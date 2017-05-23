@@ -6,175 +6,15 @@
  */
 (function() {
     // the definition
-    const oojs = (env) => {
-        // weaving catalog builder
-        let catalog = [];
-        let oops = function(match, Advise) {
-            // match: '',
-            //      sec1:sec2:sec3
-            //      sec1 can be:
-            //          * - property function and event
-            //          p - only property
-            //          f - only functions
-            //          e - only event
-            //          <> - any combination of p, f or e -- for relevant
-            //      sec2 can be:
-            //          * - any class
-            //          *<text> - any class name that ends with <text>
-            //          <text>* - any class name that starts with <text>
-            //          <text>  - exact class name
-            //      sec3 can be:
-            //          * - any member
-            //          *<text> - any member name that ends with <text>
-            //          <text>* - any member name that starts with <text>
-            //          <text>  - exact member name
-            // Advise: class definition that exposes functions like
-            //      before
-            //      after
-            //      around
-            catalog.push({match: match, Advise: Advise});
-        };
+    const def = (env) => {
+        let oojs = {};
 
         // Class
-        oops.Class = (name, inherits, factory) => {
+        oojs.Class = (className, inherits, factory) => {
             if (typeof factory !== 'function') {
                 factory = inherits;
                 inherits = null;
-            }
-
-            // in-built attributes
-            const Noop = function(targetType, targetName, target, obj) {
-                // no operation
-            };
-            const ASync = function(targetType, targetName, target, obj) {
-                // validate
-                if (targetType !== 'func') {
-                    throw `ASync attribute can only be applied to functions. ${targetName} is not a function.`;
-                }
-                if (targetName === '_constructor') {
-                    throw `ASync attribute cannot be applied on constructor.`;
-                }
-                if (targetName === '_dispose') {
-                    throw `ASync attribute cannot be applied on dispose.`;
-                }                
-
-                // wrap
-                Object.defineProperty(obj, targetName, {
-                    value: function(...args) {
-                        return new Promise((resolve, reject) => {
-                            target(resolve, reject, ...args);
-                        });
-                    }.bind(obj)
-                });                
-            };
-            const Deprecate = function(targetType, targetName, target, obj) {
-                // validate
-                if (targetName === '_constructor') {
-                    throw `Deprecate attribute cannot be applied on constructor.`;
-                }
-                if (targetName === '_dispose') {
-                    throw `Deprecate attribute cannot be applied on dispose.`;
-                }                
-
-                // wrap
-                switch(targetType) {
-                    case 'prop':
-                        let desc = Object.getOwnPropertyDescriptor(obj, targetName);
-                        if (desc.get) {
-                            let _get = desc.get;
-                            Object.defineProperty(obj, targetName, {
-                                get: function() {
-                                    console.warn(`${targetName} is deprecated.`);
-                                    return _get();
-                                }.bind(obj)
-                            });
-                        }
-                        if (desc.set) {
-                            let _set = desc.set;
-                            Object.defineProperty(obj, targetName, {
-                                set: function(value) {
-                                    console.warn(`${targetName} is deprecated.`);
-                                    return _set(value);
-                                }.bind(obj)
-                            });
-                        }   
-                        break;                 
-                    case 'func':
-                        Object.defineProperty(obj, targetName, {
-                            value: function(...args) {
-                                console.warn(`${targetName} is deprecated.`);
-                                target(...args);
-                            }.bind(obj)
-                        });  
-                        break;                  
-                }
-            };
-            const Skip = function(targetType, targetName, target, obj) {
-                // validate
-                if (targetName === '_constructor') {
-                    throw `Skip attribute cannot be applied on constructor.`;
-                }
-                if (targetName === '_dispose') {
-                    throw `Skip attribute cannot be applied on dispose.`;
-                }   
-
-                // redefine
-                Object.defineProperty(obj, targetName, {
-                    enumerable: false
-                });
-            };
-            const Inject = function(targetType, targetName, target, obj, injectType, ...typeArgs) {
-                // validate
-                if (targetType !== 'func') {
-                     throw `Inject attribute can only be applied to functions. ${targetName} is not a function.`;
-                }
-                if (targetName === '_constructor') {
-                    throw `Inject attribute cannot be applied on constructor.`;
-                }
-                if (targetName === '_dispose') {
-                    throw `Inject attribute cannot be applied on dispose.`;
-                }
-
-                // wrap
-                Object.defineProperty(obj, targetName, {
-                    value: function(...args) {
-                        let instance = new injectType(...typeArgs);
-                        target(instance, ...args);
-                    }.bind(obj)
-                }); 
-            };
-            const MultiInject = function(targetType, targetName, target, obj, ...injections) {
-                // validate
-                if (targetType !== 'func') {
-                     throw `Inject attribute can only be applied to functions. ${targetName} is not a function.`;
-                }
-                if (targetName === '_constructor') {
-                    throw `Inject attribute cannot be applied on constructor.`;
-                }
-                if (targetName === '_dispose') {
-                    throw `Inject attribute cannot be applied on dispose.`;
-                }
-
-                // wrap
-               Object.defineProperty(obj, targetName, {
-                    value: function(...args) {
-                        let instances = [],
-                            _type = null,
-                            _args = null;
-                        for(_inject of injections) {
-                            _type = _inject.type;
-                            _args = _inject.args || [];
-                            instances.push(new _type(..._args));
-                        }
-                        let InstancesAndFuncArgs = instances.concat(args);
-                        target(...InstancesAndFuncArgs);
-                    }.bind(obj)
-                });
-            };            
-
-            // aspects weaver
-            const weaver = (_this) => {
-            };
+            }         
 
             // build class definition
             let Class = function(...args) {
@@ -194,26 +34,29 @@
                 }
 
                 // definition helper
-                const getAttr = (attr) => {
-                    let Attr = null;
-                    switch(attr) {
-                        case 'ASync': Attr = ASync; break;
-                        case 'Deprecate': Attr = Deprecate; break;
-                        case 'Skip': Attr = Skip; break;
-                        case 'Inject': Attr = Inject; break;
-                        case 'MultiInject': Attr = MultiInject; break;
-                        default: Attr = Noop; break;
-                    }
-                    return Attr;
+                const attr = (attrName, ...args) => {
+                    attrName = attrName.replace('@', ''); // remove @ from name
+                    bucket.push({name: attrName, Attr: getAttr(attrName), args: args});
+                };                
+                const getAttr = (attrName) => {
+                    return attributes[attrName] || attributes['noop'];
                 };
                 const applyAttr = (targetName) => {
-                   let _Attr = null,
+                   let Attr = null,
                         targetType = meta[targetName].type,
-                        attrArgs = null;
+                        attrArgs = null,
+                        attrInstance = null,
+                        decorator = null;
                     for(let info of meta[targetName]) {
-                        _Attr = info.Attr;
+                        Attr = info.Attr;
                         attrArgs = info.args || [];
-                        new _Attr(targetType, targetName, _this[targetName], _this, ...attrArgs);
+                        attrInstance = new Attr(...attrArgs);
+                        decorator = attrInstance.decorator();
+                        if (typeof decorator === 'function') {
+                            let descriptor = Object.getOwnPropertyDescriptor(_this, targetName);
+                            decorator(_this, targetType, targetName, descriptor);
+                            Object.defineProperty(_this, targetName, descriptor);
+                        }
                     }
                 };
                 const hasAttr = (attrName, meta) => {
@@ -225,13 +68,137 @@
                     }
                     return has;
                 };
-                _this.attr = (attr, ...args) => {
-                    if (typeof attr === 'string') {
-                        bucket.push({name: attr, Attr: getAttr(attr), args: args});
-                    } else {
-                        bucket.push({name: attr.name, Attr: attr, args: args});
+                const isPatternMatched = (pattern, name) => {
+                    let isMatched = (pattern === '*' ? true : false);
+                    if (!isMatched) {
+                        if (pattern.indexOf('*') !== -1) { // wild card based match (only *abc OR abc* patterns supported)
+                            pattern = pattern.replace('*', '[\\w]');
+                            pRegEx = new RegExp(pattern);
+                            isMatched = pRegEx.test(name); 
+                        } else { // full name match
+                            isMatched = (pattern === name);
+                        }
+                    }
+                    return isMatched;
+                };
+                const applyAspects = (funcName, funcAspects) => {
+                    let fn = _this[funcName],
+                        before = [],
+                        after = [],
+                        around = [],
+                        instance = null,
+                        _fn = null;
+                    for(let funcAspect of funcAspects) {
+                        instance = new funcAspect();
+                        _fn = instance.before();
+                        if (typeof _fn === 'function') {
+                            before.push(_fn);
+                        }
+                        _fn = instance.around();
+                        if (typeof _fn === 'function') {
+                            around.push(_fn);
+                        }
+                        _fn = instance.after();
+                        if (typeof _fn === 'function') {
+                            after.push(_fn);
+                        }
+                    }
+
+                    // around weaving
+                    if (around.length > 0) { around.reverse(); }
+
+                    // weaved function
+                    let weavedFn = function(...args) {
+                        let error = null,
+                            result = null,
+                            ctx = {
+                                obj: () => { return _this; },
+                                className: () => { return className; },
+                                funcName: () => { return funcName; },
+                                error: (err) => { 
+                                    if (err) { error = err; }
+                                    return error; 
+                                },
+                                result: (value) => { 
+                                    if (typeof value !== 'undefined') { result = value; }
+                                    return result;
+                                },
+                                args: () => { return args; },
+                                data: {}
+                            };
+                        // before functions
+                        for(let beforeFn of before) {
+                            try {
+                                beforeFn(ctx);
+                            } catch (err) {
+                                error = err;
+                            }
+                        }
+
+                        // around func
+                        let newFn = fn;
+                        for(let aroundFn of around) {
+                            newFn = aroundFn(ctx, newFn);
+                        }                    
+                        try {
+                            ctx.result(newFn(...args));
+                        } catch (err) {
+                            error = err;
+                        }
+
+                        // after func
+                        for(let afterFn of after) {
+                            try {
+                                afterFn(ctx);
+                            } catch (err) {
+                                error = err;
+                            }
+                        }
+
+                        // return
+                        return ctx.result();
+                    }.bind(_this);
+
+                    // done
+                    return weavedFn;
+                };
+                const getClassAspects = () => {
+                    let classAspects = {};
+                    for(let entry in aspects) {
+                        if (aspects.hasOwnProperty(entry)) {
+                            if (isPatternMatched(entry.split('.')[0], className)) {
+                                classAspects[entry] = aspects[entry];
+                            }
+                        }
+                    }
+                    return classAspects;
+                };
+                const getFuncAspects = (classAspects, funcName) => {
+                    let funcAspects = [];
+                    for(let entry in classAspects) {
+                        if (classAspects.hasOwnProperty(entry)) {
+                            if (isPatternMatched(entry.split('.')[1], funcName)) {
+                                funcAspects.push(...classAspects[entry]);
+                            }
+                        }
+                    }
+                    return funcAspects;
+                };
+                const weave = () => {
+                    let classAspects = getClassAspects(),
+                        funcAspects = [];
+                    for(let entry in meta) {
+                        if (meta.hasOwnProperty(entry) && meta[entry].type === 'func' && ['_constructor', '_dispose'].indexOf(entry) === -1) {
+                            funcAspects = getFuncAspects(classAspects, entry);
+                            if (funcAspects.length > 0) {
+                                Object.defineProperty(_this, entry, {
+                                    value: applyAspects(entry, funcAspects)
+                                });
+                            }
+                        }
                     }
                 };
+
                 _this.func = (name, fn) => {
                     // special names
                     if (name === 'constructor') { name = '_' + name; }
@@ -244,7 +211,7 @@
                     let attrs = meta[name];
 
                     // define
-                    if (hasAttr('Override', meta[name])) {
+                    if (hasAttr('override', meta[name])) {
                         // check
                         let desc = Object.getOwnPropertyDescriptor(_this, name);
                         if (typeof desc.value !== 'function') {
@@ -258,7 +225,9 @@
                         let base = _this[name].bind(_this);
                         Object.defineProperty(_this, name, {
                             value: function(...args) {
-                                return fn(base, ...args);
+                                // run fn with base
+                                let fnArgs = [base].concat(args);                                
+                                return fn(...fnArgs);
                             }.bind(_this)
                         });
                     } else {
@@ -279,12 +248,7 @@
                 };
                 _this.prop = (name, valueOrGetter, setter) => {
                     // special names
-                    if (name === 'constructor') { 
-                         throw `${name} can only be defined as a function.`;
-                    }
-                    if (name === 'dispose') { 
-                         throw `${name} can only be defined as a function.`; 
-                    }
+                    if (['constructor', 'dispose'].indexOf(name) !== -1) {  throw `${name} can only be defined as a function.`; }
 
                     // collect attributes
                     meta[name] = [].concat(bucket);
@@ -293,7 +257,8 @@
                     let attrs = meta[name];
                     
                     // define
-                    if (hasAttr('Override', meta[name])) {
+                    if (hasAttr('override', meta[name])) {
+                        // when overriding a property, it can only be redefined completely
                         // check
                         let desc = Object.getOwnPropertyDescriptor(_this, name);
                         if (typeof desc.get !== 'function') {
@@ -315,7 +280,7 @@
                             configurable: true,
                             enumerable: true,
                             get: () => { return prop; },
-                            set: hasAttr('ReadOnly', attrs) ? (value) => { 
+                            set: hasAttr('readonly', attrs) ? (value) => { 
                                 throw `${name} is readonly.`;
                             } : (value) => {
                                 prop = value;
@@ -328,7 +293,7 @@
                             configurable: true,
                             enumerable: true,
                             get: valueOrGetter,
-                            set: hasAttr('ReadOnly', attrs) ? (value) => { 
+                            set: hasAttr('readonly', attrs) ? (value) => { 
                                 throw `${name} is readonly.`;
                             } : (value) => {
                                 if (typeof setter === 'function') { setter(value); }
@@ -341,12 +306,7 @@
                 };
                 _this.event = (name) => {
                     // special names
-                    if (name === 'constructor') { 
-                         throw `${name} can only be defined as a function.`;
-                    }
-                    if (name === 'dispose') { 
-                         throw `${name} can only be defined as a function.`; 
-                    }
+                    if (['constructor', 'dispose'].indexOf(name) !== -1) {  throw `${name} can only be defined as a function.`; }
 
                     // add meta
                     meta[name] = [];
@@ -388,8 +348,8 @@
                     });
                 };
 
-                // get class definition
-                factory.apply(_this);
+                // run factory
+                factory.apply(_this, [attr]);
 
                 // expose meta
                 _this._ = _this._ || {};
@@ -397,7 +357,7 @@
                 if (!Parent) {
                     _this._.instanceOf.push({name: 'Object', type: Object, meta: []});
                 }
-                _this._.instanceOf.push({name: name, type: Class, meta: meta});
+                _this._.instanceOf.push({name: className, type: Class, meta: meta});
                 _this._.Inherits = Class;
 
                 // constructor
@@ -408,7 +368,6 @@
 
                 // remove definition helper after constructor (so that if need be constructor 
                 // can still define props and functions at runtime)
-                delete _this.attr;
                 delete _this.func;
                 delete _this.prop;
 
@@ -420,14 +379,18 @@
                     delete _this._dispose;
                 }
 
-                // weave advises as applicale in catalog
-                weave(_this);
+                // weave members with configured advises
+                // except on Attribute and Aspect classes
+                if (['Attribute', 'Aspect'].indexOf(inherits) === -1 && 
+                    ['Attribute', 'Aspect'].indexOf(className) === -1) {
+                    weave();
+                }
 
                 // seal attribute for constructor, properties and functions
                 // are handled at the end
                 for(let member in meta) {
                     if (meta.hasOwnProperty(member)) {
-                        if (hasAttr('Seal', meta[member])) {
+                        if (hasAttr('seal', meta[member])) {
                             switch(meta[member].type) {
                                 case 'prop':
                                     Object.defineProperty(_this, member, {
@@ -452,14 +415,14 @@
                return _this;
             };
             Class.Inherits = inherits;
-            Class.Name = name;
+            Class.Name = className;
 
             // return
             return Class;
         };
 
         // using
-        oops.using = (obj, where) => {
+        oojs.using = (obj, where) => {
             try {
                 where(obj);
             } finally {
@@ -472,22 +435,211 @@
             }
         };
 
+        // Attribute
+        let attributes = {};
+        oojs.Attributes = (Attribute) => {
+            // register
+            attributes[Attribute.Name] = Attribute;
+        };
+        oojs.Attribute = oojs.Class('Attribute', function() {
+            let decoratorFn = null;
+            this.func('constructor', (...args) => {
+                this.args = args;
+            });
+            this.prop('args', []);
+            this.func('decorator', (fn) => {
+                if (typeof fn === 'function') {
+                    decoratorFn = fn;
+                }
+                return decoratorFn;
+            });
+            this.func('resetEventInterface', (source, target) => {
+                target.subscribe = source.subscribe;
+                target.unsubscribe = source.unsubscribe;
+                delete source.subscribe;
+                delete source.unsubscribe;
+            });
+        });
+
+        // in-built attributes
+        oojs.Attributes(oojs.Class('noop', oojs.Attribute, function() { 
+        }));
+        oojs.Attributes(oojs.Class('async', oojs.Attribute, function() {
+            this.decorator((obj, type, name, descriptor) => {
+                // validate
+                if (['func'].indexOf(type) === -1) { throw `@async attribute cannot be applied on ${type} members. (${name})`; }
+                if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `@async attribute cannot be applied on special function. (${name})`; }
+
+                // decorate
+                let fn = descriptor.value;
+                descriptor.value = function(...args) {
+                    return new Promise((resolve, reject) => {
+                        let fnArgs = [resolve, reject].concat(args);
+                        fn(...fnArgs);
+                    });
+                }.bind(obj);
+            });
+        }));
+        oojs.Attributes(oojs.Class('deprecate', oojs.Attribute, function() {
+            this.decorator((obj, type, name, descriptor) => {
+                // validate
+                if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `@deprecate attribute cannot be applied on special function. (${name})`; }
+
+                // decorate
+                switch(type) {
+                    case 'prop':
+                        if (descriptor.get) {
+                            let _get = descriptor.get;
+                            descriptor.get = function() {
+                                console.warn(`${name} is deprecated.`);
+                                return _get();
+                            }.bind(obj);
+                        }
+                        if (descriptor.set) {
+                            let _set = descriptor.set;
+                           descriptor.set = function(value) {
+                                console.warn(`${name} is deprecated.`);
+                                return _set(value);
+                            }.bind(obj);
+                        }   
+                        break;
+                    case 'func':
+                        let fn = descriptor.value;
+                        descriptor.value = function(...args) {
+                            console.warn(`${name} is deprecated.`);
+                            fn(...args);
+                        }.bind(obj);
+                        break;
+                    case 'event':
+                        let ev = descriptor.value;
+                        descriptor.value = function(...args) {
+                            console.warn(`${name} is deprecated.`);
+                             ev(...args);
+                        }.bind(obj);
+                        this.resetEventInterface(fn, descriptor.value);
+                        break;
+                }
+            });
+        }));
+        oojs.Attributes(oojs.Class('enumerate', oojs.Attribute, function() {
+            this.decorator((obj, type, name, descriptor) => {
+                // validate
+                if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `@enumerate attribute cannot be applied on special function. (${name})`; }
+
+                // decorate
+                let flag = this.args[0];
+                descriptor.enumerable = flag;
+            });
+        }));
+        oojs.Attributes(oojs.Class('inject', oojs.Attribute, function() {
+            this.decorator((obj, type, name, descriptor) => {
+                // validate
+                if (['func'].indexOf(type) === -1) { throw `@inject attribute cannot be applied on ${type} members. (${name})`; }
+                if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `@inject attribute cannot be applied on special function. (${name})`; }
+
+                // decorate
+                let fn = descriptor.value,
+                    Type = this.args[0],
+                    typeArgs = this.args[1];
+                if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
+                descriptor.value = function(...args) {
+                    let instance = new Type(...typeArgs);
+                    fn(instance, ...args);
+                }.bind(obj);
+            });
+        }));
+        oojs.Attributes(oojs.Class('multiinject', oojs.Attribute, function() {
+            this.decorator((obj, type, name, descriptor) => {
+                // validate
+                if (['func'].indexOf(type) === -1) { throw `@multiinject attribute cannot be applied on ${type} members. (${name})`; }
+                if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `@multiinject attribute cannot be applied on special function. (${name})`; }
+
+                // decorate
+                let fn = descriptor.value,
+                    injections = this.args,
+                    instances = [],
+                    Type = null,
+                    typeArgs = null;
+                for(entry of injections) {
+                    Type = entry.Type;
+                    typeArgs = entry.typeArgs || [];
+                    if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
+                    instances.push(new Type(...typeArgs));
+                }
+                descriptor.value = function(...args) {
+                    let cumulativeArgs = instances.concat(args);
+                    fn(...cumulativeArgs);
+                }.bind(obj);
+            });
+        }));     
+
+        // Aspect
+        let aspects = {};
+        oojs.Aspects = (pointcut, Aspect) => {
+            // pointcut: classNamePattern.funcNamePattern
+            //      classNamePattern:
+            //          * - any class
+            //          *<text> - any class name that ends with <text>
+            //          <text>* - any class name that starts with <text>
+            //          <text>  - exact class name
+            //      funcNamePattern:
+            //          * - any function
+            //          *<text> - any func name that ends with <text>
+            //          <text>* - any func name that starts with <text>
+            //          <text>  - exact func name
+            if (!aspects[pointcut]) {
+                aspects[pointcut] = [];
+            }
+            aspects[pointcut].push(Aspect);
+        };
+        oojs.Aspect = oojs.Class('Aspect', function() {
+            let beforeFn = null,
+                afterFn = null,
+                aroundFn = null;
+            this.func('constructor', (...args) => {
+                this.args = args;
+            });
+            this.prop('args', []);
+            this.func('before', (fn) => {
+                if (typeof fn === 'function') {
+                    beforeFn = fn;
+                }
+                return beforeFn;
+            });
+            this.func('after', (fn) => {
+                if (typeof fn === 'function') {
+                    afterFn = fn;
+                }
+                return afterFn;
+            });
+            this.func('around', (fn) => {
+                if (typeof fn === 'function') {
+                    aroundFn = fn;
+                }
+                return aroundFn;
+            });
+        });
+
         // expose to environment
         if (env) {
-            env.Class = oops.Class;
-            env.using = oops.using;
+            env.Class = oojs.Class;
+            env.using = oojs.using;
+            env.Attribute = oojs.Attribute;
+            env.Attributes = oojs.Attributes;
+            env.Aspect = oojs.Aspect;
+            env.Aspects = oojs.Aspects;            
         }
 
         // return
-        return Object.freeze(oops);
+        return Object.freeze(oojs);
     };
 
     // export
     if (typeof (typeof module !== 'undefined' && module !== null ? module.exports : void 0) === 'object') {
-        module.exports = oojs;
+        module.exports = def;
     } else if (typeof define === 'function' && define.amd) {
-        define(function() { return oojs; });
+        define(function() { return def; });
     } else {
-        this.oojs = oojs;
+        this.oojs = def;
     }
 }).call(this);

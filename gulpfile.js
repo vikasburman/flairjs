@@ -19,6 +19,12 @@ const errorHandler = (name) => {
 // task: build
 gulp.task('build', (done) => {
     gulp.src('./oojs.js')
+        // check for issues
+        .pipe(eslint('.eslint.json'))
+        // format errors, if any
+        .pipe(eslint.format())
+        // stop if errors
+        .pipe(eslint.failAfterError())
         // minify
         .pipe(minifier(uglifyConfig.js, uglifyjs))
         .on('error', errorHandler('minifier'))
