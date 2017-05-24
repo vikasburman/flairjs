@@ -17,23 +17,57 @@
             }         
 
             // build class definition
-            let Class = function(...args) {
+            let Class = function(flag, ...args) {
                 let Parent = Class.Inherits,
                     _this = {},
+                    _exposed_this = {},
                     bucket = [],
                     meta = {},
                     props = {},
-                    events = [];
+                    events = [],
+                    classArgs = [],
+                    isNeedProtected = false,
+                    theFlag = '__flag__';
+                
+                // classArgs
+                if (flag && flag === theFlag) {
+                    isNeedProtected = true;
+                    classArgs = args;
+                } else {
+                    if (flag) {
+                        classArgs = [flag].concat(args);
+                    } else {
+                        classArgs = args;
+                    }
+                }
 
                 // create parent instance
                 if (Parent) {
-                    _this = new Parent(...args);
+                    _this = new Parent(theFlag, ...classArgs);
                     if (Object.isFrozen(_this)) {
-                        throw `${name} cannot inherit from a sealed class.`;
+                        throw `${className} cannot inherit from a sealed class ${Parent.Name}.`;
                     }
                 }
 
                 // definition helper
+                const isSpecialMember = (member) => {
+                    return ['constructor', 'dispose', '_constructor', '_dispose', '_'].indexOf(member) !== -1;
+                };
+                const isOwnMember = (member) => {
+                    return typeof meta[member] !== 'undefined';
+                };
+                const isSealedMember = (member) => {
+                    return hasAttr('sealed', meta[member]);
+                }
+                const isPrivateMember = (member) => {
+                    return hasAttr('private', meta[member]);
+                };
+                const isProtectedMember = (member) => {
+                    return hasAttrEx('protected', member);
+                };
+                const doCopy = (member) => {
+                    Object.defineProperty(_exposed_this, member, Object.getOwnPropertyDescriptor(_this, member));
+                };                
                 const attr = (attrName, ...args) => {
                     attrName = attrName.replace('@', ''); // remove @ from name
                     bucket.push({name: attrName, Attr: getAttr(attrName), args: args});
@@ -61,13 +95,24 @@
                 };
                 const hasAttr = (attrName, meta) => {
                     let has = false;
-                    for(let info of meta) {
-                        if (info.name === attrName) {
-                            has = true; break;
+                    if (meta) {
+                        for(let info of meta) {
+                            if (info.name === attrName) {
+                                has = true; break;
+                            }
                         }
                     }
                     return has;
                 };
+                const hasAttrEx = (attrName, member) => {
+                    let result = false;
+                    for(let item of _this._.instanceOf) {
+                        if (item.meta[member]) {
+                            result = hasAttr(attrName, item.meta[member]);
+                        }
+                    }
+                    return result;
+                };              
                 const isPatternMatched = (pattern, name) => {
                     let isMatched = (pattern === '*' ? true : false);
                     if (!isMatched) {
@@ -185,10 +230,14 @@
                     return funcAspects;
                 };
                 const weave = () => {
+                    // validate
+                    if (['Attribute', 'Aspect'].indexOf(className) !== -1) { return; }
+                    if (_this._.isDerivedFrom('Attribute') || _this._.isDerivedFrom('Aspect')) { return; }
+
                     let classAspects = getClassAspects(),
                         funcAspects = [];
                     for(let entry in meta) {
-                        if (meta.hasOwnProperty(entry) && meta[entry].type === 'func' && ['_constructor', '_dispose'].indexOf(entry) === -1) {
+                        if (meta.hasOwnProperty(entry) && meta[entry].type === 'func' && !isSpecialMember(entry)) {
                             funcAspects = getFuncAspects(classAspects, entry);
                             if (funcAspects.length > 0) {
                                 Object.defineProperty(_this, entry, {
@@ -201,8 +250,9 @@
 
                 _this.func = (name, fn) => {
                     // special names
-                    if (name === 'constructor') { name = '_' + name; }
-                    if (name === 'dispose') { name = '_' + name; }
+                    if (isSpecialMember(name)) {
+                        name = '_' + name;
+                    }
                     
                     // collect attributes
                     meta[name] = [].concat(bucket);
@@ -248,7 +298,7 @@
                 };
                 _this.prop = (name, valueOrGetter, setter) => {
                     // special names
-                    if (['constructor', 'dispose'].indexOf(name) !== -1) {  throw `${name} can only be defined as a function.`; }
+                    if (isSpecialMember(name)) {  throw `${name} can only be defined as a function.`; }
 
                     // collect attributes
                     meta[name] = [].concat(bucket);
@@ -306,7 +356,7 @@
                 };
                 _this.event = (name) => {
                     // special names
-                    if (['constructor', 'dispose'].indexOf(name) !== -1) {  throw `${name} can only be defined as a function.`; }
+                    if (isSpecialMember(name)) {  throw `${name} can only be defined as a function.`; }
 
                     // add meta
                     meta[name] = [];
@@ -342,7 +392,7 @@
                     };
                     Object.defineProperty(_this, name, {
                         configurable: false,
-                        enumerable: false,
+                        enumerable: true,
                         value: _event,
                         writable: false
                     });
@@ -354,15 +404,49 @@
                 // expose meta
                 _this._ = _this._ || {};
                 _this._.instanceOf = _this._.instanceOf || [];
-                if (!Parent) {
+                if (!inherits) {
                     _this._.instanceOf.push({name: 'Object', type: Object, meta: []});
                 }
                 _this._.instanceOf.push({name: className, type: Class, meta: meta});
                 _this._.Inherits = Class;
+                _this._.isDerivedFrom = (className) => {
+                    let result = false;
+                    for(let item of _this._.instanceOf) {
+                        if (item.name === className) { result = true; break; }
+                    }
+                    return result;
+                };
+                _this._.isASync = (funcName) => {
+                    return hasAttrEx('async', memberName);
+                };
+                _this._.isReadOnly = (propName) => {
+                    return hasAttrEx('readonly', memberName);
+                };
+                _this._.isDeprecated = (memberName) => {
+                    return hasAttrEx('deprecate', memberName);
+                };
+                _this._.isOverridden = (memberName) => {
+                    return hasAttrEx('override', memberName);
+                };
+                _this._.isEnumerable = (memberName) => {
+                    if (_this[memberName]) { 
+                        return Object.getOwnPropertyDescriptor(_this, memberName).enumerable;
+                    }
+                    return false;
+                };
+                _this._.typeOf = (memberName) => {
+                    let result = '';
+                    for(let item of _this._.instanceOf) {
+                        if (item.meta[memberName]) {
+                            result = item.meta[memberName].type;
+                        }
+                    }
+                    return result;                    
+                };
 
                 // constructor
                 if (typeof _this._constructor === 'function') {
-                    _this._constructor(...args);
+                    _this._constructor(...classArgs);
                     delete _this._constructor;
                 }
 
@@ -370,6 +454,7 @@
                 // can still define props and functions at runtime)
                 delete _this.func;
                 delete _this.prop;
+                delete _this.event;
 
                 // dispose
                 if (typeof _this._dispose === 'function') {
@@ -380,39 +465,41 @@
                 }
 
                 // weave members with configured advises
-                // except on Attribute and Aspect classes
-                if (['Attribute', 'Aspect'].indexOf(inherits) === -1 && 
-                    ['Attribute', 'Aspect'].indexOf(className) === -1) {
-                    weave();
+                weave();
+
+                // get exposable _this
+                let isCopy = false;
+                doCopy('_'); // '_' is a very special member
+                for(let member in _this) {
+                    isCopy = false;
+                    if (_this.hasOwnProperty(member) && !isSpecialMember(member)) {
+                        isCopy = true;
+                        if (isOwnMember(member)) {
+                            if (isPrivateMember(member)) { isCopy = false; }
+                            if (isProtectedMember(member) && !isNeedProtected) { isCopy = false; }
+                        } else {  // some derived member (protected or public)
+                            if (isProtectedMember(member) && !isNeedProtected) { isCopy = false; }
+                        } 
+                    }
+                    if (isCopy) { doCopy(member); }
                 }
 
-                // seal attribute for constructor, properties and functions
+                // sealed attribute for properties and functions
                 // are handled at the end
-                for(let member in meta) {
-                    if (meta.hasOwnProperty(member)) {
-                        if (hasAttr('seal', meta[member])) {
-                            switch(meta[member].type) {
-                                case 'prop':
-                                    Object.defineProperty(_this, member, {
-                                        configurable: false
-                                    });
-                                    break;
-                                case 'func':
-                                    if (member === '_constructor') {
-                                        _this = Object.freeze(_this);
-                                    } else {
-                                        Object.defineProperty(_this, member, {
-                                            configurable: false
-                                        });                                    
-                                    }
-                                    break;
-                            }
-                        }
+                for(let member in _exposed_this) {
+                    if (!isSpecialMember(member) && isOwnMember(member) && isSealedMember(member)) {
+                        Object.defineProperty(_exposed_this, member, {
+                            configurable: false
+                        });
                     }
                 }
 
                 // done
-               return _this;
+                if (isSealedMember('_constructor')) { // sealed class consideration
+                    return Object.freeze(_exposed_this);
+                } else {
+                   return _exposed_this;
+                }
             };
             Class.Inherits = inherits;
             Class.Name = className;
