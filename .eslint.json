@@ -13,6 +13,8 @@
         "node": true
     },
     "globals": {
+        "global": true,
+        "window": true        
     },
     "rules": {
     }

@@ -13,15 +13,15 @@ describe('Simple class definiton', () => {
 
     describe('when Vehicle class is defined', () => {
         it('should have its Name as Vehicle', () => {
-            expect(Vehicle.Name).toEqual('Vehicle');
+            expect(Vehicle._.name).toEqual('Vehicle');
         });
         it('should Inherits from nothing', () => {
-            expect(Vehicle.Inherits).toBeNull();
+            expect(Vehicle._.inherits).toBeNull();
         });
     });
     describe('when Vehicle instance is created', () => {
         it('should Inherits from Vehicle', () => {
-            expect(obj._.Inherits.Name).toEqual('Vehicle');
+            expect(obj._.inherits._.name).toEqual('Vehicle');
         });
         it('should have a public property named isStarted with false value', () => {
             expect(obj.isStarted).toBeDefined();

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="../oojs.js"></script>
+        <script type="text/javascript">
+            // initialize with required symbols
+            oops({ symbols: ['DEBUG'] });
+            
+            // define classes
+            var Vehicle = Class('Vehicle', function(attr) {
+                this.func('constructor', (cc) => {
+                    this.cc = cc;
+                    this.capacity = cc;
+                });
+
+                attr('@deprecate', 'Use capacity instead.');
+                this.prop('cc', 0);
+                this.prop('capacity', 0);
+
+                attr('@readonly');
+                this.prop('prop3', 200);
+
+                attr('@async');
+                this.func('func1', (resolve, reject, p1, p2) => {
+                    console.log('oops type is:' + typeof oops);
+                    console.log('abc type is:' + typeof abc);
+                    console.log('prop1 = ' + this.prop1);
+                    console.log(p1);
+                    console.log(p2);
+                    resolve(true);
+                });
+
+                let _prop1 = 20;
+                attr('@deprecate');
+                //attr('@sealed');
+                this.prop('prop1', () => {
+                    console.log('event1 = ' + typeof this.event1);
+                    return _prop1;
+                }, (value) => {
+                    console.log('event1 = ' + typeof this.event1);
+                    _prop1 = value;
+                });
+
+                attr('@private');
+                this.prop('myprivate', 10);
+
+                this.func('check', () => {
+                    console.log('private property value =' + this.myprivate);
+                    console.log('protected property value =' + this.myprotected);
+                });
+
+                attr('@protected');
+                this.prop('myprotected', 10);
+
+                //attr('@seal');
+                this.func('func2', (a1) => {
+                    console.log(this.prop1);
+                    console.log('in base func:' + a1);
+                    this.event1(a1);
+                });
+
+                this.event('event1');
+
+                attr('@enumerate', false);
+                this.prop('xyz', 1);
+
+                attr('@static');
+                this.prop('staticProp1', 'static');
+
+                attr('serialize', 'prop1');
+                this.prop('p1', 10);
+
+                this.func('dispose', () => {
+                    console.log('disposed Vehicle');
+                });                    
+            });
+            
+            var Car = Class('Car', Vehicle, function(attr) {
+                attr('@singleton');       
+                this.func('constructor', (val) => {
+                    console.log('in constructor of Car w prop1 = ' + this.prop1);
+                    this.prop1 = this.prop1 * val;
+                });
+
+                attr('@override');
+                this.func('func2', (base, a1) => {
+                    console.log('prop1 = ' + this.prop1);
+                    console.log('in derived func:' + a1);
+                    base(a1);
+                });
+
+                this.func('check2', () => {
+                    console.log('private property value =' + this.myprivate);
+                    console.log('protected property value =' + this.myprotected);
+                });
+
+                attr('@inject', Object, 'vikas')
+                this.func('func3', (i1, p1) => {
+                    console.log('injected: ' + i1);
+                    console.log(p1);
+                });
+
+                attr('@inject', 'ILogger', 1)
+                this.prop('logger', null);
+
+                attr('@multiinject', 'ILogger', 1)
+                this.func('func4', (i1, p1) => {
+                    console.log('multi injected 1:' + i1);
+                    console.log(p1);
+                });
+
+                attr('@multiinject', 'ILogger', 1)
+                this.prop('logger2');
+
+                attr('@conditional', 'node');
+                this.prop('mycond1', 10);
+
+                attr('@conditional', 'browser');
+                this.prop('mycond1', 20);
+
+                attr('@conditional', 'DEBUG');
+                this.prop('mycond2', 300);
+
+                let fn = (e) => {
+                    console.log('Event ' + e.name + ' handled with: ' + e.args[0]);
+                    this.event1.unsubscribe(fn);
+                };
+                this.event1.subscribe(fn);
+
+                attr('serialize', 'prop2');
+                this.prop('p2', 20);
+
+                //attr('@override');
+                // this.prop('prop1', 4000);
+
+                this.func('dispose', () => {
+                    console.log('disposed Car');
+                });
+            });
+
+            var BMW = Class('BMW', Car, function() {
+                this.func('dispose', () => {
+                    console.log('disposed BMW');
+                });
+
+                this.func('func5', (x) => {
+                    console.log('I am func 5 with: ' + x);
+                    return x;
+                });
+            });
+
+            Aspects('*.*', Class('ElapsedTime', Aspect, function() { 
+                this.before((ctx) => {
+                    ctx.data.start = new Date().getMilliseconds();
+                    console.log('started executing: ' + ctx.className() + '.' + ctx.funcName());
+                });
+                this.after((ctx) => {
+                    console.log('done executing: ' + ctx.className() + '.' + ctx.funcName());
+                    ctx.data.end = new Date().getMilliseconds();
+                    ctx.data.elapsed = (ctx.data.end = ctx.data.start) / 1000;
+                    console.info(`${ctx.data.elapsed} seconds elapsed in execution of ${ctx.className()}.${ctx.funcName()}.`);
+                });
+                this.around((ctx, fn) => {
+                    return function(...args) {
+                        console.log('start executing wrapped: ' + ctx.className() + '.' + ctx.funcName());
+                        try {
+                            ctx.result(fn(...args));
+                        } catch(err) {
+                            ctx.error(err);
+                        }
+                        console.log('end executing wrapped: ' + ctx.className() + '.' + ctx.funcName());
+                        return ctx.result();
+                    }.bind(ctx.obj());
+                });
+            })); 
+
+            Container('ILogger', Class('ConsoleLogger', function() {
+                this.func('log', (msg) => {
+                    console.log(msg);
+                });
+            }));
+            Container('ILogger', Class('ConsoleLogger2', function() {
+                this.func('log', (msg) => {
+                    console.log('2: ' + msg);
+                });
+            }));
+
+            using(new Car(2), (bmw) => {
+                window.car = bmw;
+                window.cls = Car;
+            });
+
+            using(new Vehicle(), (v1) => {
+                window.v1 = v1;
+                window.cls2 = Vehicle;
+            });             
+        </script>
+    </head>    
+    <body>
+    </body>
+</html>
