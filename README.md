@@ -1,2 +1,2 @@
-# OOJS
+# OOJS (pronounced ojus)
 

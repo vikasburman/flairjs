@@ -1,5 +1,5 @@
 // setup
-let oojs = require('../oojs.js')(global);
+let oojs = require('../src/oojs.js')(global);
 
 describe('Simple class definiton', () => {
     // class definition

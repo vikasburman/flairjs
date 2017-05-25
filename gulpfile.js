@@ -18,7 +18,7 @@ const errorHandler = (name) => {
 
 // task: build
 gulp.task('build', (done) => {
-    gulp.src('./oojs.js')
+    gulp.src('./src/oojs.js')
         // check for issues
         .pipe(eslint('.eslint.json'))
         // format errors, if any
@@ -34,7 +34,7 @@ gulp.task('build', (done) => {
         }))
         .on('error', errorHandler('rename'))
         // write to output again
-        .pipe(gulp.dest('./'))
+        .pipe(gulp.dest('./src'))
         .on('end', done)
         .on('error', errorHandler('dest'));
 });
