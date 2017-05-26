@@ -9,7 +9,7 @@
     const def = (opts = {}) => {
         let oojs = {},
             options = {
-                env: opts.env || (typeof window !== 'undefined' ? 'browser' : 'node'),
+                env: opts.env || (typeof window !== 'undefined' ? 'client' : 'server'),
                 global: (typeof window !== 'undefined' ? window : global),
                 supressGlobals: (typeof opts.supressGlobals === 'undefined' ? false : opts.supressGlobals),
                 symbols: opts.symbols || []
@@ -64,8 +64,8 @@
                 // create parent instance
                 if (Parent) {
                     _this = new Parent(theFlag, staticInterface, ...classArgs);
-                    if (Object.isFrozen(_this)) {
-                        throw `${className} cannot inherit from a sealed class ${Parent._.name}.`;
+                    if (Parent._.isSealed() || Parent._.isSingleton()) {
+                        throw `${className} cannot inherit from a sealed/singleton class ${Parent._.name}.`;
                     }
                 }
 
@@ -78,6 +78,12 @@
                 };
                 const isOwnMember = (member) => {
                     return typeof meta[member] !== 'undefined';
+                };
+                const isDerivedMember = (member) => {
+                    if (isOwnMember(member)) { return false; }
+                    return (_this._.instanceOf.findIndex((item) => {
+                        return (item.meta[member] ? true : false);
+                    }) !== -1);   
                 };
                 const isSealedMember = (member) => {
                     return hasAttr('sealed', meta[member]);
@@ -104,10 +110,10 @@
                                 isOK = false;
                                 condition = (item.args && item.args.length > 0 ? item.args[0] : '');
                                 switch(condition) {
-                                    case 'node':
-                                        isOK = (options.env === 'node'); break;
-                                    case 'browser':
-                                        isOK = (options.env === 'browser' || options.env === ''); break;
+                                    case 'server':
+                                        isOK = (options.env === 'server'); break;
+                                    case 'client':
+                                        isOK = (options.env === 'client' || options.env === ''); break;
                                     default:
                                         isOK = options.symbols.indexOf(condition) !== -1; break;
                                 }
@@ -358,7 +364,7 @@
                         if (typeof desc.value !== 'function') {
                             throw `${name} is not a function to override.`;
                         }
-                        if (!desc.configurable) {
+                        if (hasAttrEx('sealed', name)) {
                             throw `${name} cannot override a sealed function.`;
                         }
 
@@ -404,7 +410,7 @@
                     if (!isConditionalMemberOK(name)) {
                         delete meta[name]; return;
                     }
-                    
+                
                     // define
                     if (hasAttr('override', attrs)) {
                         // when overriding a property, it can only be redefined completely
@@ -413,7 +419,7 @@
                         if (typeof desc.get !== 'function') {
                             throw `Not a property to override. (${name})`;
                         }
-                        if (!desc.configurable) {
+                        if (hasAttrEx('sealed', name)) {
                             throw `Cannot override a sealed property. (${name})`;
                         }
                         if (hasAttrEx('static', name)) { 
@@ -426,23 +432,26 @@
 
                     // define or redefine
                     if (typeof valueOrGetter !== 'function') {
-                        let prop = null;
-                        if (hasAttr('static', attrs)) { 
-                            prop = staticInterface[name] = valueOrGetter; // shared (static) copy
+                        let propHost = null;
+                        if (hasAttrEx('static', name)) { 
+                            propHost = staticInterface;
+                            if (!propHost[name]) {
+                                propHost[name] = valueOrGetter; // shared (static) copy
+                            }
                         } else {
-                            prop = props[name] = valueOrGetter; // private copy
+                            propHost = props;
+                            propHost[name] = valueOrGetter; // private copy
                         }
                         Object.defineProperty(_this, name, {
                             __proto__: null,
                             configurable: true,
                             enumerable: true,
-                            get: () => { return prop; },
+                            get: () => { return propHost[name]; },
                             set: hasAttr('readonly', attrs) ? (value) => { 
                                 throw `${name} is readonly.`;
                             } : (value) => {
-                                prop = value;
+                                propHost[name] = value;
                             }                            
-                            
                         });
                     } else {
                         if (hasAttr('static', attrs)) { throw `Static properties cannot be defined with a getter/setter. (${name})`}
@@ -482,10 +491,10 @@
                     // define event
                     let _event = (...args) => {
                         let e = {
-                            name: name,
-                            args: args,
-                            stop: false
-                        };
+                                name: name,
+                                args: args,
+                                stop: false
+                            };
                         for(let handler of events) {
                             handler(e);
                             if (e.stop) { break; }
@@ -500,6 +509,9 @@
                             events.splice(index, 1);
                         }
                     };
+                    _event.unsubscribe.all = () => {
+                        events = [];
+                    };
                     Object.defineProperty(_this, name, {
                         configurable: false,
                         enumerable: true,
@@ -507,9 +519,6 @@
                         writable: false
                     });
                 };
-
-                // run factory
-                factory.apply(_this, [attr]);
 
                 // attach instance reflector
                 _this._ = _this._ || {};
@@ -529,16 +538,16 @@
                     return _this._.typeOf(memberName) === 'func';
                 };
                 _this._.isEvent = (memberName) => {
-                    return _this._.typeOf(memberName) === 'envent';
+                    return _this._.typeOf(memberName) === 'event';
                 };
-                _this._.isASync = (funcName) => {
+                _this._.isASync = (memberName) => {
                     return hasAttrEx('async', memberName);
                 };
-                _this._.isReadOnly = (propName) => {
-                    return hasAttrEx('readonly', propName);
+                _this._.isReadOnly = (memberName) => {
+                    return hasAttrEx('readonly', memberName);
                 };
-                _this._.isStatic = (propName) => {
-                    return hasAttrEx('static', propName);
+                _this._.isStatic = (memberName) => {
+                    return hasAttrEx('static', memberName);
                 };
                 _this._.isSingleton = () => {
                     return (Class._.singleInstance() !== null);
@@ -569,6 +578,9 @@
                 _this._.deserialize = (json) => {
                     processJson(json, _this, true);
                 };
+
+                // run factory
+                factory.apply(_this, [attr]);
 
                 // constructor
                 if (typeof _this._constructor === 'function') {
@@ -602,9 +614,10 @@
                         isCopy = true;
                         if (isOwnMember(member)) {
                             if (isPrivateMember(member)) { isCopy = false; }
+                            if (isCopy && (isProtectedMember(member) && !isNeedProtected)) { isCopy = false; }
+                        } else {  // some derived member (protected or public) OR some directly added member
                             if (isProtectedMember(member) && !isNeedProtected) { isCopy = false; }
-                        } else {  // some derived member (protected or public)
-                            if (isProtectedMember(member) && !isNeedProtected) { isCopy = false; }
+                            if (isCopy && !isDerivedMember(member)) { isCopy = false; } // some directly added member
                         } 
                     }
                     if (isCopy) { doCopy(member); }
@@ -622,13 +635,15 @@
 
                 // singleton
                 if (isSingletonClass()) { // store for next use
+                    Class._.isSingleton = () => { return true; }
                     Class._.singleInstance = () => { return Object.freeze(_exposed_this); } // assume it sealed as well
                     return Class._.singleInstance();
                 } else {
                     if (isSealedMember('_constructor')) { // sealed class consideration
+                        Class._.isSealed = () => { return true; };
                         return Object.freeze(_exposed_this);
                     } else {
-                    return _exposed_this;
+                        return _exposed_this;
                     }
                 }
             };
@@ -638,9 +653,11 @@
                 inherits: inherits,
                 name: className,
                 singleInstance: () => { return null; },
+                isSingleton: () => { return false; },
+                isSealed: () => { return false; },
                 isDerivedFrom: (name) => {
                     let result = (name === 'Object'),
-                        prv = cls._.inherits;
+                        prv = inherits;
                     if (!result) {
                         while(true) {
                             if (prv === null) { break; }
@@ -776,6 +793,14 @@
                     instance = null;
                 if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
                 if (typeof Type === 'string') { 
+                    if (Type.indexOf('|') !== -1) { // condiitonal server/client specific injection
+                        let items = Type.split('|');
+                        if (options.env === 'server') {
+                            Type = items[0].trim(); // left one
+                        } else {
+                            Type = items[1].trim(); // right one
+                        }
+                    }
                     instance = oojs.Container.resolve(Type, false, ...typeArgs)
                 } else {
                     instance = new Type(...typeArgs);
@@ -796,18 +821,26 @@
         oojs.Attributes(oojs.Class('multiinject', oojs.Attribute, function() {
             this.decorator((obj, type, name, descriptor) => {
                 // validate
-                if (['func', 'prop'].indexOf(type) === -1) { throw `@inject attribute cannot be applied on ${type} members. (${name})`; }
-                if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `@inject attribute cannot be applied on special function. (${name})`; }
+                if (['func', 'prop'].indexOf(type) === -1) { throw `@multiinject attribute cannot be applied on ${type} members. (${name})`; }
+                if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `@multiinject attribute cannot be applied on special function. (${name})`; }
 
                 // decorate
                 let Type = this.args[0],
                     typeArgs = this.args[1],
                     instance = null;
                 if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
-                if (typeof Type === 'string') { 
+                if (typeof Type === 'string') {
+                    if (Type.indexOf('|') !== -1) { // condiitonal server/client specific injection
+                        let items = Type.split('|');
+                        if (options.env === 'server') {
+                            Type = items[0].trim(); // left one
+                        } else {
+                            Type = items[1].trim(); // right one
+                        }
+                    }
                     instance = oojs.Container.resolve(Type, true, ...typeArgs)
                 } else {
-                    instance = new Type(...typeArgs);
+                    throw `@multiinject attribute does not support direct type injections. (${name})`;
                 }
                 switch(type) {
                     case 'func':
