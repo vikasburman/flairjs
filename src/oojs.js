@@ -692,6 +692,8 @@
         let attributes = {};
         oojs.Attributes = (Attribute) => {
             // register
+            if (!attributes[Attribute._.name]) { throw `${Attribute._.name} already registered.`};
+
             attributes[Attribute._.name] = Attribute;
         };
         oojs.Attribute = oojs.Class('Attribute', function() {
