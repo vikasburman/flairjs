@@ -17,6 +17,12 @@
                 });
             }));
 
+            var ITest = Interface('ITest', function() {
+                this.func('check');
+                this.prop('prop1');
+                this.event('event1');
+            });
+
             var Days = ns('system', Enum('Days', {
                 Mon: 0,
                 Tue: 1,
@@ -28,7 +34,7 @@
             }));
 
             // define classes
-            var Vehicle = Class('Vehicle', [Mix1, Mix2], function(attr) {
+            var Vehicle = Class('Vehicle', [Mix1, Mix2, ITest], function(attr) {
                 this.func('constructor', (cc) => {
                     this.cc = cc;
                     this.capacity = cc;

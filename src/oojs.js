@@ -19,8 +19,8 @@
         // Class
         // Class(className, function() {})
         // Class(className, inherits, function() {})
-        // Class(className, mixins, function() {})
-        // Class(className, inherits, mixins, function() {})
+        // Class(className, mixins/interfaces, function() {})
+        // Class(className, inherits, mixins/interfaces, function() {})
         oojs.Class = (arg1, arg2, arg3, arg4) => {
             let className = arg1,
                 inherits = null,
@@ -563,11 +563,23 @@
                 _this._.isInstanceOf = (name) => {
                     return (_this._.instanceOf.findIndex((item) => { return item.name === name; }) !== -1);
                 };
+                _this._.isMixed = (name) => {
+                    let result = false;
+                    for (let item of _this._.instanceOf) {
+                        for(let mixin of item.mixins) {
+                            if (mixin._.name === name && mixin._.type === 'mixin') {
+                                result = true; break;
+                            }
+                            if (result) { break; }
+                        }
+                    }
+                    return result;                    
+                };                
                 _this._.isImplements = (name) => {
                     let result = false;
                     for (let item of _this._.instanceOf) {
                         for(let mixin of item.mixins) {
-                            if (mixin._.name === name) {
+                            if (mixin._.name === name && mixin._.type === 'interface') {
                                 result = true; break;
                             }
                             if (result) { break; }
@@ -629,7 +641,9 @@
                 // apply mixins
                 if (mixins.length !== 0) {
                     for(let mixin of mixins) {
-                        mixin.apply(_this, [attr]);
+                        if (mixin._.type === 'mixin') {
+                            mixin.apply(_this, [attr]);
+                        }
                     }
                 }
 
@@ -683,6 +697,39 @@
                     }
                 }
 
+                // validate that all intefaces are implemeted on exposed_this
+                if (mixins.length !== 0) {
+                    for(let mixin of mixins) {
+                        if (mixin._.type === 'interface') {
+                            for(let _member of mixin) {
+                                let _items = _member.split(':'),
+                                    _memberType = _items[0],
+                                    _memberName = _items[1];
+                                switch(_memberType) {
+                                    case 'f':
+                                        if (typeof _exposed_this[_memberName] !== 'function') {
+                                            throw `${_memberName} is not a function. ${mixin._.name}`;
+                                        }
+                                        break;
+                                    case 'p':
+                                        if (typeof _exposed_this[_memberName] === 'undefined' || 
+                                            typeof _exposed_this[_memberName] === 'function') {
+                                            throw `${_memberName} is not a property. ${mixin._.name}`;
+                                        }
+                                        break;
+                                    case 'e':
+                                        if (typeof _exposed_this[_memberName] === 'undefined' || 
+                                            typeof _exposed_this[_memberName] !== 'function' || 
+                                            typeof _exposed_this[_memberName].subscribe !== 'function') {
+                                            throw `${_memberName} is not an event. ${mixin._.name}`;
+                                        }
+                                        break;
+                                }
+                           }
+                        }
+                    }
+                }
+
                 // singleton
                 if (isSingletonClass()) { // store for next use
                     Class._.isSingleton = () => { return true; }
@@ -703,6 +750,7 @@
                 inherits: inherits,
                 mixins: mixins,
                 name: className,
+                type: 'class',
                 singleInstance: () => { return null; },
                 isSingleton: () => { return false; },
                 isSealed: () => { return false; },
@@ -718,10 +766,19 @@
                     }
                     return result;
                 },
+                isMixed: (name) => {
+                   let result = false;
+                   for(let mixin of mixins) {
+                       if (mixin._.name === name && mixin._.type === 'mixin') {
+                           result = true; break;
+                       }
+                   }
+                    return result;                    
+                },
                 isImplements: (name) => {
                    let result = false;
                    for(let mixin of mixins) {
-                       if (mixin._.name === name) {
+                       if (mixin._.name === name && mixin._.type === 'interface') {
                            result = true; break;
                        }
                    }
@@ -739,11 +796,48 @@
         oojs.Mixin = (mixinName, factory) => {
             // add name
             factory._ = {
-                name: mixinName
+                name: mixinName,
+                type: 'mixin'
             };
 
             // return
             return factory;
+        };
+
+        // Interface
+        // Interface(interfaceName, function() {})
+        oojs.Interface = (interfaceName, factory) => {
+            let def = [],
+                _this = {};
+
+            // definition helpers
+            _this.func = (name) => {
+                name = 'f:' + name;
+                if (def.indexOf(name) !== -1) { throw `${name} already defined.`; }
+                def.push(name);
+            };
+            _this.prop = (name) => {
+                name = 'p:' + name;
+                if (def.indexOf(name) !== -1) { throw `${name} already defined.`; }
+                def.push(name);
+            };
+            _this.event = (name) => {
+                name = 'e:' + name;
+                if (def.indexOf(name) !== -1) { throw `${name} already defined.`; }
+                def.push(name);
+            };
+
+            // run factory
+            factory.apply(_this);
+
+            // add name
+            def._ = {
+                name: interfaceName,
+                type: 'interface'
+            };
+
+            // return
+            return def;
         };
 
         // Enum
@@ -752,6 +846,7 @@
             let _enum = keyValuePairs;
             _enum._ = {
                 name: enumName,
+                type: 'enum',
                 keys: () => {
                     let items = [];
                     for(let key in keyValuePairs) {
@@ -1084,6 +1179,7 @@
             g.Mixin = oojs.Mixin;
             g.ns = oojs.ns;
             g.Enum = oojs.Enum;
+            g.Interface = oojs.Interface;
         }
 
         // return
