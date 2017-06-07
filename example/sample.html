@@ -11,11 +11,21 @@
                     console.log(this);
                 });
             });
-            var Mix2 = Mixin('Mix2', function() {
+            var Mix2 = ns('system.core', Mixin('Mix2', function() {
                 this.func('mixed2', () => {
                     console.log(this);
                 });
-            });
+            }));
+
+            var Days = ns('system', Enum('Days', {
+                Mon: 0,
+                Tue: 1,
+                Wed: 2,
+                Thu: 3,
+                Fri: 4,
+                Sat: 5,
+                Sun: 6
+            }));
 
             // define classes
             var Vehicle = Class('Vehicle', [Mix1, Mix2], function(attr) {

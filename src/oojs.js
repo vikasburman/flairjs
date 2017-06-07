@@ -734,7 +734,73 @@
             return Class;
         };
 
+        // Mixin
+        // Mixin(mixinName, function() {})
+        oojs.Mixin = (mixinName, factory) => {
+            // add name
+            factory._ = {
+                name: mixinName
+            };
+
+            // return
+            return factory;
+        };
+
+        // Enum
+        // Enum(enumName, {key: value}})
+        oojs.Enum = (enumName, keyValuePairs) => {
+            let _enum = keyValuePairs;
+            _enum._ = {
+                name: enumName,
+                keys: () => {
+                    let items = [];
+                    for(let key in keyValuePairs) {
+                        if (keyValuePairs.hasOwnProperty(key) && key !== '_') {
+                            items.push(key);
+                        }
+                    }
+                    return items;
+                },
+                values: () => {
+                    let items = [];
+                    for(let key in keyValuePairs) {
+                        if (keyValuePairs.hasOwnProperty(key) && key !== '_') {
+                            items.push(keyValuePairs[key]);
+                        }
+                    }
+                    return items;
+                }
+            };
+
+            // return
+            return Object.freeze(_enum);
+        };
+
+        // Namespace
+        // ns(namepace, Class/Mixin/Enum)
+        oojs.ns = (namespace, whatever) => {
+            // validate
+            if (typeof whatever._.name === 'undefined') { throw 'Invalid member for a namespace.'; }
+
+            // define whatever under this global namespace
+            let items = namespace.split('.'),
+                lastItem = options.global;
+            for(let item of items) {
+                if (typeof lastItem[item] === 'undefined') {
+                    lastItem[item] = {};
+                }
+                lastItem = lastItem[item];
+            }
+
+            // define whatever at last item
+            lastItem[whatever._.name] = whatever;
+
+            // return as is
+            return whatever;
+        };
+
         // using
+        // using(object, scope)
         oojs.using = (obj, where) => {
             try {
                 where(obj);
@@ -746,18 +812,6 @@
                     }
                 }
             }
-        };
-
-        // Mixin
-        // Mixin(mixinName, function() {})
-        oojs.Mixin = (mixinName, factory) => {
-            // add name
-            factory._ = {
-                name: mixinName
-            };
-
-            // return
-            return factory;
         };
 
         // attributes
@@ -1019,7 +1073,7 @@
         };
 
         // expose to global environment
-        if (!options.supressGlobals) {
+        if (!options.supressGlobals) { 
             let g = options.global;
             g.Class = oojs.Class; g.using = oojs.using;
             g.Attribute = oojs.Attribute; g.Attributes = oojs.Attributes;
@@ -1027,6 +1081,8 @@
             g.Container = oojs.Container;
             g.Serializer = oojs.Serializer;
             g.Mixin = oojs.Mixin;
+            g.ns = oojs.ns;
+            g.Enum = oojs.Enum;
         }
 
         // return
