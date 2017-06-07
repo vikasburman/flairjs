@@ -55,17 +55,17 @@
                 attr('@private');
                 this.prop('myprivate', 10);
 
-                this.func('check', ['', 'string', 'string, number'], 
-                    () => {
-                        console.log('private property value =' + this.myprivate);
-                        console.log('protected property value =' + this.myprotected);
-                    }, 
-                    (a, b) => {
+                // this.func('check', ['', 'string', 'string, number'], 
+                //     () => {
+                //         console.log('private property value =' + this.myprivate);
+                //         console.log('protected property value =' + this.myprotected);
+                //     }, 
+                //     (a, b) => {
 
-                    },
-                    (a, b) => {
+                //     },
+                //     (a, b) => {
 
-                    });
+                //     });
 
                 this.func('check', () => {
                     console.log('private property value =' + this.myprivate);
