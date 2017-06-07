@@ -863,7 +863,8 @@
                 if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `@deprecate attribute cannot be applied on special function. (${name})`; }
 
                 // decorate
-                let msg = `${name} is deprecated. ${this.args[0]}` || `${name} is deprecated.`;
+                let msg = `${name} is deprecated.`;
+                if (typeof this.args[0] !== 'undefined') { msg += ' ' + this.args[0] };
                 switch(type) {
                     case 'prop':
                         if (descriptor.get) {
