@@ -25,6 +25,7 @@
             let className = arg1,
                 inherits = null,
                 mixins = [],
+                interfaces = [],
                 factory = null;
             if (typeof arg3 === 'function') {
                 factory = arg3;
@@ -40,6 +41,16 @@
             } else if (typeof arg2 === 'function') {
                 factory = arg2;
             }
+
+            // seperate mixins and interfaces
+            let onlyMixins = [];
+            for(let mixin of mixins) {
+                switch (mixin._.type) {
+                    case 'mixin': onlyMixins.push(mixin); break;
+                    case 'interface': interfaces.push(mixin); break;
+                }
+            }
+            mixins = onlyMixins;
 
             // build class definition
             let Class = function(_flag, _static, ...args) {
@@ -556,9 +567,9 @@
                 _this._ = _this._ || {};
                 _this._.instanceOf = _this._.instanceOf || [];
                 if (!inherits) {
-                    _this._.instanceOf.push({name: 'Object', type: Object, meta: [], mixins: []});
+                    _this._.instanceOf.push({name: 'Object', type: Object, meta: [], mixins: [], interfaces: []});
                 }
-                _this._.instanceOf.push({name: className, type: Class, meta: meta, mixins: mixins});
+                _this._.instanceOf.push({name: className, type: Class, meta: meta, mixins: mixins, interfaces: interfaces});
                 _this._.inherits = Class;
                 _this._.isInstanceOf = (name) => {
                     return (_this._.instanceOf.findIndex((item) => { return item.name === name; }) !== -1);
@@ -567,7 +578,7 @@
                     let result = false;
                     for (let item of _this._.instanceOf) {
                         for(let mixin of item.mixins) {
-                            if (mixin._.name === name && mixin._.type === 'mixin') {
+                            if (mixin._.name === name) {
                                 result = true; break;
                             }
                             if (result) { break; }
@@ -578,8 +589,8 @@
                 _this._.isImplements = (name) => {
                     let result = false;
                     for (let item of _this._.instanceOf) {
-                        for(let mixin of item.mixins) {
-                            if (mixin._.name === name && mixin._.type === 'interface') {
+                        for(let _interface of item.interfaces) {
+                            if (_interface._.name === name) {
                                 result = true; break;
                             }
                             if (result) { break; }
@@ -749,6 +760,7 @@
             Class._ = {
                 inherits: inherits,
                 mixins: mixins,
+                interfaces: interfaces,
                 name: className,
                 type: 'class',
                 singleInstance: () => { return null; },
@@ -769,7 +781,7 @@
                 isMixed: (name) => {
                    let result = false;
                    for(let mixin of mixins) {
-                       if (mixin._.name === name && mixin._.type === 'mixin') {
+                       if (mixin._.name === name) {
                            result = true; break;
                        }
                    }
@@ -777,8 +789,8 @@
                 },
                 isImplements: (name) => {
                    let result = false;
-                   for(let mixin of mixins) {
-                       if (mixin._.name === name && mixin._.type === 'interface') {
+                   for(let _interface of interfaces) {
+                       if (_interface._.name === name) {
                            result = true; break;
                        }
                    }
