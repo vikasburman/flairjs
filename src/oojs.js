@@ -8,19 +8,38 @@
     // the definition
     const def = (opts = {}) => {
         let oojs = {},
+            isServer = ((typeof global === 'object' && typeof exports === 'object') ? true : false),
             options = {
-                env: opts.env || (typeof window !== 'undefined' ? 'client' : 'server'),
-                global: (typeof window !== 'undefined' ? window : global),
+                env: opts.env || (isServer ? 'server' : 'client'),
+                global: (isServer ? global : window),
                 supressGlobals: (typeof opts.supressGlobals === 'undefined' ? false : opts.supressGlobals),
                 symbols: opts.symbols || []
             };
 
         // Class
-        oojs.Class = (className, inherits, factory) => {
-            if (typeof factory !== 'function') {
-                factory = inherits;
-                inherits = null;
-            }         
+        // Class(className, function() {})
+        // Class(className, inherits, function() {})
+        // Class(className, mixins, function() {})
+        // Class(className, inherits, mixins, function() {})
+        oojs.Class = (arg1, arg2, arg3, arg4) => {
+            let className = arg1,
+                inherits = null,
+                mixins = [],
+                factory = null;
+            if (typeof arg3 === 'function') {
+                factory = arg3;
+                if (Array.isArray(arg2)) {
+                    mixins = arg2;
+                } else {
+                    inherits = arg2;
+                }
+            } else if (typeof arg4 === 'function') {
+                inherits = arg2;
+                mixins = arg3;
+                factory = arg4;
+            } else if (typeof arg2 === 'function') {
+                factory = arg2;
+            }
 
             // build class definition
             let Class = function(_flag, _static, ...args) {
@@ -125,13 +144,16 @@
                 };
                 const doCopy = (member) => {
                     Object.defineProperty(_exposed_this, member, Object.getOwnPropertyDescriptor(_this, member));
-                };                
+                };            
+                const isArrowFunction = (fn) => {
+                    return (!(fn).hasOwnProperty('prototype'));
+                }; 
                 const attr = (attrName, ...args) => {
                     attrName = attrName.replace('@', ''); // remove @ from name
                     bucket.push({name: attrName, Attr: getAttr(attrName), args: args});
                 };                
                 const getAttr = (attrName) => {
-                    return attributes[attrName];
+                    return allAttributes[attrName];
                 };
                 const getAttrArgs = (attrName, member) => {
                     let attrArgs = null;
@@ -277,10 +299,10 @@
                 };
                 const getClassAspects = () => {
                     let classAspects = {};
-                    for(let entry in aspects) {
-                        if (aspects.hasOwnProperty(entry)) {
+                    for(let entry in allAspects) {
+                        if (allAspects.hasOwnProperty(entry)) {
                             if (isPatternMatched(entry.split('.')[0], className)) {
-                                classAspects[entry] = aspects[entry];
+                                classAspects[entry] = allAspects[entry];
                             }
                         }
                     }
@@ -373,20 +395,30 @@
                         Object.defineProperty(_this, name, {
                             value: function(...args) {
                                 // run fn with base
-                                let fnArgs = [base].concat(args);                                
-                                return fn(...fnArgs);
+                                let fnArgs = [base].concat(args);
+                                if (isArrowFunction(fn)) {
+                                    return fn(...fnArgs);
+                                } else { // normal func
+                                    return fn.apply(_this, fnArgs);
+                                }
                             }.bind(_this)
                         });
                     } else {
                         // duplicate check
-                        if (_this[name]) { throw `${name} already defined.`; }
+                        if (typeof _this[name] !== 'undefined') { throw `${name} already defined.`; }
 
                         // define
                         Object.defineProperty(_this, name, {
                             configurable: true,
                             enumerable: true,
                             writable: false,
-                            value: fn
+                            value: function(...args) {
+                                if (isArrowFunction(fn)) {
+                                    return fn(...args);
+                                } else { // normal func
+                                    return fn.apply(_this, args);
+                                }
+                            }.bind(_this)
                         });
                     }
 
@@ -427,7 +459,7 @@
                         }
                     } else {
                         // duplicate check
-                        if (_this[name]) { throw `${name} already defined.`; }
+                        if (typeof _this[name] !== 'undefined') { throw `${name} already defined.`; }
                     }
 
                     // define or redefine
@@ -476,7 +508,7 @@
                     if (isSpecialMember(name)) {  throw `${name} can only be defined as a function.`; }
 
                     // duplicate check
-                    if (_this[name]) { throw `${name} already defined.`; }
+                    if (typeof _this[name] !== 'undefined') { throw `${name} already defined.`; }
 
                     // add meta
                     meta[name] = [];
@@ -524,13 +556,25 @@
                 _this._ = _this._ || {};
                 _this._.instanceOf = _this._.instanceOf || [];
                 if (!inherits) {
-                    _this._.instanceOf.push({name: 'Object', type: Object, meta: []});
+                    _this._.instanceOf.push({name: 'Object', type: Object, meta: [], mixins: []});
                 }
-                _this._.instanceOf.push({name: className, type: Class, meta: meta});
+                _this._.instanceOf.push({name: className, type: Class, meta: meta, mixins: mixins});
                 _this._.inherits = Class;
                 _this._.isInstanceOf = (name) => {
                     return (_this._.instanceOf.findIndex((item) => { return item.name === name; }) !== -1);
                 };
+                _this._.isImplements = (name) => {
+                    let result = false;
+                    for (let item of _this._.instanceOf) {
+                        for(let mixin of item.mixins) {
+                            if (mixin._.name === name) {
+                                result = true; break;
+                            }
+                            if (result) { break; }
+                        }
+                    }
+                    return result;                    
+                };                
                 _this._.isProp = (memberName) => {
                     return _this._.typeOf(memberName) === 'prop';
                 };
@@ -582,17 +626,23 @@
                 // run factory
                 factory.apply(_this, [attr]);
 
+                // apply mixins
+                if (mixins.length !== 0) {
+                    for(let mixin of mixins) {
+                        mixin.apply(_this, [attr]);
+                    }
+                }
+
+                // remove definition helpers
+                delete _this.func;
+                delete _this.prop;
+                delete _this.event;
+
                 // constructor
                 if (typeof _this._constructor === 'function') {
                     _this._constructor(...classArgs);
                     delete _this._constructor;
                 }
-
-                // remove definition helper after constructor (so that if need be constructor 
-                // can still define props and functions at runtime)
-                delete _this.func;
-                delete _this.prop;
-                delete _this.event;
 
                 // dispose
                 if (typeof _this._dispose === 'function') {
@@ -651,6 +701,7 @@
             // attach class reflector
             Class._ = {
                 inherits: inherits,
+                mixins: mixins,
                 name: className,
                 singleInstance: () => { return null; },
                 isSingleton: () => { return false; },
@@ -666,6 +717,15 @@
                         }
                     }
                     return result;
+                },
+                isImplements: (name) => {
+                   let result = false;
+                   for(let mixin of mixins) {
+                       if (mixin._.name === name) {
+                           result = true; break;
+                       }
+                   }
+                    return result;                    
                 },
                 static: {}
             };
@@ -688,13 +748,25 @@
             }
         };
 
+        // Mixin
+        // Mixin(mixinName, function() {})
+        oojs.Mixin = (mixinName, factory) => {
+            // add name
+            factory._ = {
+                name: mixinName
+            };
+
+            // return
+            return factory;
+        };
+
         // attributes
-        let attributes = {};
+        let allAttributes = {};
         oojs.Attributes = (Attribute) => {
             // register
-            if (!attributes[Attribute._.name]) { throw `${Attribute._.name} already registered.`};
+            if (allAttributes[Attribute._.name]) { throw `${Attribute._.name} already registered.`};
 
-            attributes[Attribute._.name] = Attribute;
+            allAttributes[Attribute._.name] = Attribute;
         };
         oojs.Attribute = oojs.Class('Attribute', function() {
             let decoratorFn = null;
@@ -859,7 +931,7 @@
         }));
 
         // aspects
-        let aspects = {};
+        let allAspects = {};
         oojs.Aspects = (pointcut, Aspect) => {
             // pointcut: classNamePattern.funcNamePattern
             //      classNamePattern:
@@ -872,10 +944,10 @@
             //          *<text> - any func name that ends with <text>
             //          <text>* - any func name that starts with <text>
             //          <text>  - exact func name
-            if (!aspects[pointcut]) {
-                aspects[pointcut] = [];
+            if (!allAspects[pointcut]) {
+                allAspects[pointcut] = [];
             }
-            aspects[pointcut].push(Aspect);
+            allAspects[pointcut].push(Aspect);
         };
         oojs.Aspect = oojs.Class('Aspect', function() {
             let beforeFn = null,
@@ -926,6 +998,13 @@
             }
             return result;
         };
+        oojs.Container.request = (typeAMDModuleUrl, ...args) => {
+            return new Promise((resolve, reject) => {
+                require([typeAMDModuleUrl], (Type) => {
+                    resolve(new Type(...args));
+                }, reject);
+            });
+        };
 
         // serialization
         oojs.Serializer = {
@@ -947,6 +1026,7 @@
             g.Aspect = oojs.Aspect; g.Aspects = oojs.Aspects;
             g.Container = oojs.Container;
             g.Serializer = oojs.Serializer;
+            g.Mixin = oojs.Mixin;
         }
 
         // return

@@ -4,10 +4,21 @@
         <script src="../src/oojs.js"></script>
         <script type="text/javascript">
             // initialize with required symbols
-            oops({ symbols: ['DEBUG'] });
-            
+            oojs({ symbols: ['DEBUG'] });
+
+            var Mix1 = Mixin('Mix1', function() {
+                this.func('mixed1', () => {
+                    console.log(this);
+                });
+            });
+            var Mix2 = Mixin('Mix2', function() {
+                this.func('mixed2', () => {
+                    console.log(this);
+                });
+            });
+
             // define classes
-            var Vehicle = Class('Vehicle', function(attr) {
+            var Vehicle = Class('Vehicle', [Mix1, Mix2], function(attr) {
                 this.func('constructor', (cc) => {
                     this.cc = cc;
                     this.capacity = cc;
@@ -44,10 +55,34 @@
                 attr('@private');
                 this.prop('myprivate', 10);
 
+                this.func('check', ['', 'string', 'string, number'], 
+                    () => {
+                        console.log('private property value =' + this.myprivate);
+                        console.log('protected property value =' + this.myprotected);
+                    }, 
+                    (a, b) => {
+
+                    },
+                    (a, b) => {
+
+                    });
+
                 this.func('check', () => {
                     console.log('private property value =' + this.myprivate);
                     console.log('protected property value =' + this.myprotected);
                 });
+
+                // attr('@overload', ['string']);
+                // this.func('check', (a) => {
+                //     console.log('private property value =' + this.myprivate);
+                //     console.log('protected property value =' + this.myprotected);
+                // });
+
+                // attr('@overload', ['string', 'number']);
+                // this.func('check', (a, b) => {
+                //     console.log('private property value =' + this.myprivate);
+                //     console.log('protected property value =' + this.myprotected);
+                // });
 
                 attr('@protected');
                 this.prop('myprotected', 10);
