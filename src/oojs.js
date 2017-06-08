@@ -65,7 +65,8 @@
                     classArgs = [],
                     isNeedProtected = false,
                     staticInterface = null,
-                    theFlag = '__flag__';
+                    theFlag = '__flag__',
+                    mixin_being_applied = null;
 
                 // singleton consideration
                 singleInstance = Class._.singleInstance();
@@ -213,7 +214,21 @@
                         if (item.meta[member]) { return hasAttr(attrName, item.meta[member]); }
                         return false;
                     }) !== -1);           
-                };              
+                };
+                const isDefined = (member, ignoreLast) => {
+                    let result = false,
+                        last = _this._.instanceOf.length,
+                        i = 1;
+                    for(let instance of _this._.instanceOf) {
+                        if (instance.meta[member]) {
+                            if (i !== last) {
+                                result = true; break;
+                            }
+                        }
+                        i++;
+                    }
+                    return result;
+                };            
                 const isPatternMatched = (pattern, name) => {
                     let isMatched = (pattern === '*' ? true : false);
                     if (!isMatched) {
@@ -341,6 +356,7 @@
                         if (meta.hasOwnProperty(entry) && meta[entry].type === 'func' && !isSpecialMember(entry)) {
                             funcAspects = getFuncAspects(classAspects, entry);
                             if (funcAspects.length > 0) {
+                                meta[entry].aspects = funcAspects.slice();
                                 Object.defineProperty(_this, entry, {
                                     value: applyAspects(entry, funcAspects)
                                 });
@@ -379,9 +395,15 @@
                         name = '_' + name;
                     }
                     
+                    // add mixed attr
+                    if (mixin_being_applied !== null) {
+                        attr('@mixed', mixin_being_applied);
+                    }
+
                     // collect attributes
                     meta[name] = [].concat(bucket);
                     meta[name].type = 'func';
+                    meta[name].aspects = [];
                     bucket = [];
                     let attrs = meta[name];
 
@@ -416,7 +438,7 @@
                         });
                     } else {
                         // duplicate check
-                        if (typeof _this[name] !== 'undefined') { throw `${name} already defined.`; }
+                        if (!isSpecialMember(name) && isDefined(name, true)) { throw `${name} already defined either as public, protected or private member.`; }
 
                         // define
                         Object.defineProperty(_this, name, {
@@ -434,7 +456,10 @@
                     }
 
                     // apply attributes in order they are defined
-                    applyAttr(name);                    
+                    applyAttr(name);   
+
+                    // finally hold the reference for reflector
+                    meta[name].ref = _this[name];
                 };
                 _this.prop = (name, valueOrGetter, setter) => {
                     // special names
@@ -443,9 +468,15 @@
                     // default value
                     if (typeof valueOrGetter === 'undefined' && typeof setter === 'undefined') { valueOrGetter = null; }
 
+                    // add mixed attr
+                    if (mixin_being_applied !== null) {
+                        attr('@mixed', mixin_being_applied);
+                    }
+
                     // collect attributes
                     meta[name] = [].concat(bucket);
                     meta[name].type = 'prop';
+                    meta[name].aspects = [];
                     bucket = [];
                     let attrs = meta[name];
 
@@ -470,7 +501,7 @@
                         }
                     } else {
                         // duplicate check
-                        if (typeof _this[name] !== 'undefined') { throw `${name} already defined.`; }
+                        if (isDefined(name, true)) { throw `${name} already defined either as public, protected or private member.`; }
                     }
 
                     // define or redefine
@@ -513,18 +544,25 @@
 
                     // apply attributes in order they are defined
                     applyAttr(name);
+
+                    // finally hold the reference for reflector
+                    meta[name].ref = {
+                        get: () => { return _this[name]; },
+                        set: (value) => { _this[name] = value; }
+                    };
                 };
                 _this.event = (name) => {
                     // special names
                     if (isSpecialMember(name)) {  throw `${name} can only be defined as a function.`; }
 
                     // duplicate check
-                    if (typeof _this[name] !== 'undefined') { throw `${name} already defined.`; }
+                    if (isDefined(name, true)) { throw `${name} already defined either as public, protected or private member.`; }
 
                     // add meta
                     meta[name] = [];
-                    meta[name].type = 'event';                    
-
+                    meta[name].type = 'event';  
+                    meta[name].aspects = [];
+                  
                     // discard attributes
                     if (bucket.length > 0) {
                         console.warn(`Attributes can only be applied to properties or functions. ${name} is an event.`);
@@ -532,7 +570,7 @@
                     }
 
                     // define event
-                    let _event = (...args) => {
+                    let _event = function(...args) {
                         let e = {
                                 name: name,
                                 args: args,
@@ -542,9 +580,12 @@
                             handler(e);
                             if (e.stop) { break; }
                         }
-                    };
+                    }.bind(_this);
                     _event.subscribe = (fn) => {
                         events.push(fn);
+                    };
+                    _event.subscribe.all = () => {
+                        return events.slice();
                     };
                     _event.unsubscribe = (fn) => {
                         let index = events.indexOf(fn);
@@ -561,10 +602,14 @@
                         value: _event,
                         writable: false
                     });
+
+                    // finally hold the reference for reflector
+                    meta[name].ref = _this[name];
                 };
 
                 // attach instance reflector
                 _this._ = _this._ || {};
+                _this._.type = 'instance';
                 _this._.instanceOf = _this._.instanceOf || [];
                 if (!inherits) {
                     _this._.instanceOf.push({name: 'Object', type: Object, meta: [], mixins: [], interfaces: []});
@@ -585,7 +630,7 @@
                         }
                     }
                     return result;                    
-                };                
+                };
                 _this._.isImplements = (name) => {
                     let result = false;
                     for (let item of _this._.instanceOf) {
@@ -597,45 +642,15 @@
                         }
                     }
                     return result;                    
-                };                
-                _this._.isProp = (memberName) => {
-                    return _this._.typeOf(memberName) === 'prop';
                 };
-                _this._.isFunc = (memberName) => {
-                    return _this._.typeOf(memberName) === 'func';
-                };
-                _this._.isEvent = (memberName) => {
-                    return _this._.typeOf(memberName) === 'event';
-                };
-                _this._.isASync = (memberName) => {
-                    return hasAttrEx('async', memberName);
-                };
-                _this._.isReadOnly = (memberName) => {
-                    return hasAttrEx('readonly', memberName);
-                };
-                _this._.isStatic = (memberName) => {
-                    return hasAttrEx('static', memberName);
-                };
-                _this._.isSingleton = () => {
-                    return (Class._.singleInstance() !== null);
-                };
-                _this._.isDeprecated = (memberName) => {
-                    return hasAttrEx('deprecate', memberName);
-                };
-                _this._.isEnumerable = (memberName) => {
-                    if (_this[memberName]) { 
-                        return Object.getOwnPropertyDescriptor(_this, memberName).enumerable;
-                    }
-                    return false;
-                };
-                _this._.typeOf = (memberName) => {
-                    let result = '';
-                    for(let item of _this._.instanceOf) {
-                        if (item.meta[memberName]) {
-                            result = item.meta[memberName].type;
-                        }
-                    }
-                    return result;                    
+                _this._._ = {
+                    hasAttr: hasAttr,
+                    hasAttrEx: hasAttrEx,
+                    isOwnMember: isOwnMember,
+                    isDerivedMember: isDerivedMember,
+                    isProtectedMember: isProtectedMember,
+                    isSealedMember: isSealedMember,
+                    isSerializableMember: isSerializableMember
                 };
                 _this._.serialize = () => {
                     let json = {};
@@ -653,7 +668,9 @@
                 if (mixins.length !== 0) {
                     for(let mixin of mixins) {
                         if (mixin._.type === 'mixin') {
+                            mixin_being_applied = mixin;
                             mixin.apply(_this, [attr]);
+                            mixin_being_applied = null;
                         }
                     }
                 }
@@ -709,34 +726,27 @@
                 }
 
                 // validate that all intefaces are implemeted on exposed_this
-                if (mixins.length !== 0) {
-                    for(let mixin of mixins) {
-                        if (mixin._.type === 'interface') {
-                            for(let _member of mixin) {
-                                let _items = _member.split(':'),
-                                    _memberType = _items[0],
-                                    _memberName = _items[1];
-                                switch(_memberType) {
-                                    case 'f':
-                                        if (typeof _exposed_this[_memberName] !== 'function') {
-                                            throw `${_memberName} is not a function. ${mixin._.name}`;
-                                        }
+                if (interfaces.length !== 0) {
+                    for(let _interface of interfaces) {
+                        for(let _memberName in _interface) {
+                            if (_interface.hasOwnProperty(_memberName) && _memberName !== '_') {
+                                let _member = _interface[_memberName],
+                                    _type = typeof _exposed_this[_memberName];
+                                if (_type === 'undefined') { throw `${_interface._.name}.${_memberName} is not defined.`; }
+                                switch(_member.type) {
+                                    case 'func':
+                                        if (_type !== 'function') { throw `${_interface._.name}.${_memberName} is not a function.`; } 
                                         break;
-                                    case 'p':
-                                        if (typeof _exposed_this[_memberName] === 'undefined' || 
-                                            typeof _exposed_this[_memberName] === 'function') {
-                                            throw `${_memberName} is not a property. ${mixin._.name}`;
-                                        }
+                                    case 'prop':
+                                        if (_type === 'function') { throw `${_interface._.name}.${_memberName} is not a property.`; }
                                         break;
-                                    case 'e':
-                                        if (typeof _exposed_this[_memberName] === 'undefined' || 
-                                            typeof _exposed_this[_memberName] !== 'function' || 
-                                            typeof _exposed_this[_memberName].subscribe !== 'function') {
-                                            throw `${_memberName} is not an event. ${mixin._.name}`;
+                                    case 'event':
+                                        if (_type !== 'function' || typeof _exposed_this[_memberName].subscribe !== 'function') {
+                                            throw `${_interface._.name}.${_memberName} is not an event.`;
                                         }
                                         break;
                                 }
-                           }
+                            }
                         }
                     }
                 }
@@ -819,37 +829,37 @@
         // Interface
         // Interface(interfaceName, function() {})
         oojs.Interface = (interfaceName, factory) => {
-            let def = [],
+            let meta = {},
                 _this = {};
 
             // definition helpers
             _this.func = (name) => {
-                name = 'f:' + name;
-                if (def.indexOf(name) !== -1) { throw `${name} already defined.`; }
-                def.push(name);
+                if (typeof meta[name] !== 'undefined') { throw `${name} already defined.`; }
+                meta[name] = [];
+                meta[name].type = 'func';
             };
             _this.prop = (name) => {
-                name = 'p:' + name;
-                if (def.indexOf(name) !== -1) { throw `${name} already defined.`; }
-                def.push(name);
+                if (typeof meta[name] !== 'undefined') { throw `${name} already defined.`; }
+                meta[name] = [];
+                meta[name].type = 'prop';
             };
             _this.event = (name) => {
-                name = 'e:' + name;
-                if (def.indexOf(name) !== -1) { throw `${name} already defined.`; }
-                def.push(name);
+                if (typeof meta[name] !== 'undefined') { throw `${name} already defined.`; }
+                meta[name] = [];
+                meta[name].type = 'event';
             };
 
             // run factory
             factory.apply(_this);
 
             // add name
-            def._ = {
+            meta._ = {
                 name: interfaceName,
                 type: 'interface'
             };
 
             // return
-            return def;
+            return meta;
         };
 
         // Enum
@@ -881,29 +891,6 @@
 
             // return
             return Object.freeze(_enum);
-        };
-
-        // Namespace
-        // ns(namepace, Class/Mixin/Enum)
-        oojs.ns = (namespace, whatever) => {
-            // validate
-            if (typeof whatever._.name === 'undefined') { throw 'Invalid member for a namespace.'; }
-
-            // define whatever under this global namespace
-            let items = namespace.split('.'),
-                lastItem = options.global;
-            for(let item of items) {
-                if (typeof lastItem[item] === 'undefined') {
-                    lastItem[item] = {};
-                }
-                lastItem = lastItem[item];
-            }
-
-            // define whatever at last item
-            lastItem[whatever._.name] = whatever;
-
-            // return as is
-            return whatever;
         };
 
         // using
@@ -1168,30 +1155,339 @@
             });
         };
 
-        // serialization
-        oojs.Serializer = {
-            serialize: (instance) => { 
-                return instance._.serialize(); 
-            },
-            deserialize: (Type, json) => {
-                let instance = new Type();
-                instance._.deserialize(json);
-                return instance;
+        // Serializer
+        oojs.Serializer = {};
+        oojs.Serializer.serialize = (instance) => { 
+            return instance._.serialize(); 
+        };
+        oojs.Serializer.deserialize = (Type, json) => {
+            let instance = new Type();
+            instance._.deserialize(json);
+            return instance;
+        };
+
+        // Reflector
+        oojs.Reflector = {};
+        oojs.Reflector.get = (forTarget) => {
+            // define
+            const CommonTypeReflector = function(target) {
+                this.getType = () => { return target._.type; }
+                this.getName = () => { return target._.name || ''; }
+                this.getTarget = () => { return target; }
+            };
+            const CommonMemberReflector = function(type, target, name) {
+                this.getType = () => { return 'member'; }
+                this.getMemberType = () => { return type; }
+                this.getTarget = () => { return target; }
+                this.getTargetType = () => { return target._.type; }
+                this.getName = () => { return name; }
+            };
+            const AttrReflector = function(Attr, name, args, target) {
+                this.getType = () => { return 'attribute'; }
+                this.getName = () => { return name; }
+                this.getTarget = () => { return target; }
+                this.getArgs = () => { return args.slice(); }
+                this.getClass = () => { 
+                    if (Attr) { return new ClassReflector(Attr); }
+                    return null;
+                 }
+            };
+            const AspectReflector = function(Aspect, target) {
+                this.getType = () => { return 'aspect'; }
+                this.getName = () => { return Aspect._.name; }
+                this.getTarget = () => { return target; }
+                this.getClass = () => { 
+                    if (Aspect) { return new ClassReflector(Aspect); }
+                    return null;
+                 }
+            };
+            const CommonInstanceMemberReflector = function(type, target, name, ref) {
+                let refl = new CommonMemberReflector(type, target, name);
+                refl.getAttributes = () => {
+                    let items = [],
+                        attrs = [];
+                    for (let item of target._.instanceOf) {
+                        if (item.meta[name]) {
+                            attrs = item.meta[name];
+                            for(let attr of attrs) {
+                                items.push(new AttrReflector(attr.Attr, attr.name, attr.args, target));
+                            }
+                        }
+                    }
+                    return items;
+                };
+                refl.getAttribute = (attrName) => {
+                    let attrInfo = null;
+                    for (let item of target._.instanceOf) {
+                        if (item.meta[name]) {
+                            attrs = item.meta[name];
+                            for(let attr of attrs) {
+                                if (attr.name === attrName) {
+                                    attrInfo = new AttrReflector(attr.Attr, attr.name, attr.args, target);
+                                    break;
+                                }
+                            }
+                        }
+                        if (attrInfo !== null) { break; }
+                    }
+                    return attrInfo;
+                };
+                refl.isEnumerable = () => {
+                    if (target[name]) { 
+                        return Object.getOwnPropertyDescriptor(target, name).enumerable;
+                    }
+                    return false;
+                };
+                refl.isDeprecated = () => { return target._._.hasAttrEx('deprecate', name); };
+                refl.isConditional = () => { return target._._.hasAttrEx('conditional', name); };
+                refl.isOverridden = () => { return target._._.hasAttrEx('override', name); };
+                refl.isOwn = () => { return target._.isOwnMember(name); };
+                refl.isDerived = () => { return target._._.isDerivedMember(name); };
+                refl.isPrivate = () => { return target._._.hasAttrEx('private', name); };
+                refl.isProtected = () => { return target._._.isProtectedMember(name); };
+                refl.isPublic = () => { return (!refl.isPrivate && !refl.isProtected); };
+                refl.isSealed = () => { return target._._.isSealedMember(name); };
+                refl.isMixed = () => { return target._._.hasAttrEx('mixed', name); };
+                refl.getMixin = () => { 
+                    if (refl.isMixed()) {
+                        let mixin = refl.getAttribute('mixed').getArgs()[0];
+                        return new MixinReflector(mixin);
+                    }
+                    return null;
+                };
+                return refl;
+            };
+            const PropReflector = function(target, name, ref) {
+                let refl = new CommonInstanceMemberReflector('prop', target, name, ref);
+                refl.getValue = () => { return ref.get(); }
+                refl.setValue = (value) => { return ref.set(value); }
+                refl.isReadOnly = () => { return target._._.hasAttrEx('readonly', name); };
+                refl.isStatic = () => { return target._._.hasAttrEx('static', name); };
+                refl.isSerializable = () => { return target._._.isSerializableMember(name); }
+                return refl;
+            };
+            const FuncReflector = function(target, name, ref) {
+                let refl = new CommonInstanceMemberReflector('func', target, name, ref);
+                refl.invoke = (...args) => { return ref(...args); };
+                refl.getAspects = () => {
+                    let items = [],
+                        aspects = [];
+                    for (let item of target._.instanceOf) {
+                        if (item.meta[name]) {
+                            aspects = item.meta[name].aspects;
+                            for(let aspect of aspects) {
+                                items.push(new AspectReflector(aspect, target));
+                            }
+                        }
+                    }
+                    return items;                    
+                };
+                refl.isASync = () => { return target._._.hasAttrEx('async', name); }
+                refl.isConstructor = () => { return name === '_constructor'; }
+                refl.isDisposer = () => { return name === '_dispose'; }
+                return refl;
+            };
+            const EventReflector = function(target, name, ref) {
+                let refl = new CommonInstanceMemberReflector('event', target, name, ref);
+                refl.raise = (...args) => { return ref(...args); }
+                refl.isSubscribed = () => { return ref.subscribe.all().length > 0; }
+                return refl;
+            };
+            const KeyReflector = function(target, name) {
+                let refl = new CommonMemberReflector('key', target, name);
+                refl.getValue = () => { return target[name]; }
+                return refl;
+            };
+            const InstanceReflector = function(target) {
+                let refl = new CommonTypeReflector(target),
+                    getMembers = (oneMember) => {
+                        let members = [],
+                            attrs = [],
+                            lastMember = null,
+                            member = null;
+                        for(let instance of target._.instanceOf) {
+                            for(let name in instance.meta) {
+                                if (instance.meta.hasOwnProperty(name)) {
+                                    attrs = instance.meta[name];
+                                    switch(instance.meta[name].type) {
+                                        case 'func':
+                                            lastMember = new FuncReflector(target, name, instance.meta[name].ref, attrs);
+                                            members.push(lastMember);
+                                            break;
+                                        case 'prop':
+                                            lastMember = new PropReflector(target, name, instance.meta[name].ref, attrs);
+                                            members.push(lastMember);
+                                            break;
+                                        case 'event':
+                                            lastMember = new EventReflector(target, name, instance.meta[name].ref, attrs);
+                                            members.push(lastMember);
+                                            break;
+                                        default:
+                                            throw 'Unknown member type';
+                                    }
+                                    if (typeof oneMember !== 'undefined' && name === oneMember) { 
+                                        members = [];
+                                        member = lastMember;
+                                    }
+                                }
+                                if (member !== null) { break; }
+                            }
+                            if (member !== null) { break; }
+                        }
+                        if (member !== null) { return member; }
+                        return members;                     
+                    };
+                refl.getClass = () => { 
+                    if (target._.inherits !== null) {
+                        return new ClassReflector(target._.inherits);
+                    }
+                    return null;
+                };
+                refl.getFamily = () => {
+                    let items = [],
+                        prv = target._.inherits;
+                    while(true) {
+                        if (prv === null) { break; }
+                        items.push(new ClassReflector(prv));
+                        prv = prv._.inherits;
+                    }
+                    return items;
+                };
+                refl.getMixins = () => { 
+                    let items = [],
+                        family = refl.getFamily();
+                    for(let cls of family) {
+                        items = items.concat(cls.getMixins());
+                    }
+                    return items;
+                };
+                refl.getInterfaces = () => { 
+                    let items = [],
+                        family = refl.getFamily();
+                    for(let cls of family) {
+                        items = items.concat(cls.getInterfaces());
+                    }
+                    return items;
+                };
+                refl.getMembers = () => { return getMembers(); };
+                refl.getMember = (name) => { return getMembers(name); };
+                refl.isSingleton = () => { return refl.getClass().isSingleton(); };                       
+                refl.isInstanceOf = (name) => { return target._.isInstanceOf(name); };
+                refl.isMixed = (name) => { return target._.isMixed(name); };
+                refl.isImplements = (name) => { return target._.isImplements(name); };
+                return refl;              
+            };
+            const ClassReflector = function(target) {
+                let refl = new CommonTypeReflector(target);
+                refl.getParent = () => { 
+                    if (target._.inherits !== null) {
+                        return new ClassReflector(target._.inherits);
+                    }
+                    return null;
+                };
+                refl.getFamily = () => {
+                    let items = [],
+                        prv = target._.inherits;
+                    while(true) {
+                        if (prv === null) { break; }
+                        items.push(new ClassReflector(prv));
+                        prv = prv._.inherits;
+                    }
+                    return items;
+                };       
+                refl.getMixins = () => {
+                    let items = [];
+                    for(let mixin of target._.mixins) {
+                        items.push(new MixinReflector(mixin));
+                    }
+                    return items;
+                };
+                refl.getInterfaces = () => {
+                    let items = [];
+                    for(let _interface of target._.interfaces) {
+                        items.push(new InterfaceReflector(_interface));
+                    }
+                    return items;
+                };
+                refl.isSingleton = () => { return target._.isSingleton(); };                       
+                refl.isSingleInstanceCreated = () => { return target._.singleInstance() !== null; };
+                refl.isSealed = () => { return target._.isSealed(); }
+                refl.isDerivedFrom = (name) => { return target._.isDerivedFrom(name); }
+                refl.isMixed = (name) => { return target._.isMixed(name); }
+                refl.isImplements = (name) => { return target._.isImplements(name); }
+                return refl;                
+            };
+            const EnumReflector = function(target) {
+                let refl = new CommonTypeReflector(target);
+                refl.getMembers = () => { 
+                    let keys = target._.keys(),
+                        members = [];
+                    for(let key of keys) {
+                        members.push(new KeyReflector(target, key));
+                    }
+                    return members;
+                };
+                refl.getMember = (name) => {
+                    if (typeof target[name] === 'undefined') { throw `${name} is not defined.`; }
+                    return new KeyReflector(target, name);
+                };
+                refl.getKeys = () => { return target._.keys(); }
+                refl.getValues = () => { return target._.values(); }
+                return refl;
+            };
+            const MixinReflector = function(target) {
+                let refl = new CommonTypeReflector(target);
+                return refl;
+            };
+            const InterfaceReflector = function(target) {
+                let refl = new CommonTypeReflector(target),
+                    getMembers = () => {
+                        let members = [];
+                        for(let _memberName in target) {
+                            if (target.hasOwnProperty(_memberName) && _memberName !== '_') {
+                                members.push(new CommonMemberReflector(target[_memberName].type, target, _memberName));
+                            }
+                        }
+                        return members;                     
+                    };
+                refl.getMembers = () => { 
+                    return getMembers();
+                }
+                refl.getMember = (name) => {
+                    if (typeof target[name] === 'undefined') { throw `${name} is not defined.`; }
+                    return new CommonMemberReflector(target[name].type, target, name);
+                };
+                return refl;
+            };
+
+            // get
+            let ref = null;
+            switch(forTarget._.type) {
+                case 'instance': ref = new InstanceReflector(forTarget); break;
+                case 'class': ref = new ClassReflector(forTarget); break;
+                case 'enum': ref = new EnumReflector(forTarget); break;
+                case 'mixin': ref = new MixinReflector(forTarget); break;
+                case 'interface': ref = new InterfaceReflector(forTarget); break;
+                default:
+                    throw 'Unknown type';
             }
+
+            // return
+            return ref;
         };
 
         // expose to global environment
         if (!options.supressGlobals) { 
             let g = options.global;
-            g.Class = oojs.Class; g.using = oojs.using;
+            g.Class = oojs.Class; 
+            g.Mixin = oojs.Mixin; g.Interface = oojs.Interface;
+            g.Enum = oojs.Enum;
+            g.using = oojs.using;
             g.Attribute = oojs.Attribute; g.Attributes = oojs.Attributes;
             g.Aspect = oojs.Aspect; g.Aspects = oojs.Aspects;
             g.Container = oojs.Container;
             g.Serializer = oojs.Serializer;
-            g.Mixin = oojs.Mixin;
-            g.ns = oojs.ns;
-            g.Enum = oojs.Enum;
-            g.Interface = oojs.Interface;
+            g.Reflector = oojs.Reflector;
         }
 
         // return

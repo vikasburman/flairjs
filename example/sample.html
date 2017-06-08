@@ -11,11 +11,11 @@
                     console.log(this);
                 });
             });
-            var Mix2 = ns('system.core', Mixin('Mix2', function() {
+            var Mix2 = Mixin('Mix2', function() {
                 this.func('mixed2', () => {
                     console.log(this);
                 });
-            }));
+            });
 
             var ITest = Interface('ITest', function() {
                 this.func('check');
@@ -23,7 +23,7 @@
                 this.event('event1');
             });
 
-            var Days = ns('system', Enum('Days', {
+            var Days = Enum('Days', {
                 Mon: 0,
                 Tue: 1,
                 Wed: 2,
@@ -31,7 +31,7 @@
                 Fri: 4,
                 Sat: 5,
                 Sun: 6
-            }));
+            });
 
             // define classes
             var Vehicle = Class('Vehicle', [Mix1, Mix2, ITest], function(attr) {
@@ -58,7 +58,7 @@
                 });
 
                 let _prop1 = 20;
-                attr('@deprecate');
+                attr('@deprecate', 'this is test');
                 //attr('@sealed');
                 this.prop('prop1', () => {
                     console.log('event1 = ' + typeof this.event1);
