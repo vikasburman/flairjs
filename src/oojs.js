@@ -894,10 +894,10 @@
         };
 
         // using
-        // using(object, scope)
-        oojs.using = (obj, where) => {
+        // using(object, scopeFn)
+        oojs.using = (obj, scopeFn) => {
             try {
-                where(obj);
+                scopeFn(obj);
             } finally {
                 if (obj._ && obj._.dispose && obj._.dispose.length > 0) {
                     obj._.dispose.reverse();
