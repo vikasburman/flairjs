@@ -1147,9 +1147,9 @@
             }
             return result;
         };
-        oojs.Container.request = (typeAMDModuleUrl, ...args) => {
+        oojs.Container.request = (typeModuleUrl, ...args) => {
             return new Promise((resolve, reject) => {
-                require([typeAMDModuleUrl], (Type) => {
+                require([typeModuleUrl], (Type) => {
                     resolve(new Type(...args));
                 }, reject);
             });
