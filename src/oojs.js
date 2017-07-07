@@ -8,6 +8,8 @@
     // the definition
     const def = (opts = {}) => {
         let oojs = {},
+            noop = () => {},
+            noopasync = (resolve, reject) => { resolve(); },
             isServer = ((typeof global === 'object' && typeof exports === 'object') ? true : false),
             options = {
                 env: opts.env || (isServer ? 'server' : 'client'),
@@ -19,8 +21,8 @@
         // Class
         // Class(className, function() {})
         // Class(className, inherits, function() {})
-        // Class(className, mixins/interfaces, function() {})
-        // Class(className, inherits, mixins/interfaces, function() {})
+        // Class(className, [mixins/interfaces], function() {})
+        // Class(className, inherits, [mixins/interfaces], function() {})
         oojs.Class = (arg1, arg2, arg3, arg4) => {
             let className = arg1,
                 inherits = null,
@@ -104,6 +106,9 @@
                 const isSingletonClass = () => {
                     return hasAttr('singleton', meta['_constructor']);
                 }
+                const isAbstractClass = () => {
+                    return hasAttr('abstract', meta['_constructor']);
+                };
                 const isSpecialMember = (member) => {
                     return ['constructor', 'dispose', '_constructor', '_dispose', '_'].indexOf(member) !== -1;
                 };
@@ -124,6 +129,9 @@
                 }
                 const isPrivateMember = (member) => {
                     return hasAttr('private', meta[member]);
+                };
+                const isHiddenMember = (member) => {
+                    return hasAttr('hide', meta[member]);
                 };
                 const isProtectedMember = (member) => {
                     return hasAttrEx('protected', member);
@@ -161,12 +169,15 @@
                     return (!(fn).hasOwnProperty('prototype'));
                 }; 
                 const attr = (attrName, ...args) => {
-                    attrName = attrName.replace('@', ''); // remove @ from name
-                    bucket.push({name: attrName, Attr: getAttr(attrName), args: args});
+                    let Attr = null;
+                    if (typeof attrName === 'string') {
+                        Attr = oojs.Container.get(attrName)[0]; // get the first registered
+                    } else {
+                        Attr = attrName;
+                        attrName = Attr._.name;
+                    }
+                    bucket.push({name: attrName, Attr: Attr, args: args});
                 };                
-                const getAttr = (attrName) => {
-                    return allAttributes[attrName];
-                };
                 const getAttrArgs = (attrName, member) => {
                     let attrArgs = null;
                     for(let item of _this._.instanceOf) {
@@ -296,24 +307,45 @@
                             }
                         }
 
+                        // after functions
+                        const runAfterFn = (_ctx) =>{
+                            for(let afterFn of after) {
+                                try {
+                                    afterFn(_ctx);
+                                } catch (err) {
+                                    ctx.error(err);
+                                }
+                            }
+                        };
+
                         // around func
-                        let newFn = fn;
+                        let newFn = fn,
+                            isASync = false,
+                            _result = null;
                         for(let aroundFn of around) {
                             newFn = aroundFn(ctx, newFn);
                         }                    
                         try {
-                            ctx.result(newFn(...args));
-                        } catch (err) {
-                            error = err;
-                        }
-
-                        // after func
-                        for(let afterFn of after) {
-                            try {
-                                afterFn(ctx);
-                            } catch (err) {
-                                error = err;
+                            _result = newFn(...args);
+                            if (_result && typeof _result.then === 'function') {
+                                isASync = true,
+                                ctx.result(new Promise((__resolve, __reject) => {
+                                    _result.then((value) => {
+                                        ctx.result(value);
+                                        runAfterFn(ctx);
+                                        __resolve(ctx.result());
+                                    }).catch((err) => {
+                                        ctx.error(err);
+                                        runAfterFn(ctx);
+                                        __reject(ctx.error());
+                                    });
+                                }));
+                            } else {
+                                ctx.result(_result);
+                                runAfterFn(ctx);
                             }
+                        } catch (err) {
+                            ctx.error(err);
                         }
 
                         // return
@@ -389,6 +421,7 @@
                 _this.func = (name, fn) => {
                     // validate
                     if (name === '_') { throw `${name} is not allowed.`; }
+                    if (!fn) { fn = noop; }
 
                     // special names
                     if (isSpecialMember(name)) {
@@ -397,7 +430,7 @@
                     
                     // add mixed attr
                     if (mixin_being_applied !== null) {
-                        attr('@mixed', mixin_being_applied);
+                        attr('mixed', mixin_being_applied);
                     }
 
                     // collect attributes
@@ -470,7 +503,7 @@
 
                     // add mixed attr
                     if (mixin_being_applied !== null) {
-                        attr('@mixed', mixin_being_applied);
+                        attr('mixed', mixin_being_applied);
                     }
 
                     // collect attributes
@@ -521,8 +554,12 @@
                             configurable: true,
                             enumerable: true,
                             get: () => { return propHost[name]; },
-                            set: hasAttr('readonly', attrs) ? (value) => { 
-                                throw `${name} is readonly.`;
+                            set: hasAttr('readonly', attrs) ? (value) => {
+                                if (_this._.constructing === className) {
+                                    propHost[name] = value;
+                                } else {
+                                    throw `${name} is readonly.`;
+                                }
                             } : (value) => {
                                 propHost[name] = value;
                             }                            
@@ -535,7 +572,11 @@
                             enumerable: true,
                             get: valueOrGetter,
                             set: hasAttr('readonly', attrs) ? (value) => { 
-                                throw `${name} is readonly.`;
+                                if (_this._.constructing === className) {
+                                    if (typeof setter === 'function') { setter(value); }
+                                } else {
+                                    throw `${name} is readonly.`;
+                                }
                             } : (value) => {
                                 if (typeof setter === 'function') { setter(value); }
                             }
@@ -610,6 +651,7 @@
                 // attach instance reflector
                 _this._ = _this._ || {};
                 _this._.type = 'instance';
+                _this._.name = className;
                 _this._.instanceOf = _this._.instanceOf || [];
                 if (!inherits) {
                     _this._.instanceOf.push({name: 'Object', type: Object, meta: [], mixins: [], interfaces: []});
@@ -664,6 +706,11 @@
                 // run factory
                 factory.apply(_this, [attr]);
 
+                // abstract consideration
+                if (_flag !== theFlag && isAbstractClass()) {
+                    throw 'Cannot create instance of an abstract class.';
+                }
+
                 // apply mixins
                 if (mixins.length !== 0) {
                     for(let mixin of mixins) {
@@ -682,8 +729,10 @@
 
                 // constructor
                 if (typeof _this._constructor === 'function') {
+                    _this._.constructing = className;
                     _this._constructor(...classArgs);
                     delete _this._constructor;
+                    delete _this._.constructing;
                 }
 
                 // dispose
@@ -712,6 +761,7 @@
                             if (isCopy && !isDerivedMember(member)) { isCopy = false; } // some directly added member
                         } 
                     }
+                    if (isCopy && isHiddenMember(member)) { isCopy = false; }
                     if (isCopy) { doCopy(member); }
                 }
 
@@ -753,8 +803,12 @@
 
                 // singleton
                 if (isSingletonClass()) { // store for next use
-                    Class._.isSingleton = () => { return true; }
-                    Class._.singleInstance = () => { return Object.freeze(_exposed_this); } // assume it sealed as well
+                    Class._.isSingleton = () => { return true; };
+                    Class._.singleInstance = () => { return Object.freeze(_exposed_this); }; // assume it sealed as well
+                    Class._.singleInstance.clear = () => { 
+                        Class._.singleInstance = () => { return null; };
+                        Class._.isSingleton = () => { return false; };
+                    };
                     return Class._.singleInstance();
                 } else {
                     if (isSealedMember('_constructor')) { // sealed class consideration
@@ -808,6 +862,7 @@
                 },
                 static: {}
             };
+            Class._.singleInstance.clear = () => { }; // no operation
 
             // return
             return Class;
@@ -863,7 +918,7 @@
         };
 
         // Enum
-        // Enum(enumName, {key: value}})
+        // Enum(enumName, {key: value})
         oojs.Enum = (enumName, keyValuePairs) => {
             let _enum = keyValuePairs;
             _enum._ = {
@@ -893,6 +948,19 @@
             return Object.freeze(_enum);
         };
 
+        // Assembly
+        // Assembly(asmName, {namespace: member})
+        oojs.Assembly = (asmName, nestedStructure) => {
+            let _asm = nestedStructure;
+            _asm._ = {
+                name: asmName,
+                type: 'assembly'
+            };
+
+            // return
+            return Object.freeze(_asm);
+        };
+
         // using
         // using(object, scopeFn)
         oojs.using = (obj, scopeFn) => {
@@ -908,180 +976,17 @@
             }
         };
 
-        // attributes
-        let allAttributes = {};
-        oojs.Attributes = (Attribute) => {
-            // register
-            if (allAttributes[Attribute._.name]) { throw `${Attribute._.name} already registered.`};
-
-            allAttributes[Attribute._.name] = Attribute;
+        // as
+        // as(object, intf)
+        oojs.as = (obj, intf) => {
+            if (obj._isImplements(intf._.name)) { return obj; }
+            return null;
         };
-        oojs.Attribute = oojs.Class('Attribute', function() {
-            let decoratorFn = null;
-            this.func('constructor', (...args) => {
-                this.args = args;
-            });
-            this.prop('args', []);
-            this.func('decorator', (fn) => {
-                if (typeof fn === 'function') {
-                    decoratorFn = fn;
-                }
-                return decoratorFn;
-            });
-            this.func('resetEventInterface', (source, target) => {
-                target.subscribe = source.subscribe;
-                target.unsubscribe = source.unsubscribe;
-                delete source.subscribe;
-                delete source.unsubscribe;
-            });
-        });
-        oojs.Attributes(oojs.Class('async', oojs.Attribute, function() {
-            this.decorator((obj, type, name, descriptor) => {
-                // validate
-                if (['func'].indexOf(type) === -1) { throw `@async attribute cannot be applied on ${type} members. (${name})`; }
-                if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `@async attribute cannot be applied on special function. (${name})`; }
-
-                // decorate
-                let fn = descriptor.value;
-                descriptor.value = function(...args) {
-                    return new Promise((resolve, reject) => {
-                        let fnArgs = [resolve, reject].concat(args);
-                        fn(...fnArgs);
-                    });
-                }.bind(obj);
-            });
-        }));
-        oojs.Attributes(oojs.Class('deprecate', oojs.Attribute, function() {
-            this.decorator((obj, type, name, descriptor) => {
-                // validate
-                if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `@deprecate attribute cannot be applied on special function. (${name})`; }
-
-                // decorate
-                let msg = `${name} is deprecated.`;
-                if (typeof this.args[0] !== 'undefined') { msg += ' ' + this.args[0] };
-                switch(type) {
-                    case 'prop':
-                        if (descriptor.get) {
-                            let _get = descriptor.get;                                
-                            descriptor.get = function() {
-                                console.warn(msg);
-                                return _get();
-                            }.bind(obj);
-                        }
-                        if (descriptor.set) {
-                            let _set = descriptor.set;
-                           descriptor.set = function(value) {
-                                console.warn(msg);
-                                return _set(value);
-                            }.bind(obj);
-                        }   
-                        break;
-                    case 'func':
-                        let fn = descriptor.value;
-                        descriptor.value = function(...args) {
-                            console.warn(msg);
-                            fn(...args);
-                        }.bind(obj);
-                        break;
-                    case 'event':
-                        let ev = descriptor.value;
-                        descriptor.value = function(...args) {
-                            console.warn(msg);
-                             ev(...args);
-                        }.bind(obj);
-                        this.resetEventInterface(fn, descriptor.value);
-                        break;
-                }
-            });
-        }));
-        oojs.Attributes(oojs.Class('enumerate', oojs.Attribute, function() {
-            this.decorator((obj, type, name, descriptor) => {
-                // validate
-                if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `@enumerate attribute cannot be applied on special function. (${name})`; }
-
-                // decorate
-                let flag = this.args[0];
-                descriptor.enumerable = flag;
-            });
-        }));
-        oojs.Attributes(oojs.Class('inject', oojs.Attribute, function() {
-            this.decorator((obj, type, name, descriptor) => {
-                // validate
-                if (['func', 'prop'].indexOf(type) === -1) { throw `@inject attribute cannot be applied on ${type} members. (${name})`; }
-                if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `@inject attribute cannot be applied on special function. (${name})`; }
-
-                // decorate
-                let Type = this.args[0],
-                    typeArgs = this.args[1],
-                    instance = null;
-                if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
-                if (typeof Type === 'string') { 
-                    if (Type.indexOf('|') !== -1) { // condiitonal server/client specific injection
-                        let items = Type.split('|');
-                        if (options.env === 'server') {
-                            Type = items[0].trim(); // left one
-                        } else {
-                            Type = items[1].trim(); // right one
-                        }
-                    }
-                    instance = oojs.Container.resolve(Type, false, ...typeArgs)
-                } else {
-                    instance = new Type(...typeArgs);
-                }
-                switch(type) {
-                    case 'func':
-                        let fn = descriptor.value;
-                        descriptor.value = function(...args) {
-                            fn(instance, ...args);
-                        }.bind(obj);
-                        break;
-                    case 'prop':
-                        obj[name] = instance;                        
-                        break;
-                }
-            });
-        }));
-        oojs.Attributes(oojs.Class('multiinject', oojs.Attribute, function() {
-            this.decorator((obj, type, name, descriptor) => {
-                // validate
-                if (['func', 'prop'].indexOf(type) === -1) { throw `@multiinject attribute cannot be applied on ${type} members. (${name})`; }
-                if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `@multiinject attribute cannot be applied on special function. (${name})`; }
-
-                // decorate
-                let Type = this.args[0],
-                    typeArgs = this.args[1],
-                    instance = null;
-                if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
-                if (typeof Type === 'string') {
-                    if (Type.indexOf('|') !== -1) { // condiitonal server/client specific injection
-                        let items = Type.split('|');
-                        if (options.env === 'server') {
-                            Type = items[0].trim(); // left one
-                        } else {
-                            Type = items[1].trim(); // right one
-                        }
-                    }
-                    instance = oojs.Container.resolve(Type, true, ...typeArgs)
-                } else {
-                    throw `@multiinject attribute does not support direct type injections. (${name})`;
-                }
-                switch(type) {
-                    case 'func':
-                        let fn = descriptor.value;
-                        descriptor.value = function(...args) {
-                            fn(instance, ...args);
-                        }.bind(obj);
-                        break;
-                    case 'prop':
-                        obj[name] = instance;                        
-                        break;
-                }
-            });
-        }));
 
         // aspects
         let allAspects = {};
-        oojs.Aspects = (pointcut, Aspect) => {
+        oojs.Aspects = {};
+        oojs.Aspects.register = (pointcut, Aspect) => {
             // pointcut: classNamePattern.funcNamePattern
             //      classNamePattern:
             //          * - any class
@@ -1128,9 +1033,22 @@
 
         // dependency injection container
         let container = {};
-        oojs.Container = (typeName, cls) => {
+        oojs.Container = {};
+        // register(cls)
+        // register(typeName, cls)
+        oojs.Container.register = (typeName, cls) => {
+            if (typeof typeName === 'function') {
+                cls = typeName;
+                typeName = cls._.name;
+            }
             if (!container[typeName]) { container[typeName] = []; }
             container[typeName].push(cls);
+        };
+        oojs.Container.isRegistered = (typeName) => {
+            return typeof container[typeName] !== 'undefined';
+        };
+        oojs.Container.get = (typeName) => {
+            return (container[typeName] || []).slice();
         };
         oojs.Container.resolve = (typeName, isMultiResolve, ...args) => {
             let result = null;
@@ -1147,13 +1065,171 @@
             }
             return result;
         };
-        oojs.Container.request = (typeModuleUrl, ...args) => {
-            return new Promise((resolve, reject) => {
-                require([typeModuleUrl], (Type) => {
-                    resolve(new Type(...args));
-                }, reject);
+
+        // attributes
+        oojs.Attribute = oojs.Class('Attribute', function() {
+            let decoratorFn = null;
+            this.func('constructor', (...args) => {
+                this.args = args;
             });
-        };
+            this.prop('args', []);
+            this.func('decorator', (fn) => {
+                if (typeof fn === 'function') {
+                    decoratorFn = fn;
+                }
+                return decoratorFn;
+            });
+            this.func('resetEventInterface', (source, target) => {
+                target.subscribe = source.subscribe;
+                target.unsubscribe = source.unsubscribe;
+                delete source.subscribe;
+                delete source.unsubscribe;
+            });
+        });
+        oojs.Container.register(oojs.Class('async', oojs.Attribute, function() {
+            this.decorator((obj, type, name, descriptor) => {
+                // validate
+                if (['func'].indexOf(type) === -1) { throw `async attribute cannot be applied on ${type} members. (${name})`; }
+                if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `async attribute cannot be applied on special function. (${name})`; }
+
+                // decorate
+                let fn = descriptor.value;
+                if (fn === noop) { fn = noopasync; }
+                descriptor.value = function(...args) {
+                    return new Promise((resolve, reject) => {
+                        let fnArgs = [resolve, reject].concat(args);
+                        fn(...fnArgs);
+                    });
+                }.bind(obj);
+            });
+        }));
+        oojs.Container.register(oojs.Class('deprecate', oojs.Attribute, function() {
+            this.decorator((obj, type, name, descriptor) => {
+                // validate
+                if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `deprecate attribute cannot be applied on special function. (${name})`; }
+
+                // decorate
+                let msg = `${name} is deprecated.`;
+                if (typeof this.args[0] !== 'undefined') { msg += ' ' + this.args[0] };
+                switch(type) {
+                    case 'prop':
+                        if (descriptor.get) {
+                            let _get = descriptor.get;                                
+                            descriptor.get = function() {
+                                console.warn(msg);
+                                return _get();
+                            }.bind(obj);
+                        }
+                        if (descriptor.set) {
+                            let _set = descriptor.set;
+                           descriptor.set = function(value) {
+                                console.warn(msg);
+                                return _set(value);
+                            }.bind(obj);
+                        }   
+                        break;
+                    case 'func':
+                        let fn = descriptor.value;
+                        descriptor.value = function(...args) {
+                            console.warn(msg);
+                            fn(...args);
+                        }.bind(obj);
+                        break;
+                    case 'event':
+                        let ev = descriptor.value;
+                        descriptor.value = function(...args) {
+                            console.warn(msg);
+                             ev(...args);
+                        }.bind(obj);
+                        this.resetEventInterface(fn, descriptor.value);
+                        break;
+                }
+            });
+        }));
+        oojs.Container.register(oojs.Class('enumerate', oojs.Attribute, function() {
+            this.decorator((obj, type, name, descriptor) => {
+                // validate
+                if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `enumerate attribute cannot be applied on special function. (${name})`; }
+
+                // decorate
+                let flag = this.args[0];
+                descriptor.enumerable = flag;
+            });
+        }));
+        oojs.Container.register(oojs.Class('inject', oojs.Attribute, function() {
+            this.decorator((obj, type, name, descriptor) => {
+                // validate
+                if (['func', 'prop'].indexOf(type) === -1) { throw `inject attribute cannot be applied on ${type} members. (${name})`; }
+                if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `inject attribute cannot be applied on special function. (${name})`; }
+
+                // decorate
+                let Type = this.args[0],
+                    typeArgs = this.args[1],
+                    instance = null;
+                if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
+                if (typeof Type === 'string') { 
+                    if (Type.indexOf('|') !== -1) { // condiitonal server/client specific injection
+                        let items = Type.split('|');
+                        if (options.env === 'server') {
+                            Type = items[0].trim(); // left one
+                        } else {
+                            Type = items[1].trim(); // right one
+                        }
+                    }
+                    instance = oojs.Container.resolve(Type, false, ...typeArgs)
+                } else {
+                    instance = new Type(...typeArgs);
+                }
+                switch(type) {
+                    case 'func':
+                        let fn = descriptor.value;
+                        descriptor.value = function(...args) {
+                            fn(instance, ...args);
+                        }.bind(obj);
+                        break;
+                    case 'prop':
+                        obj[name] = instance;                        
+                        break;
+                }
+            });
+        }));
+        oojs.Container.register(oojs.Class('multiinject', oojs.Attribute, function() {
+            this.decorator((obj, type, name, descriptor) => {
+                // validate
+                if (['func', 'prop'].indexOf(type) === -1) { throw `multiinject attribute cannot be applied on ${type} members. (${name})`; }
+                if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `multiinject attribute cannot be applied on special function. (${name})`; }
+
+                // decorate
+                let Type = this.args[0],
+                    typeArgs = this.args[1],
+                    instance = null;
+                if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
+                if (typeof Type === 'string') {
+                    if (Type.indexOf('|') !== -1) { // condiitonal server/client specific injection
+                        let items = Type.split('|');
+                        if (options.env === 'server') {
+                            Type = items[0].trim(); // left one
+                        } else {
+                            Type = items[1].trim(); // right one
+                        }
+                    }
+                    instance = oojs.Container.resolve(Type, true, ...typeArgs)
+                } else {
+                    throw `multiinject attribute does not support direct type injections. (${name})`;
+                }
+                switch(type) {
+                    case 'func':
+                        let fn = descriptor.value;
+                        descriptor.value = function(...args) {
+                            fn(instance, ...args);
+                        }.bind(obj);
+                        break;
+                    case 'prop':
+                        obj[name] = instance;                        
+                        break;
+                }
+            });
+        }));
 
         // Serializer
         oojs.Serializer = {};
@@ -1215,6 +1291,22 @@
                         }
                     }
                     return items;
+                };
+                refl.hasAttribute = (attrName) => {
+                    let isOk = false,
+                        attrs = [];
+                    for (let item of target._.instanceOf) {
+                        if (item.meta[name]) {
+                            attrs = item.meta[name];
+                            for(let attr of attrs) {
+                                if (attr.name == attrName) {
+                                    isOk = true; break;
+                                }
+                            }
+                        }
+                        if (isOk) { break; }
+                    }
+                    return isOk;                 
                 };
                 refl.getAttribute = (attrName) => {
                     let attrInfo = null;
@@ -1298,8 +1390,35 @@
                 refl.getValue = () => { return target[name]; }
                 return refl;
             };
+            const AsmMemberReflector = function(target, name, member) {
+                let refl = new CommonMemberReflector(member._.type, target, name);
+                refl.getMember = () => { return oojs.Reflector.get(member); }
+                return refl;
+            };
             const InstanceReflector = function(target) {
                 let refl = new CommonTypeReflector(target),
+                    filterMembers = (members, type, attrs) => {
+                        if (type === '' && attrs.length === 0) { return members.slice(); }
+                        let filtered = [],
+                            hasAllAttrs = true;
+                        for(let member of members) {
+                            if (member.getType() !== 'member') { continue; }
+                            if (type !== '' && member.getMemberType() !== type) { continue; }
+                            hasAllAttrs = true;
+                            if (attrs.length !== 0) {
+                                for(let attrName of attrs) {
+                                    if (!member.hasAttribute(attrName)) {
+                                        hasAllAttrs = false;
+                                        break; 
+                                    }
+                                }
+                            }
+                            if (hasAllAttrs) {
+                                filtered.push(member);
+                            }
+                        }
+                        return filtered;
+                    }
                     getMembers = (oneMember) => {
                         let members = [],
                             attrs = [],
@@ -1335,7 +1454,20 @@
                             if (member !== null) { break; }
                         }
                         if (member !== null) { return member; }
-                        return members;                     
+                        return {
+                            all: (...attrs) => { 
+                                return filterMembers(members, '', attrs);
+                            },
+                            func: (...attrs) => { 
+                                return filterMembers(members, 'func', attrs);
+                            },
+                            prop: (...attrs) => {
+                                return filterMembers(members, 'prop', attrs);
+                            },
+                            event: (...attrs) => {
+                                return filterMembers(members, 'event', attrs);
+                            }
+                        };                  
                     };
                 refl.getClass = () => { 
                     if (target._.inherits !== null) {
@@ -1435,6 +1567,35 @@
                 refl.getValues = () => { return target._.values(); }
                 return refl;
             };
+            const AssemblyReflector = function(target) {
+                let refl = new CommonTypeReflector(target);
+                refl.getMembers = () => { 
+                    let members = [];
+                    const findMembers = (obj, ns) => {
+                        for(let key in obj) {
+                            if (obj.hasOwnProperty(key) && key !== '_') {
+                                if (typeof obj[key]._ === 'undefined') { // this is a namespace
+                                    findMembers(obj[key], ns + '.' + key);
+                                } else { // this is a member
+                                    members.push(new AsmMemberReflector(target, ns + '.' + obj[key]._.name, obj[key]));
+                                }
+                            }
+                        }
+                    };
+                    findMembers(target, target._.name);
+                    return members;
+                };
+                refl.getMember = (qualifiedName) => {
+                    let items = qualifiedName.split('.');
+                    if (items.length > 0) { 
+                        items.shift(); // remove assembly name from namespace
+                        qualifiedName = items.join('.');
+                    }
+                    if (typeof target[qualifiedName] === 'undefined') { throw `${qualifiedName} is not defined.`; }
+                    return oojs.Reflector.get(target[qualifiedName]);
+                };
+                return refl;
+            };
             const MixinReflector = function(target) {
                 let refl = new CommonTypeReflector(target);
                 return refl;
@@ -1466,6 +1627,7 @@
                 case 'instance': ref = new InstanceReflector(forTarget); break;
                 case 'class': ref = new ClassReflector(forTarget); break;
                 case 'enum': ref = new EnumReflector(forTarget); break;
+                case 'assembly': ref = new AssemblyReflector(forTarget); break;
                 case 'mixin': ref = new MixinReflector(forTarget); break;
                 case 'interface': ref = new InterfaceReflector(forTarget); break;
                 default:
@@ -1479,15 +1641,11 @@
         // expose to global environment
         if (!options.supressGlobals) { 
             let g = options.global;
-            g.Class = oojs.Class; 
-            g.Mixin = oojs.Mixin; g.Interface = oojs.Interface;
-            g.Enum = oojs.Enum;
-            g.using = oojs.using;
-            g.Attribute = oojs.Attribute; g.Attributes = oojs.Attributes;
-            g.Aspect = oojs.Aspect; g.Aspects = oojs.Aspects;
-            g.Container = oojs.Container;
-            g.Serializer = oojs.Serializer;
-            g.Reflector = oojs.Reflector;
+            g.Class = oojs.Class; g.Mixin = oojs.Mixin; g.Interface = oojs.Interface; g.Enum = oojs.Enum; g.Assembly = oojs.Assembly;
+            g.Attribute = oojs.Attribute; g.Aspect = oojs.Aspect; 
+            g.Aspects = oojs.Aspects; g.Container = oojs.Container;
+            g.Serializer = oojs.Serializer; g.Reflector = oojs.Reflector;
+            g.using = oojs.using; g.as = oojs.as;
         }
 
         // return
