@@ -9,7 +9,7 @@
     const def = (opts = {}) => {
         let oojs = {},
             noop = () => {},
-            noopasync = (resolve, reject) => { resolve(); },
+            noopAsync = (resolve, reject) => { resolve(); },
             isServer = ((typeof global === 'object' && typeof exports === 'object') ? true : false),
             options = {
                 env: opts.env || (isServer ? 'server' : 'client'),
@@ -111,7 +111,7 @@
                 };
                 const isSpecialMember = (member) => {
                     return ['constructor', 'dispose', '_constructor', '_dispose', '_'].indexOf(member) !== -1;
-                };
+                };   
                 const isOwnMember = (member) => {
                     return typeof meta[member] !== 'undefined';
                 };
@@ -420,14 +420,14 @@
 
                 _this.func = (name, fn) => {
                     // validate
-                    if (name === '_') { throw `${name} is not allowed.`; }
+                    if (name === '_') { throw `${className}.${name} is not allowed.`; }
                     if (!fn) { fn = noop; }
-
+                    
                     // special names
                     if (isSpecialMember(name)) {
                         name = '_' + name;
                     }
-                    
+
                     // add mixed attr
                     if (mixin_being_applied !== null) {
                         attr('mixed', mixin_being_applied);
@@ -450,10 +450,10 @@
                         // check
                         let desc = Object.getOwnPropertyDescriptor(_this, name);
                         if (typeof desc.value !== 'function') {
-                            throw `${name} is not a function to override.`;
+                            throw `${className}.${name} is not a function to override.`;
                         }
                         if (hasAttrEx('sealed', name)) {
-                            throw `${name} cannot override a sealed function.`;
+                            throw `${className}.${name} cannot override a sealed function.`;
                         }
 
                         // redefine
@@ -471,7 +471,11 @@
                         });
                     } else {
                         // duplicate check
-                        if (!isSpecialMember(name) && isDefined(name, true)) { throw `${name} already defined either as public, protected or private member.`; }
+                        if (isDefined(name, true)) { 
+                            if (name === '_constructor') { name = 'constructor'; }
+                            if (name === '_dispose') { name = 'dispose'; }
+                            throw `${className}.${name} is already defined. Use override, if required.`; 
+                        }
 
                         // define
                         Object.defineProperty(_this, name, {
@@ -496,7 +500,7 @@
                 };
                 _this.prop = (name, valueOrGetter, setter) => {
                     // special names
-                    if (isSpecialMember(name)) {  throw `${name} can only be defined as a function.`; }
+                    if (isSpecialMember(name)) {  throw `${className}.${name} can only be defined as a function.`; }
 
                     // default value
                     if (typeof valueOrGetter === 'undefined' && typeof setter === 'undefined') { valueOrGetter = null; }
@@ -524,17 +528,17 @@
                         // check
                         let desc = Object.getOwnPropertyDescriptor(_this, name);
                         if (typeof desc.get !== 'function') {
-                            throw `Not a property to override. (${name})`;
+                            throw `Not a property to override. (${className}.${name})`;
                         }
                         if (hasAttrEx('sealed', name)) {
-                            throw `Cannot override a sealed property. (${name})`;
+                            throw `Cannot override a sealed property. (${className}.${name})`;
                         }
                         if (hasAttrEx('static', name)) { 
-                            throw `Cannot override a static property. (${name})`;
+                            throw `Cannot override a static property. (${className}.${name})`;
                         }
                     } else {
                         // duplicate check
-                        if (isDefined(name, true)) { throw `${name} already defined either as public, protected or private member.`; }
+                        if (isDefined(name, true)) { throw `${className}.${name} already defined either as public, protected or private member.`; }
                     }
 
                     // define or redefine
@@ -555,7 +559,7 @@
                             enumerable: true,
                             get: () => { return propHost[name]; },
                             set: hasAttr('readonly', attrs) ? (value) => {
-                                if (_this._.constructing === className) {
+                                if (_this._.constructing) {
                                     propHost[name] = value;
                                 } else {
                                     throw `${name} is readonly.`;
@@ -565,14 +569,14 @@
                             }                            
                         });
                     } else {
-                        if (hasAttr('static', attrs)) { throw `Static properties cannot be defined with a getter/setter. (${name})`}
+                        if (hasAttr('static', attrs)) { throw `Static properties cannot be defined with a getter/setter. (${className}.${name})`}
                         Object.defineProperty(_this, name, {
                             __proto__: null,
                             configurable: true,
                             enumerable: true,
                             get: valueOrGetter,
                             set: hasAttr('readonly', attrs) ? (value) => { 
-                                if (_this._.constructing === className) {
+                                if (_this._.constructing) {
                                     if (typeof setter === 'function') { setter(value); }
                                 } else {
                                     throw `${name} is readonly.`;
@@ -594,10 +598,10 @@
                 };
                 _this.event = (name) => {
                     // special names
-                    if (isSpecialMember(name)) {  throw `${name} can only be defined as a function.`; }
+                    if (isSpecialMember(name)) {  throw `${className}.${name} can only be defined as a function.`; }
 
                     // duplicate check
-                    if (isDefined(name, true)) { throw `${name} already defined either as public, protected or private member.`; }
+                    if (isDefined(name, true)) { throw `${className}.${name} already defined either as public, protected or private member.`; }
 
                     // add meta
                     meta[name] = [];
@@ -606,7 +610,7 @@
                   
                     // discard attributes
                     if (bucket.length > 0) {
-                        console.warn(`Attributes can only be applied to properties or functions. ${name} is an event.`);
+                        console.warn(`Attributes can only be applied to properties or functions. ${className}.${name} is an event.`);
                         bucket = []; 
                     }
 
@@ -647,6 +651,8 @@
                     // finally hold the reference for reflector
                     meta[name].ref = _this[name];
                 };
+                _this.noop = noop;
+                _this.noopAsync = noopAsync;
 
                 // attach instance reflector
                 _this._ = _this._ || {};
@@ -726,32 +732,36 @@
                 delete _this.func;
                 delete _this.prop;
                 delete _this.event;
-
-                // constructor
-                if (typeof _this._constructor === 'function') {
-                    _this._.constructing = className;
-                    _this._constructor(...classArgs);
-                    delete _this._constructor;
-                    delete _this._.constructing;
-                }
-
-                // dispose
-                if (typeof _this._dispose === 'function') {
-                    _this._.dispose = _this._.dispose || [];
-                    let dispose = _this._dispose;
-                    _this._.dispose.push(dispose);
-                    delete _this._dispose;
-                }
+                delete _this.noop;
+                delete _this.noopAsync;
 
                 // weave members with configured advises
                 weave();
+
+                // // top level class
+                if (!isNeedProtected) { 
+                    // constructor
+                    if (typeof _this._constructor === 'function') {
+                        _this._.constructing = true;
+                        _this._constructor(...classArgs);
+                        _this._.constructor = this._constructor;
+                        delete _this._constructor;
+                        delete _this._.constructing;
+                    }
+
+                    // dispose
+                    if (typeof _this._dispose === 'function') {
+                        _this._._dispose = _this._dispose;
+                        delete _this._dispose;
+                    }
+                }
 
                 // get exposable _this
                 let isCopy = false;
                 doCopy('_'); // '_' is a very special member
                 for(let member in _this) {
                     isCopy = false;
-                    if (_this.hasOwnProperty(member) && !isSpecialMember(member)) {
+                    if (_this.hasOwnProperty(member)) {
                         isCopy = true;
                         if (isOwnMember(member)) {
                             if (isPrivateMember(member)) { isCopy = false; }
@@ -889,17 +899,17 @@
 
             // definition helpers
             _this.func = (name) => {
-                if (typeof meta[name] !== 'undefined') { throw `${name} already defined.`; }
+                if (typeof meta[name] !== 'undefined') { throw `${className}.${name} already defined.`; }
                 meta[name] = [];
                 meta[name].type = 'func';
             };
             _this.prop = (name) => {
-                if (typeof meta[name] !== 'undefined') { throw `${name} already defined.`; }
+                if (typeof meta[name] !== 'undefined') { throw `${className}.${name} already defined.`; }
                 meta[name] = [];
                 meta[name].type = 'prop';
             };
             _this.event = (name) => {
-                if (typeof meta[name] !== 'undefined') { throw `${name} already defined.`; }
+                if (typeof meta[name] !== 'undefined') { throw `${className}.${name} already defined.`; }
                 meta[name] = [];
                 meta[name].type = 'event';
             };
@@ -967,11 +977,8 @@
             try {
                 scopeFn(obj);
             } finally {
-                if (obj._ && obj._.dispose && obj._.dispose.length > 0) {
-                    obj._.dispose.reverse();
-                    for(let dispose of obj._.dispose) {
-                        dispose();
-                    }
+                if (obj._ && typeof obj._.dispose === 'function') {
+                    obj._.dispose();
                 }
             }
         };
@@ -979,7 +986,7 @@
         // as
         // as(object, intf)
         oojs.as = (obj, intf) => {
-            if (obj._isImplements(intf._.name)) { return obj; }
+            if (obj._.isImplements(intf._.name)) { return obj; }
             return null;
         };
 
@@ -1066,7 +1073,7 @@
             return result;
         };
 
-        // attributes
+        // attribute
         oojs.Attribute = oojs.Class('Attribute', function() {
             let decoratorFn = null;
             this.func('constructor', (...args) => {
@@ -1086,15 +1093,17 @@
                 delete source.unsubscribe;
             });
         });
+        
+        // async
+        // async() 
         oojs.Container.register(oojs.Class('async', oojs.Attribute, function() {
             this.decorator((obj, type, name, descriptor) => {
                 // validate
-                if (['func'].indexOf(type) === -1) { throw `async attribute cannot be applied on ${type} members. (${name})`; }
-                if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `async attribute cannot be applied on special function. (${name})`; }
+                if (['func'].indexOf(type) === -1) { throw `async attribute cannot be applied on ${type} members. (${className}.${name})`; }
+                if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `async attribute cannot be applied on special function. (${className}.${name})`; }
 
                 // decorate
                 let fn = descriptor.value;
-                if (fn === noop) { fn = noopasync; }
                 descriptor.value = function(...args) {
                     return new Promise((resolve, reject) => {
                         let fnArgs = [resolve, reject].concat(args);
@@ -1103,10 +1112,14 @@
                 }.bind(obj);
             });
         }));
+
+        // deprecate
+        // deprecate([message])
+        //  - message: any custom message
         oojs.Container.register(oojs.Class('deprecate', oojs.Attribute, function() {
             this.decorator((obj, type, name, descriptor) => {
                 // validate
-                if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `deprecate attribute cannot be applied on special function. (${name})`; }
+                if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `deprecate attribute cannot be applied on special function. (${className}.${name})`; }
 
                 // decorate
                 let msg = `${name} is deprecated.`;
@@ -1146,21 +1159,34 @@
                 }
             });
         }));
+
+        // enumerate
+        // enumerate(flag)
+        //  - flag: true/false
         oojs.Container.register(oojs.Class('enumerate', oojs.Attribute, function() {
             this.decorator((obj, type, name, descriptor) => {
                 // validate
-                if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `enumerate attribute cannot be applied on special function. (${name})`; }
+                if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `enumerate attribute cannot be applied on special function. (${className}.${name})`; }
 
                 // decorate
                 let flag = this.args[0];
                 descriptor.enumerable = flag;
             });
         }));
+
+        // inject
+        // inject(type, [typeArgs])
+        //  - type: 
+        //      type class itself to inject, OR
+        //      type class name, OR
+        //      type class name on server | type class name on client
+        //  - typeArgs: constructor args to pass when type class instance is created
+        // NOTE: types being referred here must be available in container so sync resolve can happen
         oojs.Container.register(oojs.Class('inject', oojs.Attribute, function() {
             this.decorator((obj, type, name, descriptor) => {
                 // validate
-                if (['func', 'prop'].indexOf(type) === -1) { throw `inject attribute cannot be applied on ${type} members. (${name})`; }
-                if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `inject attribute cannot be applied on special function. (${name})`; }
+                if (['func', 'prop'].indexOf(type) === -1) { throw `inject attribute cannot be applied on ${type} members. (${className}.${name})`; }
+                if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `inject attribute cannot be applied on special function. (${className}.${name})`; }
 
                 // decorate
                 let Type = this.args[0],
@@ -1193,11 +1219,19 @@
                 }
             });
         }));
+
+        // multiinject
+        // multiinject(type, [typeArgs])
+        //  - type: 
+        //      type class name, OR
+        //      type class name on server | type class name on client
+        //  - typeArgs: constructor args to pass when type class instance is created
+        // NOTE: types being referred here must be available in container so sync resolve can happen
         oojs.Container.register(oojs.Class('multiinject', oojs.Attribute, function() {
             this.decorator((obj, type, name, descriptor) => {
                 // validate
-                if (['func', 'prop'].indexOf(type) === -1) { throw `multiinject attribute cannot be applied on ${type} members. (${name})`; }
-                if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `multiinject attribute cannot be applied on special function. (${name})`; }
+                if (['func', 'prop'].indexOf(type) === -1) { throw `multiinject attribute cannot be applied on ${type} members. (${className}.${name})`; }
+                if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `multiinject attribute cannot be applied on special function. (${className}.${name})`; }
 
                 // decorate
                 let Type = this.args[0],
@@ -1215,7 +1249,7 @@
                     }
                     instance = oojs.Container.resolve(Type, true, ...typeArgs)
                 } else {
-                    throw `multiinject attribute does not support direct type injections. (${name})`;
+                    throw `multiinject attribute does not support direct type injections. (${className}.${name})`;
                 }
                 switch(type) {
                     case 'func':

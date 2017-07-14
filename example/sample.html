@@ -41,6 +41,7 @@ TODO:
             var Vehicle = Class('Vehicle', [Mix1, Mix2, ITest], function(attr) {
                 //attr('abstract');
                 this.func('constructor', (cc) => {
+                    console.log('in constructor of Vehicle');
                     this.cc = cc;
                     this.capacity = cc;
                     this.prop3 = 201; // readonly can be defined in constructor
@@ -159,8 +160,10 @@ TODO:
             });
             
             var Car = Class('Car', Vehicle, function(attr) {
-                attr('singleton');       
-                this.func('constructor', (val) => {
+                //attr('singleton');       
+                attr('override');
+                this.func('constructor', (base, val) => {
+                    base(val);
                     console.log('in constructor of Car w prop1 = ' + this.prop1);
                     this.prop1 = this.prop1 * val;
                     this.aaaBBBB = 200; // available internally but hidden externally
@@ -226,6 +229,7 @@ TODO:
                 //attr('override');
                 // this.prop('prop1', 4000);
 
+                attr('override');
                 this.func('dispose', () => {
                     console.log('disposed Car');
                 });
@@ -287,6 +291,42 @@ TODO:
                 window.v1 = v1;
                 window.cls2 = Vehicle;
             });  
+
+            var Level0Class = Class('Level0', function(attr) {
+                this.func('constructor', (arg1) => {
+                    console.log('In Level0: ' + arg1);
+                });
+                this.func('dispose', () => {
+                    console.log('In Level0');
+                });
+            });
+            var Level1Class = Class('Level1', Level0Class, function(attr) {
+                // attr('override');
+                // this.func('constructor', (base, arg1) => {
+                //     base(arg1);
+                //     console.log('In Level1');
+                // });
+
+                // attr('override');
+                // this.func('dispose', (base) => {
+                //     base();
+                //     console.log('In Level1');
+                // });                
+            });
+            var Level2Class = Class('Level2', Level1Class, function(attr) {
+                // attr('override');
+                // this.func('constructor', (base, arg1) => {
+                //     base(arg1);
+                //     console.log('In Level2');
+                // });
+                // attr('override');
+                // this.func('dispose', (base) => {
+                //     base();
+                //     console.log('In Level2');
+                // });                
+            });
+
+            window.Level2Class = Level2Class;
 
             var system = Assembly('system', {
                 Vehicle: Vehicle,
