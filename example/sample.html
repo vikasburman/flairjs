@@ -293,19 +293,33 @@ TODO:
             });  
 
             var Level0Class = Class('Level0', function(attr) {
-                this.func('constructor', (arg1) => {
-                    console.log('In Level0: ' + arg1);
-                });
-                this.func('dispose', () => {
-                    console.log('In Level0');
+                // this.func('constructor', (arg1) => {
+                //     console.log('In Level0: ' + arg1);
+                // });
+                // this.func('dispose', () => {
+                //     console.log('In Level0');
+                // });
+                attr('async');
+                this.func('test', (a1, a2, a3, a4) => {
+                    console.log('i am base');
                 });
             });
             var Level1Class = Class('Level1', Level0Class, function(attr) {
-                // attr('override');
-                // this.func('constructor', (base, arg1) => {
-                //     base(arg1);
-                //     console.log('In Level1');
-                // });
+                //attr('override');
+                this.func('constructor', (arg1) => {
+                    //base(arg1);
+                    console.log('In Level1');
+                });
+
+                attr('override');
+                attr('async');
+                this.func('test', (a1, a2, a3, a4) => {
+                    debugger;
+                    console.log(a1);
+                    console.log(a2);
+                    console.log(a3);
+                    console.log(a4);
+                });
 
                 // attr('override');
                 // this.func('dispose', (base) => {

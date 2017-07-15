@@ -449,10 +449,14 @@
                     if (hasAttr('override', attrs)) {
                         // check
                         let desc = Object.getOwnPropertyDescriptor(_this, name);
-                        if (typeof desc.value !== 'function') {
+                        if (!desc || typeof desc.value !== 'function') {
+                            if (name === '_constructor') { name = 'constructor'; }
+                            if (name === '_dispose') { name = 'dispose'; }
                             throw `${className}.${name} is not a function to override.`;
                         }
-                        if (hasAttrEx('sealed', name)) {
+                        if (hasAttrEx('sealed', name) && !hasAttr('sealed', attrs)) {
+                            if (name === '_constructor') { name = 'constructor'; }
+                            if (name === '_dispose') { name = 'dispose'; }
                             throw `${className}.${name} cannot override a sealed function.`;
                         }
 
@@ -474,7 +478,7 @@
                         if (isDefined(name, true)) { 
                             if (name === '_constructor') { name = 'constructor'; }
                             if (name === '_dispose') { name = 'dispose'; }
-                            throw `${className}.${name} is already defined. Use override, if required.`; 
+                            throw `${className}.${name} is already defined.`; 
                         }
 
                         // define
@@ -527,18 +531,18 @@
                         // when overriding a property, it can only be redefined completely
                         // check
                         let desc = Object.getOwnPropertyDescriptor(_this, name);
-                        if (typeof desc.get !== 'function') {
+                        if (!desc || typeof desc.get !== 'function') {
                             throw `Not a property to override. (${className}.${name})`;
                         }
-                        if (hasAttrEx('sealed', name)) {
+                        if (hasAttrEx('sealed', name) && !hasAttr('sealed', attrs)) {
                             throw `Cannot override a sealed property. (${className}.${name})`;
                         }
-                        if (hasAttrEx('static', name)) { 
+                        if (hasAttrEx('static', name) && !hasAttr('static', attrs)) { 
                             throw `Cannot override a static property. (${className}.${name})`;
                         }
                     } else {
                         // duplicate check
-                        if (isDefined(name, true)) { throw `${className}.${name} already defined either as public, protected or private member.`; }
+                        if (isDefined(name, true)) { throw `${className}.${name} is already defined.`; }
                     }
 
                     // define or redefine
@@ -601,7 +605,7 @@
                     if (isSpecialMember(name)) {  throw `${className}.${name} can only be defined as a function.`; }
 
                     // duplicate check
-                    if (isDefined(name, true)) { throw `${className}.${name} already defined either as public, protected or private member.`; }
+                    if (isDefined(name, true)) { throw `${className}.${name} is already defined.`; }
 
                     // add meta
                     meta[name] = [];
@@ -899,17 +903,17 @@
 
             // definition helpers
             _this.func = (name) => {
-                if (typeof meta[name] !== 'undefined') { throw `${className}.${name} already defined.`; }
+                if (typeof meta[name] !== 'undefined') { throw `${className}.${name} is already defined.`; }
                 meta[name] = [];
                 meta[name].type = 'func';
             };
             _this.prop = (name) => {
-                if (typeof meta[name] !== 'undefined') { throw `${className}.${name} already defined.`; }
+                if (typeof meta[name] !== 'undefined') { throw `${className}.${name} is already defined.`; }
                 meta[name] = [];
                 meta[name].type = 'prop';
             };
             _this.event = (name) => {
-                if (typeof meta[name] !== 'undefined') { throw `${className}.${name} already defined.`; }
+                if (typeof meta[name] !== 'undefined') { throw `${className}.${name} is already defined.`; }
                 meta[name] = [];
                 meta[name].type = 'event';
             };
