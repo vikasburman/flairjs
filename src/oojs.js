@@ -103,6 +103,12 @@
                 }
 
                 // definition helper
+                const guid = () => {
+                    return '_xxxxxxxx_xxxx_4xxx_yxxx_xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+                        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                        return v.toString(16);
+                    });
+                };
                 const isSingletonClass = () => {
                     return hasAttr('singleton', meta['_constructor']);
                 }
@@ -563,7 +569,7 @@
                             enumerable: true,
                             get: () => { return propHost[name]; },
                             set: hasAttr('readonly', attrs) ? (value) => {
-                                if (_this._.constructing) {
+                                if (_this._.constructing || (hasAttr('once', attrs) && !propHost[name])) {
                                     propHost[name] = value;
                                 } else {
                                     throw `${name} is readonly.`;
@@ -580,7 +586,7 @@
                             enumerable: true,
                             get: valueOrGetter,
                             set: hasAttr('readonly', attrs) ? (value) => { 
-                                if (_this._.constructing) {
+                                if (_this._.constructing || (hasAttr('once', attrs) && !valueOrGetter())) {
                                     if (typeof setter === 'function') { setter(value); }
                                 } else {
                                     throw `${name} is readonly.`;
@@ -662,6 +668,7 @@
                 _this._ = _this._ || {};
                 _this._.type = 'instance';
                 _this._.name = className;
+                _this._.id = guid();
                 _this._.instanceOf = _this._.instanceOf || [];
                 if (!inherits) {
                     _this._.instanceOf.push({name: 'Object', type: Object, meta: [], mixins: [], interfaces: []});
@@ -1392,6 +1399,7 @@
                 refl.getValue = () => { return ref.get(); }
                 refl.setValue = (value) => { return ref.set(value); }
                 refl.isReadOnly = () => { return target._._.hasAttrEx('readonly', name); };
+                refl.isSetOnce = () => { return target._._.hasAttrEx('readonly', name) && target._._.hasAttrEx('once', name); };
                 refl.isStatic = () => { return target._._.hasAttrEx('static', name); };
                 refl.isSerializable = () => { return target._._.isSerializableMember(name); }
                 return refl;

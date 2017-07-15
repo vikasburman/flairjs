@@ -337,7 +337,21 @@ TODO:
                 // this.func('dispose', (base) => {
                 //     base();
                 //     console.log('In Level2');
-                // });                
+                // });         
+
+                attr('readonly');
+                attr('once');
+                this.prop('vikas', null);       
+
+                let v2 = null;
+                attr('readonly');
+                attr('once');
+                this.prop('vikas2', () => {
+                    return v2;
+                }, (value) => {
+                    v2 = value;
+                });       
+
             });
 
             window.Level2Class = Level2Class;
