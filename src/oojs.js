@@ -81,7 +81,7 @@
                     classArgs = args;
                 } else {
                     staticInterface = Class._.static;
-                    if (_flag) {
+                    if (typeof _flag !== 'undefined') { // as it can be a null value as well
                         classArgs = classArgs.concat([_flag]);
                         if (_static) {
                             classArgs = classArgs.concat([_static]);
@@ -505,8 +505,9 @@
                     // apply attributes in order they are defined
                     applyAttr(name);   
 
-                    // finally hold the reference for reflector
+                    // finally hold the references for reflector
                     meta[name].ref = _this[name];
+                    meta[name].raw = fn;
                 };
                 _this.prop = (name, valueOrGetter, setter) => {
                     // special names
@@ -553,33 +554,52 @@
 
                     // define or redefine
                     if (typeof valueOrGetter !== 'function') {
-                        let propHost = null;
+                        let propHost = null,
+                            uniqueName = '';
                         if (hasAttrEx('static', name)) { 
+                            uniqueName = name;
+                            if (hasAttrEx('session', name) || hasAttrEx('state', name)) {
+                                throw `A static property cannot be stored in session/state. (${className}.${name})`;
+                            }
                             propHost = staticInterface;
-                            if (!propHost[name]) {
-                                propHost[name] = valueOrGetter; // shared (static) copy
+                            if (!propHost[uniqueName]) { 
+                                propHost[uniqueName] = valueOrGetter; // shared (static) copy
+                            }
+                        } else if (hasAttrEx('session', name)) {
+                            uniqueName = className + '_' + name;
+                            propHost = sessionStorage;
+                            if (typeof propHost[uniqueName] === 'undefined') {
+                                propHost[uniqueName] = valueOrGetter; // private copy
+                            }
+                        } else if (hasAttrEx('state', name)) {
+                            uniqueName = className + '_' + name;
+                            propHost = localStorage;
+                            if (typeof propHost[uniqueName] === 'undefined') {
+                                propHost[uniqueName] = valueOrGetter; // private copy
                             }
                         } else {
+                            uniqueName = name;
                             propHost = props;
-                            propHost[name] = valueOrGetter; // private copy
+                            propHost[uniqueName] = valueOrGetter; // private copy
                         }
                         Object.defineProperty(_this, name, {
                             __proto__: null,
                             configurable: true,
                             enumerable: true,
-                            get: () => { return propHost[name]; },
+                            get: () => { return propHost[uniqueName]; },
                             set: hasAttr('readonly', attrs) ? (value) => {
-                                if (_this._.constructing || (hasAttr('once', attrs) && !propHost[name])) {
-                                    propHost[name] = value;
+                                if (_this._.constructing || (hasAttr('once', attrs) && !propHost[uniqueName])) {
+                                    propHost[uniqueName] = value;
                                 } else {
                                     throw `${name} is readonly.`;
                                 }
                             } : (value) => {
-                                propHost[name] = value;
+                                propHost[uniqueName] = value;
                             }                            
                         });
                     } else {
-                        if (hasAttr('static', attrs)) { throw `Static properties cannot be defined with a getter/setter. (${className}.${name})`}
+                        if (hasAttr('static', attrs)) { throw `Static properties cannot be defined with a getter/setter. (${className}.${name})`; }
+                        if (hasAttr('session', attrs) || hasAttr('state', attrs)) { throw `Properties defined with a getter/setter cannot be stored in session/state. (${className}.${name})`; }
                         Object.defineProperty(_this, name, {
                             __proto__: null,
                             configurable: true,
@@ -678,6 +698,10 @@
                 _this._.isInstanceOf = (name) => {
                     return (_this._.instanceOf.findIndex((item) => { return item.name === name; }) !== -1);
                 };
+                _this._.raw = (name) => {
+                    if (meta[name] && meta[name].raw) { return meta[name].raw; }
+                    return null;
+                },
                 _this._.isMixed = (name) => {
                     let result = false;
                     for (let item of _this._.instanceOf) {
@@ -725,7 +749,7 @@
 
                 // abstract consideration
                 if (_flag !== theFlag && isAbstractClass()) {
-                    throw 'Cannot create instance of an abstract class.';
+                    throw `Cannot create instance of an abstract class. (${className})`;
                 }
 
                 // apply mixins
@@ -822,6 +846,10 @@
                     }
                 }
 
+                // public and (protected+private) instance interface
+                _this._.pu = (isNeedProtected ? null : _exposed_this);
+                _this._.pr = (isNeedProtected ? null : _this);
+
                 // singleton
                 if (isSingletonClass()) { // store for next use
                     Class._.isSingleton = () => { return true; };
@@ -910,17 +938,17 @@
 
             // definition helpers
             _this.func = (name) => {
-                if (typeof meta[name] !== 'undefined') { throw `${className}.${name} is already defined.`; }
+                if (typeof meta[name] !== 'undefined') { throw `${interfaceName}.${name} is already defined.`; }
                 meta[name] = [];
                 meta[name].type = 'func';
             };
             _this.prop = (name) => {
-                if (typeof meta[name] !== 'undefined') { throw `${className}.${name} is already defined.`; }
+                if (typeof meta[name] !== 'undefined') { throw `${interfaceName}.${name} is already defined.`; }
                 meta[name] = [];
                 meta[name].type = 'prop';
             };
             _this.event = (name) => {
-                if (typeof meta[name] !== 'undefined') { throw `${className}.${name} is already defined.`; }
+                if (typeof meta[name] !== 'undefined') { throw `${interfaceName}.${name} is already defined.`; }
                 meta[name] = [];
                 meta[name].type = 'event';
             };
@@ -1404,7 +1432,7 @@
                 refl.isSerializable = () => { return target._._.isSerializableMember(name); }
                 return refl;
             };
-            const FuncReflector = function(target, name, ref) {
+            const FuncReflector = function(target, name, ref, raw) {
                 let refl = new CommonInstanceMemberReflector('func', target, name, ref);
                 refl.invoke = (...args) => { return ref(...args); };
                 refl.getAspects = () => {
@@ -1420,6 +1448,7 @@
                     }
                     return items;                    
                 };
+                refl.getRaw = () => { return raw; };
                 refl.isASync = () => { return target._._.hasAttrEx('async', name); }
                 refl.isConstructor = () => { return name === '_constructor'; }
                 refl.isDisposer = () => { return name === '_dispose'; }
@@ -1476,15 +1505,15 @@
                                     attrs = instance.meta[name];
                                     switch(instance.meta[name].type) {
                                         case 'func':
-                                            lastMember = new FuncReflector(target, name, instance.meta[name].ref, attrs);
+                                            lastMember = new FuncReflector(target, name, instance.meta[name].ref, instance.meta[name].raw);
                                             members.push(lastMember);
                                             break;
                                         case 'prop':
-                                            lastMember = new PropReflector(target, name, instance.meta[name].ref, attrs);
+                                            lastMember = new PropReflector(target, name, instance.meta[name].ref);
                                             members.push(lastMember);
                                             break;
                                         case 'event':
-                                            lastMember = new EventReflector(target, name, instance.meta[name].ref, attrs);
+                                            lastMember = new EventReflector(target, name, instance.meta[name].ref);
                                             members.push(lastMember);
                                             break;
                                         default:
