@@ -83,9 +83,9 @@
                     staticInterface = Class._.static;
                     if (typeof _flag !== 'undefined') { // as it can be a null value as well
                         classArgs = classArgs.concat([_flag]);
-                        if (_static) {
+                        if (typeof _static !== 'undefined') { // as it can be a null value as well
                             classArgs = classArgs.concat([_static]);
-                            if (args) {
+                            if (typeof args !== 'undefined') { // as it can be a null value as well
                                 classArgs = classArgs.concat(args);
                             }
                         }
@@ -555,7 +555,8 @@
                     // define or redefine
                     if (typeof valueOrGetter !== 'function') {
                         let propHost = null,
-                            uniqueName = '';
+                            uniqueName = '',
+                            isStorageHost = false;
                         if (hasAttrEx('static', name)) { 
                             uniqueName = name;
                             if (hasAttrEx('session', name) || hasAttrEx('state', name)) {
@@ -568,14 +569,16 @@
                         } else if (hasAttrEx('session', name)) {
                             uniqueName = className + '_' + name;
                             propHost = sessionStorage;
+                            isStorageHost = true;
                             if (typeof propHost[uniqueName] === 'undefined') {
-                                propHost[uniqueName] = valueOrGetter; // private copy
+                                propHost[uniqueName] = JSON.stringify({value: valueOrGetter}); 
                             }
                         } else if (hasAttrEx('state', name)) {
                             uniqueName = className + '_' + name;
                             propHost = localStorage;
+                            isStorageHost = true;
                             if (typeof propHost[uniqueName] === 'undefined') {
-                                propHost[uniqueName] = valueOrGetter; // private copy
+                                propHost[uniqueName] = JSON.stringify({value: valueOrGetter});
                             }
                         } else {
                             uniqueName = name;
@@ -586,15 +589,29 @@
                             __proto__: null,
                             configurable: true,
                             enumerable: true,
-                            get: () => { return propHost[uniqueName]; },
+                            get: () => { 
+                                if (isStorageHost) { 
+                                    return JSON.parse(propHost[uniqueName]).value;
+                                } else {
+                                    return propHost[uniqueName]; 
+                                }
+                            },
                             set: hasAttr('readonly', attrs) ? (value) => {
                                 if (_this._.constructing || (hasAttr('once', attrs) && !propHost[uniqueName])) {
-                                    propHost[uniqueName] = value;
+                                    if (isStorageHost) {
+                                        propHost[uniqueName] = JSON.stringify({value: value});
+                                    } else {
+                                        propHost[uniqueName] = value;
+                                    }
                                 } else {
                                     throw `${name} is readonly.`;
                                 }
                             } : (value) => {
-                                propHost[uniqueName] = value;
+                                if (isStorageHost) { 
+                                    propHost[uniqueName] = JSON.stringify({value: value});
+                                } else {
+                                    propHost[uniqueName] = value;
+                                }
                             }                            
                         });
                     } else {
