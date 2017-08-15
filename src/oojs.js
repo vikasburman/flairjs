@@ -7,13 +7,14 @@
 (function() {
     // the definition
     const def = (opts = {}) => {
+        let isServer = (new Function("try {return this===global;}catch(e){return false;}"))(),
+            getGlobal = new Function("try {return (this===global ? global : window);}catch(e){return window;}");
         let oojs = {},
             noop = () => {},
             noopAsync = (resolve, reject) => { resolve(); },
-            isServer = ((typeof global === 'object' && typeof exports === 'object') ? true : false),
             options = {
                 env: opts.env || (isServer ? 'server' : 'client'),
-                global: (isServer ? global : window),
+                global: getGlobal(),
                 supressGlobals: (typeof opts.supressGlobals === 'undefined' ? false : opts.supressGlobals),
                 symbols: opts.symbols || []
             };
@@ -126,6 +127,20 @@
                     return (_this._.instanceOf.findIndex((item) => {
                         return (item.meta[member] ? true : false);
                     }) !== -1);   
+                };
+                const memberType = (member) => {
+                    let result = '';
+                    if (typeof meta[member] !== 'undefined') {
+                        result = meta[member].type;
+                    } else {
+                        for(let instance of _this._.instanceOf) {
+                            if (instance.meta[member]) {
+                                result = instance.meta[member].type;
+                                break;
+                            }
+                        }
+                    }
+                    return result;                        
                 };
                 const isSealedMember = (member) => {
                     return hasAttr('sealed', meta[member]);
@@ -406,10 +421,10 @@
                     let mappedName = '';
                     for(member in _this) {
                         if (_this.hasOwnProperty(member)) {
-                            if (_this._.isProp(member) &&
+                            if ((memberType(member) === 'prop') &&
                                 isSerializableMember(member) &&
-                                !_this._.isReadOnly(member) && 
-                                !_this._.isStatic(member) && 
+                                !hasAttrEx('readonly', member) && 
+                                !isStaticMember(member) && 
                                 !isPrivateMember(member) && 
                                 !isProtectedMember(member) && 
                                 !isSpecialMember(member)) {
@@ -1012,6 +1027,19 @@
 
             // return
             return Object.freeze(_enum);
+        };
+
+        // Structure
+        // Structure(structureName, factoryFn(args) {})
+        oojs.Structure = (structureName, factoryFn) => {
+            let _structure = factoryFn;
+            _structure._ = {
+                name: structureName,
+                type: 'structure'
+            };
+
+            // return
+            return _structure;
         };
 
         // Assembly
@@ -1659,6 +1687,10 @@
                 refl.getValues = () => { return target._.values(); }
                 return refl;
             };
+            const StructureReflector = function(target) {
+                let refl = new CommonTypeReflector(target);
+                return refl;
+            };            
             const AssemblyReflector = function(target) {
                 let refl = new CommonTypeReflector(target);
                 refl.getMembers = () => { 
@@ -1719,6 +1751,7 @@
                 case 'instance': ref = new InstanceReflector(forTarget); break;
                 case 'class': ref = new ClassReflector(forTarget); break;
                 case 'enum': ref = new EnumReflector(forTarget); break;
+                case 'structure': ref = new StructureReflector(forTarget); break;
                 case 'assembly': ref = new AssemblyReflector(forTarget); break;
                 case 'mixin': ref = new MixinReflector(forTarget); break;
                 case 'interface': ref = new InterfaceReflector(forTarget); break;
@@ -1733,7 +1766,7 @@
         // expose to global environment
         if (!options.supressGlobals) { 
             let g = options.global;
-            g.Class = oojs.Class; g.Mixin = oojs.Mixin; g.Interface = oojs.Interface; g.Enum = oojs.Enum; g.Assembly = oojs.Assembly;
+            g.Class = oojs.Class; g.Mixin = oojs.Mixin; g.Interface = oojs.Interface; g.Structure = oojs.Structure;  g.Enum = oojs.Enum; g.Assembly = oojs.Assembly;
             g.Attribute = oojs.Attribute; g.Aspect = oojs.Aspect; 
             g.Aspects = oojs.Aspects; g.Container = oojs.Container;
             g.Serializer = oojs.Serializer; g.Reflector = oojs.Reflector;
