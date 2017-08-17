@@ -1219,7 +1219,7 @@
                         }
                         if (descriptor.set) {
                             let _set = descriptor.set;
-                           descriptor.set = function(value) {
+                            descriptor.set = function(value) {
                                 console.warn(msg);
                                 return _set(value);
                             }.bind(obj);
