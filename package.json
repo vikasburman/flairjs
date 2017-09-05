@@ -9,7 +9,8 @@
   "repository": "https://github.com/vikasburman/oojs.git",
   "scripts": {
     "test": "gulp test",
-    "build": "gulp build"
+    "build": "gulp build",
+    "start": "open ./example/index.html"
   },
   "devDependencies": {
     "babel-eslint": "^7.2.3",
