@@ -1174,7 +1174,32 @@
         oojs.Attribute = oojs.Class('Attribute', function() {
             let decoratorFn = null;
             this.func('constructor', (...args) => {
-                this.args = args;
+                // args can be static or dynamic
+                // static ones are defined just as is, e.g.,
+                //  ('text', 012, false, Reference)
+                // dynamic ones are defined as special string
+                //  ('[funcName]', 012, false, Reference)
+                // when string is defined as '[...]', this argument is replaced by a 
+                // function which can be called (with binded this) to get dynamic value of the argument
+                // the funcName is the name of a private/protected/public
+                // function of the same object where this attribute is applied
+                this.args = [];
+                for(let arg of args) {
+                    if (typeof arg === 'string') {
+                        if (arg.startsWith('[') && arg.endsWith(']')) {
+                            let fnName = arg.replace('[', '').replace(']', ''),
+                                fn = function() {
+                                    let obj = as(this, 'protected');
+                                    return obj[fnName]();
+                                };
+                                this.args.push(fn);
+                        } else {
+                            this.args.push(arg);
+                        }
+                    } else {
+                        this.args.push(arg);
+                    }
+                }
             });
             this.prop('args', []);
             this.func('decorator', (fn) => {
