@@ -1078,6 +1078,8 @@
                     case 'protected': 
                     case 'private':
                         return obj._.pr; break;
+                    default:
+                        throw 'unknown interface type: ' + intf;
                 }
             } else {
                 if (obj._.isImplements(intf._.name)) { return obj; }
