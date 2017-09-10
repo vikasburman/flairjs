@@ -1069,8 +1069,19 @@
 
         // as
         // as(object, intf)
+        //  intf: can be an interface reference or 'public', 'protected', 'private'
         oojs.as = (obj, intf) => {
-            if (obj._.isImplements(intf._.name)) { return obj; }
+            if (typeof intf === 'string') {
+                switch(intf) {
+                    case 'public': 
+                        return obj._.pu; break;
+                    case 'protected': 
+                    case 'private':
+                        return obj._.pr; break;
+                }
+            } else {
+                if (obj._.isImplements(intf._.name)) { return obj; }
+            }
             return null;
         };
 
@@ -1770,7 +1781,7 @@
             g.Attribute = oojs.Attribute; g.Aspect = oojs.Aspect; 
             g.Aspects = oojs.Aspects; g.Container = oojs.Container;
             g.Serializer = oojs.Serializer; g.Reflector = oojs.Reflector;
-            g.using = oojs.using; g.as = oojs.as;
+            g.using = oojs.using; g.as = oojs.as; 
         }
 
         // return
