@@ -582,6 +582,9 @@
                                 propHost[uniqueName] = valueOrGetter; // shared (static) copy
                             }
                         } else if (hasAttrEx('session', name)) {
+                            if (!sessionStorage) {
+                                throw `Session store (sessionStorage) is not available. (${className}.${name})`;
+                            }
                             uniqueName = className + '_' + name;
                             propHost = sessionStorage;
                             isStorageHost = true;
@@ -589,6 +592,9 @@
                                 propHost[uniqueName] = JSON.stringify({value: valueOrGetter}); 
                             }
                         } else if (hasAttrEx('state', name)) {
+                            if (!sessionStorage) {
+                                throw `State store (localStorage) is not available. (${className}.${name})`;
+                            }
                             uniqueName = className + '_' + name;
                             propHost = localStorage;
                             isStorageHost = true;
