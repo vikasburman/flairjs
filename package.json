@@ -17,12 +17,13 @@
     "eslint": "^3.19.0",
     "gulp": "^3.9.1",
     "gulp-eslint": "^3.0.1",
+    "gulp-inject-file": "^0.0.19",
     "gulp-jasmine": "^2.4.2",
     "gulp-rename": "^1.2.2",
+    "gulp-string-replace": "^1.1.2",
     "gulp-uglify": "^2.1.2",
     "jasmine": "^2.6.0",
     "uglify-js-harmony": "^2.7.7"
   },
-  "dependencies": {
-  }
+  "dependencies": {}
 }

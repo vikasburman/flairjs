@@ -33,7 +33,7 @@
     });
 
     // define classes
-    var Vehicle1 = Class('Vehicle', [Mix1, Mix2, ITest], function(attr) {
+    var Vehicle = Class('Vehicle', [Mix1, Mix2, ITest], function(attr) {
         //attr('abstract');
         this.func((cc) => {
             console.log('in constructor of Vehicle');
@@ -154,7 +154,7 @@
         });                    
     });
     
-    window.Vehicle1 = Vehicle1;
+    window.Vehicle = Vehicle;
 
     var Car = Class('Car', Vehicle, function(attr) {
         //attr('singleton');       

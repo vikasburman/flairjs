@@ -7,6 +7,8 @@ const jasmineNode = require('gulp-jasmine');
 const pkg = require('./package.json');
 const uglifyConfig = require('./build/.uglify.json');
 const rename = require('gulp-rename');
+const inject = require('gulp-inject-file');
+const replace = require('gulp-string-replace');
 
 // error handler
 const errorHandler = (name) => {
@@ -18,25 +20,39 @@ const errorHandler = (name) => {
 
 // task: build
 gulp.task('build', (done) => {
-    gulp.src('./src/oojs.js')
+    gulp.src('./src/main.js')
+        // assemble pieces
+        .pipe(inject())
+        .on('error', errorHandler('assemble'))
+
+        // write assembled
+        .pipe(rename((path) => {
+            path.basename = 'oojs'
+        }))
+        .on('error', errorHandler('rename'))        
+        .pipe(gulp.dest('./dist'))
+        .on('error', errorHandler('write-assembled'))
+
         // check for issues
         .pipe(eslint('./build/.eslint.json'))
         // format errors, if any
         .pipe(eslint.format())
         // stop if errors
         .pipe(eslint.failAfterError())
+        
         // minify
         .pipe(minifier(uglifyConfig.js, uglifyjs))
+        .pipe(replace('oojs.js', 'oojs.min.js'))
         .on('error', errorHandler('minifier'))
-        // rename 
+        
+        // write minified
         .pipe(rename((path) => {
             path.extname = '.min.js'; // from <name.whatever>.js to <name.whatever>.min.js
         }))
         .on('error', errorHandler('rename'))
-        // write to output again
-        .pipe(gulp.dest('./src'))
+        .pipe(gulp.dest('./dist'))
         .on('end', done)
-        .on('error', errorHandler('dest'));
+        .on('error', errorHandler('write-minified'));
 });
 
 // task: test
@@ -54,5 +70,5 @@ gulp.task('test', (done) => {
 });
 
 // task: default
-gulp.task('default', ['test', 'build'], () => {
+gulp.task('default', ['build', 'test'], () => {
 });

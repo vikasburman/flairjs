@@ -1,5 +1,5 @@
 // setup
-let oojs = require('../src/oojs.js')(global);
+let oojs = require('../dist/oojs.js')(global);
 
 describe('Globals definition', () => {
     describe('when loaded', () => {

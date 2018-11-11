@@ -44,7 +44,7 @@
             } else if (typeof arg2 === 'function') {
                 factory = arg2;
             }
-
+        
             // seperate mixins and interfaces
             let onlyMixins = [];
             for(let mixin of mixins) {
@@ -54,7 +54,7 @@
                 }
             }
             mixins = onlyMixins;
-
+        
             // build class definition
             let Class = function(_flag, _static, ...args) {
                 let Parent = Class._.inherits,
@@ -70,11 +70,11 @@
                     staticInterface = null,
                     theFlag = '__flag__',
                     mixin_being_applied = null;
-
+        
                 // singleton consideration
                 singleInstance = Class._.singleInstance();
                 if (singleInstance) { return singleInstance; }
-
+        
                 // classArgs and static
                 if (_flag && _flag === theFlag) {
                     staticInterface = _static;
@@ -94,7 +94,7 @@
                         classArgs = args;
                     }
                 }
-
+        
                 // create parent instance
                 if (Parent) {
                     _this = new Parent(theFlag, staticInterface, ...classArgs);
@@ -102,7 +102,7 @@
                         throw `${className} cannot inherit from a sealed/singleton class ${Parent._.name}.`;
                     }
                 }
-
+        
                 // definition helper
                 const guid = () => {
                     return '_xxxxxxxx_xxxx_4xxx_yxxx_xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
@@ -215,7 +215,7 @@
                     return (attrArgs !== null ? attrArgs : []);
                 };
                 const applyAttr = (targetName) => {
-                   let Attr = null,
+                    let Attr = null,
                         targetType = meta[targetName].type,
                         attrArgs = null,
                         attrInstance = null,
@@ -296,10 +296,10 @@
                             after.push(_fn);
                         }
                     }
-
+        
                     // around weaving
                     if (around.length > 0) { around.reverse(); }
-
+        
                     // weaved function
                     let weavedFn = function(...args) {
                         let error = null,
@@ -327,7 +327,7 @@
                                 error = err;
                             }
                         }
-
+        
                         // after functions
                         const runAfterFn = (_ctx) =>{
                             for(let afterFn of after) {
@@ -338,7 +338,7 @@
                                 }
                             }
                         };
-
+        
                         // around func
                         let newFn = fn,
                             isASync = false,
@@ -368,11 +368,11 @@
                         } catch (err) {
                             ctx.error(err);
                         }
-
+        
                         // return
                         return ctx.result();
                     }.bind(_this);
-
+        
                     // done
                     return weavedFn;
                 };
@@ -402,7 +402,7 @@
                     // validate
                     if (['Attribute', 'Aspect'].indexOf(className) !== -1) { return; }
                     if (_this._.isInstanceOf('Attribute') || _this._.isInstanceOf('Aspect')) { return; }
-
+        
                     let classAspects = getClassAspects(),
                         funcAspects = [];
                     for(let entry in meta) {
@@ -438,37 +438,43 @@
                         }
                     }
                 };
-
+        
+                // helper object that gets passed to factory
+                // this itself is attr function, the most common use, and can be use as-is, attr(...)
+                // but also can be used as hook to pass many more helpers, attr func being one of them, to support helper.attr(), helper.sumethingElse() type syntax
+                const factoryHelper = attr;
+                factoryHelper.attr = attr;
+        
                 _this.func = (name, fn) => {
                     // constructor shorthand definition
                     if (typeof name === 'function') { fn = name; name = 'constructor'; }
-
+        
                     // validate
                     if (name === '_') { throw `${className}.${name} is not allowed.`; }
                     if (!fn) { fn = noop; }
-
+        
                     // special names
                     if (isSpecialMember(name)) {
                         name = '_' + name;
                     }
-
+        
                     // add mixed attr
                     if (mixin_being_applied !== null) {
                         attr('mixed', mixin_being_applied);
                     }
-
+        
                     // collect attributes
                     meta[name] = [].concat(bucket);
                     meta[name].type = 'func';
                     meta[name].aspects = [];
                     bucket = [];
                     let attrs = meta[name];
-
+        
                     // conditional check
                     if (!isConditionalMemberOK(name)) {
                         delete meta[name]; return;
                     }
-
+        
                     // define
                     if (hasAttr('override', attrs)) {
                         // check
@@ -483,7 +489,7 @@
                             if (name === '_dispose') { name = 'dispose'; }
                             throw `${className}.${name} cannot override a sealed function.`;
                         }
-
+        
                         // redefine
                         let base = _this[name].bind(_this);
                         Object.defineProperty(_this, name, {
@@ -504,7 +510,7 @@
                             if (name === '_dispose') { name = 'dispose'; }
                             throw `${className}.${name} is already defined.`; 
                         }
-
+        
                         // define
                         Object.defineProperty(_this, name, {
                             configurable: true,
@@ -519,10 +525,10 @@
                             }.bind(_this)
                         });
                     }
-
+        
                     // apply attributes in order they are defined
                     applyAttr(name);   
-
+        
                     // finally hold the references for reflector
                     meta[name].ref = _this[name];
                     meta[name].raw = fn;
@@ -530,22 +536,22 @@
                 _this.prop = (name, valueOrGetter, setter) => {
                     // special names
                     if (isSpecialMember(name)) {  throw `${className}.${name} can only be defined as a function.`; }
-
+        
                     // default value
                     if (typeof valueOrGetter === 'undefined' && typeof setter === 'undefined') { valueOrGetter = null; }
-
+        
                     // add mixed attr
                     if (mixin_being_applied !== null) {
                         attr('mixed', mixin_being_applied);
                     }
-
+        
                     // collect attributes
                     meta[name] = [].concat(bucket);
                     meta[name].type = 'prop';
                     meta[name].aspects = [];
                     bucket = [];
                     let attrs = meta[name];
-
+        
                     // conditional check
                     if (!isConditionalMemberOK(name)) {
                         delete meta[name]; return;
@@ -569,7 +575,7 @@
                         // duplicate check
                         if (isDefined(name, true)) { throw `${className}.${name} is already defined.`; }
                     }
-
+        
                     // define or redefine
                     if (typeof valueOrGetter !== 'function') {
                         let propHost = null,
@@ -657,10 +663,10 @@
                             }
                         });
                     };       
-
+        
                     // apply attributes in order they are defined
                     applyAttr(name);
-
+        
                     // finally hold the reference for reflector
                     meta[name].ref = {
                         get: () => { return _this[name]; },
@@ -670,21 +676,21 @@
                 _this.event = (name) => {
                     // special names
                     if (isSpecialMember(name)) {  throw `${className}.${name} can only be defined as a function.`; }
-
+        
                     // duplicate check
                     if (isDefined(name, true)) { throw `${className}.${name} is already defined.`; }
-
+        
                     // add meta
                     meta[name] = [];
                     meta[name].type = 'event';  
                     meta[name].aspects = [];
-                  
+                    
                     // discard attributes
                     if (bucket.length > 0) {
                         console.warn(`Attributes can only be applied to properties or functions. ${className}.${name} is an event.`);
                         bucket = []; 
                     }
-
+        
                     // define event
                     let _event = function(...args) {
                         let e = {
@@ -718,13 +724,13 @@
                         value: _event,
                         writable: false
                     });
-
+        
                     // finally hold the reference for reflector
                     meta[name].ref = _this[name];
                 };
                 _this.noop = noop;
                 _this.noopAsync = noopAsync;
-
+        
                 // attach instance reflector
                 _this._ = _this._ || {};
                 _this._.type = 'instance';
@@ -784,15 +790,15 @@
                 _this._.deserialize = (json) => {
                     processJson(json, _this, true);
                 };
-
+        
                 // run factory
-                factory.apply(_this, [attr]);
-
+                factory.apply(_this, [factoryHelper]);
+        
                 // abstract consideration
                 if (_flag !== theFlag && isAbstractClass()) {
                     throw `Cannot create instance of an abstract class. (${className})`;
                 }
-
+        
                 // apply mixins
                 if (mixins.length !== 0) {
                     for(let mixin of mixins) {
@@ -803,17 +809,17 @@
                         }
                     }
                 }
-
+        
                 // remove definition helpers
                 delete _this.func;
                 delete _this.prop;
                 delete _this.event;
                 delete _this.noop;
                 delete _this.noopAsync;
-
+        
                 // weave members with configured advises
                 weave();
-
+        
                 // // top level class
                 if (!isNeedProtected) { 
                     // constructor
@@ -824,14 +830,14 @@
                         delete _this._constructor;
                         delete _this._.constructing;
                     }
-
+        
                     // dispose
                     if (typeof _this._dispose === 'function') {
                         _this._._dispose = _this._dispose;
                         delete _this._dispose;
                     }
                 }
-
+        
                 // get exposable _this
                 let isCopy = false;
                 doCopy('_'); // '_' is a very special member
@@ -850,7 +856,7 @@
                     if (isCopy && isHiddenMember(member)) { isCopy = false; }
                     if (isCopy) { doCopy(member); }
                 }
-
+        
                 // sealed attribute for properties and functions
                 // are handled at the end
                 for(let member in _exposed_this) {
@@ -860,7 +866,7 @@
                         });
                     }
                 }
-
+        
                 // validate that all intefaces are implemeted on exposed_this
                 if (interfaces.length !== 0) {
                     for(let _interface of interfaces) {
@@ -886,11 +892,11 @@
                         }
                     }
                 }
-
+        
                 // public and (protected+private) instance interface
                 _this._.pu = (isNeedProtected ? null : _exposed_this);
                 _this._.pr = (isNeedProtected ? null : _this);
-
+        
                 // singleton
                 if (isSingletonClass()) { // store for next use
                     Class._.isSingleton = () => { return true; };
@@ -909,7 +915,7 @@
                     }
                 }
             };
-
+        
             // attach class reflector
             Class._ = {
                 inherits: inherits,
@@ -933,31 +939,31 @@
                     return result;
                 },
                 isMixed: (name) => {
-                   let result = false;
-                   for(let mixin of mixins) {
-                       if (mixin._.name === name) {
-                           result = true; break;
-                       }
-                   }
+                    let result = false;
+                    for(let mixin of mixins) {
+                        if (mixin._.name === name) {
+                            result = true; break;
+                        }
+                    }
                     return result;                    
                 },
                 isImplements: (name) => {
-                   let result = false;
-                   for(let _interface of interfaces) {
-                       if (_interface._.name === name) {
-                           result = true; break;
-                       }
-                   }
+                    let result = false;
+                    for(let _interface of interfaces) {
+                        if (_interface._.name === name) {
+                            result = true; break;
+                        }
+                    }
                     return result;                    
                 },
                 static: {}
             };
             Class._.singleInstance.clear = () => { }; // no operation
-
+        
             // return
             return Class;
         };
-
+        
         // Mixin
         // Mixin(mixinName, function() {})
         oojs.Mixin = (mixinName, factory) => {
@@ -966,17 +972,17 @@
                 name: mixinName,
                 type: 'mixin'
             };
-
+        
             // return
             return factory;
         };
-
+        
         // Interface
         // Interface(interfaceName, function() {})
         oojs.Interface = (interfaceName, factory) => {
             let meta = {},
                 _this = {};
-
+        
             // definition helpers
             _this.func = (name) => {
                 if (typeof meta[name] !== 'undefined') { throw `${interfaceName}.${name} is already defined.`; }
@@ -993,20 +999,20 @@
                 meta[name] = [];
                 meta[name].type = 'event';
             };
-
+        
             // run factory
             factory.apply(_this);
-
+        
             // add name
             meta._ = {
                 name: interfaceName,
                 type: 'interface'
             };
-
+        
             // return
             return meta;
         };
-
+        
         // Enum
         // Enum(enumName, {key: value})
         oojs.Enum = (enumName, keyValuePairs) => {
@@ -1033,11 +1039,32 @@
                     return items;
                 }
             };
-
+        
             // return
             return Object.freeze(_enum);
         };
-
+        oojs.Enum.getKeys = (enumObj) => {
+            if (enumObj._ && enumObj._.type === 'enum') {
+                return enumObj._.keys();
+            }
+            enumName = ((enumObj._ && enumObj._.name) ? enumObj._.name : 'unknown');
+            throw `${enumName} is not an Enum.`;
+        };
+        oojs.Enum.getValues = (enumObj) => {
+            if (enumObj._ && enumObj._.type === 'enum') {
+                return enumObj._.values();
+            }
+            enumName = ((enumObj._ && enumObj._.name) ? enumObj._.name : 'unknown');
+            throw `${enumName} is not an Enum.`;
+        };
+        oojs.Enum.isDefined = (enumObj, keyOrValue) => {
+            if (enumObj._ && enumObj._.type === 'enum') {
+                return (enumObj._.keys.indexOf(keyOrValue) !== -1 || enumObj._.values.indexOf(keyOrValue) !== -1) ? true : false;
+            }
+            enumName = ((enumObj._ && enumObj._.name) ? enumObj._.name : 'unknown');
+            throw `${enumName} is not an Enum.`;
+        };
+        
         // Structure
         // Structure(structureName, factoryFn(args) {})
         oojs.Structure = (structureName, factoryFn) => {
@@ -1046,11 +1073,12 @@
                 name: structureName,
                 type: 'structure'
             };
-
+        
             // return
             return _structure;
         };
-
+        
+        
         // Assembly
         // Assembly(asmName, {namespace: member})
         oojs.Assembly = (asmName, nestedStructure) => {
@@ -1059,11 +1087,11 @@
                 name: asmName,
                 type: 'assembly'
             };
-
+        
             // return
             return Object.freeze(_asm);
         };
-
+        
         // using
         // using(object, scopeFn)
         oojs.using = (obj, scopeFn) => {
@@ -1075,7 +1103,7 @@
                 }
             }
         };
-
+        
         // as
         // as(object, intf)
         //  intf: can be an interface reference or 'public', 'protected', 'private'
@@ -1095,8 +1123,9 @@
             }
             return null;
         };
+        
 
-        // aspects
+        // Aspects
         let allAspects = {};
         oojs.Aspects = {};
         oojs.Aspects.register = (pointcut, Aspect) => {
@@ -1116,11 +1145,13 @@
             }
             allAspects[pointcut].push(Aspect);
         };
+        
+        // Aspect
         oojs.Aspect = oojs.Class('Aspect', function() {
             let beforeFn = null,
                 afterFn = null,
                 aroundFn = null;
-            this.func('constructor', (...args) => {
+            this.func((...args) => {
                 this.args = args;
             });
             this.prop('args', []);
@@ -1143,8 +1174,9 @@
                 return aroundFn;
             });
         });
+        
 
-        // dependency injection container
+        // Container
         let container = {};
         oojs.Container = {};
         // register(cls)
@@ -1178,8 +1210,9 @@
             }
             return result;
         };
+        
 
-        // attribute
+        // Attribute
         oojs.Attribute = oojs.Class('Attribute', function() {
             let decoratorFn = null;
             this.func('constructor', (...args) => {
@@ -1237,7 +1270,7 @@
                 // validate
                 if (['func'].indexOf(type) === -1) { throw `async attribute cannot be applied on ${type} members. (${className}.${name})`; }
                 if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `async attribute cannot be applied on special function. (${className}.${name})`; }
-
+        
                 // decorate
                 let fn = descriptor.value;
                 descriptor.value = function(...args) {
@@ -1248,7 +1281,7 @@
                 }.bind(obj);
             });
         }));
-
+        
         // deprecate
         // deprecate([message])
         //  - message: any custom message
@@ -1256,7 +1289,7 @@
             this.decorator((obj, type, name, descriptor) => {
                 // validate
                 if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `deprecate attribute cannot be applied on special function. (${className}.${name})`; }
-
+        
                 // decorate
                 let msg = `${name} is deprecated.`;
                 if (typeof this.args[0] !== 'undefined') { msg += ' ' + this.args[0] };
@@ -1288,14 +1321,14 @@
                         let ev = descriptor.value;
                         descriptor.value = function(...args) {
                             console.warn(msg);
-                             ev(...args);
+                                ev(...args);
                         }.bind(obj);
                         this.resetEventInterface(fn, descriptor.value);
                         break;
                 }
             });
         }));
-
+        
         // enumerate
         // enumerate(flag)
         //  - flag: true/false
@@ -1303,13 +1336,13 @@
             this.decorator((obj, type, name, descriptor) => {
                 // validate
                 if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `enumerate attribute cannot be applied on special function. (${className}.${name})`; }
-
+        
                 // decorate
                 let flag = this.args[0];
                 descriptor.enumerable = flag;
             });
         }));
-
+        
         // inject
         // inject(type, [typeArgs])
         //  - type: 
@@ -1323,7 +1356,7 @@
                 // validate
                 if (['func', 'prop'].indexOf(type) === -1) { throw `inject attribute cannot be applied on ${type} members. (${className}.${name})`; }
                 if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `inject attribute cannot be applied on special function. (${className}.${name})`; }
-
+        
                 // decorate
                 let Type = this.args[0],
                     typeArgs = this.args[1],
@@ -1355,7 +1388,7 @@
                 }
             });
         }));
-
+        
         // multiinject
         // multiinject(type, [typeArgs])
         //  - type: 
@@ -1368,7 +1401,7 @@
                 // validate
                 if (['func', 'prop'].indexOf(type) === -1) { throw `multiinject attribute cannot be applied on ${type} members. (${className}.${name})`; }
                 if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `multiinject attribute cannot be applied on special function. (${className}.${name})`; }
-
+        
                 // decorate
                 let Type = this.args[0],
                     typeArgs = this.args[1],
@@ -1400,6 +1433,7 @@
                 }
             });
         }));
+        
 
         // Serializer
         oojs.Serializer = {};
@@ -1411,6 +1445,7 @@
             instance._.deserialize(json);
             return instance;
         };
+        
 
         // Reflector
         oojs.Reflector = {};
@@ -1436,7 +1471,7 @@
                 this.getClass = () => { 
                     if (Attr) { return new ClassReflector(Attr); }
                     return null;
-                 }
+                    }
             };
             const AspectReflector = function(Aspect, target) {
                 this.getType = () => { return 'aspect'; }
@@ -1445,7 +1480,7 @@
                 this.getClass = () => { 
                     if (Aspect) { return new ClassReflector(Aspect); }
                     return null;
-                 }
+                    }
             };
             const CommonInstanceMemberReflector = function(type, target, name, ref) {
                 let refl = new CommonMemberReflector(type, target, name);
@@ -1796,7 +1831,7 @@
                 };
                 return refl;
             };
-
+        
             // get
             let ref = null;
             switch(forTarget._.type) {
@@ -1810,19 +1845,22 @@
                 default:
                     throw 'Unknown type';
             }
-
+        
             // return
             return ref;
         };
+        
 
         // expose to global environment
         if (!options.supressGlobals) { 
             let g = options.global;
             g.Class = oojs.Class; g.Mixin = oojs.Mixin; g.Interface = oojs.Interface; g.Structure = oojs.Structure;  g.Enum = oojs.Enum; g.Assembly = oojs.Assembly;
-            g.Attribute = oojs.Attribute; g.Aspect = oojs.Aspect; 
-            g.Aspects = oojs.Aspects; g.Container = oojs.Container;
-            g.Serializer = oojs.Serializer; g.Reflector = oojs.Reflector;
-            g.using = oojs.using; g.as = oojs.as; 
+            g.using = oojs.using; g.as = oojs.as;
+            g.Attribute = oojs.Attribute; 
+            g.Aspects = oojs.Aspects; g.Aspect = oojs.Aspect; 
+            g.Container = oojs.Container;
+            g.Serializer = oojs.Serializer; 
+            g.Reflector = oojs.Reflector;
         }
 
         // return
