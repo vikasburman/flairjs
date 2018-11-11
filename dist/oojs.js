@@ -1,8 +1,9 @@
 /**
  * oojs.js
- * version 1.0.0
- * (C) 2017-2018, Vikas Burman
- * MIT License 
+ * Object Oriented JavaScript
+ * Version 1.0.0
+ * (c) 2017-2018 Vikas Burman
+ * MIT License
  */
 (function() {
     // the definition

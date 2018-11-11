@@ -1,10 +1,11 @@
 {
   "name": "oojs",
+  "basename": "oojs",
   "description": "Object Oriented JavaScript",
-  "copyright": "(c) 2017 Vikas Burman",
+  "copyright": "(C) 2017-2018 Vikas Burman",
   "version": "1.0.0",
   "author": "Vikas Burman",
-  "license": "MIT",
+  "license": "MIT License",
   "link": "http://",
   "repository": "https://github.com/vikasburman/oojs.git",
   "scripts": {

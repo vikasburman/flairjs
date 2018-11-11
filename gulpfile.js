@@ -9,6 +9,9 @@ const uglifyConfig = require('./build/.uglify.json');
 const rename = require('gulp-rename');
 const inject = require('gulp-inject-file');
 const replace = require('gulp-string-replace');
+const fs = require('fs');
+const packageJSON = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+
 
 // error handler
 const errorHandler = (name) => {
@@ -27,9 +30,14 @@ gulp.task('build', (done) => {
 
         // write assembled
         .pipe(rename((path) => {
-            path.basename = 'oojs'
+            path.basename = packageJSON.basename;
         }))
-        .on('error', errorHandler('rename'))        
+        .on('error', errorHandler('rename'))     
+        .pipe(replace('<basename>', packageJSON.basename))
+        .pipe(replace('<desc>', packageJSON.description))
+        .pipe(replace('<version>', packageJSON.version))
+        .pipe(replace('<copyright>', packageJSON.copyright))
+        .pipe(replace('<license>', packageJSON.license))
         .pipe(gulp.dest('./dist'))
         .on('error', errorHandler('write-assembled'))
 
@@ -42,7 +50,6 @@ gulp.task('build', (done) => {
         
         // minify
         .pipe(minifier(uglifyConfig.js, uglifyjs))
-        .pipe(replace('oojs.js', 'oojs.min.js'))
         .on('error', errorHandler('minifier'))
         
         // write minified
@@ -50,6 +57,7 @@ gulp.task('build', (done) => {
             path.extname = '.min.js'; // from <name.whatever>.js to <name.whatever>.min.js
         }))
         .on('error', errorHandler('rename'))
+        .pipe(replace(packageJSON.basename + '.js', packageJSON.basename + '.min.js'))
         .pipe(gulp.dest('./dist'))
         .on('end', done)
         .on('error', errorHandler('write-minified'));
