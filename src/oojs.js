@@ -1,7 +1,7 @@
 /**
  * oojs.js
  * version 1.0.0
- * (C) 2017, Vikas Burman
+ * (C) 2017-2018, Vikas Burman
  * MIT License 
  */
 (function() {
@@ -440,10 +440,13 @@
                 };
 
                 _this.func = (name, fn) => {
+                    // constructor shorthand definition
+                    if (typeof name === 'function') { fn = name; name = 'constructor'; }
+
                     // validate
                     if (name === '_') { throw `${className}.${name} is not allowed.`; }
                     if (!fn) { fn = noop; }
-                    
+
                     // special names
                     if (isSpecialMember(name)) {
                         name = '_' + name;

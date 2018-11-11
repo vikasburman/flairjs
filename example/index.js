@@ -35,7 +35,7 @@
     // define classes
     var Vehicle1 = Class('Vehicle', [Mix1, Mix2, ITest], function(attr) {
         //attr('abstract');
-        this.func('constructor', (cc) => {
+        this.func((cc) => {
             console.log('in constructor of Vehicle');
             this.cc = cc;
             this.capacity = cc;
@@ -154,6 +154,8 @@
         });                    
     });
     
+    window.Vehicle1 = Vehicle1;
+
     var Car = Class('Car', Vehicle, function(attr) {
         //attr('singleton');       
         attr('override');
@@ -289,6 +291,8 @@
         window.v1 = v1;
         window.cls2 = Vehicle;
     });  
+
+ 
 
     var Level0Class = Class('Level0', function(attr) {
         // this.func('constructor', (arg1) => {
