@@ -369,5 +369,17 @@
         }
     });
 
+    // var theClass = Assembly('system', 'features.di', Class('theClass', function() {
+    // }));
+    // theClassObject = new Assembly.system.features.di.theClass()
+    // Assembly.load('<class file name>');
+    // Assembly.unload('<assembly name>');
+    // Assembly.createInstance('system.features.di.theClass', <cosntructorArgs>);
+    // Assembly.getTypes() -- return array of all types inside the assembly
+    // Assembly.getModules() -- all modules that are loaded into the assembly via load()
+    // Assembly.getType('system.features.di.theClass') -- gives the class, if available
+    // Assembly.getTypeASync('system.features.di.theClass', '<class file name>') -- gives the class if available, else load file and give type
+
+
     window.asm = system;
 })();
