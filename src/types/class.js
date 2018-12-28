@@ -440,6 +440,7 @@ oojs.Class = (arg1, arg2, arg3, arg4) => {
             meta[name] = [].concat(bucket);
             meta[name].type = 'func';
             meta[name].aspects = [];
+            meta[name].interfaces = [];
             bucket = [];
             let attrs = meta[name];
 
@@ -528,6 +529,7 @@ oojs.Class = (arg1, arg2, arg3, arg4) => {
             meta[name] = [].concat(bucket);
             meta[name].type = 'prop';
             meta[name].aspects = [];
+            meta[name].interfaces = [];
             bucket = [];
             let attrs = meta[name];
 
@@ -663,6 +665,7 @@ oojs.Class = (arg1, arg2, arg3, arg4) => {
             meta[name] = [];
             meta[name].type = 'event';  
             meta[name].aspects = [];
+            meta[name].interfaces = [];
             
             // discard attributes
             if (bucket.length > 0) {
@@ -872,14 +875,15 @@ oojs.Class = (arg1, arg2, arg3, arg4) => {
                         switch(_member.type) {
                             case 'func':
                                 if (_type !== 'function') { throw `${_interface._.name}.${_memberName} is not a function.`; } 
+                                if (meta[_memberName].interfaces.indexOf(_interface) === -1) { meta[_memberName].interfaces.push(_interface); }
                                 break;
                             case 'prop':
                                 if (_type === 'function') { throw `${_interface._.name}.${_memberName} is not a property.`; }
+                                if (meta[_memberName].interfaces.indexOf(_interface) === -1) { meta[_memberName].interfaces.push(_interface); }
                                 break;
                             case 'event':
-                                if (_type !== 'function' || typeof _exposed_this[_memberName].subscribe !== 'function') {
-                                    throw `${_interface._.name}.${_memberName} is not an event.`;
-                                }
+                                if (_type !== 'function' || typeof _exposed_this[_memberName].subscribe !== 'function') { throw `${_interface._.name}.${_memberName} is not an event.`; }
+                                if (meta[_memberName].interfaces.indexOf(_interface) === -1) { meta[_memberName].interfaces.push(_interface); }
                                 break;
                         }
                     }

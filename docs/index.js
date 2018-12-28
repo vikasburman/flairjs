@@ -18,6 +18,11 @@
         this.prop('prop1');
         this.event('event1');
     });
+    var ITest2 = Interface('ITest2', function() {
+        this.func('check');
+        this.prop('prop1');
+        this.event('event1');
+    });    
 
     var Days = Enum('Days', {
         Mon: 0,
@@ -30,7 +35,7 @@
     });
 
     // define classes
-    var Vehicle = Class('Vehicle', [Mix1, Mix2, ITest], function(attr) {
+    var Vehicle = Class('Vehicle', [Mix1, Mix2, ITest, ITest2], function(attr) {
         //attr('abstract');
         this.func((cc) => {
             console.log('in constructor of Vehicle');

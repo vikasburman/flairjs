@@ -6,6 +6,14 @@ oojs.Reflector.get = (forTarget) => {
         this.getType = () => { return target._.type; }
         this.getName = () => { return target._.name || ''; }
         this.getTarget = () => { return target; }
+        this.isInstance = () => { return target._.type === 'instance'; }
+        this.isClass = () => { return target._.type === 'class'; }
+        this.isEnum = () => { return target._.type === 'enum'; }
+        this.isStructure = () => { return target._.type === 'structure'; }
+        this.isStructureInstance = () => { return target._.type === 'sinstance'; }
+        this.isAssembly = () => { return target._.type === 'assembly'; }
+        this.isMixin = () => { return target._.type === 'mixin'; }
+        this.isInterface = () => { return target._.type === 'interface'; }
     };
     const CommonMemberReflector = function(type, target, name) {
         this.getType = () => { return 'member'; }
@@ -103,6 +111,23 @@ oojs.Reflector.get = (forTarget) => {
             }
             return null;
         };
+        refl.isInterfaceEnforced = () => { return refl.getInterfaces().length > 0; };
+        refl.getInterfaces = () => {
+            let items = [],
+                interfaces = [];
+            for (let item of target._.instanceOf) {
+                if (item.meta[name]) {
+                    interfaces = item.meta[name].interfaces;
+                    for(let iface of interfaces) {
+                        items.push(new InterfaceReflector(iface, target));
+                    }
+                }
+            }
+            return items;                    
+        };        
+        refl.isProp = () => { return type === 'prop'; }
+        refl.isFunc = () => { return type === 'func'; }
+        refl.isEvent = () => { return type === 'event'; }
         return refl;
     };
     const PropReflector = function(target, name, ref) {
@@ -267,6 +292,26 @@ oojs.Reflector.get = (forTarget) => {
         refl.isImplements = (name) => { return target._.isImplements(name); };
         return refl;              
     };
+    const StructureInstanceReflector = function(target) {
+        let refl = new CommonTypeReflector(target);
+        refl.getStructure = () => { 
+            if (target._.inherits !== null) {
+                return new StructureReflector(target._.inherits);
+            }
+            return null;
+        };
+        refl.getMembers = () => { 
+            let keys = Object.keys(target);
+            _At = keys.indexOf('_');
+            if (_At !== -1) {
+                keys.splice(_At, 1);
+            }
+            return keys;
+        };
+        refl.getMember = (name) => { return target[name]; };
+        refl.isInstanceOf = (name) => { return target._.inherits._.name === name; };
+        return refl;              
+    };    
     const ClassReflector = function(target) {
         let refl = new CommonTypeReflector(target);
         refl.getParent = () => { 
@@ -387,6 +432,7 @@ oojs.Reflector.get = (forTarget) => {
     let ref = null;
     switch(forTarget._.type) {
         case 'instance': ref = new InstanceReflector(forTarget); break;
+        case 'sinstance': ref = new StructureInstanceReflector(forTarget); break;
         case 'class': ref = new ClassReflector(forTarget); break;
         case 'enum': ref = new EnumReflector(forTarget); break;
         case 'structure': ref = new StructureReflector(forTarget); break;

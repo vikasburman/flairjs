@@ -10,10 +10,19 @@ oojs.as = (obj, intf) => {
             case 'private':
                 return obj._.pr; break;
             default:
-                throw 'unknown interface type: ' + intf;
+                throw 'unknown scope: ' + intf;
         }
     } else {
-        if (obj._.isImplements(intf._.name)) { return obj; }
+        switch(intf._.type) {
+            case 'interface':
+                if (obj._.isImplements(intf._.name)) { return obj; }; break;
+            case 'mixin':
+                if (obj._.isMixed(intf._.name)) { return obj; }; break;
+            case 'class':
+                if (obj._.isInstanceOf(intf._.name)) { return obj; }; break;
+            default:
+                throw 'unknown implementation type: ' + intf;
+        }
     }
     return null;
 };

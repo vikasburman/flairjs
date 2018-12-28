@@ -462,6 +462,7 @@
                     meta[name] = [].concat(bucket);
                     meta[name].type = 'func';
                     meta[name].aspects = [];
+                    meta[name].interfaces = [];
                     bucket = [];
                     let attrs = meta[name];
         
@@ -550,6 +551,7 @@
                     meta[name] = [].concat(bucket);
                     meta[name].type = 'prop';
                     meta[name].aspects = [];
+                    meta[name].interfaces = [];
                     bucket = [];
                     let attrs = meta[name];
         
@@ -685,6 +687,7 @@
                     meta[name] = [];
                     meta[name].type = 'event';  
                     meta[name].aspects = [];
+                    meta[name].interfaces = [];
                     
                     // discard attributes
                     if (bucket.length > 0) {
@@ -894,14 +897,15 @@
                                 switch(_member.type) {
                                     case 'func':
                                         if (_type !== 'function') { throw `${_interface._.name}.${_memberName} is not a function.`; } 
+                                        if (meta[_memberName].interfaces.indexOf(_interface) === -1) { meta[_memberName].interfaces.push(_interface); }
                                         break;
                                     case 'prop':
                                         if (_type === 'function') { throw `${_interface._.name}.${_memberName} is not a property.`; }
+                                        if (meta[_memberName].interfaces.indexOf(_interface) === -1) { meta[_memberName].interfaces.push(_interface); }
                                         break;
                                     case 'event':
-                                        if (_type !== 'function' || typeof _exposed_this[_memberName].subscribe !== 'function') {
-                                            throw `${_interface._.name}.${_memberName} is not an event.`;
-                                        }
+                                        if (_type !== 'function' || typeof _exposed_this[_memberName].subscribe !== 'function') { throw `${_interface._.name}.${_memberName} is not an event.`; }
+                                        if (meta[_memberName].interfaces.indexOf(_interface) === -1) { meta[_memberName].interfaces.push(_interface); }
                                         break;
                                 }
                             }
@@ -1082,16 +1086,33 @@
         };
         
         // Structure
-        // Structure(structureName, factoryFn(args) {})
-        oojs.Structure = (structureName, factoryFn) => {
-            let _structure = factoryFn;
-            _structure._ = {
+        // Structure(structureName, factory(args) {})
+        oojs.Structure = (structureName, factory) => {
+            // build structure definition
+            let Structure = function(...args) {
+                let _this = this;
+        
+                // attach instance reflector
+                _this._ = _this._ || {};
+                _this._.type = 'sinstance';
+                _this._.name = structureName;
+                _this._.inherits = Structure;
+        
+                // construct using factory
+                factory.apply(_this, ...args);
+        
+                // return
+                return _this;
+            };
+        
+            // attach structure reflector
+            Structure._ = {
                 name: structureName,
                 type: 'structure'
             };
         
             // return
-            return _structure;
+            return Structure;
         };
         
         
@@ -1133,14 +1154,22 @@
                     case 'private':
                         return obj._.pr; break;
                     default:
-                        throw 'unknown interface type: ' + intf;
+                        throw 'unknown scope: ' + intf;
                 }
             } else {
-                if (obj._.isImplements(intf._.name)) { return obj; }
+                switch(intf._.type) {
+                    case 'interface':
+                        if (obj._.isImplements(intf._.name)) { return obj; }; break;
+                    case 'mixin':
+                        if (obj._.isMixed(intf._.name)) { return obj; }; break;
+                    case 'class':
+                        if (obj._.isInstanceOf(intf._.name)) { return obj; }; break;
+                    default:
+                        throw 'unknown implementation type: ' + intf;
+                }
             }
             return null;
         };
-        
 
         // Aspects
         let allAspects = {};
@@ -1455,12 +1484,18 @@
         // Serializer
         oojs.Serializer = {};
         oojs.Serializer.serialize = (instance) => { 
-            return instance._.serialize(); 
+            if (instance._.type = 'instance') {
+                return instance._.serialize(); 
+            }
+            return null;
         };
         oojs.Serializer.deserialize = (Type, json) => {
             let instance = new Type();
-            instance._.deserialize(json);
-            return instance;
+            if (instance._.type = 'instance') {
+                instance._.deserialize(json);
+                return instance;
+            }
+            return null;
         };
         
 
@@ -1472,6 +1507,14 @@
                 this.getType = () => { return target._.type; }
                 this.getName = () => { return target._.name || ''; }
                 this.getTarget = () => { return target; }
+                this.isInstance = () => { return target._.type === 'instance'; }
+                this.isClass = () => { return target._.type === 'class'; }
+                this.isEnum = () => { return target._.type === 'enum'; }
+                this.isStructure = () => { return target._.type === 'structure'; }
+                this.isStructureInstance = () => { return target._.type === 'sinstance'; }
+                this.isAssembly = () => { return target._.type === 'assembly'; }
+                this.isMixin = () => { return target._.type === 'mixin'; }
+                this.isInterface = () => { return target._.type === 'interface'; }
             };
             const CommonMemberReflector = function(type, target, name) {
                 this.getType = () => { return 'member'; }
@@ -1569,6 +1612,23 @@
                     }
                     return null;
                 };
+                refl.isInterfaceEnforced = () => { return refl.getInterfaces().length > 0; };
+                refl.getInterfaces = () => {
+                    let items = [],
+                        interfaces = [];
+                    for (let item of target._.instanceOf) {
+                        if (item.meta[name]) {
+                            interfaces = item.meta[name].interfaces;
+                            for(let iface of interfaces) {
+                                items.push(new InterfaceReflector(iface, target));
+                            }
+                        }
+                    }
+                    return items;                    
+                };        
+                refl.isProp = () => { return type === 'prop'; }
+                refl.isFunc = () => { return type === 'func'; }
+                refl.isEvent = () => { return type === 'event'; }
                 return refl;
             };
             const PropReflector = function(target, name, ref) {
@@ -1733,6 +1793,26 @@
                 refl.isImplements = (name) => { return target._.isImplements(name); };
                 return refl;              
             };
+            const StructureInstanceReflector = function(target) {
+                let refl = new CommonTypeReflector(target);
+                refl.getStructure = () => { 
+                    if (target._.inherits !== null) {
+                        return new StructureReflector(target._.inherits);
+                    }
+                    return null;
+                };
+                refl.getMembers = () => { 
+                    let keys = Object.keys(target);
+                    _At = keys.indexOf('_');
+                    if (_At !== -1) {
+                        keys.splice(_At, 1);
+                    }
+                    return keys;
+                };
+                refl.getMember = (name) => { return target[name]; };
+                refl.isInstanceOf = (name) => { return target._.inherits._.name === name; };
+                return refl;              
+            };    
             const ClassReflector = function(target) {
                 let refl = new CommonTypeReflector(target);
                 refl.getParent = () => { 
@@ -1853,6 +1933,7 @@
             let ref = null;
             switch(forTarget._.type) {
                 case 'instance': ref = new InstanceReflector(forTarget); break;
+                case 'sinstance': ref = new StructureInstanceReflector(forTarget); break;
                 case 'class': ref = new ClassReflector(forTarget); break;
                 case 'enum': ref = new EnumReflector(forTarget); break;
                 case 'structure': ref = new StructureReflector(forTarget); break;
@@ -1866,7 +1947,6 @@
             // return
             return ref;
         };
-        
 
         // expose to global environment
         if (!options.supressGlobals) { 
