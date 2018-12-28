@@ -2,9 +2,6 @@
     // initialize with required symbols
     oojs({ symbols: ['DEBUG'] });
 
-    
-
-
     var Mix1 = Mixin('Mix1', function() {
         this.func('mixed1', () => {
             console.log(this);
@@ -149,7 +146,7 @@
         attr('serialize', 'prop1');
         this.prop('p1', 10);
 
-        this.func('dispose', () => {
+        this.destruct(() => {
             console.log('disposed Vehicle');
         });                    
     });
@@ -159,7 +156,7 @@
     var Car = Class('Car', Vehicle, function(attr) {
         //attr('singleton');       
         attr('override');
-        this.func('constructor', (base, val) => {
+        this.construct((base, val) => {
             base(val);
             console.log('in constructor of Car w prop1 = ' + this.prop1);
             this.prop1 = this.prop1 * val;
@@ -211,10 +208,18 @@
         this.prop('mycond2', 300);
 
         let fn = (e) => {
-            console.log('Event ' + e.name + ' handled with: ' + e.args[0]);
+            console.log('Event ' + e.name + ' handled with: ' + e.args);
             this.event1.unsubscribe(fn);
         };
         this.event1.subscribe(fn);
+
+        this.event('event2', (x, y) => {
+            return {x: x, y: y};
+        });
+
+        this.event2.subscribe((e) => {
+            console.log('Event ' + e.name + ' handled with: x=' + e.args.x + ', y=' + e.args.y);
+        });
 
         attr('serialize', 'prop2');
         this.prop('p2', 20);
@@ -230,14 +235,17 @@
         // this.prop('prop1', 4000);
 
         attr('override');
-        this.func('dispose', () => {
+        this.destruct((base) => {
             console.log('disposed Car');
+            base();
         });
     });
 
-    var BMW = Class('BMW', Car, function() {
-        this.func('dispose', () => {
+    var BMW = Class('BMW', Car, function(attr) {
+        attr('override');
+        this.destruct((base) => {
             console.log('disposed BMW');
+            base();
         });
 
         this.func('func5', (x) => {
@@ -292,7 +300,9 @@
         window.cls2 = Vehicle;
     });  
 
- 
+    using(new BMW(), (bmw) => {
+    
+    });
 
     var Level0Class = Class('Level0', function(attr) {
         // this.func('constructor', (arg1) => {
@@ -323,11 +333,11 @@
             console.log(a4);
         });
 
-        // attr('override');
-        // this.func('dispose', (base) => {
-        //     base();
-        //     console.log('In Level1');
-        // });                
+        attr('override');
+        this.destruct((base) => {
+            base();
+            console.log('In Level1');
+        });                
     });
     var Level2Class = Class('Level2', Level1Class, function(attr) {
         // attr('override');
@@ -379,6 +389,7 @@
     // Assembly.getModules() -- all modules that are loaded into the assembly via load()
     // Assembly.getType('system.features.di.theClass') -- gives the class, if available
     // Assembly.getTypeASync('system.features.di.theClass', '<class file name>') -- gives the class if available, else load file and give type
+    // WAIT - consider the namespace approach used in appgears - but similify that with this one, if this works...
 
 
     window.asm = system;

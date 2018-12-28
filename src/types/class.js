@@ -418,12 +418,6 @@ oojs.Class = (arg1, arg2, arg3, arg4) => {
             }
         };
 
-        // helper object that gets passed to factory
-        // this itself is attr function, the most common use, and can be use as-is, attr(...)
-        // but also can be used as hook to pass many more helpers, attr func being one of them, to support helper.attr(), helper.sumethingElse() type syntax
-        const factoryHelper = attr;
-        factoryHelper.attr = attr;
-
         _this.func = (name, fn) => {
             // constructor shorthand definition
             if (typeof name === 'function') { fn = name; name = 'constructor'; }
@@ -511,6 +505,12 @@ oojs.Class = (arg1, arg2, arg3, arg4) => {
             // finally hold the references for reflector
             meta[name].ref = _this[name];
             meta[name].raw = fn;
+        };
+        _this.construct = (...args) => {
+            _this.func.apply(_this, ['constructor'].concat(args));
+        };
+        _this.destruct = (...args) => {
+            _this.func.apply(_this, ['dispose'].concat(args));
         };
         _this.prop = (name, valueOrGetter, setter) => {
             // special names
@@ -652,7 +652,7 @@ oojs.Class = (arg1, arg2, arg3, arg4) => {
                 set: (value) => { _this[name] = value; }
             };
         };
-        _this.event = (name) => {
+        _this.event = (name, argProcessor) => {
             // special names
             if (isSpecialMember(name)) {  throw `${className}.${name} can only be defined as a function.`; }
 
@@ -672,9 +672,16 @@ oojs.Class = (arg1, arg2, arg3, arg4) => {
 
             // define event
             let _event = function(...args) {
+                // preprocess args
+                let processedArgs = {};
+                if (typeof argProcessor === 'function') {
+                    processedArgs = argProcessor(...args);
+                }
+
+                // define event arg
                 let e = {
                         name: name,
-                        args: args,
+                        args: processedArgs,
                         stop: false
                     };
                 for(let handler of events) {
@@ -770,7 +777,13 @@ oojs.Class = (arg1, arg2, arg3, arg4) => {
             processJson(json, _this, true);
         };
 
-        // run factory
+        // helper object that gets passed to factory
+        // this itself is attr function, the most common use, and can be use as-is, attr(...)
+        // but also can be used as hook to pass many more helpers, attr func being one of them, to support helper.attr(), helper.sumethingElse() type syntax
+        const factoryHelper = attr;
+        factoryHelper.attr = attr;        
+
+        // construct using factory
         factory.apply(_this, [factoryHelper]);
 
         // abstract consideration
@@ -783,7 +796,7 @@ oojs.Class = (arg1, arg2, arg3, arg4) => {
             for(let mixin of mixins) {
                 if (mixin._.type === 'mixin') {
                     mixin_being_applied = mixin;
-                    mixin.apply(_this, [attr]);
+                    mixin.apply(_this, [factoryHelper]);
                     mixin_being_applied = null;
                 }
             }
@@ -791,6 +804,8 @@ oojs.Class = (arg1, arg2, arg3, arg4) => {
 
         // remove definition helpers
         delete _this.func;
+        delete _this.construct;
+        delete _this.destruct;
         delete _this.prop;
         delete _this.event;
         delete _this.noop;
@@ -812,7 +827,7 @@ oojs.Class = (arg1, arg2, arg3, arg4) => {
 
             // dispose
             if (typeof _this._dispose === 'function') {
-                _this._._dispose = _this._dispose;
+                _this._.dispose = _this._dispose;
                 delete _this._dispose;
             }
         }

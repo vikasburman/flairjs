@@ -196,7 +196,7 @@ oojs.Reflector.get = (forTarget) => {
                                     members.push(lastMember);
                                     break;
                                 case 'event':
-                                    lastMember = new EventReflector(target, name, instance.meta[name].ref);
+                                    lastMember = new EventReflector(target, name, instance.meta[name].argNames, instance.meta[name].ref);
                                     members.push(lastMember);
                                     break;
                                 default:

@@ -20,14 +20,15 @@
                 symbols: opts.symbols || []
             };
 
-        <!-- inject: ./core/class.js -->
-        <!-- inject: ./core/mixin.js -->
-        <!-- inject: ./core/interface.js -->
-        <!-- inject: ./core/enum.js -->
-        <!-- inject: ./core/structure.js -->
-        <!-- inject: ./core/assembly.js -->
-        <!-- inject: ./core/using.js -->
-        <!-- inject: ./core/as.js -->
+        <!-- inject: ./types/class.js -->
+        <!-- inject: ./types/mixin.js -->
+        <!-- inject: ./types/interface.js -->
+        <!-- inject: ./types/enum.js -->
+        <!-- inject: ./types/structure.js -->
+        <!-- inject: ./types/assembly.js -->
+        
+        <!-- inject: ./func/using.js -->
+        <!-- inject: ./func/as.js -->
 
         <!-- inject: ./aop/aspects.js -->
         <!-- inject: ./aop/aspect.js -->
