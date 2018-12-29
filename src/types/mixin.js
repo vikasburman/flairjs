@@ -4,7 +4,9 @@ flair.Mixin = (mixinName, factory) => {
     // add name
     factory._ = {
         name: mixinName,
-        type: 'mixin'
+        type: 'mixin',
+        namespace: '',
+        assembly: null        
     };
 
     // return

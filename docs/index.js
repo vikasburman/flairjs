@@ -1,17 +1,17 @@
 
     // initialize with required symbols
-    oojs({ symbols: ['DEBUG'] });
+    flair({ symbols: ['DEBUG'] });
 
-    var Mix1 = Mixin('Mix1', function() {
+    var Mix1 = Assembly('system', 'core.test.abc', Mixin('Mix1', function() {
         this.func('mixed1', () => {
             console.log(this);
         });
-    });
-    var Mix2 = Mixin('Mix2', function() {
+    }));
+    var Mix2 = Assembly('system', 'core.test.abc', Mixin('Mix2', function() {
         this.func('mixed2', () => {
             console.log(this);
         });
-    });
+    }));
 
     var ITest = Interface('ITest', function() {
         this.func('check');
@@ -22,7 +22,7 @@
         this.func('check');
         this.prop('prop1');
         this.event('event1');
-    });    
+    });   
 
     var Days = Enum('Days', {
         Mon: 0,
@@ -40,7 +40,7 @@
 
 
     // define classes
-    var Vehicle = Class('Vehicle', [Mix1, Mix2, ITest, ITest2], function(attr) {
+    var Vehicle = Assembly('system', 'core.test.abc', Class('Vehicle', [Mix1, Mix2, ITest, ITest2], function(attr) {
         //attr('abstract');
         this.func((cc) => {
             console.log('in constructor of Vehicle');
@@ -159,7 +159,7 @@
         this.destruct(() => {
             console.log('disposed Vehicle');
         });                    
-    });
+    }));
 
     window.Vehicle = Vehicle;
 
@@ -378,16 +378,16 @@
 
     window.Level2Class = Level2Class;
 
-    var system = Assembly('system', {
-        Vehicle: Vehicle,
-        BMW: BMW,
-        Core: {
-            Mix1: Mix1,
-            More: {
-                Mix2: Mix2
-            }
-        }
-    });
+    // var system = Assembly('system', {
+    //     Vehicle: Vehicle,
+    //     BMW: BMW,
+    //     Core: {
+    //         Mix1: Mix1,
+    //         More: {
+    //             Mix2: Mix2
+    //         }
+    //     }
+    // });
 
     // var theClass = Assembly('system', 'features.di', Class('theClass', function() {
     // }));
@@ -402,6 +402,6 @@
     // WAIT - consider the namespace approach used in appgears - but similify that with this one, if this works...
 
 
-    window.asm = system;
+    // window.asm = system;
 
   

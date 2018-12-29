@@ -13,6 +13,8 @@ flair.Enum = (enumName, keyValuePairsOrArray) => {
     _enum._ = {
         name: enumName,
         type: 'enum',
+        namespace: '',
+        assembly: null,        
         keys: () => {
             let items = [];
             for(let i in keyValuePairs) {

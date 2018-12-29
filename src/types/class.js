@@ -921,6 +921,8 @@ flair.Class = (arg1, arg2, arg3, arg4) => {
         interfaces: interfaces,
         name: className,
         type: 'class',
+        namespace: '',
+        assembly: null,
         singleInstance: () => { return null; },
         isSingleton: () => { return false; },
         isSealed: () => { return false; },

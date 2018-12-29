@@ -33,7 +33,9 @@ flair.Interface = (interfaceName, factory) => {
     // add name
     meta._ = {
         name: interfaceName,
-        type: 'interface'
+        type: 'interface',
+        namespace: '',
+        assembly: null        
     };
 
     // return

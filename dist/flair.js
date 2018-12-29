@@ -1,6 +1,6 @@
 /**
  * flair.js
- * The Complete Object Oriented JavaScript Framework
+ * The Complete Object Oriented JavaScript
  * Version 1.0.0
  * (C) 2017-2019 Vikas Burman
  * MIT
@@ -943,6 +943,8 @@
                 interfaces: interfaces,
                 name: className,
                 type: 'class',
+                namespace: '',
+                assembly: null,
                 singleInstance: () => { return null; },
                 isSingleton: () => { return false; },
                 isSealed: () => { return false; },
@@ -990,7 +992,9 @@
             // add name
             factory._ = {
                 name: mixinName,
-                type: 'mixin'
+                type: 'mixin',
+                namespace: '',
+                assembly: null        
             };
         
             // return
@@ -1032,7 +1036,9 @@
             // add name
             meta._ = {
                 name: interfaceName,
-                type: 'interface'
+                type: 'interface',
+                namespace: '',
+                assembly: null        
             };
         
             // return
@@ -1054,6 +1060,8 @@
             _enum._ = {
                 name: enumName,
                 type: 'enum',
+                namespace: '',
+                assembly: null,        
                 keys: () => {
                     let items = [];
                     for(let i in keyValuePairs) {
@@ -1122,7 +1130,9 @@
             // attach structure reflector
             Structure._ = {
                 name: structureName,
-                type: 'structure'
+                type: 'structure',
+                namespace: '',
+                assembly: null        
             };
         
             // return
@@ -1131,21 +1141,110 @@
         
         
         // Assembly
-        // Assembly(asmName)
-        flair.Assembly = (asmName) => {
-            let _asm = {};
-            _asm._ = {
-                name: asmName,
-                type: 'assembly'
-            };
-        
+        // Assembly(asmName, namespace, Type)
+        flair.Assembly = (asmName, namespaceOrType, Type) => {
+            let _namespace = (typeof namespaceOrType === 'string' ? namespaceOrType : ''),
+                _Type = (typeof namespaceOrType === 'string' ? Type : namespaceOrType);
             
+            // only valid types are allowed
+            if (['class', 'enum', 'interface', 'mixin', 'structure'].indexOf(_Type._.type) === -1) { throw `Type (${_Type._.type}) cannot be placed in an assembly.`; }
         
-            // return
-            return Object.freeze(_asm);
+            // only uncontained types are allowed
+            if (_Type._.assembly || _Type._.namespace) { throw `Type (${_Type._.name}) is already contained in another namespace/assembly.`; }
+        
+            // build assembly structure
+            _Assembly = flair.Assembly.get(asmName);
+            if (!_Assembly) { 
+                _Assembly = {};
+        
+                // attach assembly reflector
+                _Assembly._ = {
+                    name: asmName,
+                    type: 'assembly',
+                    types: []
+                };
+        
+                // attach assembly functions
+                _Assembly.getTypes = () => { return flair.Assembly.getTypes(asmName); };
+                _Assembly.getType = (qualifiedName) => {
+                    if (!qualifiedName.startsWith(asmName + '.' )) { throw `Type ${qualifiedName} does not belong to ${asmName} assembly.`; }
+                    return flair.Assembly.getType(qualifiedName);
+                };
+                _Assembly.createInstance = (qualifiedName, ...args) => { 
+                    if (!qualifiedName.startsWith(asmName + '.' )) { throw `Type ${qualifiedName} does not belong to ${asmName} assembly.`; }
+                    return flair.Assembly.createInstance(qualifiedName, ...args);
+                };      
+        
+                // store it
+                flair.Assembly._[asmName] = _Assembly; 
+            }
+        
+            // claim type
+            _Type._.assembly = _Assembly;
+            _Type._.namespace = _namespace;
+        
+            // merge/add namespace
+            let nsList = _namespace.split('.'),
+                nextLevel = _Assembly;
+            if (_namespace && nsList.length > 0) {
+                for(nsItem of nsList) {
+                    if (nsItem) {
+                        // special name not allowed
+                        if (nsItem === '_') { throw `Special name "_" is used as namespace in ${_Type._.name}.`; }
+                        nextLevel[nsItem] = nextLevel[nsItem] || {};
+        
+                        // check if this is not a type itself
+                        if (nextLevel[nsItem]._) { throw `${_Type._.name} cannot be contained in another type (${nextLevel[nsItem]._.name})`; }
+        
+                        // pick it
+                        nextLevel = nextLevel[nsItem];
+                    }
+                }
+            }
+        
+            // add type at the bottom, if not already exists
+            if (nextLevel[_Type._.name]) { throw `Type ${_Type._.name} already contained at ${asmName}.${_namespace}.`; }
+            nextLevel[_Type._.name] = _Type;
+        
+            // add to list
+            _Assembly._.types.push(_Type);
+        
+            // return contained type itself and not the assembly
+            // assembly is always accessed via static method of Assembly
+            return _Type;
         };
+        flair.Assembly._ = {};
+        flair.Assembly.get = (asmName) => { return flair.Assembly._[asmName]; }
+        flair.Assembly.getTypes = (asmName) => {
+            let _Assembly = flair.Assembly._[asmName];
+            if (_Assembly) { return _Assembly._.types.slice(); }
+            return [];
+        };
+        flair.Assembly.getType = (qualifiedName) => {
+            let _Type = null,
+                list = qualifiedName.split('.'),
+                nextLevel = flair.Assembly._;
+            if (qualifiedName && list.length > 0) {
+                for(item of list) {
+                    if (item) {
+                        // special name not allowed
+                        if (item === '_') { throw `Special name "_" is used as qualified name in ${qualifiedName}.`; }
         
-        
+                        // pick next level
+                        nextLevel = nextLevel[item];
+                        if (!nextLevel) { break; }
+                    }
+                }
+            }
+            if (!nextLevel || !nextLevel._ || ['class', 'enum', 'interface', 'mixin', 'structure'].indexOf(nextLevel._.type) === -1) { return null; }
+            return nextLevel;
+        };
+        flair.Assembly.createInstance = (qualifiedName, ...args) => {
+            let _Type = flair.Assembly.getType(qualifiedName);
+            if (_Type && _Type._.type != 'class') { throw `${qualifiedName} is not a class.`; }
+            if (_Type) { return new _Type(...args); }
+            return null;
+        }
         
         // using
         // using(object, scopeFn)
@@ -1521,17 +1620,23 @@
         flair.Reflector.get = (forTarget) => {
             // define
             const CommonTypeReflector = function(target) {
-                this.getType = () => { return target._.type; }
-                this.getName = () => { return target._.name || ''; }
-                this.getTarget = () => { return target; }
-                this.isInstance = () => { return target._.type === 'instance'; }
-                this.isClass = () => { return target._.type === 'class'; }
-                this.isEnum = () => { return target._.type === 'enum'; }
-                this.isStructure = () => { return target._.type === 'structure'; }
-                this.isStructureInstance = () => { return target._.type === 'sinstance'; }
-                this.isAssembly = () => { return target._.type === 'assembly'; }
-                this.isMixin = () => { return target._.type === 'mixin'; }
-                this.isInterface = () => { return target._.type === 'interface'; }
+                this.getType = () => { return target._.type; };
+                this.getName = () => { return target._.name || ''; };
+                this.getNamespace = () => { return target._.namespace || ''; };
+                this.getAssembly = () => { 
+                    let _Assembly = target._.assembly;
+                    if (_Assembly) { return new AssemblyReflector(_Assembly); }
+                    return null; 
+                };
+                this.getTarget = () => { return target; };
+                this.isInstance = () => { return target._.type === 'instance'; };
+                this.isClass = () => { return target._.type === 'class'; };
+                this.isEnum = () => { return target._.type === 'enum'; };
+                this.isStructure = () => { return target._.type === 'structure'; };
+                this.isStructureInstance = () => { return target._.type === 'sinstance'; };
+                this.isAssembly = () => { return target._.type === 'assembly'; };
+                this.isMixin = () => { return target._.type === 'mixin'; };
+                this.isInterface = () => { return target._.type === 'interface'; };
             };
             const CommonMemberReflector = function(type, target, name) {
                 this.getType = () => { return 'member'; }
@@ -1691,11 +1796,6 @@
                 refl.getValue = () => { return target[name]; }
                 return refl;
             };
-            const AsmMemberReflector = function(target, name, member) {
-                let refl = new CommonMemberReflector(member._.type, target, name);
-                refl.getMember = () => { return flair.Reflector.get(member); }
-                return refl;
-            };
             const InstanceReflector = function(target) {
                 let refl = new CommonTypeReflector(target),
                     filterMembers = (members, type, attrs) => {
@@ -1827,6 +1927,7 @@
                     return keys;
                 };
                 refl.getMember = (name) => { return target[name]; };
+                refl.invoke = (...args) => { return target[name](...args); };
                 refl.isInstanceOf = (name) => { return target._.inherits._.name === name; };
                 return refl;              
             };    
@@ -1895,30 +1996,38 @@
             const AssemblyReflector = function(target) {
                 let refl = new CommonTypeReflector(target);
                 refl.getMembers = () => { 
-                    let members = [];
-                    const findMembers = (obj, ns) => {
-                        for(let key in obj) {
-                            if (obj.hasOwnProperty(key) && key !== '_') {
-                                if (typeof obj[key]._ === 'undefined') { // this is a namespace
-                                    findMembers(obj[key], ns + '.' + key);
-                                } else { // this is a member
-                                    members.push(new AsmMemberReflector(target, ns + '.' + obj[key]._.name, obj[key]));
-                                }
+                    let types = target.getTypes(),
+                        members = [];
+                    if (types) {
+                        for(type of types) {
+                            switch(type._.type) {
+                                case 'class': members.push(new ClassReflector(type)); break;
+                                case 'enum': members.push(new EnumReflector(type)); break;
+                                case 'structure': members.push(new StructureReflector(type)); break;
+                                case 'mixin': members.push(new MixinReflector(type)); break;
+                                case 'interface': members.push(new InterfaceReflector(type)); break;                    
                             }
                         }
-                    };
-                    findMembers(target, target._.name);
-                    return members;
-                };
-                refl.getMember = (qualifiedName) => {
-                    let items = qualifiedName.split('.');
-                    if (items.length > 0) { 
-                        items.shift(); // remove assembly name from namespace
-                        qualifiedName = items.join('.');
                     }
-                    if (typeof target[qualifiedName] === 'undefined') { throw `${qualifiedName} is not defined.`; }
-                    return flair.Reflector.get(target[qualifiedName]);
+                    return members;
+                }
+                refl.getMember = (qualifiedName) => {
+                    let Type = target.getType(qualifiedName),
+                        member = null;
+                    if (Type) {
+                        switch(Type._.type) {
+                            case 'class': member = new ClassReflector(Type); break;
+                            case 'enum': member = new EnumReflector(Type); break;
+                            case 'structure': member = new StructureReflector(Type); break;
+                            case 'mixin': member = new MixinReflector(Type); break;
+                            case 'interface': member = new InterfaceReflector(Type); break;                    
+                        }
+                    }
+                    return member;
                 };
+                refl.createInstance = (qualifiedName, ...args) => {
+                    return target.createInstance(qualifiedName, ...args);
+                }
                 return refl;
             };
             const MixinReflector = function(target) {
@@ -1958,7 +2067,7 @@
                 case 'mixin': ref = new MixinReflector(forTarget); break;
                 case 'interface': ref = new InterfaceReflector(forTarget); break;
                 default:
-                    throw 'Unknown type';
+                    throw `Unknown type ${forTarget._.type}.`;
             }
         
             // return

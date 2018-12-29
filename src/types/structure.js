@@ -21,7 +21,9 @@ flair.Structure = (structureName, factory) => {
     // attach structure reflector
     Structure._ = {
         name: structureName,
-        type: 'structure'
+        type: 'structure',
+        namespace: '',
+        assembly: null        
     };
 
     // return
