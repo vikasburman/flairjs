@@ -37,6 +37,7 @@ Features
 * Dependency injection: Object life-cycle management via DI container and constructor, method and property injection of registered types.
 * Serialization: Seamless serialization and deserialization of class objects for persistance and transfer.
 * Reflection: Meta programming made easy with advance reflection support on all live objects and base types.
+* Type organization: Organization of types under individual assemblies and namespaces.
 * Others: Event handling, Async method calls, Auto-disposable objects, deprecate member notifications, etc.
 
 Getting Started
