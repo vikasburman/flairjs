@@ -9,17 +9,15 @@
 Introduction
 ---
 
-Javascript is everywhere, and its popularity has grown tremendously. There has been several enhancements done in the language to make it more powerful. ES6/ES7 is bringing several new object-oriented concepts and features to the language, but the bottleneck has always been the varied support of these features in web browsers, thus restricting the large-scale usage of these new features.
+Javascript is everywhere, and its popularity has grown tremendously. There has been several enhancements done in the language to make it more powerful. ES6/ES7 has added several object-oriented features to the language, but the bottleneck has always been the varied support to these features by web browsers, thus restricting the large-scale usage of these new features.
 
 
-Besides, due to historical background of Javascript and several backward compatibility issues, expecting to have all awesome object-oriented concepts as they exists in any powerful languages like C#, Java, etc. is useless, at least in near future.
+Besides, due to historical background of Javascript and several compatibility issues, expecting to have all awesome object-oriented concepts, as they exists in any powerful languages like C#, Java, etc., is useless.
 
-In such restricted times, FlairJS takes the problem head-on and brings majority of the awesomeness of C#/Java features, in Javascript, natively! No build-time transpilation or compilation of your codebase, just plain vanilla Javascript.
-
-All basic object oriented concepts like, inheritance, encapsulation, polymorphism, events, together with advance features like aspect oriented and attribute based programming, custom attributes, serialization, 
+In such restricted times, FlairJS takes the problem head-on and brings majority of the awesomeness of C#/Java features, in Javascript, natively! All basic object oriented concepts like, inheritance, encapsulation, polymorphism, events, together with advance features like aspect oriented and attribute based programming, custom attributes, serialization, 
 dependency injection and reflection, etc. are all nicely baked in this tiny javascript library.
 
-Once again, all of these are available via pure JavaScript syntax, without any build-time transpilation or compilation 
+All of these are available via pure JavaScript syntax, without any build-time transpilation or compilation 
 of your codebase.
                   
 The forward-looking and future-proof design of the library, plays well with ongoing Ecmascript advancements, and uses available new JavaScript constructs behind the scenes, wherever possible and supported.
