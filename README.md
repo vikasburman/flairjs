@@ -15,4 +15,4 @@ of your codebase.
                   
 The forward-looking and future-proof design of the library, plays well with ongoing Ecmascript advancements, and uses available new JavaScript constructs behind the scenes, wherever possible and supported.
 
-This works in web browsers and in other JavaScript environments like Node and NW.js.
+This works in web browsers and in other JavaScript environments like [Node](https://nodejs.org) and [NW.js](https://nwjs.io/).
