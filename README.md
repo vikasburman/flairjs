@@ -14,7 +14,7 @@ JavaScript is everywhere, and its popularity has grown tremendously. There has b
 
 Besides, due to rich and long history of JavaScript, several compatibility issues do exists. Expecting to have all awesome object-oriented concepts as they exists in any new languages like C#, Java, etc., is tough.
 
-_FlairJS_ takes the problem head-on and brings majority of the awesomeness of C#/Java features in JavaScript, natively! All basic object oriented concepts like, inheritance, encapsulation, polymorphism, events, together with advance features like aspect oriented and attribute based programming, custom attributes, serialization, 
+_FlairJS_ takes the problem head-on and brings majority of the awesomeness of C#/Java features in JavaScript, natively! Basic object oriented concepts like, inheritance, encapsulation, polymorphism, events, together with advance features like aspect oriented and attribute based programming, custom attributes, serialization, 
 dependency injection and reflection, etc. are all nicely baked in this tiny JavaScript library.
 
 All of these are available via pure JavaScript syntax, without any build-time transpilation or compilation 
@@ -31,7 +31,7 @@ Features
 * **Encapsulation:** True Public, Private and Protected members etc.
 * **Polymorphism:** Abstract classes, Interfaces, Method overriding, Restrictions via 'sealed', Dynamic casting via 'as', etc.
 * **Mature Base Types:** Class, Structure, Interface, Mixin, Enum, Assembly, etc.
-* **Aspect orientation:** Aspect definitions with Before, After and Around advise weaving on methods and properties
+* **Aspect orientation:** Aspect definitions with Before, After and Around advise weaving on methods and properties.
 * **Attributes based programming:** Inbuilt system attributes like 'readonly', 'sealed' and many more with full-blown support of defining custom attributes and its usage over class and class members.
 * **Dependency injection:** Object life-cycle management via DI container and constructor, method and property injection of registered types.
 * **Serialization:** Seamless serialization and deserialization of class objects for persistance and transfer.
@@ -43,16 +43,18 @@ Getting Started
 ---
 **1. Install**
 
-Install using `bower install JS3` or download [latest release](https://github.com/vikasburman/js3/releases). All you need is to have `JS3.min.js` available, whatever approach you want to take.
+Install using `npm install flairjs` or download [latest release](https://github.com/vikasburman/flairjs/releases/latest). All you need is to have `flairjs.min.js` available, whatever approach you want to take.
 
 **2. Include**
 
-Include JS3 engine in your html page.
+Include FlairJS in your html page.
 
-> There are no external dependencies of the core engine of this library, therefore feel free to include in whatever order required. However this must be included before any `*.js3` file or any JS3 extension is being included.  
+> There are no external dependencies of this library, therefore feel free to include in whatever order required. However this must be loaded before any `*.js` file which uses FlairJS features, for them to be available.
 
 ```html
-<script type="text/javascript" src="path/JS3.min.js"></script>
+<script type="text/javascript" src="path/flairjs.min.js"></script>
+
+> FlairJS also support module loaders and can also be loaded via `require` or other module loading techniques.
 
 **3. Load `*.js3` files**
 
