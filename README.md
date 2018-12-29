@@ -5,6 +5,7 @@
 [![npm version](https://badge.fury.io/js/flairjs.svg)](https://badge.fury.io/js/flairjs)
 
 **True Object Oriented JavaScript**
+
 __Powerful .Net/Java style object oriented concepts in plain vanilla JavaScript.__
 
 All basic object oriented concepts like, inheritance, encapsulation, polymorphism, events, together with advance features like aspect oriented and attribute based programming, custom attributes, serialization, 
