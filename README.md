@@ -6,6 +6,8 @@
 ===
 > **True Object Oriented JavaScript**
 
+<div style="text-align: right"> your-text-here </div>
+
 __Powerful .Net/Java style object oriented concepts in plain vanilla JavaScript.__
 
 All basic object oriented concepts like, inheritance, encapsulation, polymorphism, events, together with advance features like aspect oriented and attribute based programming, custom attributes, serialization, 
