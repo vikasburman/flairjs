@@ -1,4 +1,6 @@
-# [FlairJS](https://flairjs.com) - **True Object Oriented JavaScript**
+[FlairJS](https://flairjs.com)
+===
+> **True Object Oriented JavaScript**
 
 [![Build Status](https://travis-ci.com/vikasburman/flairjs.svg?branch=master)](https://travis-ci.com/vikasburman/flairjs) 
 [![Known Vulnerabilities](https://snyk.io/test/github/vikasburman/flairjs/badge.svg?targetFile=package.json)](https://snyk.io/test/github/vikasburman/flairjs?targetFile=package.json) 
