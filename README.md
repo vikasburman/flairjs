@@ -9,13 +9,13 @@
 Introduction
 ---
 
-Javascript is everywhere, and its popularity has grown tremendously. There has been several enhancements done in the language to make it more powerful. ES6/ES7 has added several object-oriented features to the language, but the bottleneck has always been the varied support of these features by web browsers, thus restricting their large-scale usage.
+JavaScript is everywhere, and its popularity has grown tremendously. There has been several enhancements done in the language to make it more powerful. ES6/ES7 has added several object-oriented features to the language, but the bottleneck has always been the varied support of these features by web browsers, thus restricting their large-scale usage.
 
 
-Besides, due to rich and long history of Javascript, several compatibility issues do exists. Expecting to have all awesome object-oriented concepts as they exists in any new languages like C#, Java, etc., is tough.
+Besides, due to rich and long history of JavaScript, several compatibility issues do exists. Expecting to have all awesome object-oriented concepts as they exists in any new languages like C#, Java, etc., is tough.
 
-FlairJS takes the problem head-on and brings majority of the awesomeness of C#/Java features, in Javascript, natively! All basic object oriented concepts like, inheritance, encapsulation, polymorphism, events, together with advance features like aspect oriented and attribute based programming, custom attributes, serialization, 
-dependency injection and reflection, etc. are all nicely baked in this tiny javascript library.
+_FlairJS_ takes the problem head-on and brings majority of the awesomeness of C#/Java features in JavaScript, natively! All basic object oriented concepts like, inheritance, encapsulation, polymorphism, events, together with advance features like aspect oriented and attribute based programming, custom attributes, serialization, 
+dependency injection and reflection, etc. are all nicely baked in this tiny JavaScript library.
 
 All of these are available via pure JavaScript syntax, without any build-time transpilation or compilation 
 of your codebase.
