@@ -1,13 +1,13 @@
 {
-  "name": "oojs",
-  "basename": "oojs",
-  "description": "Object Oriented JavaScript",
+  "name": "flair",
+  "basename": "flair",
+  "description": "The Complete Object Oriented JavaScript Framework",
   "copyright": "(C) 2017-2019 Vikas Burman",
   "version": "1.0.0",
   "author": "Vikas Burman",
   "license": "MIT",
   "link": "http://",
-  "repository": "https://github.com/vikasburman/oojs.git",
+  "repository": "https://github.com/vikasburman/flair.git",
   "scripts": {
     "test": "gulp test",
     "build": "gulp build",
@@ -17,6 +17,9 @@
     "babel-eslint": "^7.2.3",
     "eslint": "^3.19.0",
     "gulp": "^3.9.1",
+    "gulp-babel": "^8.0.0",
+    "@babel/core": "^7.2.2",
+    "@babel/preset-env": "^7.2.3",
     "gulp-eslint": "^3.0.1",
     "gulp-inject-file": "^0.0.19",
     "gulp-jasmine": "^2.4.2",
@@ -26,5 +29,6 @@
     "jasmine": "^2.6.0",
     "uglify-js-harmony": "^2.7.7"
   },
-  "dependencies": {}
+  "dependencies": {
+  }
 }

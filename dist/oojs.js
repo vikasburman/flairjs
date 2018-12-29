@@ -1004,18 +1004,24 @@
                 _this = {};
         
             // definition helpers
+            const isSpecialMember = (member) => {
+                return ['constructor', 'dispose', '_constructor', '_dispose', '_'].indexOf(member) !== -1;
+            };     
             _this.func = (name) => {
                 if (typeof meta[name] !== 'undefined') { throw `${interfaceName}.${name} is already defined.`; }
+                if (isSpecialMember(name)) { throw `${interfaceName}.${name} can only be defined for a class.`; }
                 meta[name] = [];
                 meta[name].type = 'func';
             };
             _this.prop = (name) => {
                 if (typeof meta[name] !== 'undefined') { throw `${interfaceName}.${name} is already defined.`; }
+                if (isSpecialMember(name)) { throw `${interfaceName}.${name} can only be defined as a function for a class.`; }
                 meta[name] = [];
                 meta[name].type = 'prop';
             };
             _this.event = (name) => {
                 if (typeof meta[name] !== 'undefined') { throw `${interfaceName}.${name} is already defined.`; }
+                if (isSpecialMember(name)) { throw `${interfaceName}.${name} can only be defined as a function for a class.`; }
                 meta[name] = [];
                 meta[name].type = 'event';
             };
@@ -1035,14 +1041,22 @@
         
         // Enum
         // Enum(enumName, {key: value})
-        oojs.Enum = (enumName, keyValuePairs) => {
-            let _enum = keyValuePairs;
+        oojs.Enum = (enumName, keyValuePairsOrArray) => {
+            let _enum = keyValuePairsOrArray;
+            if (Array.isArray(keyValuePairsOrArray)) {
+                let i = 0;
+                _enum = {};
+                for(key of keyValuePairsOrArray) {
+                    _enum[key] = i;
+                    i++;
+                }
+            } 
             _enum._ = {
                 name: enumName,
                 type: 'enum',
                 keys: () => {
                     let items = [];
-                    for(let key in keyValuePairs) {
+                    for(let i in keyValuePairs) {
                         if (keyValuePairs.hasOwnProperty(key) && key !== '_') {
                             items.push(key);
                         }
@@ -1117,17 +1131,20 @@
         
         
         // Assembly
-        // Assembly(asmName, {namespace: member})
-        oojs.Assembly = (asmName, nestedStructure) => {
-            let _asm = nestedStructure;
+        // Assembly(asmName)
+        oojs.Assembly = (asmName) => {
+            let _asm = {};
             _asm._ = {
                 name: asmName,
                 type: 'assembly'
             };
         
+            
+        
             // return
             return Object.freeze(_asm);
         };
+        
         
         
         // using

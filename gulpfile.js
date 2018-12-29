@@ -1,11 +1,13 @@
 const gulp = require('gulp');
 const eslint = require('gulp-eslint');
+const babel = require('gulp-babel');
 const uglifyjs = require('uglify-js-harmony');
 const uglify = require('gulp-uglify');
 const minifier = require('gulp-uglify/minifier');
 const jasmineNode = require('gulp-jasmine');
 const pkg = require('./package.json');
 const uglifyConfig = require('./build/.uglify.json');
+const babelConfig = require('./build/.babel.json');
 const rename = require('gulp-rename');
 const inject = require('gulp-inject-file');
 const replace = require('gulp-string-replace');
@@ -23,7 +25,7 @@ const errorHandler = (name) => {
 
 // task: build
 gulp.task('build', (done) => {
-    gulp.src('./src/main.js')
+    gulp.src('./src/core/main.js')
         // assemble pieces
         .pipe(inject())
         .on('error', errorHandler('assemble'))
@@ -49,6 +51,7 @@ gulp.task('build', (done) => {
         .pipe(eslint.failAfterError())
         
         // minify
+        .pipe(babel(babelConfig.js))
         .pipe(minifier(uglifyConfig.js, uglifyjs))
         .on('error', errorHandler('minifier'))
         

@@ -1,13 +1,21 @@
 // Enum
 // Enum(enumName, {key: value})
-oojs.Enum = (enumName, keyValuePairs) => {
-    let _enum = keyValuePairs;
+oojs.Enum = (enumName, keyValuePairsOrArray) => {
+    let _enum = keyValuePairsOrArray;
+    if (Array.isArray(keyValuePairsOrArray)) {
+        let i = 0;
+        _enum = {};
+        for(key of keyValuePairsOrArray) {
+            _enum[key] = i;
+            i++;
+        }
+    } 
     _enum._ = {
         name: enumName,
         type: 'enum',
         keys: () => {
             let items = [];
-            for(let key in keyValuePairs) {
+            for(let i in keyValuePairs) {
                 if (keyValuePairs.hasOwnProperty(key) && key !== '_') {
                     items.push(key);
                 }

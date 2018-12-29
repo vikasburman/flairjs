@@ -1,4 +1,4 @@
-(function() {
+
     // initialize with required symbols
     oojs({ symbols: ['DEBUG'] });
 
@@ -33,6 +33,11 @@
         Sat: 5,
         Sun: 6
     });
+    window.Days = Days;
+
+    var Days2 = Enum('Days2', ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+    window.Days2 = Days2;
+
 
     // define classes
     var Vehicle = Class('Vehicle', [Mix1, Mix2, ITest, ITest2], function(attr) {
@@ -155,7 +160,7 @@
             console.log('disposed Vehicle');
         });                    
     });
-    
+
     window.Vehicle = Vehicle;
 
     var Car = Class('Car', Vehicle, function(attr) {
@@ -306,7 +311,7 @@
     });  
 
     using(new BMW(), (bmw) => {
-    
+
     });
 
     var Level0Class = Class('Level0', function(attr) {
@@ -398,4 +403,5 @@
 
 
     window.asm = system;
-})();
+
+  
