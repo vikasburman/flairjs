@@ -1,4 +1,5 @@
 #FlairJS
+
 ##True Object Oriented JavaScript
 
 [![Known Vulnerabilities](https://snyk.io/test/github/vikasburman/flairjs/badge.svg?targetFile=package.json)](https://snyk.io/test/github/vikasburman/flairjs?targetFile=package.json) 
