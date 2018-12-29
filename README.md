@@ -1,5 +1,13 @@
-##FlairJS - True Object Oriented JavaScript##
-Powerful .Net/Java style object oriented concepts in plain vanilla JavaScript.
+#FlairJS
+##True Object Oriented JavaScript
+
+[![Known Vulnerabilities](https://snyk.io/test/github/vikasburman/flairjs/badge.svg?targetFile=package.json)](https://snyk.io/test/github/vikasburman/flairjs?targetFile=package.json)
+
+[![Build Status](https://travis-ci.com/vikasburman/flairjs.svg?branch=master)](https://travis-ci.com/vikasburman/flairjs)
+
+[![npm version](https://badge.fury.io/js/flairjs.svg)](https://badge.fury.io/js/flairjs)
+
+###Powerful .Net/Java style object oriented concepts in plain vanilla JavaScript.
 
 All basic object oriented concepts like, inheritance, encapsulation, polymorphism, events, together with advance features like aspect oriented and attribute based programming, custom attributes, serialization, 
 dependency injection and reflection, etc. are all nicely baked in this tiny javascript library.
