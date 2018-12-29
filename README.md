@@ -26,9 +26,18 @@ This works in web browsers and in other JavaScript environments like [Node](http
 
 Features
 ---
-* Pure JavaScript
-* No external dependencies in core engine
-* Supports *all* CSS features *as-is* (including experimental ones)
+* Pure JavaScript, No external dependencies, ~40k minified.
+* Inheritance: Single inheritance chain, Multiple inheritance via Mixins, Restrictions via 'sealed', etc.
+* Encapsulation: True Public, Private and Protected members etc.
+* Polymorphism: Abstract classes, Interfaces, Method overriding, Restrictions via 'sealed', Dynamic casting via 'as', etc.
+* Mature Base Types: Class, Structure, Interface, Mixin, Enum, Assembly, etc.
+* Aspect orientation: Aspect definitions with Before, After and Around advise weaving on methods and properties
+* Attributes based programming: Inbuilt system attributes like 'readonly', 'sealed' and many more with full-blown support of defining custom attributes and its usage over class and class members.
+* Attributes based programming: Inbuilt system attributes like 'readonly', 'sealed' and many more with full-blown support of defining custom attributes and its usage over class and class members.
+* Dependency injection: Object life-cycle management via DI container and constructor, method and property injection of registered types.
+* Serialization: Seamless serialization and deserialization of class objects for persistance and transfer.
+* Reflection: Meta programming made easy with advance reflection support on all live objects and base types.
+* Others: Event handling, Async method calls, Auto-disposable objects, deprecate member notifications, etc.
 
 Getting Started
 ---
