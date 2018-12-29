@@ -23,17 +23,19 @@ const errorHandler = (name) => {
 
 // task: build
 gulp.task('build', (done) => {
-    gulp.src('./src/core/main.js')
+    let buildCore = () => {
+        let destName = packageJSON.basename;
+        gulp.src('./src/main.js')
         // assemble pieces
         .pipe(inject())
         .on('error', errorHandler('assemble'))
 
         // write assembled
         .pipe(rename((path) => {
-            path.basename = packageJSON.basename;
+            path.basename = destName;
         }))
         .on('error', errorHandler('rename'))     
-        .pipe(replace('<basename>', packageJSON.basename))
+        .pipe(replace('<basename>', destName))
         .pipe(replace('<desc>', packageJSON.description))
         .pipe(replace('<version>', packageJSON.version))
         .pipe(replace('<copyright>', packageJSON.copyright))
@@ -57,10 +59,12 @@ gulp.task('build', (done) => {
             path.extname = '.min.js'; // from <name.whatever>.js to <name.whatever>.min.js
         }))
         .on('error', errorHandler('rename'))
-        .pipe(replace(packageJSON.basename + '.js', packageJSON.basename + '.min.js'))
+        .pipe(replace(destName + '.js', destName + '.min.js'))
         .pipe(gulp.dest('./dist'))
         .on('end', done)
         .on('error', errorHandler('write-minified'));
+    };
+    buildCore();         
 });
 
 // task: test
