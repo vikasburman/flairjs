@@ -27,7 +27,7 @@ This works in web browsers and in other JavaScript environments like [Node](http
 Features
 ---
 * Pure JavaScript, No external dependencies, ~40k minified.
-* *Inheritance:* Single inheritance chain, Multiple inheritance via Mixins, Restrictions via 'sealed', etc.
+* **Inheritance:** Single inheritance chain, Multiple inheritance via Mixins, Restrictions via 'sealed', etc.
 * Encapsulation: True Public, Private and Protected members etc.
 * Polymorphism: Abstract classes, Interfaces, Method overriding, Restrictions via 'sealed', Dynamic casting via 'as', etc.
 * Mature Base Types: Class, Structure, Interface, Mixin, Enum, Assembly, etc.
