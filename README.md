@@ -37,7 +37,7 @@ Features
 * **Serialization:** Seamless serialization and deserialization of class objects for persistance and transfer.
 * **Reflection:** Meta programming made easy with advance reflection support on all live objects and base types.
 * **Type organization:** Organization of types under individual assemblies and namespaces.
-* **Others:** Event handling, Async method calls, Auto-disposable objects, deprecate member notifications, etc.
+* **Others:** Singleton, Static classes and members, State storage, Event handling, Async method calls, Auto-disposable objects, deprecate member notifications, etc.
 
 Getting Started
 ---
@@ -57,34 +57,65 @@ Include FlairJS in your html page or load it as a module.
 
 > FlairJS also support module loaders and can also be loaded via `require` or other module loading techniques.
 
-**3. Load `*.js3` files**
+**3. Play with Objects**
 
-A `*.js3` file can be seen as a javascript counterpart of a `*.css` file. With JS3, instead of writing `.css` you would be writing `.js3` files, which are pure javascript files. These can be loaded like any other javascript file (including using any loader such as yepnope).
-
-```html
-<script type="text/javascript" src="path/styles1.js3"></script>
-<script type="text/javascript" src="path/styles2.js3"></script>
-```
-
-> Although creating a `.js3` file is recommended for clean code separation, it is possible that you write your stylesheet code directly in any javascript file of yours. 
-
-> No matter how they are defined or loaded, all js3 objects will be able to see each other and can share style information at runtime.
-
-That's all is needed to start using the power of JS3.
-
-Create your first `.js3` file
----
-Creating a `.js3` file is simply writing bunch of javascript code lines. Each `js3` file gets loaded on global `JS3` object by its name. Here is a quick example:
+JavaScript now has the awesomeness of C#/Java. 
+Define and play with objects. Here is a quick example:
 
 ```javascript
 
-JS3.define('demo1', function() {
-	// define prefixes
-	prefixes('-moz-', '-webkit-');
-	
-	// define variables
-	vars('lightColor', color('yellow')).tint(.9);
-	vars('borderColor', color('lightgray')); 
-	vars({ 		
-        size: 11,
+// define Vehicle class
+let Vehicle = Class('Vehicle', function() {
+    this.construct((capacity) => {
+        this.cc = capacity;
+        console.log('Vehicle constructed!');    
+    });
+    
+    this.prop('cc', 0);
+    this.func('start', () => {
+        // raise event with current time of start
+        this.started(Date.now());
+    });
+    this.event('started', (time) => {
+        // event interceptor
+        return { when: time };
+    });
+});
+
+// define Car, derived from Vehicle
+let Car = Class('Car', Vehicle, function(attr) {
+    attr('override'); // constructor overridding
+    this.construct((base, model, capacity) => {
+        // call base class's constructor
+        base('car', capacity);
+        this.model = model;
+
+        // subscribe to started event of self
+        this.started.subscribe((e) => {
+            // event args 
+            console.log('Event ' + e.name + ' fired at: ' + e.args.when);
+        });
+        console.log('Car constructed!');    
+    });
+
+    attr('readonly');   // model is readonly, but can still be defined in constructor
+    this.prop('model', '');
+
+    // dispose car
+    this.destruct(() => {
+        console.log('Car disposed!');
+    });     
+});
+
+// auto disposable block
+using(new Car('SUV', 3000), (suv) => {
+    suv.start();
+});
+
 ```
+
+> Executing above code will show following on console:
+> Vehicle constructed!
+> Car constructed!
+> Event started fired at: <time>
+> Car disposed!
