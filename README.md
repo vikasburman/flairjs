@@ -4,9 +4,9 @@
 
 [FlairJS](https://flairjs.com)
 ===
-> ** True Object Oriented JavaScript **
+> **True Object Oriented JavaScript**
 
-__ Powerful .Net/Java style object oriented concepts in plain vanilla JavaScript. __
+__Powerful .Net/Java style object oriented concepts in plain vanilla JavaScript.__
 
 All basic object oriented concepts like, inheritance, encapsulation, polymorphism, events, together with advance features like aspect oriented and attribute based programming, custom attributes, serialization, 
 dependency injection and reflection, etc. are all nicely baked in this tiny javascript library.
