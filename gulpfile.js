@@ -25,7 +25,7 @@ const errorHandler = (name) => {
 gulp.task('build', (done) => {
     let buildCore = () => {
         let destName = packageJSON.basename;
-        gulp.src('./src/main.js')
+        gulp.src('./src/index.js')
         // assemble pieces
         .pipe(inject())
         .on('error', errorHandler('assemble'))

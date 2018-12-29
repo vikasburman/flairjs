@@ -49,13 +49,20 @@
         // expose to global environment
         if (!options.supressGlobals) { 
             let g = options.global;
-            g.Class = flair.Class; g.Mixin = flair.Mixin; g.Interface = flair.Interface; g.Structure = flair.Structure;  g.Enum = flair.Enum; g.Assembly = flair.Assembly;
-            g.using = flair.using; g.as = flair.as;
-            g.Attribute = flair.Attribute; 
-            g.Aspects = flair.Aspects; g.Aspect = flair.Aspect; 
-            g.Container = flair.Container;
-            g.Serializer = flair.Serializer; 
-            g.Reflector = flair.Reflector;
+            g.Class = Object.freeze(flair.Class); 
+            g.Mixin = Object.freeze(flair.Mixin); 
+            g.Interface = Object.freeze(flair.Interface); 
+            g.Structure = Object.freeze(flair.Structure);  
+            g.Enum = Object.freeze(flair.Enum); 
+            g.Assembly = Object.freeze(flair.Assembly);
+            g.using = Object.freeze(flair.using); 
+            g.as = Object.freeze(flair.as);
+            g.Attribute = Object.freeze(flair.Attribute); 
+            g.Aspects = Object.freeze(flair.Aspects); 
+            g.Aspect = Object.freeze(flair.Aspect); 
+            g.Container = Object.freeze(flair.Container);
+            g.Serializer = Object.freeze(flair.Serializer); 
+            g.Reflector = Object.freeze(flair.Reflector);
         }
 
         // return
