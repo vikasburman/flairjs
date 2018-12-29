@@ -45,6 +45,7 @@ Getting Started
 
 Install using `npm install flairjs` or download [latest release](https://github.com/vikasburman/flairjs/releases/latest). All you need is to have `flairjs.min.js` available, whatever approach you want to take.
 
+
 **2. Include**
 
 Include FlairJS in your html page or load it as a module.
@@ -55,12 +56,14 @@ Include FlairJS in your html page or load it as a module.
 <script type="text/javascript" src="path/flairjs.min.js"></script>
 ```
 
-> FlairJS also support module loaders and can also be loaded via `require` or other module loading techniques.
+> FlairJS also support module loaders and can be loaded via `require` or other module loading techniques.
+
 
 **3. Play with Objects**
 
-JavaScript now has the awesomeness of C#/Java. 
-Define and play with objects. Here is a quick example:
+JavaScript now has the awesomeness of C#/Java. Define and play with objects.
+
+Here is a quick example:
 
 ```javascript
 
@@ -87,18 +90,18 @@ let Car = Class('Car', Vehicle, function(attr) {
     attr('override'); // constructor overridding
     this.construct((base, model, capacity) => {
         // call base class's constructor
-        base('car', capacity);
+        base(capacity);
         this.model = model;
 
-        // subscribe to started event of self
+        // subscribe to started event of base class
         this.started.subscribe((e) => {
-            // event args 
+            // read event args 
             console.log('Event ' + e.name + ' fired at: ' + e.args.when);
         });
         console.log('Car constructed!');    
     });
 
-    attr('readonly');   // model is readonly, but can still be defined in constructor
+    attr('readonly'); // model is readonly, but can still be defined in constructor
     this.prop('model', '');
 
     // dispose car
@@ -114,8 +117,4 @@ using(new Car('SUV', 3000), (suv) => {
 
 ```
 
-> Executing above code will show following on console:
-> Vehicle constructed!
-> Car constructed!
-> Event started fired at: <time>
-> Car disposed!
+> Executing above code will show following on console: Vehicle constructed!, Car constructed!, Event started fired at: (time), Car disposed!
