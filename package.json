@@ -7,7 +7,7 @@
   "author": "Vikas Burman",
   "license": "MIT",
   "link": "http://",
-  "repository": "https://github.com/vikasburman/flair.git",
+  "repository": "https://github.com/vikasburman/flairjs.git",
   "scripts": {
     "test": "gulp test",
     "build": "gulp build",
