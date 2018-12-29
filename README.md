@@ -47,12 +47,13 @@ Install using `npm install flairjs` or download [latest release](https://github.
 
 **2. Include**
 
-Include FlairJS in your html page.
+Include FlairJS in your html page or load it as a module.
 
 > There are no external dependencies of this library, therefore feel free to include in whatever order required. However this must be loaded before any `*.js` file which uses FlairJS features, for them to be available.
 
 ```html
 <script type="text/javascript" src="path/flairjs.min.js"></script>
+```
 
 > FlairJS also support module loaders and can also be loaded via `require` or other module loading techniques.
 
