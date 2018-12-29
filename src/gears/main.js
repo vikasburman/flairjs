@@ -10,7 +10,7 @@
     const def = (opts = {}) => {
         let isServer = (new Function("try {return this===global;}catch(e){return false;}"))(),
             getGlobal = new Function("try {return (this===global ? global : window);}catch(e){return window;}");
-        let oojs = {},
+        let flair = {},
             noop = () => {},
             noopAsync = (resolve, reject) => { resolve(); },
             options = {
@@ -49,17 +49,17 @@
         // expose to global environment
         if (!options.supressGlobals) { 
             let g = options.global;
-            g.Class = oojs.Class; g.Mixin = oojs.Mixin; g.Interface = oojs.Interface; g.Structure = oojs.Structure;  g.Enum = oojs.Enum; g.Assembly = oojs.Assembly;
-            g.using = oojs.using; g.as = oojs.as;
-            g.Attribute = oojs.Attribute; 
-            g.Aspects = oojs.Aspects; g.Aspect = oojs.Aspect; 
-            g.Container = oojs.Container;
-            g.Serializer = oojs.Serializer; 
-            g.Reflector = oojs.Reflector;
+            g.Class = flair.Class; g.Mixin = flair.Mixin; g.Interface = flair.Interface; g.Structure = flair.Structure;  g.Enum = flair.Enum; g.Assembly = flair.Assembly;
+            g.using = flair.using; g.as = flair.as;
+            g.Attribute = flair.Attribute; 
+            g.Aspects = flair.Aspects; g.Aspect = flair.Aspect; 
+            g.Container = flair.Container;
+            g.Serializer = flair.Serializer; 
+            g.Reflector = flair.Reflector;
         }
 
         // return
-        return Object.freeze(oojs);
+        return Object.freeze(flair);
     };
 
     // export
@@ -68,6 +68,6 @@
     } else if (typeof define === 'function' && typeof define.amd !== 'undefined') {
         define(function() { return def; });
     } else {
-        this.oojs = def;
+        this.flair = def;
     }
 }).call(this);

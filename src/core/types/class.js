@@ -3,7 +3,7 @@
 // Class(className, inherits, function() {})
 // Class(className, [mixins/interfaces], function() {})
 // Class(className, inherits, [mixins/interfaces], function() {})
-oojs.Class = (arg1, arg2, arg3, arg4) => {
+flair.Class = (arg1, arg2, arg3, arg4) => {
     let className = arg1,
         inherits = null,
         mixins = [],
@@ -171,7 +171,7 @@ oojs.Class = (arg1, arg2, arg3, arg4) => {
         const attr = (attrName, ...args) => {
             let Attr = null;
             if (typeof attrName === 'string') {
-                Attr = oojs.Container.get(attrName)[0]; // get the first registered
+                Attr = flair.Container.get(attrName)[0]; // get the first registered
             } else {
                 Attr = attrName;
                 attrName = Attr._.name;

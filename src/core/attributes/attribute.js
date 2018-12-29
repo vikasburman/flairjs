@@ -1,5 +1,5 @@
 // Attribute
-oojs.Attribute = oojs.Class('Attribute', function() {
+flair.Attribute = flair.Class('Attribute', function() {
     let decoratorFn = null;
     this.func('constructor', (...args) => {
         // args can be static or dynamic or settings

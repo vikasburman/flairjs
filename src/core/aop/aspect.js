@@ -1,5 +1,5 @@
 // Aspect
-oojs.Aspect = oojs.Class('Aspect', function() {
+flair.Aspect = flair.Class('Aspect', function() {
     let beforeFn = null,
         afterFn = null,
         aroundFn = null;

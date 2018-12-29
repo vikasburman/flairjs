@@ -1,6 +1,6 @@
 // Interface
 // Interface(interfaceName, function() {})
-oojs.Interface = (interfaceName, factory) => {
+flair.Interface = (interfaceName, factory) => {
     let meta = {},
         _this = {};
 

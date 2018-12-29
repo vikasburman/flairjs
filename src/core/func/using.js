@@ -1,6 +1,6 @@
 // using
 // using(object, scopeFn)
-oojs.using = (obj, scopeFn) => {
+flair.using = (obj, scopeFn) => {
     try {
         scopeFn(obj);
     } finally {

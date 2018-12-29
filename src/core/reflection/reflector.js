@@ -1,6 +1,6 @@
 // Reflector
-oojs.Reflector = {};
-oojs.Reflector.get = (forTarget) => {
+flair.Reflector = {};
+flair.Reflector.get = (forTarget) => {
     // define
     const CommonTypeReflector = function(target) {
         this.getType = () => { return target._.type; }
@@ -175,7 +175,7 @@ oojs.Reflector.get = (forTarget) => {
     };
     const AsmMemberReflector = function(target, name, member) {
         let refl = new CommonMemberReflector(member._.type, target, name);
-        refl.getMember = () => { return oojs.Reflector.get(member); }
+        refl.getMember = () => { return flair.Reflector.get(member); }
         return refl;
     };
     const InstanceReflector = function(target) {
@@ -399,7 +399,7 @@ oojs.Reflector.get = (forTarget) => {
                 qualifiedName = items.join('.');
             }
             if (typeof target[qualifiedName] === 'undefined') { throw `${qualifiedName} is not defined.`; }
-            return oojs.Reflector.get(target[qualifiedName]);
+            return flair.Reflector.get(target[qualifiedName]);
         };
         return refl;
     };

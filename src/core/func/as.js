@@ -1,7 +1,7 @@
 // as
 // as(object, intf)
 //  intf: can be an interface reference or 'public', 'protected', 'private'
-oojs.as = (obj, intf) => {
+flair.as = (obj, intf) => {
     if (typeof intf === 'string') {
         switch(intf) {
             case 'public': 

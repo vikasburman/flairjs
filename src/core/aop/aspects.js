@@ -1,7 +1,7 @@
 // Aspects
 let allAspects = {};
-oojs.Aspects = {};
-oojs.Aspects.register = (pointcut, Aspect) => {
+flair.Aspects = {};
+flair.Aspects.register = (pointcut, Aspect) => {
     // pointcut: classNamePattern.funcNamePattern
     //      classNamePattern:
     //          * - any class

@@ -1,6 +1,6 @@
 // Structure
 // Structure(structureName, factory(args) {})
-oojs.Structure = (structureName, factory) => {
+flair.Structure = (structureName, factory) => {
     // build structure definition
     let Structure = function(...args) {
         let _this = this;

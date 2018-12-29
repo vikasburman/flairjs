@@ -1,6 +1,6 @@
 // Enum
 // Enum(enumName, {key: value})
-oojs.Enum = (enumName, keyValuePairsOrArray) => {
+flair.Enum = (enumName, keyValuePairsOrArray) => {
     let _enum = keyValuePairsOrArray;
     if (Array.isArray(keyValuePairsOrArray)) {
         let i = 0;
@@ -36,21 +36,21 @@ oojs.Enum = (enumName, keyValuePairsOrArray) => {
     // return
     return Object.freeze(_enum);
 };
-oojs.Enum.getKeys = (enumObj) => {
+flair.Enum.getKeys = (enumObj) => {
     if (enumObj._ && enumObj._.type === 'enum') {
         return enumObj._.keys();
     }
     enumName = ((enumObj._ && enumObj._.name) ? enumObj._.name : 'unknown');
     throw `${enumName} is not an Enum.`;
 };
-oojs.Enum.getValues = (enumObj) => {
+flair.Enum.getValues = (enumObj) => {
     if (enumObj._ && enumObj._.type === 'enum') {
         return enumObj._.values();
     }
     enumName = ((enumObj._ && enumObj._.name) ? enumObj._.name : 'unknown');
     throw `${enumName} is not an Enum.`;
 };
-oojs.Enum.isDefined = (enumObj, keyOrValue) => {
+flair.Enum.isDefined = (enumObj, keyOrValue) => {
     if (enumObj._ && enumObj._.type === 'enum') {
         return (enumObj._.keys.indexOf(keyOrValue) !== -1 || enumObj._.values.indexOf(keyOrValue) !== -1) ? true : false;
     }

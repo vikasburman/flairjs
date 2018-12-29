@@ -1,9 +1,9 @@
 // Container
 let container = {};
-oojs.Container = {};
+flair.Container = {};
 // register(cls)
 // register(typeName, cls)
-oojs.Container.register = (typeName, cls) => {
+flair.Container.register = (typeName, cls) => {
     if (typeof typeName === 'function') {
         cls = typeName;
         typeName = cls._.name;
@@ -11,13 +11,13 @@ oojs.Container.register = (typeName, cls) => {
     if (!container[typeName]) { container[typeName] = []; }
     container[typeName].push(cls);
 };
-oojs.Container.isRegistered = (typeName) => {
+flair.Container.isRegistered = (typeName) => {
     return typeof container[typeName] !== 'undefined';
 };
-oojs.Container.get = (typeName) => {
+flair.Container.get = (typeName) => {
     return (container[typeName] || []).slice();
 };
-oojs.Container.resolve = (typeName, isMultiResolve, ...args) => {
+flair.Container.resolve = (typeName, isMultiResolve, ...args) => {
     let result = null;
     if (container[typeName] && container[typeName].length > 0) { 
         if (isMultiResolve) {

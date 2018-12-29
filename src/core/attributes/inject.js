@@ -6,7 +6,7 @@
 //      type class name on server | type class name on client
 //  - typeArgs: constructor args to pass when type class instance is created
 // NOTE: types being referred here must be available in container so sync resolve can happen
-oojs.Container.register(oojs.Class('inject', oojs.Attribute, function() {
+flair.Container.register(flair.Class('inject', flair.Attribute, function() {
     this.decorator((obj, type, name, descriptor) => {
         // validate
         if (['func', 'prop'].indexOf(type) === -1) { throw `inject attribute cannot be applied on ${type} members. (${className}.${name})`; }
@@ -26,7 +26,7 @@ oojs.Container.register(oojs.Class('inject', oojs.Attribute, function() {
                     Type = items[1].trim(); // right one
                 }
             }
-            instance = oojs.Container.resolve(Type, false, ...typeArgs)
+            instance = flair.Container.resolve(Type, false, ...typeArgs)
         } else {
             instance = new Type(...typeArgs);
         }

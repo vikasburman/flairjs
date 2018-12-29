@@ -11,7 +11,7 @@
   "scripts": {
     "test": "gulp test",
     "build": "gulp build",
-    "start": "open ./example/index.html"
+    "start": "open ./docs/index.html"
   },
   "devDependencies": {
     "babel-eslint": "^7.2.3",
