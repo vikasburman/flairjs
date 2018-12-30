@@ -69,16 +69,22 @@ Here is a quick example:
 
 // define Vehicle class
 let Vehicle = Class('Vehicle', function() {
+    // constructor
     this.construct((capacity) => {
         this.cc = capacity;
         console.log('Vehicle constructed!');    
     });
     
+    // property
     this.prop('cc', 0);
+
+    // method
     this.func('start', () => {
         // raise event with current time of start
         this.started(Date.now());
     });
+
+    // event
     this.event('started', (time) => {
         // event interceptor
         return { when: time };
@@ -104,7 +110,7 @@ let Car = Class('Car', Vehicle, function(attr) {
     attr('readonly'); // model is readonly, but can still be defined in constructor
     this.prop('model', '');
 
-    // dispose car
+    // dispose car via destructor
     this.destruct(() => {
         console.log('Car disposed!');
     });     
