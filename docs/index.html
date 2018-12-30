@@ -94,7 +94,7 @@
           var htmlContent = converter.makeHtml(mdText);
           $(".content").html(htmlContent);
           $(".menu2").html(renderMenu(getMenu($(".content"))));
-          if ($('.menu1').children().children().html()) {
+          if ($('.menu2').children().children().html()) {
             $(".menu2").show();
           } else {
             $(".menu2").hide();
