@@ -1,8 +1,8 @@
 Changelog
 =========
 
-2018
-----
+&beta; Versions
+---------------
 
 ##### 0.12.0 - &beta; (29 Dec 2018)
 
@@ -22,13 +22,13 @@ Changelog
 * Documentation structure created
 * Code is re-factored
 
-##### 0.9.0 - &alpha; (09 Oct 2018)
+##### 0.9.0 - &beta; (09 Oct 2018)
 
 * Issues fixed
 * Examples matured
 
-2017
-----
+&alpha; Versions
+----------------
 
 ##### 0.8.0 - &alpha; (16 Sep 2017)
 
