@@ -1,4 +1,5 @@
 const gulp = require('gulp');
+const git = require('gulp-git');
 const eslint = require('gulp-eslint');
 const uglifyjs = require('uglify-js-harmony');
 const uglify = require('gulp-uglify');
@@ -20,6 +21,53 @@ const errorHandler = (name) => {
         console.error('Error: ' + err.toString());
     };
 };
+
+// arguments reader
+const readArgs = function() {
+    let argList = process.argv,
+        arg = {}, a, opt, thisOpt, curOpt;
+    for (a = 0; a < argList.length; a++) {
+      thisOpt = argList[a].trim();
+      opt = thisOpt.replace(/^\-+/, '');
+
+      if (opt === thisOpt) {
+        // argument value
+        if (curOpt) arg[curOpt] = opt;
+        curOpt = null;
+      }
+      else {
+        // argument name
+        curOpt = opt;
+        arg[curOpt] = true;
+      }
+    }
+    return arg;
+};
+
+// task: bump
+gulp.task('bump', (done) => {
+    // bump version
+    let ver = packageJSON.version.split('.');
+    ver[0] = parseInt(ver[0]);
+    ver[1] = parseInt(ver[1]);
+    ver[2] = parseInt(ver[2]);
+    if (ver[2] >= 99999) {
+        ver[2] = 0
+        if (ver[1] >= 999) {
+            ver[1] = 0
+            ver[0] += 1
+        } else {
+            ver[1] += 1
+        }
+    } else {
+        ver[2] += 1
+    }
+    packageJSON.version = ver[0].toString() + '.' + ver[1].toString() + '.' + ver[2].toString();
+    fs.writeFileSync('./package.json', JSON.stringify(packageJSON, null, 4), 'utf8');
+
+    // done
+    done();
+});
 
 // task: build
 gulp.task('build', (done) => {
@@ -79,6 +127,10 @@ gulp.task('test', (done) => {
     // so calling done() manually below - this seems to be working so far
     // but need to be revisited for a better solution
     done(); 
+});
+
+// task: release
+gulp.task('release', ['bump', 'build', 'test'], () => {
 });
 
 // task: default

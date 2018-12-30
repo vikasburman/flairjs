@@ -1,45 +1,46 @@
 {
-  "name": "flairjs",
-  "basename": "flair",
-  "description": "True Object Oriented JavaScript",
-  "copyright": "(c) 2017-2019 Vikas Burman",
-  "version": "0.12.0",
-  "author": "Vikas Burman <vikasburman@gmail.com>",
-  "keywords": [
-    "javascript",
-    "oops",
-    "js",
-    "object oriented",
-    "es6",
-    "es5",
-    "es7"
-  ],
-  "license": "MIT",
-  "link": "https://flairjs.com",
-  "homepage": "https://flairjs.com",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/vikasburman/flairjs.git"
-  },
-  "main": "./dist/flair.js",
-  "scripts": {
-    "test": "gulp test",
-    "build": "gulp build",
-    "start": "open ./docs/index.html"
-  },
-  "devDependencies": {
-    "eslint": "^3.19.0",
-    "gulp": "^3.9.1",
-    "gulp-eslint": "^3.0.1",
-    "babel-eslint": "^10.0.1",
-    "gulp-inject-file": "^0.0.19",
-    "gulp-jasmine": "^2.4.2",
-    "gulp-rename": "^1.2.2",
-    "gulp-string-replace": "^1.1.2",
-    "gulp-uglify": "^2.1.2",
-    "jasmine": "^2.6.0",
-    "uglify-js-harmony": "^2.7.7"
-  },
-  "dependencies": {
-  }
+    "name": "flairjs",
+    "basename": "flair",
+    "title": "FlairJS",
+    "description": "True Object Oriented JavaScript",
+    "copyright": "(c) 2017-2019 Vikas Burman",
+    "version": "0.12.4",
+    "author": "Vikas Burman <vikasburman@gmail.com>",
+    "keywords": [
+        "javascript",
+        "oops",
+        "js",
+        "object oriented",
+        "es6",
+        "es5",
+        "es7"
+    ],
+    "license": "MIT",
+    "link": "https://flairjs.com",
+    "homepage": "https://flairjs.com",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/vikasburman/flairjs.git"
+    },
+    "main": "./dist/flair.min.js",
+    "scripts": {
+        "build": "gulp build",
+        "test": "gulp test",
+        "bump": "gulp bump",
+        "release": "gulp release"
+    },
+    "devDependencies": {
+        "babel-eslint": "^10.0.1",
+        "eslint": "^3.19.0",
+        "gulp": "^3.9.1",
+        "gulp-eslint": "^3.0.1",
+        "gulp-inject-file": "^0.0.19",
+        "gulp-jasmine": "^2.4.2",
+        "gulp-rename": "^1.2.2",
+        "gulp-string-replace": "^1.1.2",
+        "gulp-uglify": "^2.1.2",
+        "jasmine": "^2.6.0",
+        "uglify-js-harmony": "^2.7.7"
+    },
+    "dependencies": {}
 }
