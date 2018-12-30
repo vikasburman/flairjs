@@ -1,7 +1,8 @@
 Changelog
-===
+=========
 
-## 2018
+2018
+----
 
 ##### 0.12.0 - &beta; (29 Dec 2018)
 
@@ -26,7 +27,8 @@ Changelog
 * Issues fixed
 * Examples matured
 
-## 2017
+2017
+----
 
 ##### 0.8.0 - &alpha; (16 Sep 2017)
 
