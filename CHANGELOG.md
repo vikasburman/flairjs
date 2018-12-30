@@ -25,7 +25,7 @@ Beta
 * Documentation structure created
 * Code is re-factored
 
-### 0.9.0 - &beta; (09 Oct 2018)
+### 0.09.0 - &beta; (09 Oct 2018)
 
 * Issues fixed
 * Examples matured
@@ -34,44 +34,44 @@ Alpha
 -----
 
 
-##### 0.8.0 - &alpha; (16 Sep 2017)
+### 0.08.0 - &alpha; (16 Sep 2017)
 
 * Issue fixed
 
-##### 0.7.0 - &alpha; (15 Aug 2017)
+### 0.07.0 - &alpha; (15 Aug 2017)
 
 * Issue fixed
 * Running example created
 
-##### 0.6.0 - &alpha; (23 Jul 2017)
+### 0.06.0 - &alpha; (23 Jul 2017)
 
 * Issues fixed
 * More inbuilt attributes added (session, state, etc.)
 
-##### 0.5.0 - &alpha; (14 Jul 2017)
+### 0.05.0 - &alpha; (14 Jul 2017)
 
 * Issues fixed
 * Added constructor and disposer overrides
 * Readonly and once attributes added
 
-##### 0.4.0 - &alpha; (08 Jun 2017)
+### 0.04.0 - &alpha; (08 Jun 2017)
 * Reflection API conceptualized
 
-##### 0.3.0 - &alpha; (07 Jun 2017)
+### 0.03.0 - &alpha; (07 Jun 2017)
 
 * Interface, Enum and Namespace concepts added
 * Minor enhancements
 
-##### 0.2.0 - &alpha; (30 May 2017)
+### 0.02.0 - &alpha; (30 May 2017)
 
 * API standardization
 * Build engine
 
-##### 0.1.x - &alpha; (25 May 2017)
+### 0.01.0 - &alpha; (25 May 2017)
 
 * Basic library structure with quick functional plumbing
 
-##### 0.0.x - &alpha; (22 May 2017)
+### 0.01.x - &alpha; (22 May 2017)
 
 * Idea processing
 * Conceptualizing and maturing the overall approach
