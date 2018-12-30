@@ -886,7 +886,7 @@ code .comment {
 .content h3:before {
   position: fixed!important; 
 }
-.menu1 .level-1 {
+.menu1 .level-1 a{
   font-size: 1.2em!important;
   color: black!important;
   padding-bottom: 10px!important;
