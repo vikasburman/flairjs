@@ -107,7 +107,7 @@
             }
         });
     };
-    $(document).ready(function() {
+    let onChange = function() {
       let hashtag = location.hash.substr(1);
       if (hashtag) {
         renderMd(hashtag);
@@ -115,6 +115,12 @@
         $('.title-area').show();
         $('.content-root').hide();
       }
+    };
+    $(document).ready(function() {
+      $( window ).on('hashchange', function(e) {
+        onChange();
+      });
+      onChange(); // first time
     });
   </script>  
 </head>
