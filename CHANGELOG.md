@@ -7,7 +7,7 @@ Here is a rundown of all major and minor happenings during the development of th
 Beta
 ----
 
-##### 0.12.0 - &beta; (29 Dec 2018)
+### 0.12.0 - &beta; (29 Dec 2018)
 
 * Documentation revamped
 * Assembly and namespace concepts coded
@@ -16,16 +16,16 @@ Beta
 * Code refactored and cleaned
 * Changelog written for all major developments since the beginning
 
-##### 0.11.0 - &beta; (12 Nov 2018)
+### 0.11.0 - &beta; (12 Nov 2018)
 
 * Updated documentation
 
-##### 0.10.0 - &beta; (19 Oct 2018)
+### 0.10.0 - &beta; (19 Oct 2018)
 
 * Documentation structure created
 * Code is re-factored
 
-##### 0.9.0 - &beta; (09 Oct 2018)
+### 0.9.0 - &beta; (09 Oct 2018)
 
 * Issues fixed
 * Examples matured
