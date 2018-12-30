@@ -1,4 +1,4 @@
-<!-- default.nav.html -->
+<!-- nav: default.nav.html -->
 
 Changelog
 =========
