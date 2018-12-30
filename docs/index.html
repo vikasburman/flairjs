@@ -101,7 +101,7 @@
               tlMenuUrl = "https://flairjs.com/content/" + tlMenu;
           $.get(tlMenuUrl, function(jsonContent) {
             if (jsonContent) {
-              $(".menu1").html(renderMenu(JSON.parse(jsonContent)));
+              $(".menu1").html(renderMenu(jsonContent));
               $(".menu1").show();
             }
           });
