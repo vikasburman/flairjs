@@ -9,7 +9,7 @@ Production
 
 Production grade, tested and ready-to-use library.
 
-### 1.0.0 - 05 Jan 2019
+#### 1.0.0 - 05 Jan 2019
 
 * Stabelized API
 * Fully functional examples
