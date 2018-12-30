@@ -94,10 +94,10 @@
           var htmlContent = converter.makeHtml(mdText);
           $(".content").html(htmlContent);
           $(".menu2").html(renderMenu(getMenu($(".content"))));
-          if ($('.menu1').children().children().html().trim() === '') {
-            $(".menu2").hide();
-          } else {
+          if ($('.menu1').children().children().html()) {
             $(".menu2").show();
+          } else {
+            $(".menu2").hide();
           }
         } else {
           $(".menu2").hide();
