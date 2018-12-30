@@ -877,6 +877,9 @@ code .comment {
   z-index: 1;
 }
 
+.content h1 {
+  font-size: 2.0em!important; 
+}
 .content h3 {
   padding-top: 20px!important; 
 }
