@@ -69,6 +69,7 @@ Here is a quick example:
 
 // define Vehicle class
 let Vehicle = Class('Vehicle', function() {
+    
     // constructor
     this.construct((capacity) => {
         this.cc = capacity;
@@ -93,6 +94,7 @@ let Vehicle = Class('Vehicle', function() {
 
 // define Car, derived from Vehicle
 let Car = Class('Car', Vehicle, function(attr) {
+    
     attr('override'); // constructor overridding
     this.construct((base, model, capacity) => {
         // call base class's constructor
