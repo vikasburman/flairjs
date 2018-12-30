@@ -82,7 +82,6 @@
       return $el;
     };
     let renderMd = function(token) {
-      $('.title-area').hide();
       $('.content-root').show();      
       if (!token) { token = 'overview' }
       let url = "https://flairjs.com/content/" + token + '.md';
@@ -96,7 +95,6 @@
             $(".menu2").html(renderMenu(getMenu($(".content"))));
 
             // render top level menu
-            $(".menu1").hide();
             if ($('.content')[0] && $('.content')[0].firstChild && $('.content')[0].firstChild.data && $('.content')[0].firstChild.data.trim().startsWith('nav:')) {
               let tlMenu = $('.content')[0].firstChild.data.trim().split(':')[1].trim(),
                   tlMenuUrl = "https://flairjs.com/content/" + tlMenu;
@@ -110,6 +108,10 @@
         });
     };
     let onChange = function() {
+      $('.title-area').hide();
+      $(".menu1").hide();
+      $(".menu2").hide();
+
       let hashtag = location.hash.substr(1);
       if (hashtag.startsWith('/')) { hashtag = hashtag.substr(1); }
       if (hashtag) {
