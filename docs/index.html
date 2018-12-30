@@ -89,11 +89,15 @@
       $(".content").html();
       // Load the Markdown file and convert it to HTML for display
       $.get(url, function(mdText) {
+        if (!mdText) {
+          $(".menu2").hide();
+        } else {
+          $(".menu2").show();
+        }
         var converter = new Markdown.Converter();
         var htmlContent = converter.makeHtml(mdText);
         $(".content").html(htmlContent);
         $(".menu2").html(renderMenu(getMenu($(".content"))));
-        $(".menu2").show();
         
         // render top level menu
         if ($('.content')[0] && $('.content')[0].firstChild && $('.content')[0].firstChild.data && $('.content')[0].firstChild.data.trim().startsWith('nav:')) {
@@ -103,23 +107,25 @@
             if (jsonContent) {
               $(".menu1").html(renderMenu(jsonContent));
               $(".menu1").show();
+            } else {
+              $(".menu1").hide();
             }
           });
+        } else {
+          $(".menu1").hide();
         }
       });
     };
     let onChange = function() {
-      $('.title-area').hide();
-      $('.content-root').hide();
-      $(".menu1").hide();
-      $(".menu2").hide();
-
       let hashtag = location.hash.substr(1);
       if (hashtag.startsWith('/')) { hashtag = hashtag.substr(1); }
       if (hashtag) {
+        $('.title-area').hide();
+        $('.content-root').show();
         renderMd(hashtag);
       } else {
         $('.title-area').show();
+        $('.content-root').hide();
       }
     };
     $(document).ready(function() {
