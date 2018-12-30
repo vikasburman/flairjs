@@ -835,7 +835,7 @@ a.big.button:hover:visited {
   height: 3px;
   -webkit-border-radius: 2px;
   border-radius: 2px;
-  background: #2badad;
+  background: darkblue;
 }
 code .string,
 code .number {
