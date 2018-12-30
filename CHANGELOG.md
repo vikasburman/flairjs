@@ -75,5 +75,3 @@ Alpha
 
 * Idea processing
 * Conceptualizing and maturing the overall approach
-
----
