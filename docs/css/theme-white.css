@@ -890,4 +890,5 @@ code .comment {
   font-size: 1em!important;
   color: black!important;
   padding-bottom: 10px!important;
+  letter-spacing: 0.1em!important;
 }
