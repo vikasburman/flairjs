@@ -89,15 +89,19 @@
       $(".content").html();
       // Load the Markdown file and convert it to HTML for display
       $.get(url, function(mdText) {
-        if (!mdText) {
-          $(".menu2").hide();
+        if (mdText) {
+          var converter = new Markdown.Converter();
+          var htmlContent = converter.makeHtml(mdText);
+          $(".content").html(htmlContent);
+          $(".menu2").html(renderMenu(getMenu($(".content"))));
+          if ($('.menu1').children().children().html().trim() === '') {
+            $(".menu2").hide();
+          } else {
+            $(".menu2").show();
+          }
         } else {
-          $(".menu2").show();
+          $(".menu2").hide();
         }
-        var converter = new Markdown.Converter();
-        var htmlContent = converter.makeHtml(mdText);
-        $(".content").html(htmlContent);
-        $(".menu2").html(renderMenu(getMenu($(".content"))));
         
         // render top level menu
         if ($('.content')[0] && $('.content')[0].firstChild && $('.content')[0].firstChild.data && $('.content')[0].firstChild.data.trim().startsWith('nav:')) {
