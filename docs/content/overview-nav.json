@@ -4,11 +4,11 @@
     "items": [
         { 
             "section":"Overview",
-            "id": "overview",
+            "id": "/overview",
             "items": [
                 {
                     "section":"Changelog",
-                    "id": "overview/changelog",
+                    "id": "/overview/changelog",
                     "items": [],
                     "level": 2
                 }
