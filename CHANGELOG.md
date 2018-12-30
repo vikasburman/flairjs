@@ -1,9 +1,3 @@
-Latest Release
-==============
-
-Latest stable production release is [v1.0.0](https://github.com/vikasburman/flairjs/releases/tag/1.0.0), which is recommended for most users. If you want to play with new features which are yet not made into any formal production release, use [edge](https://raw.githubusercontent.com/vikasburman/flairjs/master/dist/flair.js) version.
-
-
 Changelog
 =========
 
