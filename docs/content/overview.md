@@ -1,3 +1,3 @@
-<!-- nav: overview.nav.html -->
+<!-- nav: overview.nav.json -->
 
 overview

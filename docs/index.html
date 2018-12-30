@@ -100,9 +100,11 @@
             if ($('.content')[0] && $('.content')[0].firstChild && $('.content')[0].firstChild.data && $('.content')[0].firstChild.data.trim().startsWith('nav:')) {
               let tlMenu = $('.content')[0].firstChild.data.trim().split(':')[1].trim(),
                   tlMenuUrl = "https://flairjs.com/content/" + tlMenu;
-              $.get(tlMenuUrl, function(htmlContent) {
-                $(".menu1").html(htmlContent);
-                $(".menu1").show();
+              $.get(tlMenuUrl, function(jsonContent) {
+                if (jsonContent) {
+                  $(".menu2").html(renderMenu(JSON.parse(jsonContent)));
+                  $(".menu1").show();
+                }
               });
             }
         });
