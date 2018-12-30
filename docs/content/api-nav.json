@@ -1,6 +1,13 @@
 {
-    "section":"API Reference",
-    "id": "#api",
-    "items": [],
+    "section":"",
+    "id": "",
+    "items": [
+        { 
+            "section":"API Reference",
+            "id": "/api",
+            "items": [],
+            "level": 1
+        }
+    ],
     "level": 0
 }

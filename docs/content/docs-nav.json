@@ -1,6 +1,13 @@
 {
-    "section":"Docs",
-    "id": "#docs",
-    "items": [],
+    "section":"",
+    "id": "",
+    "items": [
+        { 
+            "section":"Docs",
+            "id": "/docs",
+            "items": [],
+            "level": 1
+        }
+    ],
     "level": 0
 }
