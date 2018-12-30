@@ -889,4 +889,5 @@ code .comment {
 .menu1 .level-1 {
   font-size: 1.2em!important;
   color: black;
+  padding-bottom: 10px;
 }
