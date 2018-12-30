@@ -4,15 +4,15 @@ Changelog
 Here is a rundown of all major and minor happenings during the development of this library, grouped via published (or unpublished) tags and releases.
 
 
-Beta Versions
--------------
+Beta
+----
 
 ##### 0.12.0 - &beta; (29 Dec 2018)
 
 * Documentation revamped
 * Assembly and namespace concepts coded
 * oojs renamed to flairjs
-* https://flairjs.com published
+* (https://flairjs.com) published
 * Code refactored and cleaned
 * Changelog written for all major developments since the beginning
 
@@ -30,8 +30,9 @@ Beta Versions
 * Issues fixed
 * Examples matured
 
-Alpha Versions
---------------
+Alpha
+-----
+
 
 ##### 0.8.0 - &alpha; (16 Sep 2017)
 
