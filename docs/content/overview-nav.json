@@ -1,11 +1,18 @@
 {
-    "section":"Overview",
-    "id": "#overview",
+    "section":"",
+    "id": "",
     "items": [
         { 
-            "section":"Changelog",
-            "id": "#overview/changelog",
-            "items": [],
+            "section":"Overview",
+            "id": "overview",
+            "items": [
+                {
+                    "section":"Changelog",
+                    "id": "overview/changelog",
+                    "items": [],
+                    "level": 2
+                }
+            ],
             "level": 1
         }
     ],
