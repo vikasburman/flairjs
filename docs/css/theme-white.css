@@ -478,7 +478,7 @@ body.no-literate .content pre > code:hover::-webkit-scrollbar-thumb {
 }
 .button,
 .button:visited {
-  background: #2badad;
+  background: darkblue;
   color: #fff;
   text-shadow: none;
 }
