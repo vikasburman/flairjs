@@ -1,4 +1,4 @@
-<!-- nav: overview.nav.json.txt -->
+<!-- nav: overview.nav.json.md -->
 
 Changelog
 =========
