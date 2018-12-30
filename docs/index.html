@@ -81,19 +81,29 @@
       process(menu, $el);
       return $el;
     };
-
-    $(document).ready(function() {
-      let url = "https://raw.githubusercontent.com/vikasburman/flairjs/master/docs/"
+    let renderMd = function(token) {
+      $('.title-area').hide();
+      $('.content-root').show();      
+      if (!token) { token = 'default' }
+      let url = "https://flairjs.com/content/" + token + '.md';
 
       $(".content").html();
-      // Load the Markdown file and convert it to HTML for display
-      var markdownURL = "https://raw.githubusercontent.com/vikasburman/flairjs/master/CHANGELOG.md";
-      $.get(markdownURL, function(markdownContent) {
-          var converter = new Markdown.Converter();
-          var htmlContent = converter.makeHtml(markdownContent);
-          $(".content").html(htmlContent);
-          $(".menu").html(renderMenu(getMenu($(".content"))));
-      });
+        // Load the Markdown file and convert it to HTML for display
+        $.get(url, function(mdText) {
+            var converter = new Markdown.Converter();
+            var htmlContent = converter.makeHtml(mdText);
+            $(".content").html(htmlContent);
+            $(".menu").html(renderMenu(getMenu($(".content"))));
+        });
+    };
+    $(document).ready(function() {
+      let hashtag = location.hash.substr(1);
+      if (hashtag) {
+        renderMd(hashtag);
+      } else {
+        $('.title-area').show();
+        $('.content-root').hide();
+      }
     });
   </script>  
 </head>
@@ -119,7 +129,7 @@
             </p>
             <h5><a href="https://github.com/vikasburman/flairjs/releases/latest" target="_blank"><span style="color:black">Download</span></a></h5>
             <h6>Edge: <a href="https://raw.githubusercontent.com/vikasburman/flairjs/master/dist/flair.js" target="_blank">development</a>, <a href="https://raw.githubusercontent.com/vikasburman/flairjs/master/dist/flair.min.js" target="_blank">minified</a>
-                | Other: <a href="https://github.com/vikasburman/flairjs/releases/" target="_blank">releases</a>, <a href="./news.html">news</a>
+                | Other: <a href="https://github.com/vikasburman/flairjs/releases/" target="_blank">releases</a>, <a href="./index.html#changelog">news</a>
                 | License: <a href="https://github.com/vikasburman/flairjs/blob/master/LICENSE" target="_blank">MIT</a>
                 <br/><br/>&copy; 2017-2019 <a href="https://www.linkedin.com/in/vikasburman/" target="_blank">Vikas Burman</a>
             </h6>        
@@ -130,10 +140,10 @@
     <div class="left">
       <h1><a href="./index.html"><b><span style="color:darkblue">Flair</span><span style="color:maroon">JS</span></b></a></h1>
       <ul>
-        <li><a href="./index.html#start">Overview</a></li>
-        <li><a href="./docs.html">Docs</a></li>
-        <li><a href="./api.html">API</a></li>
-        <li><a href="./examples.html">Examples</a></li>
+        <li><a href="./index.html#overview">Overview</a></li>
+        <li><a href="./index.html#docs">Docs</a></li>
+        <li><a href="./index.html#api">API</a></li>
+        <li><a href="./index.html#examples">Examples</a></li>
         <li><a href="https://gearsjs.com" target="_blank"><span style="color:green">Gears</span><span style="color:maroon">JS</span></a></li>
       </ul>
     </div>
@@ -143,7 +153,6 @@
       </ul>
     </div>
     </div>
-
     <div class="content-root">
         <div class="menubar fixed">
           <div class="section" style="text-align: center;" >
@@ -170,6 +179,6 @@
           </div>       
         </div>
         <div role="flatdoc-content" class="content"></div>
-      </div>
+    </div>
 </body>
 </html>
