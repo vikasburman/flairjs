@@ -876,3 +876,10 @@ code .comment {
   position: relative;
   z-index: 1;
 }
+
+.content h3 {
+  padding-top: 20px!important; 
+}
+.content h3:before {
+  position: fixed!important; 
+}
