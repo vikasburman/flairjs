@@ -137,7 +137,7 @@ However, before you delve deep into any of these areas, begin with getting an [O
 
 Release History
 ---
-See the changelog [here](https://github.com/vikasburman/flairjs/blob/master/CHANGELOG.md).
+See the changelog [here](https://flairjs.com/news.html).
 
 License
 ---
