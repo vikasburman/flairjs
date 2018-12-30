@@ -3,7 +3,7 @@
   "basename": "flair",
   "description": "True Object Oriented JavaScript",
   "copyright": "(c) 2017-2019 Vikas Burman",
-  "version": "1.0.1",
+  "version": "0.12.0",
   "author": "Vikas Burman <vikasburman@gmail.com>",
   "keywords": [
     "javascript",
