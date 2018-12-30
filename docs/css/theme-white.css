@@ -714,11 +714,11 @@ a.big.button {
 }
 a.big.button,
 a.big.button:visited {
-  color: #2badad;
+  color:darkblue;
   text-decoration: none;
 }
 a.big.button:hover {
-  background: #2badad;
+  background: blue;
 }
 a.big.button:hover,
 a.big.button:hover:visited {
@@ -788,10 +788,10 @@ a.big.button:hover:visited {
 }
 .menu a,
 .menu a:visited {
-  color: #2badad;
+  color: darkblue;
 }
 .menu a:hover {
-  color: #228a8a;
+  color: blue;
 }
 .menu a.level-1 {
   font-family: montserrat, sans-serif;
