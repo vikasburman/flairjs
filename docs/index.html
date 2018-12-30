@@ -87,25 +87,26 @@
       let url = "https://flairjs.com/content/" + token + '.md';
 
       $(".content").html();
-        // Load the Markdown file and convert it to HTML for display
-        $.get(url, function(mdText) {
-            var converter = new Markdown.Converter();
-            var htmlContent = converter.makeHtml(mdText);
-            $(".content").html(htmlContent);
-            $(".menu2").html(renderMenu(getMenu($(".content"))));
-
-            // render top level menu
-            if ($('.content')[0] && $('.content')[0].firstChild && $('.content')[0].firstChild.data && $('.content')[0].firstChild.data.trim().startsWith('nav:')) {
-              let tlMenu = $('.content')[0].firstChild.data.trim().split(':')[1].trim(),
-                  tlMenuUrl = "https://flairjs.com/content/" + tlMenu;
-              $.get(tlMenuUrl, function(jsonContent) {
-                if (jsonContent) {
-                  $(".menu2").html(renderMenu(JSON.parse(jsonContent)));
-                  $(".menu1").show();
-                }
-              });
+      // Load the Markdown file and convert it to HTML for display
+      $.get(url, function(mdText) {
+        var converter = new Markdown.Converter();
+        var htmlContent = converter.makeHtml(mdText);
+        $(".content").html(htmlContent);
+        $(".menu2").html(renderMenu(getMenu($(".content"))));
+        $(".menu2").show();
+        
+        // render top level menu
+        if ($('.content')[0] && $('.content')[0].firstChild && $('.content')[0].firstChild.data && $('.content')[0].firstChild.data.trim().startsWith('nav:')) {
+          let tlMenu = $('.content')[0].firstChild.data.trim().split(':')[1].trim(),
+              tlMenuUrl = "https://flairjs.com/content/" + tlMenu;
+          $.get(tlMenuUrl, function(jsonContent) {
+            if (jsonContent) {
+              $(".menu2").html(renderMenu(JSON.parse(jsonContent)));
+              $(".menu1").show();
             }
-        });
+          });
+        }
+      });
     };
     let onChange = function() {
       $('.title-area').hide();
