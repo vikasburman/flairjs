@@ -93,7 +93,7 @@
             var converter = new Markdown.Converter();
             var htmlContent = converter.makeHtml(mdText);
             $(".content").html(htmlContent);
-            $(".menu").html(renderMenu(getMenu($(".content"))));
+            $(".menu2").html(renderMenu(getMenu($(".content"))));
         });
     };
     $(document).ready(function() {
@@ -155,12 +155,9 @@
     </div>
     <div class="content-root">
         <div class="menubar">
-          <div class="section" style="text-align: center;" >
-              <a class="github-button" href="https://github.com/vikasburman/flairjs/releases/latest" data-icon="octicon-cloud-download" data-size="large" aria-label="Download vikasburman/flairjs on GitHub">Download</a>
-              <br/>
-              <h6><a href="https://raw.githubusercontent.com/vikasburman/flairjs/master/dist/flair.js" target="_blank">edge</a> | <a href="https://raw.githubusercontent.com/vikasburman/flairjs/master/dist/flair.min.js" target="_blank">edge (min)</a> | <a href="https://github.com/vikasburman/flairjs/releases/" target="_blank">others</a> | <a href="https://www.npmjs.com/package/flairjs" target="_blank">npm</a></h6>
+          <div class="menu1 menu section">
           </div>      
-          <div class="menu section" role="flatdoc-menu">
+          <div class="menu2 menu section" role="flatdoc-menu">
           </div>
           <div class="bottom section">
               <img src="https://travis-ci.com/vikasburman/flairjs.svg?branch=master"/>

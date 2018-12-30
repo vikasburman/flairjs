@@ -1,7 +1,3 @@
-[//]: # "Comment"
-[//]: # "Comment"
-<!-- this is comment -->
-
 Changelog
 =========
 
