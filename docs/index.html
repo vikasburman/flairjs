@@ -98,7 +98,7 @@
             // render top level menu
             $(".menu1").hide();
             if ($('.content')[0] && $('.content')[0].firstChild && $('.content')[0].firstChild.data && $('.content')[0].firstChild.data.trim().startsWith('nav:')) {
-              let tlMenu = ('.content')[0].firstChild.data.trim().split(':')[1].trim(),
+              let tlMenu = $('.content')[0].firstChild.data.trim().split(':')[1].trim(),
                   tlMenuUrl = "https://flairjs.com/content/" + tlMenu;
               $.get(tlMenuUrl, function(htmlContent) {
                 $(".menu1").html(htmlContent);
