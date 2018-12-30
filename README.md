@@ -118,3 +118,23 @@ using(new Car('SUV', 3000), (suv) => {
 ```
 
 > Executing above code will show following on console: Vehicle constructed!, Car constructed!, Event started fired at: (time), Car disposed!
+
+Explore The Power
+---
+What you have seen above is the tip of the iceberg. FlairJS adds a lot of firepower to JavaScript that makes building complex JavaScript projects as easy as with C# or Java.
+
+To tap the real power of FlairJS, explore the [Docs](https://flairjs.com/docs.html) to understand concepts and behaviors, [API](https://flairjs.com/api.html) to know details of each exposed programming interface of various constructs and finally [Examples](https://flairjs.com/examples.html) to see real codebase showcasing all these concepts in action. 
+
+However, before you delve deep into any of these areas, begin with getting an [Overview](https://flairjs.com/index.html#start) first.
+
+Release History
+---
+See the changelog [here](https://github.com/vikasburman/flairjs/blob/master/CHANGELOG.md).
+
+License
+---
+&copy; 2017-2019 Vikas Burman.
+
+Licensed under the terms of the [MIT license](https://github.com/vikasburman/flairjs/blob/master/LICENSE). You are free to use FlairJS under any open source or commercial project, as long as this copyright header is left intact.
+
+Disclaimer: FlairJS is authored by me ([Vikas Burman](https://www.linkedin.com/in/vikasburman/)). The concepts and opinions found here, as well as in code, are my own and do not represent my employers (past, current or future) in any ways. 
