@@ -109,6 +109,7 @@
     };
     let onChange = function() {
       $('.title-area').hide();
+      $('.content-root').hide();
       $(".menu1").hide();
       $(".menu2").hide();
 
@@ -118,7 +119,6 @@
         renderMd(hashtag);
       } else {
         $('.title-area').show();
-        $('.content-root').hide();
       }
     };
     $(document).ready(function() {
