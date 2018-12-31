@@ -13,13 +13,14 @@
   <link href="css/theme.css" rel="stylesheet">
 
   <script src="js/jquery.min.js"></script>
+  <script src="js/jquery.scrollTo.min.js"></script>
   <script src="js/theme-white.js"></script>
   <script src="js/theme.js"></script>
   <script src="js/md.js"></script>
   <script src="https://buttons.github.io/buttons.js"></script>
   <script>
     let getMenu = function($content) {
-        var root = {items: [], id: '', level: 0};
+        var root = {items: [], id: '', level: 0, $: null};
         var cache = [root];
 
         function mkdir_p(level) {
@@ -40,7 +41,7 @@
 
           var parent = mkdir_p(level-1);
 
-          var obj = { section: $el.text(), items: [], level: level, id: $el.attr('id') || $el };
+          var obj = { section: $el.text(), items: [], level: level, id: $el.attr('id'), $: $el };
           parent.items.push(obj);
           cache[level] = obj;
         });
@@ -69,9 +70,10 @@
               if (node.id) {
                 $a.attr('href', '#' + node.id);
               }
-            } else {
+            } else if (node.$) {
+              $a.attr('style', "cursor:pointer;");
               $a.on('click', () => {
-                node.id.focus();
+                $('body').scrollTo(node.$); 
               });
             }
         }
