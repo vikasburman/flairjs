@@ -105,17 +105,17 @@
       $(".content").html();
       // Load the Markdown file and convert it to HTML for display
       $.get(url, function(mdText) {
-        if (mdText) {
-          var converter = new Markdown.Converter();
-          var htmlContent = converter.makeHtml(mdText);
-          $(".content").html(htmlContent);
-          $(".menu2").html(renderMenu(getMenu($(".content"))));
-          if ($('.menu2').children().children().html()) {
-            $($('.menu2').children().children().children().children().children()[0]).html('On This Page');
-            $(".menu2").show();
-          } else {
-            $(".menu2").hide();
-          }
+        if (!mdText) {
+          $(".menu2").hide();
+          mdText = "404 Not Found.";
+        }
+        var converter = new Markdown.Converter();
+        var htmlContent = converter.makeHtml(mdText);
+        $(".content").html(htmlContent);
+        $(".menu2").html(renderMenu(getMenu($(".content"))));
+        if ($('.menu2').children().children().html()) {
+          $($('.menu2').children().children().children().children().children()[0]).html('On This Page');
+          $(".menu2").show();
         } else {
           $(".menu2").hide();
         }
