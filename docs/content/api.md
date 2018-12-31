@@ -6,7 +6,7 @@ API Reference
 Types
 ------
 
-[Class](/#/api/class) |
+[Class](#/api/class) |
 Enum |
 Interface |
 Mixin |

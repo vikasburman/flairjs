@@ -892,7 +892,7 @@ code .comment {
   padding-bottom: 10px!important;
   letter-spacing: 0.1em!important;
 }
-.menu1 .level-1 p{
+.menu1 .level-1 a p{
   text-transform: none!important;
   letter-spacing: normal!important;
   font-weight: normal!important;
