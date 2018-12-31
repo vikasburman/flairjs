@@ -9,7 +9,7 @@ Learn concepts of developing JavaScript codebase using Flair. Guides are arrange
 [Getting Started](#/guides/getting-started)
 ---------------
 
-What are the core concepts, 
+What are the core concepts, how to setup Flair in your project, what to expect and how to troubleshoot are some of the focus areas of dsicussion under this guide. 
 
 
 [Object Oriented Constructs](#/guides/object-oriented-constructs)
