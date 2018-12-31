@@ -895,5 +895,5 @@ code .comment {
 .menu1 .level-1 a p{
   text-transform: none!important;
   letter-spacing: normal!important;
-  font-weight: normal!important;
+  font-weight: .75em!important;
 }
