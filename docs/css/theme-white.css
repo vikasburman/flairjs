@@ -893,6 +893,7 @@ code .comment {
   letter-spacing: 0.1em!important;
 }
 .menu1 .level-1 p{
-  font-size: 0.5em!important;
-  color: darkgrey!important;
+  text-transform: none!important;
+  letter-spacing: normal!important;
+  font-weight: normal!important;
 }

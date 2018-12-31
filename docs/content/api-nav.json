@@ -4,7 +4,7 @@
     "items": [
         { 
             "section":"API",
-            "desc": "This is main description",
+            "desc": "Reference for exposed API on all constructs.",
             "id": "/api",
             "items": [],
             "level": 1
