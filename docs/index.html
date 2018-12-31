@@ -107,17 +107,17 @@
       $.get(url, function(mdText) {
         if (!mdText) {
           $(".menu2").hide();
-          mdText = "404 Not Found.";
-        }
-        var converter = new Markdown.Converter();
-        var htmlContent = converter.makeHtml(mdText);
-        $(".content").html(htmlContent);
-        $(".menu2").html(renderMenu(getMenu($(".content"))));
-        if ($('.menu2').children().children().html()) {
-          $($('.menu2').children().children().children().children().children()[0]).html('On This Page');
-          $(".menu2").show();
         } else {
-          $(".menu2").hide();
+          var converter = new Markdown.Converter();
+          var htmlContent = converter.makeHtml(mdText);
+          $(".content").html(htmlContent);
+          $(".menu2").html(renderMenu(getMenu($(".content"))));
+          if ($('.menu2').children().children().html()) {
+            $($('.menu2').children().children().children().children().children()[0]).html('On This Page');
+            $(".menu2").show();
+          } else {
+            $(".menu2").hide();
+          }
         }
         
         // render top level menu
@@ -131,10 +131,16 @@
             } else {
               $(".menu1").hide();
             }
+          }).fail(function() {
+            $(".menu1").hide();
           });
         } else {
           $(".menu1").hide();
         }
+      }).fail(function() {
+          var converter = new Markdown.Converter();
+          var htmlContent = converter.makeHtml("> **404 - Page Not Found**");
+          $(".content").html(htmlContent);
       });
     };
     let onChange = function() {
