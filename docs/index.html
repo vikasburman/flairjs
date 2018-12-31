@@ -100,7 +100,8 @@
     let renderMd = function(token) {
       $('.content-root').show();      
       if (!token) { token = 'overview' }
-      let url = "https://flairjs.com/content/" + token + '.md';
+      let url = "https://flairjs.com/content/" + token + '.md',
+          url404 = "https://flairjs.com/content/404.md";
 
       $(".content").html();
       // Load the Markdown file and convert it to HTML for display
@@ -138,9 +139,13 @@
           $(".menu1").hide();
         }
       }).fail(function() {
-          var converter = new Markdown.Converter();
-          var htmlContent = converter.makeHtml("> **404 - Page Not Found**");
-          $(".content").html(htmlContent);
+          $.get(url404, function(mdText) {
+            var converter = new Markdown.Converter();
+            var htmlContent = converter.makeHtml(mdText);
+            $(".content").html(htmlContent);
+            $(".menu1").hide();
+            $(".menu2").hide();
+          }        
       });
     };
     let onChange = function() {
