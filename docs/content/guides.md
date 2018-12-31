@@ -1,13 +1,13 @@
 Guides
 ======
 
-Learn concepts of developing JavaScript codebase using Flair. Guides are arranged keeping various focus ares in mind. At minimum [Getting Started](#/guides/start/introduction) and [Object Oriented Constructs](#/guides/oop/introduction) are good to start with and should be read in this order. Other guides can be read as an when needed in no specific order. 
+Learn concepts of developing JavaScript codebase using Flair. Guides are arranged keeping various focus areas in mind. At minimum [Getting Started](#/guides/start/introduction) and [Object Oriented Constructs](#/guides/oop/introduction) are good to start with and should be read in this order. Other guides can be read as an when needed in no specific order. 
 
 
 [Getting Started](#/guides/start/introduction)
 ---------------
 
-What are the core concepts, how to setup Flair in your project, what to expect and how to troubleshoot are some of the focus areas of dsicussion under this guide. 
+What are the core concepts, how to setup Flair in your project, what to expect and how to troubleshoot are some of the focus areas of discussion under this guide. 
 
 
 [Object Oriented Constructs](#/guides/oop/introduction)
