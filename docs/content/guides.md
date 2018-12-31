@@ -27,7 +27,7 @@ AOP, or Aspect Oriented Programming is a programming paradigm that aims to incre
 [Attributes Based Programming](#/guides/attributes-based-programming)
 ----------------------------
 
-The ability to fully describe a class using metadata is a key element of Flair. Using the available [Reflector](#/api/reflector) API, advance programming designs can be achieved, which otherwise is limited via native reflection available in JavaScript. A lot of [inbuilt attributes](#/guides/aop/inbuilt-attributes) are available and you are free to build custom attributes to further qualify the behavior of your classes by creating a new attribute deriving from [Attribute](#/api/attribute) class.
+The ability to fully describe a class using metadata is a key element of Flair. Using the available [Reflector](#/api/reflector) API, advance programming designs can be achieved, which otherwise is limited via native reflection support available in JavaScript. A lot of [inbuilt attributes](#/guides/aop/inbuilt-attributes) are available and you are free to build custom attributes to further qualify the behavior of your classes by creating a new attribute deriving from [Attribute](#/api/attribute) class.
 
 
 [Dependency Injection](#/guides/dependency-injection)
