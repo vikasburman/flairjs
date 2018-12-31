@@ -138,6 +138,7 @@
               loadFile(tlMenuUrl, '', (jsonContent) => {
                 if (jsonContent) {
                   $(".menu1").html(renderMenu(jsonContent));
+                  $(".menu1").show();
                 } else {
                   $(".menu1").hide();
                 }
