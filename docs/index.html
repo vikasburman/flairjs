@@ -76,6 +76,10 @@
                 $('body').scrollTo(node.$); 
               });
             }
+
+            if (node.desc) {
+              $a.append('<p>' + node.desc + '<p>');
+            }
         }
   
         if (node.items.length > 0) {
@@ -123,7 +127,7 @@
           $.get(tlMenuUrl, function(jsonContent) {
             if (jsonContent) {
               $(".menu1").html(renderMenu(jsonContent));
-              $(".menu1").show();
+
             } else {
               $(".menu1").hide();
             }

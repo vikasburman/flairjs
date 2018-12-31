@@ -4,6 +4,7 @@
     "items": [
         { 
             "section":"API",
+            "desc": "This is main description",
             "id": "/api",
             "items": [],
             "level": 1
