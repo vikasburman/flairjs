@@ -1,5 +1,3 @@
-<!-- nav: guides-nav.json -->
-
 Guides
 ======
 

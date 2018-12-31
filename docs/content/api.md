@@ -1,5 +1,3 @@
-<!-- nav: api-nav.json -->
-
 API Reference
 =============
 
