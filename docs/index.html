@@ -19,6 +19,21 @@
   <script src="js/md.js"></script>
   <script src="https://buttons.github.io/buttons.js"></script>
   <script>
+    let loadFile = function(url, url404, onDone, onFail) {
+      $.get(url, function(fileText) {
+        onDone(fileText);
+      }).fail(function() {
+        if (url404) {
+          $.get(url404, function(fileText) {
+            onFail(fileText);
+          }).fail(function() {
+            onFail();
+          });
+        } else {
+          onFail();
+        }
+      });
+    };
     let getMenu = function($content) {
         var root = {items: [], id: '', level: 0, $: null};
         var cache = [root];
@@ -103,50 +118,53 @@
       let url = "https://flairjs.com/content/" + token + '.md',
           url404 = "https://flairjs.com/content/404.md";
 
-      $(".content").html();
-      // Load the Markdown file and convert it to HTML for display
-      $.get(url, function(mdText) {
-        if (!mdText) {
-          $(".menu2").hide();
-        } else {
-          var converter = new Markdown.Converter();
-          var htmlContent = converter.makeHtml(mdText);
-          $(".content").html(htmlContent);
-          $(".menu2").html(renderMenu(getMenu($(".content"))));
-          if ($('.menu2').children().children().html()) {
-            $($('.menu2').children().children().children().children().children()[0]).html('On This Page');
-            $(".menu2").show();
-          } else {
-            $(".menu2").hide();
-          }
-        }
-        
-        // render top level menu
-        if ($('.content')[0] && $('.content')[0].firstChild && $('.content')[0].firstChild.data && $('.content')[0].firstChild.data.trim().startsWith('nav:')) {
-          let tlMenu = $('.content')[0].firstChild.data.trim().split(':')[1].trim(),
-              tlMenuUrl = "https://flairjs.com/content/" + tlMenu;
-          $.get(tlMenuUrl, function(jsonContent) {
-            if (jsonContent) {
-              $(".menu1").html(renderMenu(jsonContent));
-
+      loadFile(url, url404, 
+      (fileText) => {
+          if (fileText) {
+            var converter = new Markdown.Converter();
+            var htmlContent = converter.makeHtml(fileText);
+            $(".content").html(htmlContent);
+            $(".menu2").html(renderMenu(getMenu($(".content"))));
+            if ($('.menu2').children().children().html()) {
+              $($('.menu2').children().children().children().children().children()[0]).html('On This Page');
+              $(".menu2").show();
+            } else {
+              $(".menu2").hide();
+            }
+            
+            if ($('.content')[0] && $('.content')[0].firstChild && $('.content')[0].firstChild.data && $('.content')[0].firstChild.data.trim().startsWith('nav:')) {
+              let tlMenu = $('.content')[0].firstChild.data.trim().split(':')[1].trim(),
+                  tlMenuUrl = "https://flairjs.com/content/" + tlMenu;
+              loadFile(tlMenuUrl, '', (jsonContent) => {
+                if (jsonContent) {
+                  $(".menu1").html(renderMenu(jsonContent));
+                } else {
+                  $(".menu1").hide();
+                }
+              }, () => {
+                $(".menu1").hide();
+              });
             } else {
               $(".menu1").hide();
             }
-          }).fail(function() {
-            $(".menu1").hide();
-          });
-        } else {
-          $(".menu1").hide();
-        }
-      }).fail(function() {
-          $.get(url404, function(mdText) {
-            var converter = new Markdown.Converter();
-            var htmlContent = converter.makeHtml(mdText);
-            $(".content").html(htmlContent);
+          } else {
+            $(".content").html();
             $(".menu1").hide();
             $(".menu2").hide();
-        });
-    });
+          }
+      }, 
+      (fileText404) => {
+        if (fileText404) {
+          var converter = new Markdown.Converter();
+          var htmlContent = converter.makeHtml(fileText404);
+          $(".content").html(htmlContent);
+        } else {
+          $(".content").html();
+        }
+        $(".menu1").hide();
+        $(".menu2").hide();
+      });
+    };
     let onChange = function() {
       let hashtag = location.hash.substr(1);
       if (hashtag.startsWith('/')) { hashtag = hashtag.substr(1); }
@@ -160,7 +178,7 @@
       }
     };
     $(document).ready(function() {
-      $( window ).on('hashchange', function(e) {
+      $(window).on('hashchange', function(e) {
         onChange();
       });
       onChange(); // first time
