@@ -1,3 +1,42 @@
 <!-- nav: guides-nav.json -->
 
-docs
+Guides
+======
+
+Learn concepts of developing JavaScript codebase using Flair. Guides are arranged keeping various focus ares in mind. At minimum Getting Started and Object Oriented Constructs are good to start with and should be read in this order. Other guides can be read as an when needed in no specific order. 
+
+
+[Getting Started](#/guides/getting-started)
+---------------
+
+What are the core concepts, 
+
+
+[Object Oriented Constructs](#/guides/object-oriented-constructs)
+--------------------------
+
+Real power of Flair comes by its ability to handle object oriented concepts as supported by other high level languages like C# and Java. Know how to define C#/Java type programming constructs using Flair powered plain JavaScript syntax.
+
+
+Aspect Oriented Programming
+---------------------------
+
+AOP, or Aspect Oriented Programming is a programming paradigm that aims to increase modularity by allowing the separation of cross-cutting concerns. Unlike C#/Java, where AOP support comes with external frameworks or libraries, Flair natively supports AOP. Learn what AOP constructs are available and how to implement various cross-cutting aspects for your codebase. 
+
+
+Attributes Based Programming
+----------------------------
+
+The ability to fully describe a class using metadata is a key element of Flair. Using the available [Reflector](#/api/reflector) API, advance programming designs can be achieved, which otherwise is limited via native reflection available in JavaScript. A lot of [inbuilt attributes](#/guides/aop/inbuilt-attributes) are available and you are free to build custom attributes to further qualify the behavior of your classes by creating a new attribute deriving from [Attribute](#/api/attribute) class.
+
+
+Dependency Injection
+--------------------
+
+Dependency Injection (DI) is a design pattern that allows us to develop loosely coupled code. DI is a great way to reduce tight coupling between components and to make code maintainable. The flexible nature of JavaScript makes it rather easy to implement DI in more than one ways. Flair's implementsation brings the DI mature concepts neatly baked in its core API. Learn how to define object lifecycle management, in addition to resolving class instances at runtime.
+
+
+Advanced Concepts
+-----------------
+
+Besides core and extended concepts learned so far, there are some advance constructs available in Flair, that you would need to know, when building large scale projects. These features adds lot of firepower to Flair and make it even more comparable to C#/Java type languages. 

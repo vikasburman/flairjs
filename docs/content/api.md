@@ -33,7 +33,7 @@ Classes
 -------
 
 Aspect |
-Attribute
+[Attribute](#/api/attribute)
 
 Objects
 -------
@@ -42,7 +42,7 @@ Aspects |
 Assembly |
 Container |
 Flair |
-Reflector |
+[Reflector](#/api/reflector) |
 Serializer
 
 
