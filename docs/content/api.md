@@ -4,10 +4,8 @@ API Reference
 =============
 
 Types
------
+------
 
-Aspect |
-Attribute |
 Class |
 Enum |
 Interface |
@@ -31,6 +29,11 @@ Functions
 as |
 using
 
+Classes
+-------
+
+Aspect |
+Attribute
 
 Objects
 -------
