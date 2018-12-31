@@ -3,23 +3,6 @@
 API Reference
 =============
 
-Types
------
-
-Aspect
-Attribute
-Class
-Enum
-Interface
-Mixin
-Structure
-
-Functions
----------
-
-as
-using
-
 Attributes
 ----------
 
@@ -44,6 +27,12 @@ state
 static
 once
 
+Functions
+---------
+
+as
+using
+
 Members
 -------
 
@@ -53,6 +42,18 @@ Event
 Function
 Key
 Property
+
+
+Types
+-----
+
+Aspect |
+Attribute |
+Class |
+Enum |
+Interface |
+Mixin |
+Structure
 
 Objects
 -------

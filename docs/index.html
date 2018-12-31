@@ -62,7 +62,7 @@
           var $a = $('<a>')
             .html(node.section)
             .attr('id', id + '-link')
-            .attr('href', '#' + node.id)
+            .attr('href', (node.id ? '#' + node.id : ''))
             .addClass('level-' + node.level)
             .appendTo($li);
         }
@@ -96,6 +96,7 @@
           $(".content").html(htmlContent);
           $(".menu2").html(renderMenu(getMenu($(".content"))));
           if ($('.menu2').children().children().html()) {
+            $($('.menu2').children().children().children().children().children()[0]).html('On This Page');
             $(".menu2").show();
           } else {
             $(".menu2").hide();
