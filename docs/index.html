@@ -40,7 +40,7 @@
 
           var parent = mkdir_p(level-1);
 
-          var obj = { section: $el.text(), items: [], level: level, id: $el.attr('id') };
+          var obj = { section: $el.text(), items: [], level: level, id: $el.attr('id') || $el };
           parent.items.push(obj);
           cache[level] = obj;
         });
@@ -62,9 +62,18 @@
           var $a = $('<a>')
             .html(node.section)
             .attr('id', id + '-link')
-            .attr('href', (node.id ? '#' + node.id : ''))
             .addClass('level-' + node.level)
             .appendTo($li);
+
+            if (typeof node.id === 'string') {
+              if (node.id) {
+                $a.attr('href', '#' + node.id);
+              }
+            } else {
+              $a.on('click', () => {
+                node.id.focus();
+              });
+            }
         }
   
         if (node.items.length > 0) {
