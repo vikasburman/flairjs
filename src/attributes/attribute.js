@@ -1,7 +1,9 @@
 // Attribute
-flair.Attribute = flair.Class('Attribute', function() {
+flair.Attribute = flair.Class('Attribute', function(attr) {
     let decoratorFn = null;
-    this.func('constructor', (...args) => {
+    
+    attr('abstract');
+    this.construct((...args) => {
         // args can be static or dynamic or settings
         // static ones are defined just as is, e.g.,
         //  ('text', 012, false, Reference)
@@ -34,6 +36,7 @@ flair.Attribute = flair.Class('Attribute', function() {
             }
         }
     });
+    
     this.prop('args', []);
     this.func('decorator', (fn) => {
         if (typeof fn === 'function') {

@@ -1,11 +1,13 @@
 // Aspect
-flair.Aspect = flair.Class('Aspect', function() {
+flair.Aspect = flair.Class('Aspect', function(attr) {
     let beforeFn = null,
         afterFn = null,
         aroundFn = null;
-    this.func((...args) => {
+    attr('abstract');
+    this.construct((...args) => {
         this.args = args;
     });
+    
     this.prop('args', []);
     this.func('before', (fn) => {
         if (typeof fn === 'function') {

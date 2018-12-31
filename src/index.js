@@ -64,6 +64,7 @@
             g.Serializer = Object.freeze(flair.Serializer); 
             g.Reflector = Object.freeze(flair.Reflector);
         }
+        g.Flair = flair; // this is still exposed, so can be used globally
 
         // return
         return Object.freeze(flair);

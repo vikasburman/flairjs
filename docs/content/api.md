@@ -41,7 +41,7 @@ Objects
 Aspects |
 Assembly |
 Container |
-flair |
+Flair |
 Reflector |
 Serializer
 
