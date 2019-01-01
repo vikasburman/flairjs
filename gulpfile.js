@@ -1,5 +1,4 @@
 const gulp = require('gulp');
-const git = require('gulp-git');
 const eslint = require('gulp-eslint');
 const uglifyjs = require('uglify-js-harmony');
 const uglify = require('gulp-uglify');
@@ -84,6 +83,7 @@ gulp.task('build', (done) => {
         }))
         .on('error', errorHandler('rename'))     
         .pipe(replace('<basename>', destName))
+        .pipe(replace('<title>', packageJSON.title))
         .pipe(replace('<desc>', packageJSON.description))
         .pipe(replace('<version>', packageJSON.version))
         .pipe(replace('<copyright>', packageJSON.copyright))

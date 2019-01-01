@@ -22,9 +22,11 @@ flair.Structure = (structureName, factory) => {
     Structure._ = {
         name: structureName,
         type: 'structure',
-        namespace: '',
-        assembly: null        
+        package: null        
     };
+
+    // register type with package
+    flair.Package(Structure);
 
     // return
     return Structure;

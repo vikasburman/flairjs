@@ -13,12 +13,13 @@ Production grade, tested and ready-to-use library.
 
 ### 1.0.0 - 05 Jan 2019
 
-* Stabelized API
+* Stableized API
 * Fully functional examples
 * Completely documented API and usage guides
 * Published [NPM](https://www.npmjs.com/package/flairjs) package
 * Key test specs created
 * Travis build connected
+* Reimagined c# type Assembly implementation as Java type Package
 
 Beta
 ----

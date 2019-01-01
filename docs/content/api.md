@@ -25,6 +25,11 @@ Functions
 ---------
 
 as |
+classOf |
+isDerivedFrom |
+isImplements |
+isInstanceOf |
+isMixed |
 using
 
 Classes
@@ -37,9 +42,9 @@ Objects
 -------
 
 Aspects |
-Assembly |
 Container |
-Flair |
+flair |
+Package |
 [Reflector](#/api/reflector) |
 Serializer
 

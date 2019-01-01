@@ -13,8 +13,7 @@ flair.Enum = (enumName, keyValuePairsOrArray) => {
     _enum._ = {
         name: enumName,
         type: 'enum',
-        namespace: '',
-        assembly: null,        
+        package: null,        
         keys: () => {
             let items = [];
             for(let i in keyValuePairs) {
@@ -34,6 +33,9 @@ flair.Enum = (enumName, keyValuePairsOrArray) => {
             return items;
         }
     };
+
+    // register type with package
+    flair.Package(_enum);
 
     // return
     return Object.freeze(_enum);

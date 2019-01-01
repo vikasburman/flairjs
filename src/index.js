@@ -19,16 +19,29 @@
                 supressGlobals: (typeof opts.supressGlobals === 'undefined' ? false : opts.supressGlobals),
                 symbols: opts.symbols || []
             };
+        flair._ = {
+            name: '<title>',
+            version: '<version>',
+            copyright: '<copyright>',
+            license: '<license>',
+            options: options
+        };
 
+
+        <!-- inject: ./types/package.js -->
         <!-- inject: ./types/class.js -->
         <!-- inject: ./types/mixin.js -->
         <!-- inject: ./types/interface.js -->
         <!-- inject: ./types/enum.js -->
         <!-- inject: ./types/structure.js -->
-        <!-- inject: ./types/assembly.js -->
         
         <!-- inject: ./func/using.js -->
         <!-- inject: ./func/as.js -->
+        <!-- inject: ./func/classOf.js -->
+        <!-- inject: ./func/isDerivedFrom.js -->
+        <!-- inject: ./func/isImplements.js -->
+        <!-- inject: ./func/isInstanceOf.js -->
+        <!-- inject: ./func/isMixed.js -->
 
         <!-- inject: ./aop/aspects.js -->
         <!-- inject: ./aop/aspect.js -->
@@ -47,16 +60,21 @@
         <!-- inject: ./reflection/reflector.js -->
 
         // expose to global environment
+        let g = options.global;
         if (!options.supressGlobals) { 
-            let g = options.global;
             g.Class = Object.freeze(flair.Class); 
             g.Mixin = Object.freeze(flair.Mixin); 
             g.Interface = Object.freeze(flair.Interface); 
             g.Structure = Object.freeze(flair.Structure);  
             g.Enum = Object.freeze(flair.Enum); 
-            g.Assembly = Object.freeze(flair.Assembly);
+            g.Package = Object.freeze(flair.Package);
             g.using = Object.freeze(flair.using); 
             g.as = Object.freeze(flair.as);
+            g.isDerivedFrom = Object.freeze(flair.isDerivedFrom);
+            g.isImplements = Object.freeze(flair.isImplements);
+            g.isInstanceOf = Object.freeze(flair.isInstanceOf);
+            g.isMixed = Object.freeze(flair.isMixed);
+            g.classOf = Object.freeze(flair.classOf);
             g.Attribute = Object.freeze(flair.Attribute); 
             g.Aspects = Object.freeze(flair.Aspects); 
             g.Aspect = Object.freeze(flair.Aspect); 
@@ -64,7 +82,7 @@
             g.Serializer = Object.freeze(flair.Serializer); 
             g.Reflector = Object.freeze(flair.Reflector);
         }
-        g.Flair = flair; // this is still exposed, so can be used globally
+        g.flair = flair; // this is still exposed, so can be used globally
 
         // return
         return Object.freeze(flair);

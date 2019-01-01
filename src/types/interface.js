@@ -27,16 +27,23 @@ flair.Interface = (interfaceName, factory) => {
         meta[name].type = 'event';
     };
 
-    // run factory
-    factory.apply(_this);
-
     // add name
     meta._ = {
         name: interfaceName,
         type: 'interface',
-        namespace: '',
-        assembly: null        
+        package: null        
     };
+
+    // register type with package
+    flair.Package(meta);
+
+    // run factory
+    factory.apply(_this);
+
+    // remove definition helpers
+    delete _this.func;
+    delete _this.prop;
+    delete _this.event;
 
     // return
     return meta;
