@@ -76,8 +76,8 @@ flair.Package = (Type) => {
         if (!_Type || !_Type._ || ['class', 'enum', 'interface', 'mixin', 'structure'].indexOf(_Type._.type) === -1) { return null; }
         return _Type;
     };
-    let createInstance = (name, ...args) => {
-        let _Type = nextLevel.getType(name);
+    let createInstance = (qualifiedName, ...args) => {
+        let _Type = nextLevel.getType(qualifiedName);
         if (_Type && _Type._.type != 'class') { throw `${name} is not a class.`; }
         if (_Type) { return new _Type(...args); }
         return null;
@@ -87,6 +87,21 @@ flair.Package = (Type) => {
     nextLevel.createInstance = nextLevel.createInstance || createInstance;
 };
 flair.Package.root = {};
-flair.Package.getType = flair.Package.root.getType;
-flair.Package.getTypes = flair.Package.root.getTypes;
-flair.Package.createInstance = flair.Package.root.createInstance;
+flair.Package.getType = (qualifiedName) => { 
+    if (flair.Package.root.getType) {
+        return flair.Package.root.getType(qualifiedName);
+    }
+    return null;
+};
+flair.Package.getTypes = () => {
+    if (flair.Package.root.getTypes) {
+        return flair.Package.root.getTypes();
+    }
+    return [];
+};
+flair.Package.createInstance = (qualifiedName, ...args) => {
+    if (flair.Package.root.createInstance) {
+        return flair.Package.root.createInstance(qualifiedName, ...args);
+    }
+    return null;
+};

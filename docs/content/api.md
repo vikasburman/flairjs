@@ -30,6 +30,7 @@ isDerivedFrom |
 isImplements |
 isInstanceOf |
 isMixed |
+type |
 using
 
 Classes

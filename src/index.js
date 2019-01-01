@@ -37,6 +37,7 @@
         
         <!-- inject: ./func/using.js -->
         <!-- inject: ./func/as.js -->
+        <!-- inject: ./func/type.js -->
         <!-- inject: ./func/classOf.js -->
         <!-- inject: ./func/isDerivedFrom.js -->
         <!-- inject: ./func/isImplements.js -->
@@ -70,6 +71,7 @@
             g.Package = Object.freeze(flair.Package);
             g.using = Object.freeze(flair.using); 
             g.as = Object.freeze(flair.as);
+            g.type = Object.freeze(flair.type);
             g.isDerivedFrom = Object.freeze(flair.isDerivedFrom);
             g.isImplements = Object.freeze(flair.isImplements);
             g.isInstanceOf = Object.freeze(flair.isInstanceOf);

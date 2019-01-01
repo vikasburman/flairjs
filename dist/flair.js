@@ -106,8 +106,8 @@
                 if (!_Type || !_Type._ || ['class', 'enum', 'interface', 'mixin', 'structure'].indexOf(_Type._.type) === -1) { return null; }
                 return _Type;
             };
-            let createInstance = (name, ...args) => {
-                let _Type = nextLevel.getType(name);
+            let createInstance = (qualifiedName, ...args) => {
+                let _Type = nextLevel.getType(qualifiedName);
                 if (_Type && _Type._.type != 'class') { throw `${name} is not a class.`; }
                 if (_Type) { return new _Type(...args); }
                 return null;
@@ -117,6 +117,25 @@
             nextLevel.createInstance = nextLevel.createInstance || createInstance;
         };
         flair.Package.root = {};
+        flair.Package.getType = (qualifiedName) => { 
+            if (flair.Package.root.getType) {
+                return flair.Package.root.getType(qualifiedName);
+            }
+            return null;
+        };
+        flair.Package.getTypes = () => {
+            if (flair.Package.root.getTypes) {
+                return flair.Package.root.getTypes();
+            }
+            return [];
+        };
+        flair.Package.createInstance = (qualifiedName, ...args) => {
+            if (flair.Package.root.createInstance) {
+                return flair.Package.root.createInstance(qualifiedName, ...args);
+            }
+            return null;
+        };
+        
         // Class
         // Class(className, function() {})
         // Class(className, inherits, function() {})
@@ -1292,6 +1311,14 @@
             }
             return null;
         };
+        // type
+        // type(qualifiedName)
+        //  qualifiedName: qualifiedName of type to get
+        flair.type = (qualifiedName) => {
+            let _Type = flair.Package.getType(qualifiedName);
+            if (!_Type) { throw `${qualifiedName} is not loaded.`; }
+            return _Type;
+        };
         // classOf
         // classOf(obj)
         //  obj: object instance for which class type is required
@@ -2153,6 +2180,7 @@
             g.Package = Object.freeze(flair.Package);
             g.using = Object.freeze(flair.using); 
             g.as = Object.freeze(flair.as);
+            g.type = Object.freeze(flair.type);
             g.isDerivedFrom = Object.freeze(flair.isDerivedFrom);
             g.isImplements = Object.freeze(flair.isImplements);
             g.isInstanceOf = Object.freeze(flair.isInstanceOf);
