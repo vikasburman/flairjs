@@ -28,23 +28,23 @@
         };
 
 
-        // Package
-        // Package(Type)
-        flair.Package = (Type) => {
+        // Namespace
+        // Namespace(Type)
+        flair.Namespace = (Type) => {
             // any type name can be in this format:
             // name
             // namespace.name
             
             // only valid types are allowed
-            if (['class', 'enum', 'interface', 'mixin', 'structure'].indexOf(Type._.type) === -1) { throw `Type (${Type._.type}) cannot be placed in a package.`; }
+            if (['class', 'enum', 'interface', 'mixin', 'structure'].indexOf(Type._.type) === -1) { throw `Type (${Type._.type}) cannot be placed in a namespace.`; }
         
-            // only unpackaged types are allowed
-            if (Type._.package) { throw `Type (${Type._.name}) is already contained in a package.`; }
+            // only unattached types are allowed
+            if (Type._.namespace) { throw `Type (${Type._.name}) is already contained in a namespace.`; }
         
-            // merge/add type in package tree
-            let nextLevel = flair.Package.root,
+            // merge/add type in namespace tree
+            let nextLevel = flair.Namespace.root,
                 nm = Type._.name,
-                pkgName = '',
+                nsName = '',
                 ns = nm.substr(0, nm.lastIndexOf('.'));
             nm = nm.substr(nm.lastIndexOf('.') + 1);
             if (ns) {
@@ -54,10 +54,10 @@
                         // special name not allowed
                         if (nsItem === '_') { throw `Special name "_" is used as namespace in ${Type._.name}.`; }
                         nextLevel[nsItem] = nextLevel[nsItem] || {};
-                        pkgName = nsItem;
+                        nsName = nsItem;
         
                         // check if this is not a type itself
-                        if (nextLevel[nsItem]._ && nextLevel[nsItem]._.type !== 'package') { throw `${Type._.name} cannot be packaged in another type (${nextLevel[nsItem]._.name})`; }
+                        if (nextLevel[nsItem]._ && nextLevel[nsItem]._.type !== 'namespace') { throw `${Type._.name} cannot be contained in another type (${nextLevel[nsItem]._.name})`; }
         
                         // pick it
                         nextLevel = nextLevel[nsItem];
@@ -68,19 +68,19 @@
             if (nextLevel[nm]) { throw `Type ${nm} already contained at ${ns}.`; }
             nextLevel[nm] = Type;
         
-            // add package
-            Type._.package = nextLevel;
+            // add namespace
+            Type._.namespace = nextLevel;
         
-            // define package meta
+            // define namespace meta
             nextLevel._ = nextLevel._ || {};
-            nextLevel._.name = nextLevel._.name || pkgName;
-            nextLevel._.type = nextLevel._.type || 'package';
+            nextLevel._.name = nextLevel._.name || nsName;
+            nextLevel._.type = nextLevel._.type || 'namespace';
             nextLevel._.types = nextLevel._.types || [];
             
-            // add to package
+            // add to Namespace
             nextLevel._.types.push(Type);
         
-            // attach package functions
+            // attach Namespace functions
             let getTypes = () => { 
                 return nextLevel._.types.slice(); 
             }
@@ -116,22 +116,22 @@
             nextLevel.getType = nextLevel.getType || getType;
             nextLevel.createInstance = nextLevel.createInstance || createInstance;
         };
-        flair.Package.root = {};
-        flair.Package.getType = (qualifiedName) => { 
-            if (flair.Package.root.getType) {
-                return flair.Package.root.getType(qualifiedName);
+        flair.Namespace.root = {};
+        flair.Namespace.getType = (qualifiedName) => { 
+            if (flair.Namespace.root.getType) {
+                return flair.Namespace.root.getType(qualifiedName);
             }
             return null;
         };
-        flair.Package.getTypes = () => {
-            if (flair.Package.root.getTypes) {
-                return flair.Package.root.getTypes();
+        flair.Namespace.getTypes = () => {
+            if (flair.Namespace.root.getTypes) {
+                return flair.Namespace.root.getTypes();
             }
             return [];
         };
-        flair.Package.createInstance = (qualifiedName, ...args) => {
-            if (flair.Package.root.createInstance) {
-                return flair.Package.root.createInstance(qualifiedName, ...args);
+        flair.Namespace.createInstance = (qualifiedName, ...args) => {
+            if (flair.Namespace.root.createInstance) {
+                return flair.Namespace.root.createInstance(qualifiedName, ...args);
             }
             return null;
         };
@@ -1059,7 +1059,7 @@
                 interfaces: interfaces,
                 name: className,
                 type: 'class',
-                package: null,
+                namespace: null,
                 singleInstance: () => { return null; },
                 isSingleton: () => { return false; },
                 isSealed: () => { return false; },
@@ -1097,8 +1097,8 @@
             };
             Class._.singleInstance.clear = () => { }; // no operation
         
-            // register type with package
-            flair.Package(Class);
+            // register type with namespace
+            flair.Namespace(Class);
         
             // return
             return Class;
@@ -1111,11 +1111,11 @@
             factory._ = {
                 name: mixinName,
                 type: 'mixin',
-                package: null        
+                namespace: null        
             };
         
-            // register type with package
-            flair.Package(factory);
+            // register type with namespace
+            flair.Namespace(factory);
         
             // return
             return factory;
@@ -1154,11 +1154,11 @@
             meta._ = {
                 name: interfaceName,
                 type: 'interface',
-                package: null        
+                namespace: null        
             };
         
-            // register type with package
-            flair.Package(meta);
+            // register type with namespace
+            flair.Namespace(meta);
         
             // run factory
             factory.apply(_this);
@@ -1186,7 +1186,7 @@
             _enum._ = {
                 name: enumName,
                 type: 'enum',
-                package: null,        
+                namespace: null,        
                 keys: () => {
                     let items = [];
                     for(let i in keyValuePairs) {
@@ -1207,8 +1207,8 @@
                 }
             };
         
-            // register type with package
-            flair.Package(_enum);
+            // register type with namespace
+            flair.Namespace(_enum);
         
             // return
             return Object.freeze(_enum);
@@ -1259,11 +1259,11 @@
             Structure._ = {
                 name: structureName,
                 type: 'structure',
-                package: null        
+                namespace: null        
             };
         
-            // register type with package
-            flair.Package(Structure);
+            // register type with namespace
+            flair.Namespace(Structure);
         
             // return
             return Structure;
@@ -1315,7 +1315,7 @@
         // type(qualifiedName)
         //  qualifiedName: qualifiedName of type to get
         flair.type = (qualifiedName) => {
-            let _Type = flair.Package.getType(qualifiedName);
+            let _Type = flair.Namespace.getType(qualifiedName);
             if (!_Type) { throw `${qualifiedName} is not loaded.`; }
             return _Type;
         };
@@ -1718,9 +1718,9 @@
             const CommonTypeReflector = function(target) {
                 this.getType = () => { return target._.type; };
                 this.getName = () => { return target._.name || ''; };
-                this.getPackage = () => { 
-                    let _Package = target._.package;
-                    if (_Package) { return new PackageReflector(_Package); }
+                this.getNamespace = () => { 
+                    let _Namespace = target._.namespace;
+                    if (_Namespace) { return new NamespaceReflector(_Namespace); }
                     return null; 
                 };
                 this.getTarget = () => { return target; };
@@ -1729,7 +1729,7 @@
                 this.isEnum = () => { return target._.type === 'enum'; };
                 this.isStructure = () => { return target._.type === 'structure'; };
                 this.isStructureInstance = () => { return target._.type === 'sinstance'; };
-                this.isPackage = () => { return target._.type === 'package'; };
+                this.isNamespace = () => { return target._.type === 'namespace'; };
                 this.isMixin = () => { return target._.type === 'mixin'; };
                 this.isInterface = () => { return target._.type === 'interface'; };
             };
@@ -2088,7 +2088,7 @@
                 let refl = new CommonTypeReflector(target);
                 return refl;
             };            
-            const PackageReflector = function(target) {
+            const NamespaceReflector = function(target) {
                 let refl = new CommonTypeReflector(target);
                 refl.getMembers = () => { 
                     let types = target.getTypes(),
@@ -2158,7 +2158,7 @@
                 case 'class': ref = new ClassReflector(forTarget); break;
                 case 'enum': ref = new EnumReflector(forTarget); break;
                 case 'structure': ref = new StructureReflector(forTarget); break;
-                case 'package': ref = new PackageReflector(forTarget); break;
+                case 'namespace': ref = new NamespaceReflector(forTarget); break;
                 case 'mixin': ref = new MixinReflector(forTarget); break;
                 case 'interface': ref = new InterfaceReflector(forTarget); break;
                 default:
@@ -2177,7 +2177,7 @@
             g.Interface = Object.freeze(flair.Interface); 
             g.Structure = Object.freeze(flair.Structure);  
             g.Enum = Object.freeze(flair.Enum); 
-            g.Package = Object.freeze(flair.Package);
+            g.Namespace = Object.freeze(flair.Namespace);
             g.using = Object.freeze(flair.using); 
             g.as = Object.freeze(flair.as);
             g.type = Object.freeze(flair.type);

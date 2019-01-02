@@ -31,11 +31,11 @@ flair.Interface = (interfaceName, factory) => {
     meta._ = {
         name: interfaceName,
         type: 'interface',
-        package: null        
+        namespace: null        
     };
 
-    // register type with package
-    flair.Package(meta);
+    // register type with namespace
+    flair.Namespace(meta);
 
     // run factory
     factory.apply(_this);

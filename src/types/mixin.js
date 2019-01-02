@@ -5,11 +5,11 @@ flair.Mixin = (mixinName, factory) => {
     factory._ = {
         name: mixinName,
         type: 'mixin',
-        package: null        
+        namespace: null        
     };
 
-    // register type with package
-    flair.Package(factory);
+    // register type with namespace
+    flair.Namespace(factory);
 
     // return
     return factory;

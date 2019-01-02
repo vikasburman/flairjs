@@ -19,7 +19,7 @@ Production grade, tested and ready-to-use library.
 * Published [NPM](https://www.npmjs.com/package/flairjs) package
 * Key test specs created
 * Travis build connected
-* Reimagined c# type Assembly implementation as Java type Package
+* Reimagined Assembly implementation 
 
 Beta
 ----

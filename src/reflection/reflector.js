@@ -5,9 +5,9 @@ flair.Reflector.get = (forTarget) => {
     const CommonTypeReflector = function(target) {
         this.getType = () => { return target._.type; };
         this.getName = () => { return target._.name || ''; };
-        this.getPackage = () => { 
-            let _Package = target._.package;
-            if (_Package) { return new PackageReflector(_Package); }
+        this.getNamespace = () => { 
+            let _Namespace = target._.namespace;
+            if (_Namespace) { return new NamespaceReflector(_Namespace); }
             return null; 
         };
         this.getTarget = () => { return target; };
@@ -16,7 +16,7 @@ flair.Reflector.get = (forTarget) => {
         this.isEnum = () => { return target._.type === 'enum'; };
         this.isStructure = () => { return target._.type === 'structure'; };
         this.isStructureInstance = () => { return target._.type === 'sinstance'; };
-        this.isPackage = () => { return target._.type === 'package'; };
+        this.isNamespace = () => { return target._.type === 'namespace'; };
         this.isMixin = () => { return target._.type === 'mixin'; };
         this.isInterface = () => { return target._.type === 'interface'; };
     };
@@ -375,7 +375,7 @@ flair.Reflector.get = (forTarget) => {
         let refl = new CommonTypeReflector(target);
         return refl;
     };            
-    const PackageReflector = function(target) {
+    const NamespaceReflector = function(target) {
         let refl = new CommonTypeReflector(target);
         refl.getMembers = () => { 
             let types = target.getTypes(),
@@ -445,7 +445,7 @@ flair.Reflector.get = (forTarget) => {
         case 'class': ref = new ClassReflector(forTarget); break;
         case 'enum': ref = new EnumReflector(forTarget); break;
         case 'structure': ref = new StructureReflector(forTarget); break;
-        case 'package': ref = new PackageReflector(forTarget); break;
+        case 'namespace': ref = new NamespaceReflector(forTarget); break;
         case 'mixin': ref = new MixinReflector(forTarget); break;
         case 'interface': ref = new InterfaceReflector(forTarget); break;
         default:

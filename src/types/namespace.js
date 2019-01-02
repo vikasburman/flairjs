@@ -1,20 +1,20 @@
-// Package
-// Package(Type)
-flair.Package = (Type) => {
+// Namespace
+// Namespace(Type)
+flair.Namespace = (Type) => {
     // any type name can be in this format:
     // name
     // namespace.name
     
     // only valid types are allowed
-    if (['class', 'enum', 'interface', 'mixin', 'structure'].indexOf(Type._.type) === -1) { throw `Type (${Type._.type}) cannot be placed in a package.`; }
+    if (['class', 'enum', 'interface', 'mixin', 'structure'].indexOf(Type._.type) === -1) { throw `Type (${Type._.type}) cannot be placed in a namespace.`; }
 
-    // only unpackaged types are allowed
-    if (Type._.package) { throw `Type (${Type._.name}) is already contained in a package.`; }
+    // only unattached types are allowed
+    if (Type._.namespace) { throw `Type (${Type._.name}) is already contained in a namespace.`; }
 
-    // merge/add type in package tree
-    let nextLevel = flair.Package.root,
+    // merge/add type in namespace tree
+    let nextLevel = flair.Namespace.root,
         nm = Type._.name,
-        pkgName = '',
+        nsName = '',
         ns = nm.substr(0, nm.lastIndexOf('.'));
     nm = nm.substr(nm.lastIndexOf('.') + 1);
     if (ns) {
@@ -24,10 +24,10 @@ flair.Package = (Type) => {
                 // special name not allowed
                 if (nsItem === '_') { throw `Special name "_" is used as namespace in ${Type._.name}.`; }
                 nextLevel[nsItem] = nextLevel[nsItem] || {};
-                pkgName = nsItem;
+                nsName = nsItem;
 
                 // check if this is not a type itself
-                if (nextLevel[nsItem]._ && nextLevel[nsItem]._.type !== 'package') { throw `${Type._.name} cannot be packaged in another type (${nextLevel[nsItem]._.name})`; }
+                if (nextLevel[nsItem]._ && nextLevel[nsItem]._.type !== 'namespace') { throw `${Type._.name} cannot be contained in another type (${nextLevel[nsItem]._.name})`; }
 
                 // pick it
                 nextLevel = nextLevel[nsItem];
@@ -38,19 +38,19 @@ flair.Package = (Type) => {
     if (nextLevel[nm]) { throw `Type ${nm} already contained at ${ns}.`; }
     nextLevel[nm] = Type;
 
-    // add package
-    Type._.package = nextLevel;
+    // add namespace
+    Type._.namespace = nextLevel;
 
-    // define package meta
+    // define namespace meta
     nextLevel._ = nextLevel._ || {};
-    nextLevel._.name = nextLevel._.name || pkgName;
-    nextLevel._.type = nextLevel._.type || 'package';
+    nextLevel._.name = nextLevel._.name || nsName;
+    nextLevel._.type = nextLevel._.type || 'namespace';
     nextLevel._.types = nextLevel._.types || [];
     
-    // add to package
+    // add to Namespace
     nextLevel._.types.push(Type);
 
-    // attach package functions
+    // attach Namespace functions
     let getTypes = () => { 
         return nextLevel._.types.slice(); 
     }
@@ -86,22 +86,22 @@ flair.Package = (Type) => {
     nextLevel.getType = nextLevel.getType || getType;
     nextLevel.createInstance = nextLevel.createInstance || createInstance;
 };
-flair.Package.root = {};
-flair.Package.getType = (qualifiedName) => { 
-    if (flair.Package.root.getType) {
-        return flair.Package.root.getType(qualifiedName);
+flair.Namespace.root = {};
+flair.Namespace.getType = (qualifiedName) => { 
+    if (flair.Namespace.root.getType) {
+        return flair.Namespace.root.getType(qualifiedName);
     }
     return null;
 };
-flair.Package.getTypes = () => {
-    if (flair.Package.root.getTypes) {
-        return flair.Package.root.getTypes();
+flair.Namespace.getTypes = () => {
+    if (flair.Namespace.root.getTypes) {
+        return flair.Namespace.root.getTypes();
     }
     return [];
 };
-flair.Package.createInstance = (qualifiedName, ...args) => {
-    if (flair.Package.root.createInstance) {
-        return flair.Package.root.createInstance(qualifiedName, ...args);
+flair.Namespace.createInstance = (qualifiedName, ...args) => {
+    if (flair.Namespace.root.createInstance) {
+        return flair.Namespace.root.createInstance(qualifiedName, ...args);
     }
     return null;
 };

@@ -28,7 +28,7 @@
         };
 
 
-        <!-- inject: ./types/package.js -->
+        <!-- inject: ./types/namespace.js -->
         <!-- inject: ./types/class.js -->
         <!-- inject: ./types/mixin.js -->
         <!-- inject: ./types/interface.js -->
@@ -68,7 +68,7 @@
             g.Interface = Object.freeze(flair.Interface); 
             g.Structure = Object.freeze(flair.Structure);  
             g.Enum = Object.freeze(flair.Enum); 
-            g.Package = Object.freeze(flair.Package);
+            g.Namespace = Object.freeze(flair.Namespace);
             g.using = Object.freeze(flair.using); 
             g.as = Object.freeze(flair.as);
             g.type = Object.freeze(flair.type);

@@ -45,7 +45,7 @@ Objects
 Aspects |
 Container |
 flair |
-Package |
+Namespace |
 [Reflector](#/api/reflector) |
 Serializer
 

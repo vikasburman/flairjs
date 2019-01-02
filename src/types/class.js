@@ -921,7 +921,7 @@ flair.Class = (arg1, arg2, arg3, arg4) => {
         interfaces: interfaces,
         name: className,
         type: 'class',
-        package: null,
+        namespace: null,
         singleInstance: () => { return null; },
         isSingleton: () => { return false; },
         isSealed: () => { return false; },
@@ -959,8 +959,8 @@ flair.Class = (arg1, arg2, arg3, arg4) => {
     };
     Class._.singleInstance.clear = () => { }; // no operation
 
-    // register type with package
-    flair.Package(Class);
+    // register type with namespace
+    flair.Namespace(Class);
 
     // return
     return Class;
