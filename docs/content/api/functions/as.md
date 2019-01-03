@@ -6,7 +6,7 @@ as
 The **as** function has dual use. It can either return the private or protected variant of the object or can check if given object implements/mixed/inherits specified type. It returns _null_ if casting is unsuccessful or else return appropriate object.
 
 
-```
+```javascript
 // Example 1: if car is an instance of Vehicle Class
 let vehicle = as(car, Vehicle);
 
@@ -22,7 +22,6 @@ let prvCar = as(car, 'private');
 
 // Example 5: access protected and private members of car object
 let proCar = as(car, 'protected');
-
 ```
 
 Syntax
