@@ -8,9 +8,15 @@ The **as** function checks if given object has implemented, mixed, or inherited 
 Usage
 ---
 
-- [x] As Function
-- [ ] As Constructor Function
-- [ ] As Object
+[x] As Function
+[  ] As Constructor Function
+[  ] As Object
+
+``` javascript
+Flatdoc.run({
+  fetcher: Flatdoc.github('USER/REPO', 'Changelog.md')
+});
+```
 
 ``` javascript
 
