@@ -879,6 +879,7 @@ code .comment {
 
 .content h1 {
   font-size: 1.75em!important; 
+  text-transform: none!important;
 }
 .content h3 {
   padding-top: 20px!important; 

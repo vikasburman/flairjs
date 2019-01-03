@@ -3,10 +3,10 @@
 as
 ===
 
-Cast given object to specified interface.
----
+*** Cast given object to specified interface. ***
+Returns ```null``` if cast was not successful.
 
-> Returns ```null``` if cast was not successful.
+
 
 
 
