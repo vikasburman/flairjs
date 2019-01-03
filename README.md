@@ -70,7 +70,7 @@ flair({ symbols: ['DEBUG'] }); // initialize
 
 **3. Play with Objects**
 
-With global functions/objects added to environment, JavaScript environment now has the awesomeness of C#/Java. Define and play with objects.
+With global functions/objects added to environment, JavaScript now has the awesomeness of C#/Java. Define and play with objects.
 
 Here is a quick example:
 
