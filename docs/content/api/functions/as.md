@@ -3,7 +3,7 @@
 as
 ===
 
-The **as** function has dual use. It can either return the private or protected variant of the object or can check if given object implements/mixed/inherits specified type. It returns _null_ if casting is unsuccessful or else return appropriate object.
+The **as** function has dual use. It can either return the private or protected variant of the object or can check if given object implements/mixed/inherits specified type. 
 
 
 ```javascript
@@ -16,7 +16,9 @@ let sportsCar = as(car, SportsCar);
 // Example 3: if car implements ITurbo Interface
 let turboChargedCar = as(car, ITurbo);
 
-WARNING: These two examples are for advance framework usage, and can be derecated / replaced without notice.
+// WARNING: Following two examples are for advanced framework usage, and can be deprecated 
+// or replaced without notice. Avoid using them.
+
 // Example 4: access private members of car object
 let prvCar = as(car, 'private');
 
