@@ -13,13 +13,6 @@ Usage
 [  ] As Object
 
 <pre><code class="javascript">
-Flatdoc.run({
-  fetcher: Flatdoc.github('USER/REPO', 'Changelog.md')
-});
-</code></pre>
-
-``` javascript
-
 // Example 1: if car is an instance of Vehicle Class
 let vehicle = as(car, Vehicle);
 
@@ -37,8 +30,8 @@ let prvCar = as(car, 'private');
 
 // Example 5: access protected and private members of car object
 let proCar = as(car, 'protected');
+</code></pre>
 
-```
 
 Syntax
 ---
