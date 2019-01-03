@@ -113,7 +113,7 @@ let Car = Class('Car', Vehicle, function(attr) {
         // subscribe to started event of base class
         this.started.subscribe((e) => {
             // read event args 
-            console.log('Event ' + e.name + ' fired at: ' + e.args.when);
+            console.log(this.model + ' ' + e.name + ' at: ' + e.args.when);
         });
         console.log('Car constructed!');    
     });
@@ -140,7 +140,7 @@ Vehicle constructed!
 
 Car constructed!
 
-Event started fired at: (time)
+SUV started at: (time)
 
 Car disposed!
 ```
