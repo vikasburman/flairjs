@@ -12,11 +12,11 @@ Usage
 [  ] As Constructor Function
 [  ] As Object
 
-``` javascript
+<pre><code class="javascript">
 Flatdoc.run({
   fetcher: Flatdoc.github('USER/REPO', 'Changelog.md')
 });
-```
+</code></pre>
 
 ``` javascript
 
