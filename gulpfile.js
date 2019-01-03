@@ -71,7 +71,7 @@ gulp.task('bump', (done) => {
 // task: build
 gulp.task('build', (done) => {
     let buildCore = () => {
-        let destName = packageJSON.basename;
+        let destName = packageJSON.name;
         gulp.src('./src/index.js')
         // assemble pieces
         .pipe(inject())
