@@ -3,14 +3,16 @@
 as
 ===
 
-The **as** function has dual use. It can either return the private or protected variant of the object or can check if given object implements/mixed/inherits specified type. 
-
+The **as** function checks if given object has implemented, mixed, or inherited specified type.
 
 Usage
 ---
 
+- [x] Function
+- [ ] Constructor Function
+- [ ] Object
 
-```javascript
+``` javascript
 
 // Example 1: if car is an instance of Vehicle Class
 let vehicle = as(car, Vehicle);
@@ -37,7 +39,7 @@ Syntax
 
 ***as(object, interface)***
 
-**Parameters:**
+### Parameters:
 
 * object
     An object that needs to be casted. Only instance objects of [Class](#/api/types/class) types can be casted. 
