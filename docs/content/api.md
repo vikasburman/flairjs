@@ -4,7 +4,7 @@ API Reference
 Types
 ------
 
-[Class](#/api/class) |
+[Class](#/api/types/class) |
 Enum |
 Interface |
 Mixin |
@@ -24,7 +24,8 @@ Property
 Functions
 ---------
 
-as |
+[as](#/api/functions/as) |
+bring |
 classOf |
 isDerivedFrom |
 isImplements |
@@ -37,7 +38,7 @@ Classes
 -------
 
 Aspect |
-[Attribute](#/api/attribute)
+[Attribute](#/api/classes/attribute)
 
 Objects
 -------
@@ -46,7 +47,7 @@ Aspects |
 Container |
 flair |
 Namespace |
-[Reflector](#/api/reflector) |
+[Reflector](#/api/objects/reflector) |
 Serializer
 
 

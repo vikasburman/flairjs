@@ -1,0 +1,55 @@
+{
+    "section":"",
+    "id": "",
+    "items": [
+        { 
+            "section":"Types",
+            "id": "",
+            "items": [
+                { 
+                    "section":"Class",
+                    "id": "api/types/class",
+                    "items": [],
+                    "level": 2
+                }                
+            ],
+            "level": 1
+        },
+        { 
+            "section":"Members",
+            "id": "",
+            "items": [
+            ],
+            "level": 1
+        },
+        { 
+            "section":"Functions",
+            "id": "",
+            "items": [
+            ],
+            "level": 1
+        },
+        { 
+            "section":"Classes",
+            "id": "",
+            "items": [
+            ],
+            "level": 1
+        },
+        { 
+            "section":"Objects",
+            "id": "",
+            "items": [
+            ],
+            "level": 1
+        },
+        { 
+            "section":"Attributes",
+            "id": "",
+            "items": [
+            ],
+            "level": 1
+        }                                     
+    ],
+    "level": 0
+}
