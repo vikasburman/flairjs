@@ -134,7 +134,7 @@ using(new Car('SUV', 3000), (suv) => {
 
 ```
 
-> Executing above code will show following on console: 
+Executing above code will show following on console: 
 ```
 Vehicle constructed!
 
