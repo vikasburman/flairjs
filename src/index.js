@@ -50,6 +50,8 @@
             options: options
         });
 
+        <!-- inject: ./types/exception.js -->
+
         <!-- inject: ./assembly/assembly.js -->
 
         <!-- inject: ./types/namespace.js -->
@@ -88,6 +90,7 @@
         // expose to global environment
         let g = options.env.global;
         if (!options.env.supressGlobals) { 
+            g.Exception = Object.freeze(flair.Exception); 
             g.Class = Object.freeze(flair.Class); 
             g.Mixin = Object.freeze(flair.Mixin); 
             g.Interface = Object.freeze(flair.Interface); 

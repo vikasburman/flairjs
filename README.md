@@ -30,7 +30,7 @@ Features
 * **Inheritance:** Single inheritance chain, Multiple inheritance via Mixins, Restrictions via 'sealed', etc.
 * **Encapsulation:** True Public, Private and Protected members etc.
 * **Polymorphism:** Abstract classes, Interfaces, Method overriding, Restrictions via 'sealed', Dynamic casting via 'as', etc.
-* **Mature Base Types:** Class, Structure, Interface, Mixin, Enum, etc.
+* **Mature Base Types:** Class, Structure, Interface, Mixin, Enum, Exception, etc.
 * **Aspect orientation:** Aspect definitions with Before, After and Around advise weaving on methods and properties.
 * **Attributes based programming:** Inbuilt system attributes like 'readonly', 'sealed' and many more with full-blown support of defining custom attributes and its usage over class and class members.
 * **Dependency injection:** Object life-cycle management via DI container and constructor, method and property injection of registered types.
