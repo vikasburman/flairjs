@@ -29,7 +29,7 @@ flair.Assembly.registerMany = (fileAndTypes) => {
 flair.Assembly.isRegistered = (file) => {
     return typeof asmFiles[file] !== 'undefined';
 }
-flair.Assembly.load(file) => {
+flair.Assembly.load = (file) => {
     if (flair.Assembly.isRegistered(file)) {
         return new Promise((resolve, reject) => {
             if (asmFiles[file] === 'loaded') {
@@ -62,9 +62,9 @@ flair.Assembly.load(file) => {
         throw `Assembly ${file} must be registered first.`;
     }
 };
-flair.Assembly.isLoaded(file) => {
+flair.Assembly.isLoaded = (file) => {
     return typeof asmFiles[file] !== 'undefined' && asmFiles[file] === 'loaded';
 };
-flair.Assembly.get(type) => {
+flair.Assembly.get = (type) => {
     return asmTypes[type] || ''; // name of the file where this type is loaded, else ''
 };

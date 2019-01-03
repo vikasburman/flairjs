@@ -19,7 +19,7 @@
                 global: getGlobal(),
                 supressGlobals: (typeof opts.supressGlobals === 'undefined' ? false : opts.supressGlobals),
                 symbols: opts.symbols || [],
-                moduleLoader = opts.moduleLoader || null
+                moduleLoader: opts.moduleLoader || null
             };
         
         // special symbols

@@ -15,18 +15,95 @@
             noopAsync = (resolve, reject) => { resolve(); },
             options = {
                 env: opts.env || (isServer ? 'server' : 'client'),
+                isServer: isServer,
                 global: getGlobal(),
                 supressGlobals: (typeof opts.supressGlobals === 'undefined' ? false : opts.supressGlobals),
-                symbols: opts.symbols || []
+                symbols: opts.symbols || [],
+                moduleLoader: opts.moduleLoader || null
             };
-        flair._ = {
+        
+        // special symbols
+        options.isDebug = options.symbols.indexOf('DEBUG') !== -1;
+        options.isProd = options.symbols.indexOf('PROD') !== -1 || options.symbols.indexOf('PRODUCTION') !== -1;
+
+        flair._ = Object.freeze({
             name: 'FlairJS',
             version: '0.12.4',
             copyright: '(c) 2017-2019 Vikas Burman',
             license: 'MIT',
-            options: options
-        };
+            options: Object.freeze(options)
+        });
 
+        // Assembly
+        let asmFiles = {},
+            asmTypes = {};
+        flair.Assembly = () => {};
+        flair.Assembly.register = (file, types) => { 
+            // load assembly
+            if (asmFiles[file]) {
+                throw `Assembly ${file} already registered.`;
+            } else {
+                asmFiles[file] = 'not-loaded'; // by default file is not loaded as yet
+            }
+        
+            // load types
+            for(let type of asmTypes) {
+                // qualified names across anywhere should be unique
+                if (asmTypes[type]) {
+                    throw `Type ${type} already registered.`;
+                } else {
+                    asmTypes[type] = file; // means this type can be loaded from this assembly file
+                }
+            }
+        };
+        flair.Assembly.registerMany = (fileAndTypes) => {
+            // array of { file: 'path/bundled-file.js', types: ['contained-type1', 'contained-type2', ...] }
+            for(let asm of fileAndTypes) {
+                flair.Assembly.register(asm.file, asm.types);
+           }
+        };
+        flair.Assembly.isRegistered = (file) => {
+            return typeof asmFiles[file] !== 'undefined';
+        }
+        flair.Assembly.load = (file) => {
+            if (flair.Assembly.isRegistered(file)) {
+                return new Promise((resolve, reject) => {
+                    if (asmFiles[file] === 'loaded') {
+                        resolve();
+                    } else {
+                        if (isServer) {
+                            try {
+                                require(file);
+                                asmFiles[file] = 'loaded';
+                                resolve();
+                            } catch (e) {
+                                reject(e);
+                            }
+                        } else {
+                            const script = document.createElement('script');
+                            script.onload = () => {
+                                asmFiles[file] = 'loaded';
+                                resolve();
+                            };
+                            script.onerror = (e) => {
+                                reject(e);
+                            };
+                            script.async = true;
+                            script.src = file;
+                            document.body.appendChild(script);
+                        }
+                    }
+                  });
+            } else {
+                throw `Assembly ${file} must be registered first.`;
+            }
+        };
+        flair.Assembly.isLoaded = (file) => {
+            return typeof asmFiles[file] !== 'undefined' && asmFiles[file] === 'loaded';
+        };
+        flair.Assembly.get = (type) => {
+            return asmTypes[type] || ''; // name of the file where this type is loaded, else ''
+        };
 
         // Namespace
         // Namespace(Type)
@@ -288,9 +365,9 @@
                                 condition = (item.args && item.args.length > 0 ? item.args[0] : '');
                                 switch(condition) {
                                     case 'server':
-                                        isOK = (options.env === 'server'); break;
+                                        isOK = (options.isServer === true); break;
                                     case 'client':
-                                        isOK = (options.env === 'client' || options.env === ''); break;
+                                        isOK = (options.isServer === false); break;
                                     default:
                                         isOK = options.symbols.indexOf(condition) !== -1; break;
                                 }
@@ -1271,6 +1348,7 @@
         
         
         
+        
         // using
         // using(object, scopeFn)
         flair.using = (obj, scopeFn) => {
@@ -1431,42 +1509,6 @@
         });
         
 
-        // Container
-        let container = {};
-        flair.Container = {};
-        // register(cls)
-        // register(typeName, cls)
-        flair.Container.register = (typeName, cls) => {
-            if (typeof typeName === 'function') {
-                cls = typeName;
-                typeName = cls._.name;
-            }
-            if (!container[typeName]) { container[typeName] = []; }
-            container[typeName].push(cls);
-        };
-        flair.Container.isRegistered = (typeName) => {
-            return typeof container[typeName] !== 'undefined';
-        };
-        flair.Container.get = (typeName) => {
-            return (container[typeName] || []).slice();
-        };
-        flair.Container.resolve = (typeName, isMultiResolve, ...args) => {
-            let result = null;
-            if (container[typeName] && container[typeName].length > 0) { 
-                if (isMultiResolve) {
-                    result = [];
-                    for(let Type of container[typeName]) {
-                        result.push(new Type(...args));
-                    }
-                } else {
-                    let Type = container[typeName][0];
-                    result = new Type(...args);
-                }
-            }
-            return result;
-        };
-        
-
         // Attribute
         flair.Attribute = flair.Class('Attribute', function(attr) {
             let decoratorFn = null;
@@ -1601,6 +1643,67 @@
             });
         }));
         
+        
+        // Container
+        let container = {};
+        flair.Container = {};
+        
+        // register(type)
+        // register(alias, type)
+        //  alias: type alias to register a type with
+        //  type: actual type to register against alias OR
+        //        qualifiedName of the type to resolve with OR
+        //        a JS file name that needs to be resolved 
+        //        When qualifiedName of a JS file is being defined, it can also be defined using contextual format
+        //        <serverContent> | <clientContext>
+        flair.Container.register = (alias, cls) => {
+            if (typeof alias === 'function') {
+                cls = alias;
+                alias = cls._.name;
+            }
+            if (typeof alias === 'string' && typeof cls === 'string') {
+                if (cls.indexOf('|')) {
+                    let items = cls.split('|');
+                    if (flair.options.isServer) {
+                        cls = items[0].trim();
+                    } else {
+                        cls = items[1].trim();
+                    }
+                }
+                cls = type(cls); // cls is qualifiedNane here, if not found it will throw error
+            }
+            if (!container[alias]) { container[alias] = []; }
+            container[alias].push(cls);
+        };
+        flair.Container.isRegistered = (alias) => {
+            return typeof container[alias] !== 'undefined';
+        };
+        flair.Container.get = (alias) => {
+            return (container[alias] || []).slice();
+        };
+        flair.Container.resolve = (alias, isMultiResolve, ...args) => {
+            let result = null,
+                getResolvedObject = (Type) => {
+                    let obj = Type; // whatever it was
+                    if (Type._ && Type._.type && ['class', 'structure'].indexOf(Type._.type) !== -1) { 
+                        obj = new Type(...args); // only class and structure need a new instance
+                    }
+                    return obj;
+                }
+            if (container[alias] && container[alias].length > 0) { 
+                if (isMultiResolve) {
+                    result = [];
+                    for(let Type of container[alias]) {
+                        result.push(getResolvedObject(Type));
+                    }
+                } else {
+                    let Type = container[alias][0];
+                    result = getResolvedObject(Type);
+                }
+            }
+            return result;
+        };
+        
         // inject
         // inject(type, [typeArgs])
         //  - type: 
@@ -1623,7 +1726,7 @@
                 if (typeof Type === 'string') { 
                     if (Type.indexOf('|') !== -1) { // condiitonal server/client specific injection
                         let items = Type.split('|');
-                        if (options.env === 'server') {
+                        if (options.isServer) {
                             Type = items[0].trim(); // left one
                         } else {
                             Type = items[1].trim(); // right one
@@ -1668,7 +1771,7 @@
                 if (typeof Type === 'string') {
                     if (Type.indexOf('|') !== -1) { // condiitonal server/client specific injection
                         let items = Type.split('|');
-                        if (options.env === 'server') {
+                        if (options.isServer) {
                             Type = items[0].trim(); // left one
                         } else {
                             Type = items[1].trim(); // right one
@@ -2177,7 +2280,9 @@
             g.Interface = Object.freeze(flair.Interface); 
             g.Structure = Object.freeze(flair.Structure);  
             g.Enum = Object.freeze(flair.Enum); 
+            g.Assembly = Object.freeze(flair.Assembly);
             g.Namespace = Object.freeze(flair.Namespace);
+            g.bring = Object.freeze(flair.bring); 
             g.using = Object.freeze(flair.using); 
             g.as = Object.freeze(flair.as);
             g.type = Object.freeze(flair.type);
