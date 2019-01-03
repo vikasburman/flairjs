@@ -6,6 +6,10 @@ as
 The **as** function has dual use. It can either return the private or protected variant of the object or can check if given object implements/mixed/inherits specified type. 
 
 
+Usage
+---
+
+
 ```javascript
 
 // Example 1: if car is an instance of Vehicle Class
