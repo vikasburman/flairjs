@@ -8,9 +8,9 @@ The **as** function checks if given object has implemented, mixed, or inherited 
 Usage
 ---
 
-- [x] Function
-- [ ] Constructor Function
-- [ ] Object
+- [x] As Function
+- [ ] As Constructor Function
+- [ ] As Object
 
 ``` javascript
 
