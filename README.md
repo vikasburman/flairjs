@@ -135,7 +135,7 @@ using(new Car('SUV', 3000), (suv) => {
 ```
 
 > Executing above code will show following on console: 
-
+```
 Vehicle constructed!
 
 Car constructed!
@@ -143,6 +143,7 @@ Car constructed!
 Event started fired at: (time)
 
 Car disposed!
+```
 
 Explore The Power
 ---
