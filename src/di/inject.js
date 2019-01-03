@@ -20,7 +20,7 @@ flair.Container.register(flair.Class('inject', flair.Attribute, function() {
         if (typeof Type === 'string') { 
             if (Type.indexOf('|') !== -1) { // condiitonal server/client specific injection
                 let items = Type.split('|');
-                if (options.isServer) {
+                if (options.env.isServer) {
                     Type = items[0].trim(); // left one
                 } else {
                     Type = items[1].trim(); // right one

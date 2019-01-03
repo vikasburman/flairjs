@@ -150,9 +150,9 @@ flair.Class = (arg1, arg2, arg3, arg4) => {
                         condition = (item.args && item.args.length > 0 ? item.args[0] : '');
                         switch(condition) {
                             case 'server':
-                                isOK = (options.isServer === true); break;
+                                isOK = (options.env.isServer === true); break;
                             case 'client':
-                                isOK = (options.isServer === false); break;
+                                isOK = (options.env.isServer === false); break;
                             default:
                                 isOK = options.symbols.indexOf(condition) !== -1; break;
                         }

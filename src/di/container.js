@@ -18,7 +18,7 @@ flair.Container.register = (alias, cls) => {
     if (typeof alias === 'string' && typeof cls === 'string') {
         if (cls.indexOf('|')) {
             let items = cls.split('|');
-            if (flair.options.isServer) {
+            if (flair.options.env.isServer) {
                 cls = items[0].trim();
             } else {
                 cls = items[1].trim();

@@ -38,6 +38,80 @@ flair.bring = (members, scopeFn) => {
     let resolvedItems = [],
         _members = members.slice();
 
+    let loader = (isServer, isModule, file) => {
+        let loaders = flair.options.loaders,
+            loader = null;
+        return new Promise(resolve, reject) {
+            let ext = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
+            if (isServer) {
+                if (isModule) {
+                    loader = loaders.module.server;
+                    if (typeof loader === 'function') {
+                        loader(file).then(resolve).catch(reject);
+                    } else {
+                        try {
+                            resolve(require(file));
+                        } catch(e) {
+                            reject(e);
+                        }
+                    }
+                } else { // file
+                    loader = loaders.file.server;
+                    if (typeof loader === 'function') {
+                        loader(file).then(resolve).catch(reject);
+                    } else {
+                        try {
+                            const request = require('request');
+                            request(file, (err, res, body) => {
+                                if (err) {  
+                                    reject(err)
+                                } else {
+                                    if (ext === 'json') { 
+                                        resolve(JSON.parse(body));
+                                    } else {
+                                        resolve(body);
+                                    }
+                                }
+                            });
+                        } catch(e) {
+                            reject(e);
+                        }
+                    }
+                }
+            } else { // client
+                if (isModule) {
+                    loader = loaders.module.client;
+                    if (typeof loader === 'function') {
+                        loader(file).then(resolve).catch(reject);
+                    } else { // assume requirejs type library having require() is available to load modules on client
+                        try {
+                            require([file], resolve, reject);
+                        } catch(e) {
+                            reject(e);
+                        }
+                    }
+                } else { // file
+                    loader = loaders.file.client;
+                    if (typeof loader === 'function') {
+                        loader(file).then(resolve).catch(reject);
+                    } else {
+                        fetch(file).then((response) => {
+                            if (response.status !== 200) {
+                                reject(response.status);
+                            } else {
+                                if (ext === 'json') { // special case of JSON
+                                    response.json().then(resolve).catch(reject);
+                                } else {
+                                    resolve(response.text());
+                                }
+                            }
+                        }).catch(reject);
+                    }                    
+                }
+            }
+        };
+    };
+
     let processNextMember = () => {
         if (_members.length === 0) {
             scopeFn(...resolvedItems);
@@ -49,7 +123,7 @@ flair.bring = (members, scopeFn) => {
             // pick contextual member
             if (_member.indexOf('|')) {
                 let items = _member.split('|');
-                if (flair.options.isServer) {
+                if (flair.options.env.isServer) {
                     _member = items[0].trim();
                 } else {
                     _member = items[1].trim();
@@ -93,10 +167,10 @@ flair.bring = (members, scopeFn) => {
             let option4 = (done) => {
                 let ext = _member.substr(_member.lastIndexOf('.') + 1).toLowerCase();
                 if (ext) {
-                    if (ext === 'js') {
+                    if (ext === 'js' || ext === 'mjs') {
                         // pick minified or dev version
                         if (_member.indexOf('{.min}') !== -1) {
-                            if (flair.options.isProd) {
+                            if (flair.options.env.isProd) {
                                 _member = _member.replace('{.min}', '.min'); // a{.min}.js => a.min.js
                             } else {
                                 _member = _member.replace('{.min}', ''); // a{.min}.js => a.js
@@ -106,46 +180,12 @@ flair.bring = (members, scopeFn) => {
                         // this will be loaded as module in next option as a module
                         done();
                     } else { // some other file (could be json, css, html, etc.)
-                        if (flair.options.isServer) {
-                            const request = require('request');
-                            request(_member, (err, res, body) => {
-                              if (err) {  
-                                  throw `Failed to load ${_member} with error: ${err}.`;
-                              }
-                              _resolved = body;
-
-                              // special case of JSON
-                              if (ext === 'json') {
-                                try {
-                                    if (_resolved) {
-                                        _resolved = JSON.parse(_resolved);
-                                    }
-                                }  catch(e) {
-                                    throw `Failed to parse JSON of ${_member} with error: ${e}.`;
-                                }
-                              }
-                              done();
-                            });
-                        } else { // client
-                            fetch(_member).then((response) => {
-                                if (response.status !== 200) {
-                                    throw `Failed to load ${_member} with error code: ${response.status}.`;
-                                }
-                                _resolved = response.text();
-
-                                // special case of JSON
-                                if (ext === 'json') {
-                                    response.json().then((data) => {
-                                        _resolved = data;
-                                        done();
-                                    });
-                                } else {
-                                    done();
-                                }
-                            }).catch((err) => {
-                                throw `Failed to load ${_member} with error: ${err}.`;
-                            });
-                        }
+                        loader(flair.options.env.isServer, false, _member).then((content) => {
+                            _resolved = content;
+                            done();
+                        }).catch((e) => {
+                            throw `Failed to load ${_member} as file, with error: ${e}.`;
+                        });
                     }
                 } else { // not a file
                     done();
@@ -154,24 +194,12 @@ flair.bring = (members, scopeFn) => {
 
             // check if this is a module
             let option5 = (done) => {
-                // use module loader to load it as module, as last option
-                loadAsModule(done);
-            };
-
-            // load as module
-            let loadAsModule = (done) => {
-                let loaderFn = flair.options.moduleLoader;
-                if (typeof loaderFn !== 'function') {
-                    throw `Module loader is not configured to load ${_member}.`
-                }
-
-                // load module
-                loaderFn(_member).then((item) => {
-                    _resolved = item;
+                loader(flair.options.env.isServer, true, _member).then((content) => { // as last option, try to load it as module
+                    _resolved = content;
                     done();
                 }).catch((e) => {
-                    throw `Failed to load module ${_member} with error: ${e}.`;
-                });
+                    throw `Failed to load ${_member} as module, with error: ${e}.`;
+                });                
             };
 
             // done
@@ -196,9 +224,7 @@ flair.bring = (members, scopeFn) => {
                             if (!_resolved) { option5(() => {
                                 if (!_resolved) { 
                                     throw `Could not resolve ${_member}.`;
-                                } else {
-                                    resolved();
-                                }
+                                } else { resolved(); }
                             }) } else { resolved(); }
                         }) } else { resolved(); }
                     }) } else { resolved(); }

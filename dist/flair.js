@@ -1,7 +1,7 @@
 /**
  * flair.js
  * True Object Oriented JavaScript
- * Version 0.12.4
+ * Version 0.15.0
  * (c) 2017-2019 Vikas Burman
  * MIT
  */
@@ -13,25 +13,41 @@
         let flair = {},
             noop = () => {},
             noopAsync = (resolve, reject) => { resolve(); },
-            options = {
-                env: opts.env || (isServer ? 'server' : 'client'),
-                isServer: isServer,
-                global: getGlobal(),
-                supressGlobals: (typeof opts.supressGlobals === 'undefined' ? false : opts.supressGlobals),
-                symbols: opts.symbols || [],
-                moduleLoader: opts.moduleLoader || null
-            };
+            options = Object.freeze({
+                symbols: Object.freeze(opts.symbols || []),
+                env: Object.freeze({
+                    type: opts.env || (isServer ? 'server' : 'client'),
+                    isServer: isServer,
+                    isProd: (options.symbols.indexOf('PROD') !== -1 || options.symbols.indexOf('PRODUCTION') !== -1),
+                    isDebug: (options.symbols.indexOf('DEBUG') !== -1),
+                    global: getGlobal(),
+                    supressGlobals: (typeof opts.supressGlobals === 'undefined' ? false : opts.supressGlobals),
+                    args: (isServer ? process.argv : new URLSearchParams(location.search))
+                }),
+                loaders: Object.freeze({
+                    module: Object.freeze({ // (file) => {} that gives a promise to resolve with the module object, on success
+                        server: opts.moduleLoaderServer || null,
+                        client: opts.moduleLoaderClient || null  
+                    }),
+                    file: Object.freeze({ // (file) => {} that gives a promise to resolve with file content, on success
+                        server: opts.fileLoaderServer || null,
+                        client: opts.fileLoaderClient || null
+                    })
+                })
+            });
         
         // special symbols
-        options.isDebug = options.symbols.indexOf('DEBUG') !== -1;
-        options.isProd = options.symbols.indexOf('PROD') !== -1 || options.symbols.indexOf('PRODUCTION') !== -1;
+        if (options.env.isProd && options.env.isDebug) { // when both are given
+            throw `DEBUG and PROD/PRODUCTION symbols are mutually exclusive. Use only one.`;
+        }
 
         flair._ = Object.freeze({
             name: 'FlairJS',
-            version: '0.12.4',
+            version: '0.15.0',
             copyright: '(c) 2017-2019 Vikas Burman',
             license: 'MIT',
-            options: Object.freeze(options)
+            lupdate: new Date('Thu, 03 Jan 2019 21:00:30 GMT'),
+            options: options
         });
 
         // Assembly
@@ -365,9 +381,9 @@
                                 condition = (item.args && item.args.length > 0 ? item.args[0] : '');
                                 switch(condition) {
                                     case 'server':
-                                        isOK = (options.isServer === true); break;
+                                        isOK = (options.env.isServer === true); break;
                                     case 'client':
-                                        isOK = (options.isServer === false); break;
+                                        isOK = (options.env.isServer === false); break;
                                     default:
                                         isOK = options.symbols.indexOf(condition) !== -1; break;
                                 }
@@ -1664,7 +1680,7 @@
             if (typeof alias === 'string' && typeof cls === 'string') {
                 if (cls.indexOf('|')) {
                     let items = cls.split('|');
-                    if (flair.options.isServer) {
+                    if (flair.options.env.isServer) {
                         cls = items[0].trim();
                     } else {
                         cls = items[1].trim();
@@ -1726,7 +1742,7 @@
                 if (typeof Type === 'string') { 
                     if (Type.indexOf('|') !== -1) { // condiitonal server/client specific injection
                         let items = Type.split('|');
-                        if (options.isServer) {
+                        if (options.env.isServer) {
                             Type = items[0].trim(); // left one
                         } else {
                             Type = items[1].trim(); // right one
@@ -1771,7 +1787,7 @@
                 if (typeof Type === 'string') {
                     if (Type.indexOf('|') !== -1) { // condiitonal server/client specific injection
                         let items = Type.split('|');
-                        if (options.isServer) {
+                        if (options.env.isServer) {
                             Type = items[0].trim(); // left one
                         } else {
                             Type = items[1].trim(); // right one
@@ -2273,8 +2289,8 @@
         };
 
         // expose to global environment
-        let g = options.global;
-        if (!options.supressGlobals) { 
+        let g = options.env.global;
+        if (!options.env.supressGlobals) { 
             g.Class = Object.freeze(flair.Class); 
             g.Mixin = Object.freeze(flair.Mixin); 
             g.Interface = Object.freeze(flair.Interface); 
