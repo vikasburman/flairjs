@@ -96,8 +96,7 @@ let Vehicle = Class('Vehicle', function() {
 
     // event
     this.event('started', (time) => {
-        // event interceptor
-        return { when: time };
+        return { when: time }; // event args
     });
 });
 
