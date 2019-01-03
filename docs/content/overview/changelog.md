@@ -6,25 +6,18 @@ Changelog
 Here is a rundown of all major and minor happenings during the development of this library, grouped via published (or unpublished) tags and releases.
 
 
-Production
-----------
-
-Production grade, tested and ready-to-use library.
-
-### 1.0.0 - 05 Jan 2019
-
-* Stableized API
-* Fully functional examples
-* Completely documented API and usage guides
-* Published [NPM](https://www.npmjs.com/package/flairjs) package
-* Key test specs created
-* Travis build connected
-* Reimagined Assembly implementation 
 
 Beta
 ----
 
 Serious efforts to mature the codebase, restructuring, cleaning and stabelizing the API to make it production ready. 
+
+### 0.15.0 - &beta; (03 Jan 2019)
+
+* bring API coded
+* Fixed bugs
+* Stabelized API
+* Code refactored
 
 ### 0.12.0 - &beta; (29 Dec 2018)
 
