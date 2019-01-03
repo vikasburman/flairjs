@@ -1,5 +1,5 @@
 /**
- * flair.js
+ * flairjs.js
  * True Object Oriented JavaScript
  * Version 0.15.0
  * (c) 2017-2019 Vikas Burman
@@ -46,7 +46,7 @@
             version: '0.15.0',
             copyright: '(c) 2017-2019 Vikas Burman',
             license: 'MIT',
-            lupdate: new Date('Thu, 03 Jan 2019 21:00:30 GMT'),
+            lupdate: new Date('Thu, 03 Jan 2019 21:36:54 GMT'),
             options: options
         });
 
