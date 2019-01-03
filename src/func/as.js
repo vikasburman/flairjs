@@ -1,6 +1,6 @@
 // as
 // as(object, intf)
-//  intf: can be an interface reference or 'public', 'protected', 'private'
+//  intf: can be a reference or 'public', 'protected', 'private'
 flair.as = (obj, intf) => {
     if (typeof intf === 'string') {
         switch(intf) {
@@ -10,7 +10,7 @@ flair.as = (obj, intf) => {
             case 'private':
                 return obj._.pr; break;
             default:
-                throw 'unknown scope: ' + intf;
+                throw `Unknown scope: ${intf}`;
         }
     } else {
         switch(intf._.type) {
@@ -21,7 +21,7 @@ flair.as = (obj, intf) => {
             case 'class':
                 if (obj._.isInstanceOf(intf._.name)) { return obj; }; break;
             default:
-                throw 'unknown implementation type: ' + intf;
+                throw `Unknown/unsupported interface type: ${intf}`;
         }
     }
     return null;
