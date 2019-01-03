@@ -48,20 +48,29 @@ Install using `npm install flairjs` or download [latest release](https://github.
 
 **2. Include**
 
-Include FlairJS in your html page or load it as a module.
+Include FlairJS in your html page or load it as a module, and initialize.
 
 > There are no external dependencies of this library, therefore feel free to include in whatever order required. However this must be loaded before any `*.js` file which uses FlairJS features, for them to be available.
 
+When using on client side:
 ```html
 <script type="text/javascript" src="path/flairjs.min.js"></script>
+<script>
+   flair({ symbols: ['DEBUG'] }); // initialize
+</script>
 ```
 
 > FlairJS also support module loaders and can be loaded via `require` or other module loading techniques.
 
+When using on server side:
+```html
+const flair = require('flairjs');
+flair({ symbols: ['DEBUG'] }); // initialize
+```
 
 **3. Play with Objects**
 
-JavaScript now has the awesomeness of C#/Java. Define and play with objects.
+With global functions/objects added to environment, JavaScript environment now has the awesomeness of C#/Java. Define and play with objects.
 
 Here is a quick example:
 
