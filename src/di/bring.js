@@ -26,7 +26,7 @@ flair.bring = (members, scopeFn) => {
     //  
     //  <path>/<file.css|json|html|md|...>
     //      if ths is not a js file, it will treat it as any other file and will try to fetch as a resource on client
-    //      and using request() on server
+    //      and using request on server
     //      
     //  Each member definition can also be defined for contextual consideration
     //      <member1> | <member2>
