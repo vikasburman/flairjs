@@ -139,7 +139,7 @@ Vehicle constructed!
 
 Car constructed!
 
-SUV started at: (time)
+SUV (3000cc) started at: (time)
 
 Car disposed!
 ```
