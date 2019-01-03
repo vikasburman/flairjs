@@ -24,6 +24,10 @@ flair.bring = (members, scopeFn) => {
     //      use it as <path>/<file>.js 
     //      NOTE: Path is always in context of the root path - full. Relative paths are not supported.
     //  
+    //  <path>/<file.css|json|html|md|...>
+    //      if ths is not a js file, it will treat it as any other file and will try to fetch as a resource on client
+    //      and using request() on server
+    //      
     //  Each member definition can also be defined for contextual consideration
     //      <member1> | <member2>
     //          when running on server, <member1> would be considered, and
@@ -87,17 +91,63 @@ flair.bring = (members, scopeFn) => {
 
             // check if this is a file
             let option4 = (done) => {
-                if (_member.toLowerCase().indexOf('.js')) {
-                    // pick minified or dev version
-                    if (_member.indexOf('{.min}') !== -1) {
-                        if (flair.options.isProd) {
-                            _member = _member.replace('{.min}', '.min'); // a{.min}.js => a.min.js
-                        } else {
-                            _member = _member.replace('{.min}', ''); // a{.min}.js => a.js
+                let ext = _member.substr(_member.lastIndexOf('.') + 1).toLowerCase();
+                if (ext) {
+                    if (ext === 'js') {
+                        // pick minified or dev version
+                        if (_member.indexOf('{.min}') !== -1) {
+                            if (flair.options.isProd) {
+                                _member = _member.replace('{.min}', '.min'); // a{.min}.js => a.min.js
+                            } else {
+                                _member = _member.replace('{.min}', ''); // a{.min}.js => a.js
+                            }
+                        }
+                        
+                        // this will be loaded as module in next option as a module
+                        done();
+                    } else { // some other file (could be json, css, html, etc.)
+                        if (flair.options.isServer) {
+                            const request = require('request');
+                            request(_member, (err, res, body) => {
+                              if (err) {  
+                                  throw `Failed to load ${_member} with error: ${err}.`;
+                              }
+                              _resolved = body;
+
+                              // special case of JSON
+                              if (ext === 'json') {
+                                try {
+                                    if (_resolved) {
+                                        _resolved = JSON.parse(_resolved);
+                                    }
+                                }  catch(e) {
+                                    throw `Failed to parse JSON of ${_member} with error: ${e}.`;
+                                }
+                              }
+                              done();
+                            });
+                        } else { // client
+                            fetch(_member).then((response) => {
+                                if (response.status !== 200) {
+                                    throw `Failed to load ${_member} with error code: ${response.status}.`;
+                                }
+                                _resolved = response.text();
+
+                                // special case of JSON
+                                if (ext === 'json') {
+                                    response.json().then((data) => {
+                                        _resolved = data;
+                                        done();
+                                    });
+                                } else {
+                                    done();
+                                }
+                            }).catch((err) => {
+                                throw `Failed to load ${_member} with error: ${err}.`;
+                            });
                         }
                     }
-                    // this will be loaded as file in next option as a module
-                } else { // not a JS file
+                } else { // not a file
                     done();
                 }
             };
