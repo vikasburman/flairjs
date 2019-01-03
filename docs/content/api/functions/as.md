@@ -48,12 +48,11 @@ Returns
 
 Exceptions
 ---
-* FASX01: Unknown scope type: _scope_
-    Given scope type is unknown.
-    
-* FASX02: Unknown/unsupported interface type: _type_
-    Type of provided interface reference is unknown or is not supported.
 
+Code | Message | Description
+-----|---------|------------
+FASX01 | Unknown scope type: _scope_ | Given scope type is unknown.
+FASX02 | Unknown/unsupported interface type: _type_ | Type of provided interface reference is unknown or is not supported.
 
 Properties
 ---
