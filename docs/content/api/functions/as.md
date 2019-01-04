@@ -1,5 +1,3 @@
-<!-- nav: api.json -->
-
 as
 ===
 
