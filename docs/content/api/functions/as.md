@@ -11,8 +11,8 @@ Usage
 &#9746; as function |
 &#9744; as constructor |
 &#9744; as object |
-&#9746; in global namespace |
-&#9746; in _flair_ namespace
+&#9746; in _global_ namespace |
+&#9746; in [flair](#/api/objects/flair) namespace
 
 ### instance of a Class
 Checks if given object is a direct or indirect (via inheritance) instance of the specified [Class](#/api/types/class) type.
