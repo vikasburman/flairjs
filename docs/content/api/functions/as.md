@@ -47,20 +47,24 @@ Syntax
 
 ### Parameters
 
-* **_object_**: An object that needs to be validated for casting. Only instance objects of [Class](#/api/types/class) types can be checked. 
-* **_type_**: A [Class](#/api/types/class), [Mixin](#/api/types/mixin) or [Interface](#/api/types/interface) type for which given object needs to be validated.
+* **_object_**
+    * An object that needs to be validated for casting. Only instance objects of [Class](#/api/types/class) types can be checked. 
+* **_type_**
+    * A [Class](#/api/types/class), [Mixin](#/api/types/mixin) or [Interface](#/api/types/interface) type for which given object needs to be validated.
 
 ### Returns
 
-* **object**: Returns the same object if casting was successfully validated.
-* **null**: Returns _null_, if casting could not be validated.
+* **object**
+    * Returns the same object if casting was successfully validated.
+* **null**
+    * Returns _null_, if casting could not be validated.
 
 ### Exceptions
 
 * **FASX01**:  Unknown/unsupported object type: _type_
-* Given object type is unknown or is not supported.
+    * Given object type is unknown or is not supported.
 * **FASX02**: Unknown/unsupported interface type: _type_
-* Type of provided interface reference is unknown or is not supported.
+    * Type of provided interface reference is unknown or is not supported.
 
 
 Members
