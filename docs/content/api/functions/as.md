@@ -43,19 +43,19 @@ This can also be checked via [isImplements](#/api/functions/isImplements) functi
 Syntax
 ---
 
-***as(object, interface)***
+***as(object, type)***
 
 ### Parameters
 
-**_object_**: An object that needs to be validated for casting. Only instance objects of [Class](#/api/types/class) types can be checked. 
+* **_object_**: An object that needs to be validated for casting. Only instance objects of [Class](#/api/types/class) types can be checked. 
     
-**_interface_**: A [Class](#/api/types/class), [Mixin](#/api/types/mixin) or [Interface](#/api/types/interface) type for which given object needs to be validated.
+* **_type_**: A [Class](#/api/types/class), [Mixin](#/api/types/mixin) or [Interface](#/api/types/interface) type for which given object needs to be validated.
 
 ### Returns
 
-**object** Returns the same object if casting was successfully validated.
+* **object**: Returns the same object if casting was successfully validated.
 
-**null** Returns _null_, if casting could not be validated.
+* **null**: Returns _null_, if casting could not be validated.
 
 ### Exceptions
 
