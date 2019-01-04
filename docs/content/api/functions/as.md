@@ -9,6 +9,8 @@ Usage
 &#9746; as function |
 &#9744; as constructor |
 &#9744; as object |
+&#9744; as type |
+&#9744; as attribute |
 &#9746; in _global_ namespace |
 &#9746; in [flair](#/api/objects/flair) namespace
 
