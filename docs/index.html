@@ -18,6 +18,10 @@
   <script src="js/theme.js"></script>
   <script src="js/md.js"></script>
   <script src="https://buttons.github.io/buttons.js"></script>
+
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.13.1/styles/default.min.css">
+  <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.13.1/highlight.min.js"></script>
+
   <script>
     let loadFile = function(url, url404, onDone, onFail) {
       $.get(url, function(fileText) {
@@ -153,6 +157,9 @@
             $(".menu1").hide();
             $(".menu2").hide();
           }
+
+          // highlight
+          hljs.initHighlightingOnLoad();          
       }, 
       (fileText404) => {
         if (fileText404) {
