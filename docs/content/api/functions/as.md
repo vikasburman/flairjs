@@ -8,36 +8,30 @@ The **as** function checks if given object has implemented, mixed, or inherited 
 Usage
 ---
 
-[x] as Function
-[ ] as Constructor Function
-[ ] as Object
-
-[x] in global namespace
-[x] in _flair_ namespace
+&9746; as function
+&9744; as constructor
+&9744; as object
+&9746; in global namespace
+&9746; in _flair_ namespace
 
 ### instance of a Class
 Checks if given object is a direct or indirect (via inheritance) instance of the specified [Class](#/api/types/class) type.
-
 <pre><code class="javascript">
 let vehicle = as(car, Vehicle);
 if (vehicle) {
     // .. do something that is generic to Vehicle Class
 }
 </code></pre>
-
 ### mixed from a Mixin
 Checks if specified [Mixin](#/api/types/mixin) type was mixed on this object directly or indirectly (via inheritance).
-
 <pre><code class="javascript">
 let sportsCar = as(car, SportsCar);
 if (sportsCar) {
     //.. do something that is available on SportsCar Mixin
 }
 </code></pre>
-
 ### implements an Interface
 Checks if specified [Interface](#/api/types/interface) type was implemented on this object directly or indirectly (via inheritance).
-
 <pre><code class="javascript">
 let turboChargedCar = as(car, ITurbo);
 if (turboChargedCar) {
