@@ -6,13 +6,15 @@ The **as** function checks if given object has implemented, mixed, or inherited 
 Usage
 ---
 
-> &#9746; as function |
-> &#9744; as constructor |
-> &#9744; as object |
-> &#9744; as type |
-> &#9744; as attribute |
-> &#9746; as _global_ namespace member |
-> &#9746; as [flair](#/api/objects/flair) namespace member
+&#9746; as function |
+&#9744; as constructor |
+&#9744; as object |
+&#9744; as type |
+&#9744; as attribute |
+&#9746; as _global_ namespace member |
+&#9746; as [flair](#/api/objects/flair) namespace member
+
+- - - - - - - - - - - - -
 
 ### instance of a Class
 Checks if given object is a direct or indirect (via inheritance) instance of the specified [Class](#/api/types/class) type.
