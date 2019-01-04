@@ -11,27 +11,43 @@ Usage
 [x] as Function
 [ ] as Constructor Function
 [ ] as Object
-[x] available in global namespace
-[x] available in _flair_ namespace
 
-### is instance of a Class
+[x] in global namespace
+[x] in _flair_ namespace
+
+### instance of a Class
+Checks if given object is a direct or indirect (via inheritance) instance of the specified [Class](#/api/types/class) type.
+
 <pre><code class="javascript">
-// Example 1: if car is an instance of Vehicle Class
 let vehicle = as(car, Vehicle);
+if (vehicle) {
+    // .. do something that is generic to Vehicle Class
+}
 </code></pre>
 
-### has mixed features of a Mixing
+### mixed from a Mixin
+Checks if specified [Mixin](#/api/types/mixin) type was mixed on this object directly or indirectly (via inheritance).
+
 <pre><code class="javascript">
-// Example 2: if car has SportsCar Mixin features
 let sportsCar = as(car, SportsCar);
+if (sportsCar) {
+    //.. do something that is available on SportsCar Mixin
+}
 </code></pre>
 
 ### implements an Interface
-<pre><code class="javascript">
-let turboChargedCar = as(car, ITurbo);
-</code></pre>
+Checks if specified [Interface](#/api/types/interface) type was implemented on this object directly or indirectly (via inheritance).
 
 <pre><code class="javascript">
+let turboChargedCar = as(car, ITurbo);
+if (turboChargedCar) {
+    //.. do something that is available on ITurbo Interface
+}
+</code></pre>
+
+
+
+
 // Example 1: if car is an instance of Vehicle Class
 let vehicle = as(car, Vehicle);
 
@@ -40,7 +56,6 @@ let sportsCar = as(car, SportsCar);
 
 // Example 3: if car implements ITurbo Interface
 let turboChargedCar = as(car, ITurbo);
-</code></pre>
 
 
 
