@@ -8,13 +8,11 @@ The **as** function checks if given object has implemented, mixed, or inherited 
 Usage
 ---
 
-<p>
-&#9746; as function
-&#9744; as constructor
-&#9744; as object
-&#9746; in global namespace
+&#9746; as function |
+&#9744; as constructor |
+&#9744; as object |
+&#9746; in global namespace |
 &#9746; in _flair_ namespace
-</p>
 
 ### instance of a Class
 Checks if given object is a direct or indirect (via inheritance) instance of the specified [Class](#/api/types/class) type.
