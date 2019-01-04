@@ -57,9 +57,9 @@ Syntax
 
 ### Exceptions
 
-**FASX01**:  Unknown/unsupported object type: _type_
+* **FASX01**:  Unknown/unsupported object type: _type_
 * Given object type is unknown or is not supported.
-**FASX02**: Unknown/unsupported interface type: _type_
+* **FASX02**: Unknown/unsupported interface type: _type_
 * Type of provided interface reference is unknown or is not supported.
 
 
