@@ -560,7 +560,7 @@ body.no-literate .content pre > code:hover::-webkit-scrollbar-thumb {
   body:not(.no-literate) .content > blockquote + h5,
   body:not(.no-literate) .content > pre + h6,
   body:not(.no-literate) .content > blockquote + h6 {
-    clear: both;
+    clear: none;
   }
   body:not(.no-literate) .content > p,
   body:not(.no-literate) .content > ul,
@@ -886,9 +886,6 @@ code .comment {
 }
 .content h3:before {
   position: fixed!important; 
-}
-.content h6 {
-  clear: none!important;
 }
 .menu1 .level-1 {
   font-size: 1em!important;
