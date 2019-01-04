@@ -15,29 +15,30 @@ Usage
 &#9746; in [flair](#/api/objects/flair) namespace
 
 ### instance of a Class
+Checks if given object is a direct or indirect (via inheritance) instance of the specified [Class](#/api/types/class) type.
 <pre><code class="javascript">
 let vehicle = as(car, Vehicle);
 if (vehicle) {
     // .. do something that is generic to Vehicle Class
 }
 </code></pre>
-Checks if given object is a direct or indirect (via inheritance) instance of the specified [Class](#/api/types/class) type.
 ### mixed from a Mixin
+Checks if specified [Mixin](#/api/types/mixin) type was mixed on this object directly or indirectly (via inheritance).
 <pre><code class="javascript">
 let sportsCar = as(car, SportsCar);
 if (sportsCar) {
     //.. do something that is available on SportsCar Mixin
 }
 </code></pre>
-Checks if specified [Mixin](#/api/types/mixin) type was mixed on this object directly or indirectly (via inheritance).
 ### implements an Interface
+Checks if specified [Interface](#/api/types/interface) type was implemented on this object directly or indirectly (via inheritance).
 <pre><code class="javascript">
 let turboChargedCar = as(car, ITurbo);
 if (turboChargedCar) {
     //.. do something that is available on ITurbo Interface
 }
 </code></pre>
-Checks if specified [Interface](#/api/types/interface) type was implemented on this object directly or indirectly (via inheritance).
+
 
 
 
