@@ -20,6 +20,7 @@ if (vehicle) {
     // .. do something that is generic to Vehicle Class
 }
 </code></pre>
+> This can also be checked via [isInstanceOf](#/api/functions/isInstanceOf) function.
 ### mixed from a Mixin
 Checks if specified [Mixin](#/api/types/mixin) type was mixed on this object directly or indirectly (via inheritance).
 <pre><code class="javascript">
