@@ -47,7 +47,7 @@ This can also be checked via [isImplements](#/api/functions/isImplements) functi
 Syntax
 ---
 
-***as(object, type)***
+##***as(object, type)***
 
 ### Parameters
 
