@@ -20,7 +20,7 @@ if (vehicle) {
     // .. do something that is generic to Vehicle Class
 }
 </code></pre>
-> This can also be checked via [isInstanceOf](#/api/functions/isInstanceOf) function.
+This can also be checked via [isInstanceOf](#/api/functions/isInstanceOf) function. _as_ gives a unified implementation for variety of such checks.
 ### mixed from a Mixin
 Checks if specified [Mixin](#/api/types/mixin) type was mixed on this object directly or indirectly (via inheritance).
 <pre><code class="javascript">
@@ -29,6 +29,7 @@ if (sportsCar) {
     //.. do something that is available on SportsCar Mixin
 }
 </code></pre>
+This can also be checked via [isMixed](#/api/functions/isMixed) function. _as_ gives a unified implementation for variety of such checks.
 ### implements an Interface
 Checks if specified [Interface](#/api/types/interface) type was implemented on this object directly or indirectly (via inheritance).
 <pre><code class="javascript">
@@ -37,7 +38,7 @@ if (turboChargedCar) {
     //.. do something that is available on ITurbo Interface
 }
 </code></pre>
-
+This can also be checked via [isImplements](#/api/functions/isImplements) function. _as_ gives a unified implementation for variety of such checks.
 
 
 
