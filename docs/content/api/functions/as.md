@@ -9,10 +9,10 @@ Usage
 &#9746; as function |
 &#9744; as constructor |
 &#9744; as object |
-&#9744; as prototype<br>
+&#9744; as prototype |
 &#9744; as [type](#/api/misc/types) |
 &#9744; as [aspect](#/api/aop/aspect) |
-&#9744; as [attribute](#/api/attributes/attribute)<br>
+&#9744; as [attribute](#/api/attributes/attribute) |
 &#9746; as _global_ namespace member |
 &#9746; as [flair](#/api/objects/flair) namespace member
 
