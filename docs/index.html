@@ -159,7 +159,9 @@
           }
 
           // highlight
-          hljs.initHighlightingOnLoad();          
+          $('pre code').each(function(i, block) {
+            hljs.highlightBlock(block);
+          });          
       }, 
       (fileText404) => {
         if (fileText404) {
