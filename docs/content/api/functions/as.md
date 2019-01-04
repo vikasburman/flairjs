@@ -14,7 +14,7 @@ Usage
 &#9746; as _global_ namespace member |
 &#9746; as [flair](#/api/objects/flair) namespace member
 
----
+<hr>
 
 ### instance of a Class
 Checks if given object is a direct or indirect (via inheritance) instance of the specified [Class](#/api/types/class) type.
