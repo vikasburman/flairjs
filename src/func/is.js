@@ -1,7 +1,9 @@
 // is
-// is(object, intf)
+// is(objOtType, intf)
 //  intf: can be a reference
-flair.is = (obj, intf) => {
+flair.is = (objOtType, intf) => {
+// TODO: check for all types as well
+
     if (typeof intf !== 'string') {
         return flair.as(obj) !== null;
     } else {

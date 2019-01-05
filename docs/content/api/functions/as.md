@@ -6,15 +6,15 @@ The <code>as</code> function checks if given object has implemented, mixed, or i
 Usage
 ---
 
-&#9746; as function |
-&#9744; as constructor |
-&#9744; as object |
-&#9744; as prototype |
-&#9744; as [type](#/api/misc/types) |
-&#9744; as [aspect](#/api/aop/aspect) |
-&#9744; as [attribute](#/api/attributes/attribute) |
-&#9746; as _global_ namespace member |
-&#9746; as [flair](#/api/objects/flair) namespace member
+&#9746; function |
+&#9744; constructor |
+&#9744; object |
+&#9744; prototype |
+&#9744; [type](#/api/misc/types) |
+&#9744; [aspect](#/api/aop/aspect) |
+&#9744; [attribute](#/api/attributes/attribute) |
+&#9746; _global_ namespace member |
+&#9746; [flair](#/api/objects/flair) namespace member
 
 ### instance of a Class
 Checks if given object is a direct or indirect (via inheritance) instance of the specified [Class](#/api/types/class) type.
