@@ -19,10 +19,20 @@ Usage
 ### instance of a Class
 Checks if given object is a direct or indirect (via inheritance) instance of the specified [Class](#/api/types/class) type.
 <pre><code class="javascript">
-let vehicle = as(car, Vehicle);
-if (vehicle) {
-    // .. do something that is generic to Vehicle Class
+let Base = Class('Base', function() {
+    this.prop('name', 'Base');
+});
+let Derived = Class('Derived', Base, function() { //... });
+
+let d = new Derived();
+let b = as(d, Base);
+if (b) {
+    console.log(b.name);
 }
+
+/* Output:
+0: Base
+*/
 </code></pre>
 This can also be checked via [isInstanceOf](#/api/functions/isInstanceOf) function. _as_ gives a unified implementation for variety of such checks.
 ### mixed from a Mixin
