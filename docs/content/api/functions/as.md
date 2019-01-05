@@ -1,7 +1,7 @@
 as
 ===
 
-The **as** function checks if given object has implemented, mixed, or inherited specified type.
+The <code>as</code> function checks if given object has implemented, mixed, or inherited specified type.
 
 Usage
 ---
@@ -64,3 +64,8 @@ Syntax
 * **FASX01**: _Unknown/unsupported object type: {type}_ - Given object type is unknown or is not supported.
 * **FASX02**: _Unknown/unsupported interface type: {type}_ - Type of provided interface reference is unknown or is not supported.
 
+Examples
+---
+* Cast as Interfece
+* Cast as Mixin
+* Cast as Class

@@ -64,6 +64,7 @@
         <!-- inject: ./func/bring.js -->
         <!-- inject: ./func/using.js -->
         <!-- inject: ./func/as.js -->
+        <!-- inject: ./func/is.js -->
         <!-- inject: ./func/type.js -->
         <!-- inject: ./func/classOf.js -->
         <!-- inject: ./func/isDerivedFrom.js -->
@@ -101,6 +102,7 @@
             g.bring = Object.freeze(flair.bring); 
             g.using = Object.freeze(flair.using); 
             g.as = Object.freeze(flair.as);
+            g.is = Object.freeze(flair.is);
             g.type = Object.freeze(flair.type);
             g.isDerivedFrom = Object.freeze(flair.isDerivedFrom);
             g.isImplements = Object.freeze(flair.isImplements);

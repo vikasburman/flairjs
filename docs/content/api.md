@@ -27,6 +27,7 @@ Functions
 [as](#/api/functions/as) |
 bring |
 classOf |
+is | 
 isDerivedFrom |
 isImplements |
 isInstanceOf |

@@ -46,9 +46,23 @@
             version: '0.15.0',
             copyright: '(c) 2017-2019 Vikas Burman',
             license: 'MIT',
-            lupdate: new Date('Thu, 03 Jan 2019 21:36:54 GMT'),
+            lupdate: new Date('Sat, 05 Jan 2019 16:10:31 GMT'),
             options: options
         });
+
+        // Exception
+        // Exception(code, msg, error)
+        flair.Exception = function(code, msg, error) {
+            let _ex = this;
+            
+            this.code = code || '';
+            this.message = msg || '';
+            this.error = error || null;
+        
+            // return
+            return Object.freeze(_ex);
+        };
+        
 
         // Assembly
         let asmFiles = {},
@@ -1379,31 +1393,45 @@
         
         // as
         // as(object, intf)
-        //  intf: can be an interface reference or 'public', 'protected', 'private'
+        //  intf: can be a reference or 'public', 'protected', 'private'
         flair.as = (obj, intf) => {
-            if (typeof intf === 'string') {
-                switch(intf) {
-                    case 'public': 
-                        return obj._.pu; break;
-                    case 'protected': 
-                    case 'private':
-                        return obj._.pr; break;
-                    default:
-                        throw 'unknown scope: ' + intf;
+            if (obj && obj._ && obj._.type === 'instance') {
+                if (typeof intf === 'string') {
+                    switch(intf) {
+                        case 'public': 
+                            return obj._.pu; break;
+                        case 'protected': 
+                        case 'private':
+                            return obj._.pr; break;
+                        default:
+                            throw new flair.Exception('AS03', `Unknown scope type: ${intf}`);
+                    }
+                } else {
+                    switch(intf._.type) {
+                        case 'interface':
+                            if (obj._.isImplements(intf._.name)) { return obj; }; break;
+                        case 'mixin':
+                            if (obj._.isMixed(intf._.name)) { return obj; }; break;
+                        case 'class':
+                            if (obj._.isInstanceOf(intf._.name)) { return obj; }; break;
+                        default:
+                            throw new flair.Exception('AS02', `Unknown/unsupported interface type: ${intf}`);
+                    }
                 }
             } else {
-                switch(intf._.type) {
-                    case 'interface':
-                        if (obj._.isImplements(intf._.name)) { return obj; }; break;
-                    case 'mixin':
-                        if (obj._.isMixed(intf._.name)) { return obj; }; break;
-                    case 'class':
-                        if (obj._.isInstanceOf(intf._.name)) { return obj; }; break;
-                    default:
-                        throw 'unknown implementation type: ' + intf;
-                }
+                throw new flair.Exception('AS01', `Unknown/unsupported object type: ${((obj && obj._ && obj._.type) ? obj._.type : '')}`);
             }
             return null;
+        };
+        // is
+        // is(object, intf)
+        //  intf: can be a reference
+        flair.is = (obj, intf) => {
+            if (typeof intf !== 'string') {
+                return flair.as(obj) !== null;
+            } else {
+                throw new flair.Exception('IS01', `Scope types are not supported: ${intf}`);
+            }
         };
         // type
         // type(qualifiedName)
@@ -2291,6 +2319,7 @@
         // expose to global environment
         let g = options.env.global;
         if (!options.env.supressGlobals) { 
+            g.Exception = Object.freeze(flair.Exception); 
             g.Class = Object.freeze(flair.Class); 
             g.Mixin = Object.freeze(flair.Mixin); 
             g.Interface = Object.freeze(flair.Interface); 
@@ -2301,6 +2330,7 @@
             g.bring = Object.freeze(flair.bring); 
             g.using = Object.freeze(flair.using); 
             g.as = Object.freeze(flair.as);
+            g.is = Object.freeze(flair.is);
             g.type = Object.freeze(flair.type);
             g.isDerivedFrom = Object.freeze(flair.isDerivedFrom);
             g.isImplements = Object.freeze(flair.isImplements);

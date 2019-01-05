@@ -11,7 +11,7 @@ flair.as = (obj, intf) => {
                 case 'private':
                     return obj._.pr; break;
                 default:
-                    throw new Exception('AS03', `Unknown scope type: ${intf}`);
+                    throw new flair.Exception('AS03', `Unknown scope type: ${intf}`);
             }
         } else {
             switch(intf._.type) {
@@ -22,11 +22,11 @@ flair.as = (obj, intf) => {
                 case 'class':
                     if (obj._.isInstanceOf(intf._.name)) { return obj; }; break;
                 default:
-                    throw new Exception('AS02', `Unknown/unsupported interface type: ${intf}`);
+                    throw new flair.Exception('AS02', `Unknown/unsupported interface type: ${intf}`);
             }
         }
     } else {
-        throw new Exception('AS01', `Unknown/unsupported object type: ${((obj && obj._ && obj._.type) ? obj._.type : '')}`);
+        throw new flair.Exception('AS01', `Unknown/unsupported object type: ${((obj && obj._ && obj._.type) ? obj._.type : '')}`);
     }
     return null;
 };
