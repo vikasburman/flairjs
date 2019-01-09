@@ -5,7 +5,7 @@ const uglify = require('gulp-uglify');
 const minifier = require('gulp-uglify/minifier');
 const jasmineNode = require('gulp-jasmine');
 const pkg = require('./package.json');
-const uglifyConfig = require('./gulp/.uglify.json');
+const uglifyConfig = require('./build/.uglify.json');
 const rename = require('gulp-rename');
 const inject = require('gulp-inject-file');
 const replace = require('gulp-string-replace');
@@ -93,7 +93,7 @@ gulp.task('build', (done) => {
         .on('error', errorHandler('write-assembled'))
 
         // check for issues
-        .pipe(eslint('./gulp/.eslint.json'))
+        .pipe(eslint('./build/.eslint.json'))
         // format errors, if any
         .pipe(eslint.format())
         // stop if errors
@@ -118,7 +118,7 @@ gulp.task('build', (done) => {
 
 // task: test
 gulp.task('test', (done) => {
-    const jasminConfig = require('./gulp/.jasmine.json'),
+    const jasminConfig = require('./build/.jasmine.json'),
         tests = ['./specs/*.spec.js'];
     gulp.src(tests)
         .pipe(jasmineNode(jasminConfig))
