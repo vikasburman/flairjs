@@ -47,7 +47,7 @@
             version: '0.15.2',
             copyright: '(c) 2017-2019 Vikas Burman',
             license: 'MIT',
-            lupdate: new Date('Wed, 09 Jan 2019 21:22:55 GMT'),
+            lupdate: new Date('Wed, 09 Jan 2019 22:35:18 GMT'),
             options: options
         });
 
@@ -140,7 +140,8 @@
         // Namespace(Type)
         flair.Namespace = (Type) => {
             // any type name can be in this format:
-            // name
+            // ~name <-- means, no namespace is given but still register this with root namespace
+            // name <-- means, no namespace is given but since it is not forced, do not register this with root namespace
             // namespace.name
             
             // only valid types are allowed
@@ -148,6 +149,13 @@
         
             // only unattached types are allowed
             if (Type._.namespace) { throw `Type (${Type._.name}) is already contained in a namespace.`; }
+        
+            // remove force register symbol (~) from name and also fix name
+            let isForced = false;
+            if (Type._.name.startsWith('~')) {
+                Type._.name = Type._.name.substr(1); // remove ~
+                isForced = true;
+            }
         
             // merge/add type in namespace tree
             let nextLevel = flair.Namespace.root,
@@ -171,8 +179,13 @@
                         nextLevel = nextLevel[nsItem];
                     }
                 }
+            } else {
+                if (!isForced) {
+                    return; // don't do anything
+                }
             }
-            // add type at the bottom, if not already exists
+        
+                // add type at the bottom, if not already exists
             if (nextLevel[nm]) { throw `Type ${nm} already contained at ${ns}.`; }
             nextLevel[nm] = Type;
         
