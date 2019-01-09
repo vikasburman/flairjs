@@ -1,19 +1,22 @@
 const gulp = require('gulp');
+const gulpConfig = require('../config/.gulp.json');
 const eslint = require('gulp-eslint');
 const uglifyjs = require('uglify-js-harmony');
 const uglify = require('gulp-uglify');
 const minifier = require('gulp-uglify/minifier');
-const uglifyConfig = require('../.uglify.json');
+const uglifyConfig = require('../config/.uglify.json');
 const rename = require('gulp-rename');
 const inject = require('gulp-inject-file');
 const replace = require('gulp-string-replace');
-const packageJSON = JSON.parse(fs.readFileSync('../../package.json', 'utf8'));
+const fs = require('fs');
+const packageJSON = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
 const errorHandler = require('../utils.js').errorHandler;
+const destName = gulpConfig.dest.file;
 
 // do
 const doTask = (done) => {
-    let destName = packageJSON.name;
-    gulp.src('./src/index.js')
+    gulp.src(gulpConfig.src.file, gulpConfig.src.options)
+
     // assemble pieces
     .pipe(inject())
     .on('error', errorHandler('assemble'))
@@ -23,18 +26,18 @@ const doTask = (done) => {
         path.basename = destName;
     }))
     .on('error', errorHandler('rename'))     
-    .pipe(replace('<basename>', destName))
+    .pipe(replace('<basename>', packageJSON.name))
     .pipe(replace('<title>', packageJSON.title))
     .pipe(replace('<desc>', packageJSON.description))
     .pipe(replace('<version>', packageJSON.version))
     .pipe(replace('<copyright>', packageJSON.copyright))
     .pipe(replace('<license>', packageJSON.license))
     .pipe(replace('<datetime>', new Date().toUTCString()))
-    .pipe(gulp.dest('./dist'))
+    .pipe(gulp.dest(gulpConfig.dest.base))
     .on('error', errorHandler('write-assembled'))
 
     // check for issues
-    .pipe(eslint('./build/.eslint.json'))
+    .pipe(eslint('./build/config/.eslint.json'))
     // format errors, if any
     .pipe(eslint.format())
     // stop if errors
@@ -50,7 +53,7 @@ const doTask = (done) => {
     }))
     .on('error', errorHandler('rename'))
     .pipe(replace(destName + '.js', destName + '.min.js'))
-    .pipe(gulp.dest('./dist'))
+    .pipe(gulp.dest(gulpConfig.dest.base))
     .on('end', done)
     .on('error', errorHandler('write-minified'));
 };

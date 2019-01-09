@@ -1,5 +1,5 @@
 // setup
-let oojs = require('../dist/oojs.js')(global);
+require('../../dist/flair.js')();
 
 describe('Simple class definiton', () => {
     // class definition

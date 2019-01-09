@@ -1,8 +1,9 @@
 const gulp = require('gulp');
+const gulpConfig = require('../config/.gulp.json');
 const jasmineNode = require('gulp-jasmine');
+const jasminConfig = require('../config/.jasmine.json');
 const errorHandler = require('../utils.js').errorHandler;
-const jasminConfig = require('../.jasmine.json');
-const tests = ['./specs/*.spec.js'];
+const tests = gulpConfig.specs;
 
 // do
 const doTask = (done) => {

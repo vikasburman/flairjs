@@ -1,7 +1,7 @@
 /**
  * flairjs.js
  * True Object Oriented JavaScript
- * Version 0.15.0
+ * Version 0.15.2
  * (c) 2017-2019 Vikas Burman
  * MIT
  */
@@ -12,14 +12,15 @@
             getGlobal = new Function("try {return (this===global ? global : window);}catch(e){return window;}");
         let flair = {},
             noop = () => {},
+            sym = (opts.symbols || []),
             noopAsync = (resolve, reject) => { resolve(); },
             options = Object.freeze({
-                symbols: Object.freeze(opts.symbols || []),
+                symbols: Object.freeze(sym),
                 env: Object.freeze({
                     type: opts.env || (isServer ? 'server' : 'client'),
                     isServer: isServer,
-                    isProd: (options.symbols.indexOf('PROD') !== -1 || options.symbols.indexOf('PRODUCTION') !== -1),
-                    isDebug: (options.symbols.indexOf('DEBUG') !== -1),
+                    isProd: (sym.indexOf('PROD') !== -1 || sym.indexOf('PRODUCTION') !== -1),
+                    isDebug: (sym.indexOf('DEBUG') !== -1),
                     global: getGlobal(),
                     supressGlobals: (typeof opts.supressGlobals === 'undefined' ? false : opts.supressGlobals),
                     args: (isServer ? process.argv : new URLSearchParams(location.search))
@@ -43,10 +44,10 @@
 
         flair._ = Object.freeze({
             name: 'FlairJS',
-            version: '0.15.0',
+            version: '0.15.2',
             copyright: '(c) 2017-2019 Vikas Burman',
             license: 'MIT',
-            lupdate: new Date('Sat, 05 Jan 2019 16:10:31 GMT'),
+            lupdate: new Date('Wed, 09 Jan 2019 21:22:55 GMT'),
             options: options
         });
 
@@ -1424,9 +1425,11 @@
             return null;
         };
         // is
-        // is(object, intf)
+        // is(objOtType, intf)
         //  intf: can be a reference
-        flair.is = (obj, intf) => {
+        flair.is = (objOtType, intf) => {
+        // TODO: check for all types as well
+        
             if (typeof intf !== 'string') {
                 return flair.as(obj) !== null;
             } else {
@@ -1499,6 +1502,158 @@
                 throw 'Invalid arguments.';
             }
         };
+
+        // Container
+        let container = {};
+        flair.Container = {};
+        
+        // register(type)
+        // register(alias, type)
+        //  alias: type alias to register a type with
+        //  type: actual type to register against alias OR
+        //        qualifiedName of the type to resolve with OR
+        //        a JS file name that needs to be resolved 
+        //        When qualifiedName of a JS file is being defined, it can also be defined using contextual format
+        //        <serverContent> | <clientContext>
+        flair.Container.register = (alias, cls) => {
+            if (typeof alias === 'function') {
+                cls = alias;
+                alias = cls._.name;
+            }
+            if (typeof alias === 'string' && typeof cls === 'string') {
+                if (cls.indexOf('|')) {
+                    let items = cls.split('|');
+                    if (flair.options.env.isServer) {
+                        cls = items[0].trim();
+                    } else {
+                        cls = items[1].trim();
+                    }
+                }
+                cls = type(cls); // cls is qualifiedNane here, if not found it will throw error
+            }
+            if (!container[alias]) { container[alias] = []; }
+            container[alias].push(cls);
+        };
+        flair.Container.isRegistered = (alias) => {
+            return typeof container[alias] !== 'undefined';
+        };
+        flair.Container.get = (alias) => {
+            return (container[alias] || []).slice();
+        };
+        flair.Container.resolve = (alias, isMultiResolve, ...args) => {
+            let result = null,
+                getResolvedObject = (Type) => {
+                    let obj = Type; // whatever it was
+                    if (Type._ && Type._.type && ['class', 'structure'].indexOf(Type._.type) !== -1) { 
+                        obj = new Type(...args); // only class and structure need a new instance
+                    }
+                    return obj;
+                }
+            if (container[alias] && container[alias].length > 0) { 
+                if (isMultiResolve) {
+                    result = [];
+                    for(let Type of container[alias]) {
+                        result.push(getResolvedObject(Type));
+                    }
+                } else {
+                    let Type = container[alias][0];
+                    result = getResolvedObject(Type);
+                }
+            }
+            return result;
+        };
+        
+        // inject
+        // inject(type, [typeArgs])
+        //  - type: 
+        //      type class itself to inject, OR
+        //      type class name, OR
+        //      type class name on server | type class name on client
+        //  - typeArgs: constructor args to pass when type class instance is created
+        // NOTE: types being referred here must be available in container so sync resolve can happen
+        flair.Container.register(flair.Class('inject', flair.Attribute, function() {
+            this.decorator((obj, type, name, descriptor) => {
+                // validate
+                if (['func', 'prop'].indexOf(type) === -1) { throw `inject attribute cannot be applied on ${type} members. (${className}.${name})`; }
+                if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `inject attribute cannot be applied on special function. (${className}.${name})`; }
+        
+                // decorate
+                let Type = this.args[0],
+                    typeArgs = this.args[1],
+                    instance = null;
+                if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
+                if (typeof Type === 'string') { 
+                    if (Type.indexOf('|') !== -1) { // condiitonal server/client specific injection
+                        let items = Type.split('|');
+                        if (options.env.isServer) {
+                            Type = items[0].trim(); // left one
+                        } else {
+                            Type = items[1].trim(); // right one
+                        }
+                    }
+                    instance = flair.Container.resolve(Type, false, ...typeArgs)
+                } else {
+                    instance = new Type(...typeArgs);
+                }
+                switch(type) {
+                    case 'func':
+                        let fn = descriptor.value;
+                        descriptor.value = function(...args) {
+                            fn(instance, ...args);
+                        }.bind(obj);
+                        break;
+                    case 'prop':
+                        obj[name] = instance;                        
+                        break;
+                }
+            });
+        }));
+        
+        // multiinject
+        // multiinject(type, [typeArgs])
+        //  - type: 
+        //      type class name, OR
+        //      type class name on server | type class name on client
+        //  - typeArgs: constructor args to pass when type class instance is created
+        // NOTE: types being referred here must be available in container so sync resolve can happen
+        flair.Container.register(flair.Class('multiinject', flair.Attribute, function() {
+            this.decorator((obj, type, name, descriptor) => {
+                // validate
+                if (['func', 'prop'].indexOf(type) === -1) { throw `multiinject attribute cannot be applied on ${type} members. (${className}.${name})`; }
+                if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `multiinject attribute cannot be applied on special function. (${className}.${name})`; }
+        
+                // decorate
+                let Type = this.args[0],
+                    typeArgs = this.args[1],
+                    instance = null;
+                if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
+                if (typeof Type === 'string') {
+                    if (Type.indexOf('|') !== -1) { // condiitonal server/client specific injection
+                        let items = Type.split('|');
+                        if (options.env.isServer) {
+                            Type = items[0].trim(); // left one
+                        } else {
+                            Type = items[1].trim(); // right one
+                        }
+                    }
+                    instance = flair.Container.resolve(Type, true, ...typeArgs)
+                } else {
+                    throw `multiinject attribute does not support direct type injections. (${className}.${name})`;
+                }
+                switch(type) {
+                    case 'func':
+                        let fn = descriptor.value;
+                        descriptor.value = function(...args) {
+                            fn(instance, ...args);
+                        }.bind(obj);
+                        break;
+                    case 'prop':
+                        obj[name] = instance;                        
+                        break;
+                }
+            });
+        }));
+        
 
         // Aspects
         let allAspects = {};
@@ -1688,158 +1843,6 @@
         }));
         
         
-        // Container
-        let container = {};
-        flair.Container = {};
-        
-        // register(type)
-        // register(alias, type)
-        //  alias: type alias to register a type with
-        //  type: actual type to register against alias OR
-        //        qualifiedName of the type to resolve with OR
-        //        a JS file name that needs to be resolved 
-        //        When qualifiedName of a JS file is being defined, it can also be defined using contextual format
-        //        <serverContent> | <clientContext>
-        flair.Container.register = (alias, cls) => {
-            if (typeof alias === 'function') {
-                cls = alias;
-                alias = cls._.name;
-            }
-            if (typeof alias === 'string' && typeof cls === 'string') {
-                if (cls.indexOf('|')) {
-                    let items = cls.split('|');
-                    if (flair.options.env.isServer) {
-                        cls = items[0].trim();
-                    } else {
-                        cls = items[1].trim();
-                    }
-                }
-                cls = type(cls); // cls is qualifiedNane here, if not found it will throw error
-            }
-            if (!container[alias]) { container[alias] = []; }
-            container[alias].push(cls);
-        };
-        flair.Container.isRegistered = (alias) => {
-            return typeof container[alias] !== 'undefined';
-        };
-        flair.Container.get = (alias) => {
-            return (container[alias] || []).slice();
-        };
-        flair.Container.resolve = (alias, isMultiResolve, ...args) => {
-            let result = null,
-                getResolvedObject = (Type) => {
-                    let obj = Type; // whatever it was
-                    if (Type._ && Type._.type && ['class', 'structure'].indexOf(Type._.type) !== -1) { 
-                        obj = new Type(...args); // only class and structure need a new instance
-                    }
-                    return obj;
-                }
-            if (container[alias] && container[alias].length > 0) { 
-                if (isMultiResolve) {
-                    result = [];
-                    for(let Type of container[alias]) {
-                        result.push(getResolvedObject(Type));
-                    }
-                } else {
-                    let Type = container[alias][0];
-                    result = getResolvedObject(Type);
-                }
-            }
-            return result;
-        };
-        
-        // inject
-        // inject(type, [typeArgs])
-        //  - type: 
-        //      type class itself to inject, OR
-        //      type class name, OR
-        //      type class name on server | type class name on client
-        //  - typeArgs: constructor args to pass when type class instance is created
-        // NOTE: types being referred here must be available in container so sync resolve can happen
-        flair.Container.register(flair.Class('inject', flair.Attribute, function() {
-            this.decorator((obj, type, name, descriptor) => {
-                // validate
-                if (['func', 'prop'].indexOf(type) === -1) { throw `inject attribute cannot be applied on ${type} members. (${className}.${name})`; }
-                if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `inject attribute cannot be applied on special function. (${className}.${name})`; }
-        
-                // decorate
-                let Type = this.args[0],
-                    typeArgs = this.args[1],
-                    instance = null;
-                if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
-                if (typeof Type === 'string') { 
-                    if (Type.indexOf('|') !== -1) { // condiitonal server/client specific injection
-                        let items = Type.split('|');
-                        if (options.env.isServer) {
-                            Type = items[0].trim(); // left one
-                        } else {
-                            Type = items[1].trim(); // right one
-                        }
-                    }
-                    instance = flair.Container.resolve(Type, false, ...typeArgs)
-                } else {
-                    instance = new Type(...typeArgs);
-                }
-                switch(type) {
-                    case 'func':
-                        let fn = descriptor.value;
-                        descriptor.value = function(...args) {
-                            fn(instance, ...args);
-                        }.bind(obj);
-                        break;
-                    case 'prop':
-                        obj[name] = instance;                        
-                        break;
-                }
-            });
-        }));
-        
-        // multiinject
-        // multiinject(type, [typeArgs])
-        //  - type: 
-        //      type class name, OR
-        //      type class name on server | type class name on client
-        //  - typeArgs: constructor args to pass when type class instance is created
-        // NOTE: types being referred here must be available in container so sync resolve can happen
-        flair.Container.register(flair.Class('multiinject', flair.Attribute, function() {
-            this.decorator((obj, type, name, descriptor) => {
-                // validate
-                if (['func', 'prop'].indexOf(type) === -1) { throw `multiinject attribute cannot be applied on ${type} members. (${className}.${name})`; }
-                if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `multiinject attribute cannot be applied on special function. (${className}.${name})`; }
-        
-                // decorate
-                let Type = this.args[0],
-                    typeArgs = this.args[1],
-                    instance = null;
-                if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
-                if (typeof Type === 'string') {
-                    if (Type.indexOf('|') !== -1) { // condiitonal server/client specific injection
-                        let items = Type.split('|');
-                        if (options.env.isServer) {
-                            Type = items[0].trim(); // left one
-                        } else {
-                            Type = items[1].trim(); // right one
-                        }
-                    }
-                    instance = flair.Container.resolve(Type, true, ...typeArgs)
-                } else {
-                    throw `multiinject attribute does not support direct type injections. (${className}.${name})`;
-                }
-                switch(type) {
-                    case 'func':
-                        let fn = descriptor.value;
-                        descriptor.value = function(...args) {
-                            fn(instance, ...args);
-                        }.bind(obj);
-                        break;
-                    case 'prop':
-                        obj[name] = instance;                        
-                        break;
-                }
-            });
-        }));
-        
-
         // Serializer
         flair.Serializer = {};
         flair.Serializer.serialize = (instance) => { 

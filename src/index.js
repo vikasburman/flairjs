@@ -12,14 +12,15 @@
             getGlobal = new Function("try {return (this===global ? global : window);}catch(e){return window;}");
         let flair = {},
             noop = () => {},
+            sym = (opts.symbols || []),
             noopAsync = (resolve, reject) => { resolve(); },
             options = Object.freeze({
-                symbols: Object.freeze(opts.symbols || []),
+                symbols: Object.freeze(sym),
                 env: Object.freeze({
                     type: opts.env || (isServer ? 'server' : 'client'),
                     isServer: isServer,
-                    isProd: (options.symbols.indexOf('PROD') !== -1 || options.symbols.indexOf('PRODUCTION') !== -1),
-                    isDebug: (options.symbols.indexOf('DEBUG') !== -1),
+                    isProd: (sym.indexOf('PROD') !== -1 || sym.indexOf('PRODUCTION') !== -1),
+                    isDebug: (sym.indexOf('DEBUG') !== -1),
                     global: getGlobal(),
                     supressGlobals: (typeof opts.supressGlobals === 'undefined' ? false : opts.supressGlobals),
                     args: (isServer ? process.argv : new URLSearchParams(location.search))
@@ -72,6 +73,10 @@
         <!-- inject: ./func/isInstanceOf.js -->
         <!-- inject: ./func/isMixed.js -->
 
+        <!-- inject: ./di/container.js -->
+        <!-- inject: ./di/inject.js -->
+        <!-- inject: ./di/multiinject.js -->
+
         <!-- inject: ./aop/aspects.js -->
         <!-- inject: ./aop/aspect.js -->
 
@@ -80,10 +85,6 @@
         <!-- inject: ./attributes/deprecate.js -->
         <!-- inject: ./attributes/enumerate.js -->
         
-        <!-- inject: ./di/container.js -->
-        <!-- inject: ./di/inject.js -->
-        <!-- inject: ./di/multiinject.js -->
-
         <!-- inject: ./serialization/serializer.js -->
 
         <!-- inject: ./reflection/reflector.js -->
