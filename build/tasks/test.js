@@ -1,0 +1,20 @@
+const gulp = require('gulp');
+const jasmineNode = require('gulp-jasmine');
+const errorHandler = require('../utils.js').errorHandler;
+const jasminConfig = require('../.jasmine.json');
+const tests = ['./specs/*.spec.js'];
+
+// do
+const doTask = (done) => {
+    gulp.src(tests)
+        .pipe(jasmineNode(jasminConfig))
+        .on('end', done)
+        .on('error', errorHandler('jasmine'));
+    // HACK: pipe() is not exising and hence end/error done() is not called via pipe, 
+    // so calling done() manually below - this seems to be working so far
+    // but need to be revisited for a better solution
+    done();
+};
+exports.test = function(cb) {
+    doTask(cb);
+};
