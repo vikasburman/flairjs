@@ -22,7 +22,9 @@ Checks if given object is a direct or indirect (via inheritance) instance of the
 let Base = Class('Base', function() {
     this.prop('name', 'Base');
 });
-let Derived = Class('Derived', Base, function() { //... });
+let Derived = Class('Derived', Base, function() { 
+    //
+});
 
 let d = new Derived();
 let b = as(d, Base);
