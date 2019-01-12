@@ -18,7 +18,7 @@ flair.Container.register(flair.Class('inject', flair.Attribute, function() {
             instance = null;
         if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
         if (typeof Type === 'string') { 
-            if (Type.indexOf('|') !== -1) { // condiitonal server/client specific injection
+            if (Type.indexOf('|') !== -1) { // conditional server/client specific injection
                 let items = Type.split('|');
                 if (options.env.isServer) {
                     Type = items[0].trim(); // left one

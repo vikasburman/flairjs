@@ -137,8 +137,9 @@ flair.Reflector.get = (forTarget) => {
     };
     const PropReflector = function(target, name, ref) {
         let refl = new CommonInstanceMemberReflector('prop', target, name, ref);
-        refl.getValue = () => { return ref.get(); }
-        refl.setValue = (value) => { return ref.set(value); }
+        refl.getValue = () => { return target[name]; };
+        refl.setValue = (value) => { return target[name] = value; };
+        refl.getRaw = () => { return ref; };
         refl.isReadOnly = () => { return target._._.hasAttrEx('readonly', name); };
         refl.isSetOnce = () => { return target._._.hasAttrEx('readonly', name) && target._._.hasAttrEx('once', name); };
         refl.isStatic = () => { return target._._.hasAttrEx('static', name); };
@@ -147,7 +148,7 @@ flair.Reflector.get = (forTarget) => {
     };
     const FuncReflector = function(target, name, ref, raw) {
         let refl = new CommonInstanceMemberReflector('func', target, name, ref);
-        refl.invoke = (...args) => { return ref(...args); };
+        refl.invoke = (...args) => { return target[name](...args); };
         refl.getAspects = () => {
             let items = [],
                 aspects = [];
@@ -284,7 +285,13 @@ flair.Reflector.get = (forTarget) => {
             }
             return items;
         };
-        refl.getMembers = () => { return getMembers(); };
+        refl.getMembers = (...attrs) => { 
+            let members = getMembers();
+            if (attrs.length !== 0) {
+                return members.all(...attrs);
+            }
+            return members;
+        };
         refl.getMember = (name) => { return getMembers(name); };
         refl.isSingleton = () => { return refl.getClass().isSingleton(); };                       
         refl.isInstanceOf = (name) => { return target._.isInstanceOf(name); };

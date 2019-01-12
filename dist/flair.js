@@ -1,7 +1,7 @@
 /**
  * flair.js
  * True Object Oriented JavaScript
- * Version 0.15.2
+ * Version 0.15.4
  * (c) 2017-2019 Vikas Burman
  * MIT
  */
@@ -33,8 +33,24 @@
                     file: Object.freeze({ // (file) => {} that gives a promise to resolve with file content, on success
                         server: opts.fileLoaderServer || null,
                         client: opts.fileLoaderClient || null
-                    })
-                })
+                    }),
+                    define: (type, fn) => {
+                        // NOTE: only once these can be defined after loading
+                        let loaderOverrides = flair.options.loaderOverrides;
+                        switch(type) {
+                            case 'sm': loaderOverrides.moduleLoaderServer = loaderOverrides.moduleLoaderServer || fn; break;
+                            case 'cm': loaderOverrides.moduleLoaderClient = loaderOverrides.moduleLoaderClient || fn; break;
+                            case 'sf': loaderOverrides.fileLoaderServer = loaderOverrides.fileLoaderServer || fn; break;
+                            case 'cf': loaderOverrides.fileLoaderClient = loaderOverrides.fileLoaderClient || fn; break;
+                        }
+                    }
+                }),
+                loaderOverrides: {
+                    moduleLoaderServer: null,
+                    moduleLoaderClient: null,
+                    fileLoaderServer: null,
+                    fileLoaderClient: null
+                }
             });
         
         // special symbols
@@ -44,12 +60,12 @@
 
         flair._ = Object.freeze({
             name: 'FlairJS',
-            version: '0.15.2',
+            version: '0.15.4',
             copyright: '(c) 2017-2019 Vikas Burman',
             license: 'MIT',
-            lupdate: new Date('Wed, 09 Jan 2019 23:28:48 GMT'),
-            options: options
+            lupdate: new Date('Sat, 12 Jan 2019 00:45:06 GMT')
         });
+        flair.options = options;
 
         // Exception
         // Exception(code, msg, error)
@@ -145,7 +161,6 @@
         flair.Assembly.get = (type) => {
             return asmTypes[type] || ''; // name of the file where this type is loaded, else ''
         };
-
         // Namespace
         // Namespace(Type)
         flair.Namespace = (Type) => {
@@ -267,6 +282,7 @@
             return null;
         };
         
+
         // Class
         // Class(className, function() {})
         // Class(className, inherits, function() {})
@@ -624,38 +640,15 @@
                     // done
                     return weavedFn;
                 };
-                const getClassAspects = () => {
-                    let classAspects = {};
-                    for(let entry in allAspects) {
-                        if (allAspects.hasOwnProperty(entry)) {
-                            if (isPatternMatched(entry.split('.')[0], className)) {
-                                classAspects[entry] = allAspects[entry];
-                            }
-                        }
-                    }
-                    return classAspects;
-                };
-                const getFuncAspects = (classAspects, funcName) => {
-                    let funcAspects = [];
-                    for(let entry in classAspects) {
-                        if (classAspects.hasOwnProperty(entry)) {
-                            if (isPatternMatched(entry.split('.')[1], funcName)) {
-                                funcAspects.push(...classAspects[entry]);
-                            }
-                        }
-                    }
-                    return funcAspects;
-                };
                 const weave = () => {
                     // validate
                     if (['Attribute', 'Aspect'].indexOf(className) !== -1) { return; }
                     if (_this._.isInstanceOf('Attribute') || _this._.isInstanceOf('Aspect')) { return; }
         
-                    let classAspects = getClassAspects(),
-                        funcAspects = [];
+                    let funcAspects = [];
                     for(let entry in meta) {
                         if (meta.hasOwnProperty(entry) && meta[entry].type === 'func' && !isSpecialMember(entry)) {
-                            funcAspects = getFuncAspects(classAspects, entry);
+                            funcAspects = flair.Aspects.get(className, entry, meta[entry]);
                             if (funcAspects.length > 0) {
                                 meta[entry].aspects = funcAspects.slice();
                                 Object.defineProperty(_this, entry, {
@@ -1459,14 +1452,6 @@
                 throw new flair.Exception('IS01', `Scope types are not supported: ${intf}`);
             }
         };
-        // type
-        // type(qualifiedName)
-        //  qualifiedName: qualifiedName of type to get
-        flair.type = (qualifiedName) => {
-            let _Type = flair.Namespace.getType(qualifiedName);
-            if (!_Type) { throw `${qualifiedName} is not loaded.`; }
-            return _Type;
-        };
         // classOf
         // classOf(obj)
         //  obj: object instance for which class type is required
@@ -1552,7 +1537,7 @@
                         cls = items[1].trim();
                     }
                 }
-                cls = type(cls); // cls is qualifiedNane here, if not found it will throw error
+                cls = flair.Namespace.getType(cls); // cls is qualifiedNane here, if not found it will throw error
             }
             if (!container[alias]) { container[alias] = []; }
             container[alias].push(cls);
@@ -1585,150 +1570,6 @@
             }
             return result;
         };
-        
-        // inject
-        // inject(type, [typeArgs])
-        //  - type: 
-        //      type class itself to inject, OR
-        //      type class name, OR
-        //      type class name on server | type class name on client
-        //  - typeArgs: constructor args to pass when type class instance is created
-        // NOTE: types being referred here must be available in container so sync resolve can happen
-        flair.Container.register(flair.Class('inject', flair.Attribute, function() {
-            this.decorator((obj, type, name, descriptor) => {
-                // validate
-                if (['func', 'prop'].indexOf(type) === -1) { throw `inject attribute cannot be applied on ${type} members. (${className}.${name})`; }
-                if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `inject attribute cannot be applied on special function. (${className}.${name})`; }
-        
-                // decorate
-                let Type = this.args[0],
-                    typeArgs = this.args[1],
-                    instance = null;
-                if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
-                if (typeof Type === 'string') { 
-                    if (Type.indexOf('|') !== -1) { // condiitonal server/client specific injection
-                        let items = Type.split('|');
-                        if (options.env.isServer) {
-                            Type = items[0].trim(); // left one
-                        } else {
-                            Type = items[1].trim(); // right one
-                        }
-                    }
-                    instance = flair.Container.resolve(Type, false, ...typeArgs)
-                } else {
-                    instance = new Type(...typeArgs);
-                }
-                switch(type) {
-                    case 'func':
-                        let fn = descriptor.value;
-                        descriptor.value = function(...args) {
-                            fn(instance, ...args);
-                        }.bind(obj);
-                        break;
-                    case 'prop':
-                        obj[name] = instance;                        
-                        break;
-                }
-            });
-        }));
-        
-        // multiinject
-        // multiinject(type, [typeArgs])
-        //  - type: 
-        //      type class name, OR
-        //      type class name on server | type class name on client
-        //  - typeArgs: constructor args to pass when type class instance is created
-        // NOTE: types being referred here must be available in container so sync resolve can happen
-        flair.Container.register(flair.Class('multiinject', flair.Attribute, function() {
-            this.decorator((obj, type, name, descriptor) => {
-                // validate
-                if (['func', 'prop'].indexOf(type) === -1) { throw `multiinject attribute cannot be applied on ${type} members. (${className}.${name})`; }
-                if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `multiinject attribute cannot be applied on special function. (${className}.${name})`; }
-        
-                // decorate
-                let Type = this.args[0],
-                    typeArgs = this.args[1],
-                    instance = null;
-                if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
-                if (typeof Type === 'string') {
-                    if (Type.indexOf('|') !== -1) { // condiitonal server/client specific injection
-                        let items = Type.split('|');
-                        if (options.env.isServer) {
-                            Type = items[0].trim(); // left one
-                        } else {
-                            Type = items[1].trim(); // right one
-                        }
-                    }
-                    instance = flair.Container.resolve(Type, true, ...typeArgs)
-                } else {
-                    throw `multiinject attribute does not support direct type injections. (${className}.${name})`;
-                }
-                switch(type) {
-                    case 'func':
-                        let fn = descriptor.value;
-                        descriptor.value = function(...args) {
-                            fn(instance, ...args);
-                        }.bind(obj);
-                        break;
-                    case 'prop':
-                        obj[name] = instance;                        
-                        break;
-                }
-            });
-        }));
-        
-
-        // Aspects
-        let allAspects = {};
-        flair.Aspects = {};
-        flair.Aspects.register = (pointcut, Aspect) => {
-            // pointcut: classNamePattern.funcNamePattern
-            //      classNamePattern:
-            //          * - any class
-            //          *<text> - any class name that ends with <text>
-            //          <text>* - any class name that starts with <text>
-            //          <text>  - exact class name
-            //      funcNamePattern:
-            //          * - any function
-            //          *<text> - any func name that ends with <text>
-            //          <text>* - any func name that starts with <text>
-            //          <text>  - exact func name
-            if (!allAspects[pointcut]) {
-                allAspects[pointcut] = [];
-            }
-            allAspects[pointcut].push(Aspect);
-        };
-        
-        // Aspect
-        flair.Aspect = flair.Class('Aspect', function(attr) {
-            let beforeFn = null,
-                afterFn = null,
-                aroundFn = null;
-            attr('abstract');
-            this.construct((...args) => {
-                this.args = args;
-            });
-            
-            this.prop('args', []);
-            this.func('before', (fn) => {
-                if (typeof fn === 'function') {
-                    beforeFn = fn;
-                }
-                return beforeFn;
-            });
-            this.func('after', (fn) => {
-                if (typeof fn === 'function') {
-                    afterFn = fn;
-                }
-                return afterFn;
-            });
-            this.func('around', (fn) => {
-                if (typeof fn === 'function') {
-                    aroundFn = fn;
-                }
-                return aroundFn;
-            });
-        });
         
 
         // Attribute
@@ -1865,7 +1706,283 @@
             });
         }));
         
+
+        // inject
+        // inject(type, [typeArgs])
+        //  - type: 
+        //      type class itself to inject, OR
+        //      type class name, OR
+        //      type class name on server | type class name on client
+        //  - typeArgs: constructor args to pass when type class instance is created
+        // NOTE: types being referred here must be available in container so sync resolve can happen
+        flair.Container.register(flair.Class('inject', flair.Attribute, function() {
+            this.decorator((obj, type, name, descriptor) => {
+                // validate
+                if (['func', 'prop'].indexOf(type) === -1) { throw `inject attribute cannot be applied on ${type} members. (${className}.${name})`; }
+                if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `inject attribute cannot be applied on special function. (${className}.${name})`; }
         
+                // decorate
+                let Type = this.args[0],
+                    typeArgs = this.args[1],
+                    instance = null;
+                if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
+                if (typeof Type === 'string') { 
+                    if (Type.indexOf('|') !== -1) { // conditional server/client specific injection
+                        let items = Type.split('|');
+                        if (options.env.isServer) {
+                            Type = items[0].trim(); // left one
+                        } else {
+                            Type = items[1].trim(); // right one
+                        }
+                    }
+                    instance = flair.Container.resolve(Type, false, ...typeArgs)
+                } else {
+                    instance = new Type(...typeArgs);
+                }
+                switch(type) {
+                    case 'func':
+                        let fn = descriptor.value;
+                        descriptor.value = function(...args) {
+                            fn(instance, ...args);
+                        }.bind(obj);
+                        break;
+                    case 'prop':
+                        obj[name] = instance;                        
+                        break;
+                }
+            });
+        }));
+        
+        // multiinject
+        // multiinject(type, [typeArgs])
+        //  - type: 
+        //      type class name, OR
+        //      type class name on server | type class name on client
+        //  - typeArgs: constructor args to pass when type class instance is created
+        // NOTE: types being referred here must be available in container so sync resolve can happen
+        flair.Container.register(flair.Class('multiinject', flair.Attribute, function() {
+            this.decorator((obj, type, name, descriptor) => {
+                // validate
+                if (['func', 'prop'].indexOf(type) === -1) { throw `multiinject attribute cannot be applied on ${type} members. (${className}.${name})`; }
+                if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `multiinject attribute cannot be applied on special function. (${className}.${name})`; }
+        
+                // decorate
+                let Type = this.args[0],
+                    typeArgs = this.args[1],
+                    instance = null;
+                if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
+                if (typeof Type === 'string') {
+                    if (Type.indexOf('|') !== -1) { // condiitonal server/client specific injection
+                        let items = Type.split('|');
+                        if (options.env.isServer) {
+                            Type = items[0].trim(); // left one
+                        } else {
+                            Type = items[1].trim(); // right one
+                        }
+                    }
+                    instance = flair.Container.resolve(Type, true, ...typeArgs)
+                } else {
+                    throw `multiinject attribute does not support direct type injections. (${className}.${name})`;
+                }
+                switch(type) {
+                    case 'func':
+                        let fn = descriptor.value;
+                        descriptor.value = function(...args) {
+                            fn(instance, ...args);
+                        }.bind(obj);
+                        break;
+                    case 'prop':
+                        obj[name] = instance;                        
+                        break;
+                }
+            });
+        }));
+        
+
+        // Aspects
+        let allAspects = [],
+            regExpEscape = (s) => { return s.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&'); },
+            wildcardToRegExp = (s) => { return new RegExp('^' + s.split(/\*+/).map(regExpEscape).join('.*') + '$'); };
+        flair.Aspects = {};
+        flair.Aspects.raw = () => { return allAspects; }
+        flair.Aspects.register = (pointcut, Aspect) => {
+            // pointcut: [namespace.]class[:func][/attr1[,attr2[,...]]]
+            //      namespace/class/func:
+            //          ~ - any
+            //          *<text> - any name that ends with <text> 
+            //          <text>* - any name that starts with <text>
+            //          <text>  - exact name
+            //      attribute:
+            //          <text>  - exact name
+            //
+            //      Examples:
+            //          ~                   - on all functions of all classes in all namespaces
+            //          abc                 - on all functions of all classes names abc in root namespace (without any namespace)
+            //          ~.abc               - on all functions of all classes names abc in all namespaces
+            //          ~.abc:~             - on all functions of all classes names abc in all namespaces
+            //          xyz.*               - on all functions of all classes in xyz namespace
+            //          xyz.abc             - on all functions of class abc under xyz namespace
+            //          xyz.abc:*           - on all functions of class abc under xyz namespace
+            //          xyz.abc:f1          - on func f1 of class abc under xyz namespace
+            //          xyz.abc:f*          - on all funcs that starts with f in class abc under xyz namespace
+            //          xyz.xx*.abc         - on functions of all classes names abc under namespaces where pattern matches xyz.xx* (e.g., xyz.xx1 and xyz.xx2)
+            //          xy*.xx*.abc         - on functions of all classes names abc under namespaces where pattern matches xyz.xx* (e.g., xy1.xx1 and xy2.xx1)
+            //          abc/service         - on all functions of abc class in root namespace which has service attribute applied
+            //          ~/service           - on all functions of all classes in all namespaces which has service attribute applied
+            //          /service            - on all functions of all classes which has service attribute applied
+            //          /service*           - on all functions of all classes which has service* attribute name pattern applied
+        
+        
+            // split name and attributes
+            let nm = pointcut || '~',
+                ns = '',
+                cls = '',
+                fnc = '',
+                attr = '~',
+                bucket = '';
+            if (nm.indexOf('/') !== -1) {
+                let items = nm.split('/');
+                nm = items[0].trim();
+                attr = items[1].trim();
+            }
+        
+            // get bucket to store in
+            if (nm === '~') { 
+                ns = '~';
+                cls = '~';
+                fnc = '~';
+            } else if (nm === '') {
+                ns = '^';
+                cls = '~';
+                fnc = '~';
+            } else if (nm.indexOf('.') === -1) {
+                ns = '^';
+                if (nm.indexOf(':') === -1) {
+                    cls = nm;
+                    fnc = '~';
+                } else {
+                    let itms = nm.split(':');
+                    cls = itms[0].trim();
+                    fnc = itms[1].trim();
+                }
+            } else {
+                ns = nm.substr(0, nm.lastIndexOf('.'));
+                nm = nm.substr(nm.lastIndexOf('.') + 1);
+                if (nm.indexOf(':') === -1) {
+                    cls = nm;
+                    fnc = '~';
+                } else {
+                    let itms = nm.split(':');
+                    cls = itms[0].trim();
+                    fnc = itms[1].trim();
+                }        
+            }
+            if (ns === '*' || ns === '') { ns = '~'; }
+            if (cls === '*' || cls === '') { cls = '~'; }
+            if (fnc === '*' || fnc === '') { fnc = '~'; }
+            if (attr === '*' || attr === '') { attr = '~'; }
+            bucket = `${ns}=${cls}=${fnc}=${attr}`;
+        
+            // add bucket if not already there
+            allAspects[bucket] = allAspects[bucket] || [];
+            allAspects[bucket].push(Aspect);
+        
+            // allAspects[ns] = allAspects[ns] || {};
+            // allAspects[ns][cls] = allAspects[ns][cls] || {};
+            // allAspects[ns][cls][fnc] = allAspects[ns][cls][fnc] || {};
+            // allAspects[ns][cls][fnc] = allAspects[ns][cls][fnc] || {};
+            // allAspects[ns][cls][fnc][attr] = allAspects[ns][cls][fnc][attr] || {};
+            // allAspects[ns][cls][fnc][attr].list = allAspects[ns][cls][fnc][attr].list || [];
+        
+            // // store
+            // allAspects[ns][cls][fnc][attr].list.push(Aspect);
+        };
+        flair.Aspects.get = (className, funcName, attrs) => {
+            // get parts
+            let funcAspects = [],
+                ns = '',
+                cls = '',
+                fnc = funcName.trim(),
+                attr = '~',
+                bucket = '';
+        
+            if (className.indexOf('.') !== -1) {
+                ns = className.substr(0, className.lastIndexOf('.')).trim();
+                cls = className.substr(className.lastIndexOf('.') + 1).trim(); 
+            } else {
+                ns = '^';
+                cls = className.trim();
+            }
+        
+            for(let bucket in allAspects) {
+                let items = bucket.split('='),
+                    thisNS = items[0],
+                    rxNS = wildcardToRegExp(thisNS),
+                    thisCls = items[1],
+                    rxCls = wildcardToRegExp(thisCls),
+                    thisFnc = items[2],
+                    rxFnc = wildcardToRegExp(thisFnc),
+                    thisAttr = items[3],
+                    rxAttr = wildcardToRegExp(thisAttr),
+                    isMatched = (thisAttr === '~');
+                
+                if (((ns === thisNS || rxNS.test(ns)) &&
+                    (cls === thisCls || rxCls.test(cls)) &&
+                    (fnc === thisFnc || rxFnc.test(fnc)))) {
+                    if (!isMatched) {
+                        for(let attr of attrs) {
+                            if (attr.name === thisAttr || rxAttr.test(attr.name)) {
+                                isMatched = true;
+                                break; // matched
+                            }
+                        }
+                    }
+                    if (isMatched) {
+                        for(let aspect of allAspects[bucket]) {
+                            if (funcAspects.indexOf(aspect) === -1) {
+                                funcAspects.push(aspect);
+                            }
+                        }                  
+                    }
+                }
+            }
+        
+            // return
+            return funcAspects;
+        };
+        
+        // Aspect
+        flair.Aspect = flair.Class('Aspect', function(attr) {
+            let beforeFn = null,
+                afterFn = null,
+                aroundFn = null;
+            attr('abstract');
+            this.construct((...args) => {
+                this.args = args;
+            });
+            
+            this.prop('args', []);
+            this.func('before', (fn) => {
+                if (typeof fn === 'function') {
+                    beforeFn = fn;
+                }
+                return beforeFn;
+            });
+            this.func('after', (fn) => {
+                if (typeof fn === 'function') {
+                    afterFn = fn;
+                }
+                return afterFn;
+            });
+            this.func('around', (fn) => {
+                if (typeof fn === 'function') {
+                    aroundFn = fn;
+                }
+                return aroundFn;
+            });
+        });
+        
+
         // Serializer
         flair.Serializer = {};
         flair.Serializer.serialize = (instance) => { 
@@ -2023,8 +2140,9 @@
             };
             const PropReflector = function(target, name, ref) {
                 let refl = new CommonInstanceMemberReflector('prop', target, name, ref);
-                refl.getValue = () => { return ref.get(); }
-                refl.setValue = (value) => { return ref.set(value); }
+                refl.getValue = () => { return target[name]; };
+                refl.setValue = (value) => { return target[name] = value; };
+                refl.getRaw = () => { return ref; };
                 refl.isReadOnly = () => { return target._._.hasAttrEx('readonly', name); };
                 refl.isSetOnce = () => { return target._._.hasAttrEx('readonly', name) && target._._.hasAttrEx('once', name); };
                 refl.isStatic = () => { return target._._.hasAttrEx('static', name); };
@@ -2033,7 +2151,7 @@
             };
             const FuncReflector = function(target, name, ref, raw) {
                 let refl = new CommonInstanceMemberReflector('func', target, name, ref);
-                refl.invoke = (...args) => { return ref(...args); };
+                refl.invoke = (...args) => { return target[name](...args); };
                 refl.getAspects = () => {
                     let items = [],
                         aspects = [];
@@ -2170,7 +2288,13 @@
                     }
                     return items;
                 };
-                refl.getMembers = () => { return getMembers(); };
+                refl.getMembers = (...attrs) => { 
+                    let members = getMembers();
+                    if (attrs.length !== 0) {
+                        return members.all(...attrs);
+                    }
+                    return members;
+                };
                 refl.getMember = (name) => { return getMembers(name); };
                 refl.isSingleton = () => { return refl.getClass().isSingleton(); };                       
                 refl.isInstanceOf = (name) => { return target._.isInstanceOf(name); };
@@ -2357,7 +2481,6 @@
             g.using = Object.freeze(flair.using); 
             g.as = Object.freeze(flair.as);
             g.is = Object.freeze(flair.is);
-            g.type = Object.freeze(flair.type);
             g.isDerivedFrom = Object.freeze(flair.isDerivedFrom);
             g.isImplements = Object.freeze(flair.isImplements);
             g.isInstanceOf = Object.freeze(flair.isInstanceOf);

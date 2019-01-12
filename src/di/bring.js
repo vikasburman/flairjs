@@ -40,12 +40,13 @@ flair.bring = (members, scopeFn) => {
 
     let loader = (isServer, isModule, file) => {
         let loaders = flair.options.loaders,
+            loaderOverrides = flair.options.loaderOverrides,
             loader = null;
         return new Promise(resolve, reject) {
             let ext = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
             if (isServer) {
                 if (isModule) {
-                    loader = loaders.module.server;
+                    loader = loaders.module.server || loaderOverrides.moduleLoaderServer || null;
                     if (typeof loader === 'function') {
                         loader(file).then(resolve).catch(reject);
                     } else {
@@ -56,7 +57,7 @@ flair.bring = (members, scopeFn) => {
                         }
                     }
                 } else { // file
-                    loader = loaders.file.server;
+                    loader = loaders.file.server || loaderOverrides.fileLoaderServer || null;
                     if (typeof loader === 'function') {
                         loader(file).then(resolve).catch(reject);
                     } else {
@@ -80,7 +81,7 @@ flair.bring = (members, scopeFn) => {
                 }
             } else { // client
                 if (isModule) {
-                    loader = loaders.module.client;
+                    loader = loaders.module.client || loaderOverrides.moduleLoaderClient || null;
                     if (typeof loader === 'function') {
                         loader(file).then(resolve).catch(reject);
                     } else { // assume requirejs type library having require() is available to load modules on client
@@ -91,7 +92,7 @@ flair.bring = (members, scopeFn) => {
                         }
                     }
                 } else { // file
-                    loader = loaders.file.client;
+                    loader = loaders.file.client || loaderOverrides.fileLoaderClient || null;
                     if (typeof loader === 'function') {
                         loader(file).then(resolve).catch(reject);
                     } else {

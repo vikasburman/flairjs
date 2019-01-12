@@ -33,8 +33,24 @@
                     file: Object.freeze({ // (file) => {} that gives a promise to resolve with file content, on success
                         server: opts.fileLoaderServer || null,
                         client: opts.fileLoaderClient || null
-                    })
-                })
+                    }),
+                    define: (type, fn) => {
+                        // NOTE: only once these can be defined after loading
+                        let loaderOverrides = flair.options.loaderOverrides;
+                        switch(type) {
+                            case 'sm': loaderOverrides.moduleLoaderServer = loaderOverrides.moduleLoaderServer || fn; break;
+                            case 'cm': loaderOverrides.moduleLoaderClient = loaderOverrides.moduleLoaderClient || fn; break;
+                            case 'sf': loaderOverrides.fileLoaderServer = loaderOverrides.fileLoaderServer || fn; break;
+                            case 'cf': loaderOverrides.fileLoaderClient = loaderOverrides.fileLoaderClient || fn; break;
+                        }
+                    }
+                }),
+                loaderOverrides: {
+                    moduleLoaderServer: null,
+                    moduleLoaderClient: null,
+                    fileLoaderServer: null,
+                    fileLoaderClient: null
+                }
             });
         
         // special symbols
@@ -47,15 +63,15 @@
             version: '<version>',
             copyright: '<copyright>',
             license: '<license>',
-            lupdate: new Date('<datetime>'),
-            options: options
+            lupdate: new Date('<datetime>')
         });
+        flair.options = options;
 
         <!-- inject: ./types/exception.js -->
 
         <!-- inject: ./assembly/assembly.js -->
+        <!-- inject: ./assembly/namespace.js -->
 
-        <!-- inject: ./types/namespace.js -->
         <!-- inject: ./types/class.js -->
         <!-- inject: ./types/mixin.js -->
         <!-- inject: ./types/interface.js -->
@@ -66,7 +82,6 @@
         <!-- inject: ./func/using.js -->
         <!-- inject: ./func/as.js -->
         <!-- inject: ./func/is.js -->
-        <!-- inject: ./func/type.js -->
         <!-- inject: ./func/classOf.js -->
         <!-- inject: ./func/isDerivedFrom.js -->
         <!-- inject: ./func/isImplements.js -->
@@ -74,17 +89,18 @@
         <!-- inject: ./func/isMixed.js -->
 
         <!-- inject: ./di/container.js -->
+
+        <!-- inject: ./attributes/attribute.js -->
+        <!-- inject: ./attributes/async.js -->
+        <!-- inject: ./attributes/deprecate.js -->
+        <!-- inject: ./attributes/enumerate.js -->
+
         <!-- inject: ./di/inject.js -->
         <!-- inject: ./di/multiinject.js -->
 
         <!-- inject: ./aop/aspects.js -->
         <!-- inject: ./aop/aspect.js -->
 
-        <!-- inject: ./attributes/attribute.js -->
-        <!-- inject: ./attributes/async.js -->
-        <!-- inject: ./attributes/deprecate.js -->
-        <!-- inject: ./attributes/enumerate.js -->
-        
         <!-- inject: ./serialization/serializer.js -->
 
         <!-- inject: ./reflection/reflector.js -->
@@ -104,7 +120,6 @@
             g.using = Object.freeze(flair.using); 
             g.as = Object.freeze(flair.as);
             g.is = Object.freeze(flair.is);
-            g.type = Object.freeze(flair.type);
             g.isDerivedFrom = Object.freeze(flair.isDerivedFrom);
             g.isImplements = Object.freeze(flair.isImplements);
             g.isInstanceOf = Object.freeze(flair.isInstanceOf);

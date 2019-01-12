@@ -24,7 +24,7 @@ flair.Container.register = (alias, cls) => {
                 cls = items[1].trim();
             }
         }
-        cls = type(cls); // cls is qualifiedNane here, if not found it will throw error
+        cls = flair.Namespace.getType(cls); // cls is qualifiedNane here, if not found it will throw error
     }
     if (!container[alias]) { container[alias] = []; }
     container[alias].push(cls);

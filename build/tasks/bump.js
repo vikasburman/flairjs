@@ -1,6 +1,5 @@
 const fs = require('fs');
-const gulpConfig = require('../config/.gulp.json');
-const packageJSON = JSON.parse(fs.readFileSync(gulpConfig.packageJson, 'utf8'));
+const packageJSON = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
 
 // do
 const doTask = (done) => {
@@ -23,7 +22,7 @@ const doTask = (done) => {
     let newVer = ver[0].toString() + '.' + ver[1].toString() + '.' + ver[2].toString();
     console.log('Bumped: ' + packageJSON.version + ' -> ' + newVer);
     packageJSON.version = newVer;
-    fs.writeFileSync(gulpConfig.packageJson, JSON.stringify(packageJSON, null, 4), 'utf8');
+    fs.writeFileSync('./package.json', JSON.stringify(packageJSON, null, 4), 'utf8');
 
     // done
     done();

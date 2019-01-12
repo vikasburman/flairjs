@@ -1,16 +1,5 @@
 {
-    "packageJson": "./package.json",
     "specs": [
         "./specs/**/*.spec.js"
-    ],
-    "src": {
-        "file": "./src/index.js",
-        "options": {
-            "base": "./src/"
-        }
-    },
-    "dest": {
-        "file": "flair",
-        "base": "./dist"
-    }
+    ]
 }

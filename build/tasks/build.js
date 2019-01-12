@@ -11,11 +11,11 @@ const replace = require('gulp-string-replace');
 const fs = require('fs');
 const packageJSON = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
 const errorHandler = require('../utils.js').errorHandler;
-const destName = gulpConfig.dest.file;
+const destName = packageJSON.name;
 
 // do
 const doTask = (done) => {
-    gulp.src(gulpConfig.src.file, gulpConfig.src.options)
+    gulp.src('./src/index.js', {base: './src/'})
 
     // assemble pieces
     .pipe(inject())
@@ -33,7 +33,7 @@ const doTask = (done) => {
     .pipe(replace('<copyright>', packageJSON.copyright))
     .pipe(replace('<license>', packageJSON.license))
     .pipe(replace('<datetime>', new Date().toUTCString()))
-    .pipe(gulp.dest(gulpConfig.dest.base))
+    .pipe(gulp.dest('./dist'))
     .on('error', errorHandler('write-assembled'))
 
     // check for issues
@@ -53,7 +53,7 @@ const doTask = (done) => {
     }))
     .on('error', errorHandler('rename'))
     .pipe(replace(destName + '.js', destName + '.min.js'))
-    .pipe(gulp.dest(gulpConfig.dest.base))
+    .pipe(gulp.dest('./dist'))
     .on('end', done)
     .on('error', errorHandler('write-minified'));
 };

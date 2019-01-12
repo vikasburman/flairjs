@@ -355,38 +355,15 @@ flair.Class = (arg1, arg2, arg3, arg4) => {
             // done
             return weavedFn;
         };
-        const getClassAspects = () => {
-            let classAspects = {};
-            for(let entry in allAspects) {
-                if (allAspects.hasOwnProperty(entry)) {
-                    if (isPatternMatched(entry.split('.')[0], className)) {
-                        classAspects[entry] = allAspects[entry];
-                    }
-                }
-            }
-            return classAspects;
-        };
-        const getFuncAspects = (classAspects, funcName) => {
-            let funcAspects = [];
-            for(let entry in classAspects) {
-                if (classAspects.hasOwnProperty(entry)) {
-                    if (isPatternMatched(entry.split('.')[1], funcName)) {
-                        funcAspects.push(...classAspects[entry]);
-                    }
-                }
-            }
-            return funcAspects;
-        };
         const weave = () => {
             // validate
             if (['Attribute', 'Aspect'].indexOf(className) !== -1) { return; }
             if (_this._.isInstanceOf('Attribute') || _this._.isInstanceOf('Aspect')) { return; }
 
-            let classAspects = getClassAspects(),
-                funcAspects = [];
+            let funcAspects = [];
             for(let entry in meta) {
                 if (meta.hasOwnProperty(entry) && meta[entry].type === 'func' && !isSpecialMember(entry)) {
-                    funcAspects = getFuncAspects(classAspects, entry);
+                    funcAspects = flair.Aspects.get(className, entry, meta[entry]);
                     if (funcAspects.length > 0) {
                         meta[entry].aspects = funcAspects.slice();
                         Object.defineProperty(_this, entry, {
