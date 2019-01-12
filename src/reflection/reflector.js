@@ -378,6 +378,13 @@ flair.Reflector.get = (forTarget) => {
         refl.getValues = () => { return target._.values(); }
         return refl;
     };
+    const ResourceReflector = function(target) {
+        let refl = new CommonTypeReflector(target);
+        refl.getFile = () => { return target.file(); };
+        refl.getResType = () => { return target.type(); };
+        refl.getContent = () => { return target.get(); };
+        return refl;
+    };
     const StructureReflector = function(target) {
         let refl = new CommonTypeReflector(target);
         return refl;
@@ -451,6 +458,7 @@ flair.Reflector.get = (forTarget) => {
         case 'sinstance': ref = new StructureInstanceReflector(forTarget); break;
         case 'class': ref = new ClassReflector(forTarget); break;
         case 'enum': ref = new EnumReflector(forTarget); break;
+        case 'resource': ref = new ResourceReflector(forTarget); break;
         case 'structure': ref = new StructureReflector(forTarget); break;
         case 'namespace': ref = new NamespaceReflector(forTarget); break;
         case 'mixin': ref = new MixinReflector(forTarget); break;

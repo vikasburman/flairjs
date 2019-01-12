@@ -19,6 +19,7 @@
                 env: Object.freeze({
                     type: opts.env || (isServer ? 'server' : 'client'),
                     isServer: isServer,
+                    isClient: !isServer,
                     isProd: (sym.indexOf('PROD') !== -1 || sym.indexOf('PRODUCTION') !== -1),
                     isDebug: (sym.indexOf('DEBUG') !== -1),
                     global: getGlobal(),
@@ -63,7 +64,7 @@
             version: '0.15.4',
             copyright: '(c) 2017-2019 Vikas Burman',
             license: 'MIT',
-            lupdate: new Date('Sat, 12 Jan 2019 00:45:06 GMT')
+            lupdate: new Date('Sat, 12 Jan 2019 04:11:18 GMT')
         });
         flair.options = options;
 
@@ -159,7 +160,7 @@
             return typeof asmFiles[file] !== 'undefined' && asmFiles[file].status === 'loaded';
         };
         flair.Assembly.get = (type) => {
-            return asmTypes[type] || ''; // name of the file where this type is loaded, else ''
+            return asmTypes[type] || ''; // name of the file where this type is bundled, else ''
         };
         // Namespace
         // Namespace(Type)
@@ -170,7 +171,7 @@
             // namespace.name
             
             // only valid types are allowed
-            if (['class', 'enum', 'interface', 'mixin', 'structure'].indexOf(Type._.type) === -1) { throw `Type (${Type._.type}) cannot be placed in a namespace.`; }
+            if (['class', 'enum', 'interface', 'mixin', 'resource', 'structure'].indexOf(Type._.type) === -1) { throw `Type (${Type._.type}) cannot be placed in a namespace.`; }
         
             // only unattached types are allowed
             if (Type._.namespace) { throw `Type (${Type._.name}) is already contained in a namespace.`; }
@@ -249,7 +250,7 @@
                 } else {
                     _Type = level[qualifiedName];
                 }
-                if (!_Type || !_Type._ || ['class', 'enum', 'interface', 'mixin', 'structure'].indexOf(_Type._.type) === -1) { return null; }
+                if (!_Type || !_Type._ || ['class', 'enum', 'interface', 'mixin', 'resource', 'structure'].indexOf(_Type._.type) === -1) { return null; }
                 return _Type;
             };
             let createInstance = (qualifiedName, ...args) => {
@@ -1359,6 +1360,105 @@
             throw `${enumName} is not an Enum.`;
         };
         
+        // Resource
+        // Resource(resName, resFile)
+        flair.Resource = (resName, resFile, data) => {
+        
+            // start: this will be processed by build engine
+            let resData = data || '<-- data -->'; 
+            // end
+        
+            let isLoaded = false;
+            let _res = {
+                file: () => { return resFile; },
+                type: () => { return resFile.substr(resFile.lastIndexOf('.') + 1).toLowerCase(); },
+                get: () => { return resData; },
+                load: Object.freeze({
+                    asJSON: () => {
+                        return JSON.parse(resData);
+                    },
+                    asCSS: () => {
+                        if (flair.options.env.isClient) {
+                            if (!isLoaded) {
+                                let css = flair.options.env.global.document.createElement('style');
+                                css.type = 'text/css';
+                                css.name = resFile;
+                                css.innerHTML = resData;
+                                flair.options.env.global.document.head.appendChild(css);
+                                isLoaded = true;
+                            }
+                            return isLoaded;
+                        }
+                        return false;
+                    },
+                    asHTML: (node, position = '') => {
+                        // position can be: https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML
+                        // if empty, it will replace node html
+                        if (flair.options.env.isClient) {
+                            if (node) {
+                                if (!isLoaded) {
+                                    if (position) {
+                                        node.innerHTML = resData;
+                                    } else {
+                                        node.insertAdjacentHTML(position, resData);
+                                    }
+                                    isLoaded = true;
+                                }
+                                return isLoaded;
+                            }
+                        }
+                        return false;
+                    },
+                    asJS: (cb) => {
+                        if (flair.options.env.isClient) {
+                            if (!isLoaded) {
+                                let js = flair.options.env.global.document.createElement('script');
+                                js.type = 'text/javascript';
+                                js.name = resFile;
+                                js.src = resData;
+                                if (typeof cb === 'function') {
+                                    js.onload = cb;
+                                    js.onreadystatechange = cb;
+                                }
+                                flair.options.env.global.document.head.appendChild(js);
+                                isLoaded = true;
+                            }
+                            return isLoaded;                    
+                        }
+                        return false;
+                    }
+                })
+            };
+            _res._ = {
+                name: resName,
+                type: 'resource',
+                namespace: null,
+                file: resFile,
+                data: () => { return resData; }
+            };
+        
+            // set JSON automatically
+            _res.JSON = {};
+            try {
+                _res.JSON = Object.freeze(_res.load.asJSON());
+            } catch (e) {
+                // ignore
+            };
+        
+            // register type with namespace
+            flair.Namespace(_res);
+        
+            // return
+            return Object.freeze(_res);
+        };
+        flair.Resource.load = (resObj, ...args) => {
+            if (resObj._ && resObj._.type === 'resource') {
+                return resObj.load(...args);
+            }
+            resName = ((resObj._ && resObj._.name) ? resObj._.name : 'unknown');
+            throw `${resName} is not a Resource.`;
+        };
+        
         // Structure
         // Structure(structureName, factory(args) {})
         flair.Structure = (structureName, factory) => {
@@ -2381,6 +2481,13 @@
                 refl.getValues = () => { return target._.values(); }
                 return refl;
             };
+            const ResourceReflector = function(target) {
+                let refl = new CommonTypeReflector(target);
+                refl.getFile = () => { return target.file(); };
+                refl.getResType = () => { return target.type(); };
+                refl.getContent = () => { return target.get(); };
+                return refl;
+            };
             const StructureReflector = function(target) {
                 let refl = new CommonTypeReflector(target);
                 return refl;
@@ -2454,6 +2561,7 @@
                 case 'sinstance': ref = new StructureInstanceReflector(forTarget); break;
                 case 'class': ref = new ClassReflector(forTarget); break;
                 case 'enum': ref = new EnumReflector(forTarget); break;
+                case 'resource': ref = new ResourceReflector(forTarget); break;
                 case 'structure': ref = new StructureReflector(forTarget); break;
                 case 'namespace': ref = new NamespaceReflector(forTarget); break;
                 case 'mixin': ref = new MixinReflector(forTarget); break;
@@ -2475,6 +2583,7 @@
             g.Interface = Object.freeze(flair.Interface); 
             g.Structure = Object.freeze(flair.Structure);  
             g.Enum = Object.freeze(flair.Enum); 
+            g.Resource = Object.freeze(flair.Resource); 
             g.Assembly = Object.freeze(flair.Assembly);
             g.Namespace = Object.freeze(flair.Namespace);
             g.bring = Object.freeze(flair.bring); 

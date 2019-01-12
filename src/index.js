@@ -19,6 +19,7 @@
                 env: Object.freeze({
                     type: opts.env || (isServer ? 'server' : 'client'),
                     isServer: isServer,
+                    isClient: !isServer,
                     isProd: (sym.indexOf('PROD') !== -1 || sym.indexOf('PRODUCTION') !== -1),
                     isDebug: (sym.indexOf('DEBUG') !== -1),
                     global: getGlobal(),
@@ -76,6 +77,7 @@
         <!-- inject: ./types/mixin.js -->
         <!-- inject: ./types/interface.js -->
         <!-- inject: ./types/enum.js -->
+        <!-- inject: ./types/resource.js -->
         <!-- inject: ./types/structure.js -->
         
         <!-- inject: ./func/bring.js -->
@@ -114,6 +116,7 @@
             g.Interface = Object.freeze(flair.Interface); 
             g.Structure = Object.freeze(flair.Structure);  
             g.Enum = Object.freeze(flair.Enum); 
+            g.Resource = Object.freeze(flair.Resource); 
             g.Assembly = Object.freeze(flair.Assembly);
             g.Namespace = Object.freeze(flair.Namespace);
             g.bring = Object.freeze(flair.bring); 

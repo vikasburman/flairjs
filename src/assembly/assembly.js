@@ -76,5 +76,5 @@ flair.Assembly.isLoaded = (file) => {
     return typeof asmFiles[file] !== 'undefined' && asmFiles[file].status === 'loaded';
 };
 flair.Assembly.get = (type) => {
-    return asmTypes[type] || ''; // name of the file where this type is loaded, else ''
+    return asmTypes[type] || ''; // name of the file where this type is bundled, else ''
 };
