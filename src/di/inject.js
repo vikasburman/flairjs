@@ -18,14 +18,10 @@ flair.Container.register(flair.Class('inject', flair.Attribute, function() {
             instance = null;
         if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
         if (typeof Type === 'string') { 
-            if (Type.indexOf('|') !== -1) { // conditional server/client specific injection
-                let items = Type.split('|');
-                if (options.env.isServer) {
-                    Type = items[0].trim(); // left one
-                } else {
-                    Type = items[1].trim(); // right one
-                }
-            }
+            // get contextual type
+            Type = flair.which(Type);
+
+            // get instance
             instance = flair.Container.resolve(Type, false, ...typeArgs)
         } else {
             instance = new Type(...typeArgs);

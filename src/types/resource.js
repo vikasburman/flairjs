@@ -1,10 +1,8 @@
 // Resource
 // Resource(resName, resFile)
 flair.Resource = (resName, resFile, data) => {
-
     // start: this will be processed by build engine
-    let resData = data || '<-- data -->'; 
-    // end
+    let resData = data || '';
 
     let isLoaded = false;
     let _res = {
@@ -56,7 +54,7 @@ flair.Resource = (resName, resFile, data) => {
                         js.src = resData;
                         if (typeof cb === 'function') {
                             js.onload = cb;
-                            js.onreadystatechange = cb;
+                            js.onerror = () => { isLoaded = false; }
                         }
                         flair.options.env.global.document.head.appendChild(js);
                         isLoaded = true;
@@ -72,7 +70,12 @@ flair.Resource = (resName, resFile, data) => {
         type: 'resource',
         namespace: null,
         file: resFile,
-        data: () => { return resData; }
+        data: (data) => { 
+            if (data && !resData) { 
+                resData = data; // set only once
+            }
+            return resData;
+        }
     };
 
     // set JSON automatically
@@ -91,8 +94,27 @@ flair.Resource = (resName, resFile, data) => {
 };
 flair.Resource.load = (resObj, ...args) => {
     if (resObj._ && resObj._.type === 'resource') {
-        return resObj.load(...args);
+        let type = resObj.type();
+        switch(type) {
+            case 'json':
+                return resObj.load.asJSON(); break;
+            case 'css':
+                return resObj.load.asCSS(); break;
+            case 'js':
+                return resObj.load.asJS(...args); break;
+            case 'html':
+                return resObj.load.asHTML(...args); break;
+            default:
+                throw `Unknown resource type: ${type}.`;
+        }
     }
     resName = ((resObj._ && resObj._.name) ? resObj._.name : 'unknown');
     throw `${resName} is not a Resource.`;
+};
+flair.Resource.get = (resName) => {
+    let resObj = flair.Namespace.getType(resName);
+    if (resObj._ && resObj._.type === 'resource') {
+       return resType.get();
+    }
+    return null;
 };

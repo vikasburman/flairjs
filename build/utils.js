@@ -24,6 +24,7 @@ const errorHandler = (name) => {
   return function (err) {
       console.error('Error in task: ' + name);
       console.error('Error: ' + err.toString());
+      console.error(err);
   };
 };
 

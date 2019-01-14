@@ -7,9 +7,14 @@
  */
 (function() {
     // the definition
-    const def = (opts = {}) => {
+    const def = (opts = null) => {
         let isServer = (new Function("try {return this===global;}catch(e){return false;}"))(),
             getGlobal = new Function("try {return (this===global ? global : window);}catch(e){return window;}");
+        if (typeof opts === 'string') { // only symbols can be given as comma delimited string
+            opts = {
+                symbols: opts.split(',').map(item => item.trim())
+            };
+        }
         let flair = {},
             noop = () => {},
             sym = (opts.symbols || []),
@@ -20,7 +25,7 @@
                     type: opts.env || (isServer ? 'server' : 'client'),
                     isServer: isServer,
                     isClient: !isServer,
-                    isProd: (sym.indexOf('PROD') !== -1 || sym.indexOf('PRODUCTION') !== -1),
+                    isProd: (sym.indexOf('PROD') !== -1),
                     isDebug: (sym.indexOf('DEBUG') !== -1),
                     global: getGlobal(),
                     supressGlobals: (typeof opts.supressGlobals === 'undefined' ? false : opts.supressGlobals),
@@ -56,7 +61,7 @@
         
         // special symbols
         if (options.env.isProd && options.env.isDebug) { // when both are given
-            throw `DEBUG and PROD/PRODUCTION symbols are mutually exclusive. Use only one.`;
+            throw `DEBUG and PROD symbols are mutually exclusive. Use only one.`;
         }
 
         flair._ = Object.freeze({
@@ -64,7 +69,7 @@
             version: '0.15.4',
             copyright: '(c) 2017-2019 Vikas Burman',
             license: 'MIT',
-            lupdate: new Date('Sat, 12 Jan 2019 04:11:18 GMT')
+            lupdate: new Date('Mon, 14 Jan 2019 22:49:38 GMT')
         });
         flair.options = options;
 
@@ -86,7 +91,7 @@
         let asmFiles = {},
             asmTypes = {};
         flair.Assembly = () => {};
-        flair.Assembly.register = (...ado) => { 
+        flair.Assembly.register = (...ados) => { 
             // each ADO is an Assembly Definition Object with following structure:
             // {
             //      "name": "", 
@@ -98,7 +103,9 @@
             //      "types": ["", "", ...]
             // }
         
-            for(let asm of ado) {
+            for(let asm of ados) {
+                if (typeof asm !== 'object' || Array.isArray(asm.type)) { continue; }
+        
                 // load assembly
                 if (asmFiles[asm.file]) {
                     throw `Assembly ${asm.file} already registered.`;
@@ -1363,10 +1370,8 @@
         // Resource
         // Resource(resName, resFile)
         flair.Resource = (resName, resFile, data) => {
-        
             // start: this will be processed by build engine
-            let resData = data || '<-- data -->'; 
-            // end
+            let resData = data || '';
         
             let isLoaded = false;
             let _res = {
@@ -1418,7 +1423,7 @@
                                 js.src = resData;
                                 if (typeof cb === 'function') {
                                     js.onload = cb;
-                                    js.onreadystatechange = cb;
+                                    js.onerror = () => { isLoaded = false; }
                                 }
                                 flair.options.env.global.document.head.appendChild(js);
                                 isLoaded = true;
@@ -1434,7 +1439,12 @@
                 type: 'resource',
                 namespace: null,
                 file: resFile,
-                data: () => { return resData; }
+                data: (data) => { 
+                    if (data && !resData) { 
+                        resData = data; // set only once
+                    }
+                    return resData;
+                }
             };
         
             // set JSON automatically
@@ -1453,10 +1463,29 @@
         };
         flair.Resource.load = (resObj, ...args) => {
             if (resObj._ && resObj._.type === 'resource') {
-                return resObj.load(...args);
+                let type = resObj.type();
+                switch(type) {
+                    case 'json':
+                        return resObj.load.asJSON(); break;
+                    case 'css':
+                        return resObj.load.asCSS(); break;
+                    case 'js':
+                        return resObj.load.asJS(...args); break;
+                    case 'html':
+                        return resObj.load.asHTML(...args); break;
+                    default:
+                        throw `Unknown resource type: ${type}.`;
+                }
             }
             resName = ((resObj._ && resObj._.name) ? resObj._.name : 'unknown');
             throw `${resName} is not a Resource.`;
+        };
+        flair.Resource.get = (resName) => {
+            let resObj = flair.Namespace.getType(resName);
+            if (resObj._ && resObj._.type === 'resource') {
+               return resType.get();
+            }
+            return null;
         };
         
         // Structure
@@ -1495,6 +1524,35 @@
         
         
         
+        // which
+        // which(def, isFile)
+        //  def: definition to check
+        //  isFile: if definition is a file 
+        flair.which = (def, isFile) => {
+            if (isFile) { // debug/prod specific decision
+                // pick minified or dev version
+                if (def.indexOf('{.min}') !== -1) {
+                    if (flair.options.env.isProd) {
+                        return def.replace('{.min}', '.min'); // a{.min}.js => a.min.js
+                    } else {
+                        return def.replace('{.min}', ''); // a{.min}.js => a.js
+                    }
+                }
+            } else { // server/client specific decision
+                if (def.indexOf('|')) { 
+                    let items = def.split('|'),
+                        item = '';
+                    if (flair.options.env.isServer) {
+                        item = items[0].trim();
+                    } else {
+                        item = items[1].trim();
+                    }
+                    if (item === 'x') { item = ''; } // special case to explicitely mark absence of a type
+                    return item;
+                }            
+            }
+            return def; // as is
+        };
         
         // using
         // using(object, scopeFn)
@@ -1623,24 +1681,20 @@
         //        a JS file name that needs to be resolved 
         //        When qualifiedName of a JS file is being defined, it can also be defined using contextual format
         //        <serverContent> | <clientContext>
-        flair.Container.register = (alias, cls) => {
+        flair.Container.register = (alias, type) => {
             if (typeof alias === 'function') {
-                cls = alias;
-                alias = cls._.name;
+                type = alias;
+                alias = type._.name;
             }
-            if (typeof alias === 'string' && typeof cls === 'string') {
-                if (cls.indexOf('|')) {
-                    let items = cls.split('|');
-                    if (flair.options.env.isServer) {
-                        cls = items[0].trim();
-                    } else {
-                        cls = items[1].trim();
-                    }
-                }
-                cls = flair.Namespace.getType(cls); // cls is qualifiedNane here, if not found it will throw error
+            if (typeof alias === 'string' && typeof type === 'string') {
+                // get contextual type
+                type = flair.which(type);
+                
+                // get actual type
+                type = flair.Namespace.getType(type); // type is qualifiedNane here, if not found it will throw error
             }
             if (!container[alias]) { container[alias] = []; }
-            container[alias].push(cls);
+            container[alias].push(type);
         };
         flair.Container.isRegistered = (alias) => {
             return typeof container[alias] !== 'undefined';
@@ -1827,14 +1881,10 @@
                     instance = null;
                 if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
                 if (typeof Type === 'string') { 
-                    if (Type.indexOf('|') !== -1) { // conditional server/client specific injection
-                        let items = Type.split('|');
-                        if (options.env.isServer) {
-                            Type = items[0].trim(); // left one
-                        } else {
-                            Type = items[1].trim(); // right one
-                        }
-                    }
+                    // get contextual type
+                    Type = flair.which(Type);
+        
+                    // get instance
                     instance = flair.Container.resolve(Type, false, ...typeArgs)
                 } else {
                     instance = new Type(...typeArgs);
@@ -1872,14 +1922,10 @@
                     instance = null;
                 if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
                 if (typeof Type === 'string') {
-                    if (Type.indexOf('|') !== -1) { // condiitonal server/client specific injection
-                        let items = Type.split('|');
-                        if (options.env.isServer) {
-                            Type = items[0].trim(); // left one
-                        } else {
-                            Type = items[1].trim(); // right one
-                        }
-                    }
+                    // get contextual type
+                    Type = flair.which(Type);
+        
+                    // get instance
                     instance = flair.Container.resolve(Type, true, ...typeArgs)
                 } else {
                     throw `multiinject attribute does not support direct type injections. (${className}.${name})`;
@@ -2586,6 +2632,7 @@
             g.Resource = Object.freeze(flair.Resource); 
             g.Assembly = Object.freeze(flair.Assembly);
             g.Namespace = Object.freeze(flair.Namespace);
+            g.which = Object.freeze(flair.which); 
             g.bring = Object.freeze(flair.bring); 
             g.using = Object.freeze(flair.using); 
             g.as = Object.freeze(flair.as);

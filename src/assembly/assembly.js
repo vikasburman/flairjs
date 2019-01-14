@@ -2,7 +2,7 @@
 let asmFiles = {},
     asmTypes = {};
 flair.Assembly = () => {};
-flair.Assembly.register = (...ado) => { 
+flair.Assembly.register = (...ados) => { 
     // each ADO is an Assembly Definition Object with following structure:
     // {
     //      "name": "", 
@@ -14,7 +14,9 @@ flair.Assembly.register = (...ado) => {
     //      "types": ["", "", ...]
     // }
 
-    for(let asm of ado) {
+    for(let asm of ados) {
+        if (typeof asm !== 'object' || Array.isArray(asm.type)) { continue; }
+
         // load assembly
         if (asmFiles[asm.file]) {
             throw `Assembly ${asm.file} already registered.`;

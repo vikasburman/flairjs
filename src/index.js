@@ -7,9 +7,14 @@
  */
 (function() {
     // the definition
-    const def = (opts = {}) => {
+    const def = (opts = null) => {
         let isServer = (new Function("try {return this===global;}catch(e){return false;}"))(),
             getGlobal = new Function("try {return (this===global ? global : window);}catch(e){return window;}");
+        if (typeof opts === 'string') { // only symbols can be given as comma delimited string
+            opts = {
+                symbols: opts.split(',').map(item => item.trim())
+            };
+        }
         let flair = {},
             noop = () => {},
             sym = (opts.symbols || []),
@@ -20,7 +25,7 @@
                     type: opts.env || (isServer ? 'server' : 'client'),
                     isServer: isServer,
                     isClient: !isServer,
-                    isProd: (sym.indexOf('PROD') !== -1 || sym.indexOf('PRODUCTION') !== -1),
+                    isProd: (sym.indexOf('PROD') !== -1),
                     isDebug: (sym.indexOf('DEBUG') !== -1),
                     global: getGlobal(),
                     supressGlobals: (typeof opts.supressGlobals === 'undefined' ? false : opts.supressGlobals),
@@ -56,7 +61,7 @@
         
         // special symbols
         if (options.env.isProd && options.env.isDebug) { // when both are given
-            throw `DEBUG and PROD/PRODUCTION symbols are mutually exclusive. Use only one.`;
+            throw `DEBUG and PROD symbols are mutually exclusive. Use only one.`;
         }
 
         flair._ = Object.freeze({
@@ -80,6 +85,7 @@
         <!-- inject: ./types/resource.js -->
         <!-- inject: ./types/structure.js -->
         
+        <!-- inject: ./func/which.js -->
         <!-- inject: ./func/bring.js -->
         <!-- inject: ./func/using.js -->
         <!-- inject: ./func/as.js -->
@@ -119,6 +125,7 @@
             g.Resource = Object.freeze(flair.Resource); 
             g.Assembly = Object.freeze(flair.Assembly);
             g.Namespace = Object.freeze(flair.Namespace);
+            g.which = Object.freeze(flair.which); 
             g.bring = Object.freeze(flair.bring); 
             g.using = Object.freeze(flair.using); 
             g.as = Object.freeze(flair.as);

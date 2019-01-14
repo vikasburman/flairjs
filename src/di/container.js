@@ -10,24 +10,20 @@ flair.Container = {};
 //        a JS file name that needs to be resolved 
 //        When qualifiedName of a JS file is being defined, it can also be defined using contextual format
 //        <serverContent> | <clientContext>
-flair.Container.register = (alias, cls) => {
+flair.Container.register = (alias, type) => {
     if (typeof alias === 'function') {
-        cls = alias;
-        alias = cls._.name;
+        type = alias;
+        alias = type._.name;
     }
-    if (typeof alias === 'string' && typeof cls === 'string') {
-        if (cls.indexOf('|')) {
-            let items = cls.split('|');
-            if (flair.options.env.isServer) {
-                cls = items[0].trim();
-            } else {
-                cls = items[1].trim();
-            }
-        }
-        cls = flair.Namespace.getType(cls); // cls is qualifiedNane here, if not found it will throw error
+    if (typeof alias === 'string' && typeof type === 'string') {
+        // get contextual type
+        type = flair.which(type);
+        
+        // get actual type
+        type = flair.Namespace.getType(type); // type is qualifiedNane here, if not found it will throw error
     }
     if (!container[alias]) { container[alias] = []; }
-    container[alias].push(cls);
+    container[alias].push(type);
 };
 flair.Container.isRegistered = (alias) => {
     return typeof container[alias] !== 'undefined';

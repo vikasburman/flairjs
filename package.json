@@ -39,7 +39,8 @@
         "gulp-string-replace": "^1.1.2",
         "gulp-uglify": "^2.1.2",
         "jasmine": "^2.6.0",
-        "uglify-js-harmony": "^2.7.7"
+        "uglify-js-harmony": "^2.7.7"        
     },
-    "dependencies": {}
+    "dependencies": {
+    }
 }

@@ -20,7 +20,7 @@ flair.bring = (members, scopeFn) => {
     //  <path>/<file>.js
     //      this is a bare file to load to, it will be resolved using configured module loader
     //      to handle PRODUCTION and DEBUG scenarios automatically, use <path>/<file>{.min}.js format. 
-    //      it PROD or PRODUCTION symbol is available, it will use it as <path>/<file>.min.js otherwise it will
+    //      it PROD symbol is available, it will use it as <path>/<file>.min.js otherwise it will
     //      use it as <path>/<file>.js 
     //      NOTE: Path is always in context of the root path - full. Relative paths are not supported.
     //  
@@ -33,6 +33,8 @@ flair.bring = (members, scopeFn) => {
     //          when running on server, <member1> would be considered, and
     //          when running on client, <member2> will be considered
     //  
+
+    if (typeof members === 'string') { members = [members]; }
 
     // resolve all dependencies first
     let resolvedItems = [],
@@ -84,9 +86,19 @@ flair.bring = (members, scopeFn) => {
                     loader = loaders.module.client || loaderOverrides.moduleLoaderClient || null;
                     if (typeof loader === 'function') {
                         loader(file).then(resolve).catch(reject);
-                    } else { // assume requirejs type library having require() is available to load modules on client
+                    } else { 
                         try {
-                            require([file], resolve, reject);
+                            if (typeof require !== 'undefined') { // if requirejs type library having require() is available to load modules / files on client
+                                require([file], resolve, reject);
+                            } else { // load it as file on browser, this could be a problem for module types // TODO: this needs to be changed, when there is a case
+                                let js = flair.options.env.global.document.createElement('script');
+                                js.type = 'text/javascript';
+                                js.name = file;
+                                js.src = file;
+                                js.onload = () => { resolve(true); }
+                                js.onerror = () => { reject(`Failed to load: ${file}`); }
+                                flair.options.env.global.document.head.appendChild(js);
+                            }
                         } catch(e) {
                             reject(e);
                         }
@@ -122,14 +134,7 @@ flair.bring = (members, scopeFn) => {
                 _resolved = null;
 
             // pick contextual member
-            if (_member.indexOf('|')) {
-                let items = _member.split('|');
-                if (flair.options.env.isServer) {
-                    _member = items[0].trim();
-                } else {
-                    _member = items[1].trim();
-                }
-            }            
+            _member = flair.which(_member);
             
             // check if this is an alias registered on DI container
             let option1 = (done) => {
@@ -169,14 +174,8 @@ flair.bring = (members, scopeFn) => {
                 let ext = _member.substr(_member.lastIndexOf('.') + 1).toLowerCase();
                 if (ext) {
                     if (ext === 'js' || ext === 'mjs') {
-                        // pick minified or dev version
-                        if (_member.indexOf('{.min}') !== -1) {
-                            if (flair.options.env.isProd) {
-                                _member = _member.replace('{.min}', '.min'); // a{.min}.js => a.min.js
-                            } else {
-                                _member = _member.replace('{.min}', ''); // a{.min}.js => a.js
-                            }
-                        }
+                        // pick contextual file
+                        _member = flair.which(_member, true);
                         
                         // this will be loaded as module in next option as a module
                         done();
