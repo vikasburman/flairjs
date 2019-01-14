@@ -3,7 +3,7 @@
     "title": "FlairJS",
     "description": "True Object Oriented JavaScript",
     "copyright": "(c) 2017-2019 Vikas Burman",
-    "version": "0.15.4",
+    "version": "0.15.5",
     "author": "Vikas Burman <vikasburman@gmail.com>",
     "keywords": [
         "javascript",
@@ -39,8 +39,7 @@
         "gulp-string-replace": "^1.1.2",
         "gulp-uglify": "^2.1.2",
         "jasmine": "^2.6.0",
-        "uglify-js-harmony": "^2.7.7"        
+        "uglify-js-harmony": "^2.7.7"
     },
-    "dependencies": {
-    }
+    "dependencies": {}
 }
