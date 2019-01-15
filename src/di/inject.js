@@ -9,13 +9,14 @@
 flair.Container.register(flair.Class('inject', flair.Attribute, function() {
     this.decorator((obj, type, name, descriptor) => {
         // validate
-        if (['func', 'prop'].indexOf(type) === -1) { throw `inject attribute cannot be applied on ${type} members. (${className}.${name})`; }
-        if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `inject attribute cannot be applied on special function. (${className}.${name})`; }
+        if (['func', 'prop'].indexOf(type) === -1) { throw `inject attribute cannot be applied on ${type} members.`; }
+        if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `inject attribute cannot be applied on special function.`; }
 
         // decorate
         let Type = this.args[0],
             typeArgs = this.args[1],
-            instance = null;
+            instance = null,
+            fn = null;
         if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
         if (typeof Type === 'string') { 
             // get contextual type
@@ -28,7 +29,7 @@ flair.Container.register(flair.Class('inject', flair.Attribute, function() {
         }
         switch(type) {
             case 'func':
-                let fn = descriptor.value;
+                fn = descriptor.value;
                 descriptor.value = function(...args) {
                     fn(instance, ...args);
                 }.bind(obj);

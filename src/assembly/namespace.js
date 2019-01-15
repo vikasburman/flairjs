@@ -23,11 +23,12 @@ flair.Namespace = (Type) => {
     let nextLevel = flair.Namespace.root,
         nm = Type._.name,
         nsName = '',
+        nsList = null,
         ns = nm.substr(0, nm.lastIndexOf('.'));
     nm = nm.substr(nm.lastIndexOf('.') + 1);
     if (ns) {
         nsList = ns.split('.');
-        for(nsItem of nsList) {
+        for(let nsItem of nsList) {
             if (nsItem) {
                 // special name not allowed
                 if (nsItem === '_') { throw `Special name "_" is used as namespace in ${Type._.name}.`; }
@@ -72,7 +73,7 @@ flair.Namespace = (Type) => {
             level = nextLevel;
         if (qualifiedName.indexOf('.') !== -1) { // if a qualified name is given
             let items = qualifiedName.split('.');
-            for(item of items) {
+            for(let item of items) {
                 if (item) {
                     // special name not allowed
                     if (item === '_') { throw `Special name "_" is used as name in ${qualifiedName}.`; }

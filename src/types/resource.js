@@ -1,90 +1,121 @@
 // Resource
 // Resource(resName, resFile)
 flair.Resource = (resName, resFile, data) => {
-    // start: this will be processed by build engine
-    let resData = data || '';
+    const b64EncodeUnicode = (str) => { // eslint-disable-line no-unused-vars
+        // first we use encodeURIComponent to get percent-encoded UTF-8,
+        // then we convert the percent encodings into raw bytes which
+        // can be fed into btoa.
+        return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+            function toSolidBytes(match, p1) {
+                return String.fromCharCode('0x' + p1);
+        }));
+    };
+    const b64DecodeUnicode = (str) => {
+        // Going backwards: from bytestream, to percent-encoding, to original string.
+        return decodeURIComponent(atob(str).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+    };
+    
+    let resData = data; // data is base64 encoded string, added by build engine
+    let resType = resFile.substr(resFile.lastIndexOf('.') + 1).toLowerCase(),
+        textTypes = ['txt', 'xml', 'js', 'json', 'css', 'html'];
+    
+    // decode
+    if (textTypes.indexOf(resType) !== -1) { // text
+        if (flair.options.env.isServer) {
+            let buff = new Buffer(resData).toString('base64');
+            resData = buff.toString('utf8');
+        } else { // client
+            resData = b64DecodeUnicode(resData); 
+        }
+    } else { // binary
+        if (flair.options.env.isServer) {
+            resData = new Buffer(resData).toString('base64');
+        } else { // client
+            // no change, leave it as is
+        }        
+    }
 
     let isLoaded = false;
     let _res = {
         file: () => { return resFile; },
-        type: () => { return resFile.substr(resFile.lastIndexOf('.') + 1).toLowerCase(); },
+        type: () => { return resType; },
         get: () => { return resData; },
-        load: Object.freeze({
-            asJSON: () => {
-                return JSON.parse(resData);
-            },
-            asCSS: () => {
-                if (flair.options.env.isClient) {
-                    if (!isLoaded) {
-                        let css = flair.options.env.global.document.createElement('style');
-                        css.type = 'text/css';
-                        css.name = resFile;
-                        css.innerHTML = resData;
-                        flair.options.env.global.document.head.appendChild(css);
-                        isLoaded = true;
-                    }
-                    return isLoaded;
-                }
-                return false;
-            },
-            asHTML: (node, position = '') => {
-                // position can be: https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML
-                // if empty, it will replace node html
-                if (flair.options.env.isClient) {
-                    if (node) {
-                        if (!isLoaded) {
-                            if (position) {
-                                node.innerHTML = resData;
-                            } else {
-                                node.insertAdjacentHTML(position, resData);
-                            }
+        load: (...args) => {
+            if (flair.options.env.isClient) {
+                if (!isLoaded) {
+                    isLoaded = true;
+                    if (['gif', 'jpeg', 'jpg', 'png'].indexOf(resType) !== -1) { // image types
+                        // args:    node
+                        let node = args[0];
+                        if (node) {
+                            let image = new Image();
+                            image.src = 'data:image/png;base64,' + data; // use base64 version itself
+                            node.appendChild(image);
                             isLoaded = true;
                         }
-                        return isLoaded;
-                    }
-                }
-                return false;
-            },
-            asJS: (cb) => {
-                if (flair.options.env.isClient) {
-                    if (!isLoaded) {
-                        let js = flair.options.env.global.document.createElement('script');
-                        js.type = 'text/javascript';
-                        js.name = resFile;
-                        js.src = resData;
-                        if (typeof cb === 'function') {
-                            js.onload = cb;
-                            js.onerror = () => { isLoaded = false; }
+                    } else { // css, js, html or others
+                        let css, js, node, position = null;
+                        switch(resType) {
+                            case 'css':     // args: ()
+                                css = flair.options.env.global.document.createElement('style');
+                                css.type = 'text/css';
+                                css.name = resFile;
+                                css.innerHTML = resData;
+                                flair.options.env.global.document.head.appendChild(css);
+                                break;
+                            case 'js':      // args: (callback)
+                                js = flair.options.env.global.document.createElement('script');
+                                js.type = 'text/javascript';
+                                js.name = resFile;
+                                js.src = resData;
+                                if (typeof cb === 'function') {
+                                    js.onload = args[0]; // callback
+                                    js.onerror = () => { isLoaded = false; }
+                                }
+                                flair.options.env.global.document.head.appendChild(js);
+                                break;           
+                            case 'html':    // args: (node, position)
+                                // position can be: https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML
+                                // if empty, it will replace node html
+                                node = args[0];
+                                position = args[1] || '';
+                                if (node) {
+                                    if (position) {
+                                        node.innerHTML = resData;
+                                    } else {
+                                        node.insertAdjacentHTML(position, resData);
+                                    }
+                                }
+                                break;
+                            default:
+                                // load not supported for all other types
+                                break;
                         }
-                        flair.options.env.global.document.head.appendChild(js);
-                        isLoaded = true;
                     }
-                    return isLoaded;                    
                 }
-                return false;
             }
-        })
+            return isLoaded;
+        }
     };
     _res._ = {
         name: resName,
         type: 'resource',
         namespace: null,
         file: resFile,
-        data: (data) => { 
-            if (data && !resData) { 
-                resData = data; // set only once
-            }
-            return resData;
-        }
+        data: () => { return resData; }
     };
 
-    // set JSON automatically
-    _res.JSON = {};
-    try {
-        _res.JSON = Object.freeze(_res.load.asJSON());
-    } catch (e) {
-        // ignore
-    };
+    // set json 
+    _res.JSON = null;
+    if (_res.type() === 'json') {
+        try {
+            _res.JSON = Object.freeze(JSON.parse(resData));
+        } catch (e) {
+            // ignore
+        }
+    }
 
     // register type with namespace
     flair.Namespace(_res);
@@ -92,29 +123,10 @@ flair.Resource = (resName, resFile, data) => {
     // return
     return Object.freeze(_res);
 };
-flair.Resource.load = (resObj, ...args) => {
-    if (resObj._ && resObj._.type === 'resource') {
-        let type = resObj.type();
-        switch(type) {
-            case 'json':
-                return resObj.load.asJSON(); break;
-            case 'css':
-                return resObj.load.asCSS(); break;
-            case 'js':
-                return resObj.load.asJS(...args); break;
-            case 'html':
-                return resObj.load.asHTML(...args); break;
-            default:
-                throw `Unknown resource type: ${type}.`;
-        }
-    }
-    resName = ((resObj._ && resObj._.name) ? resObj._.name : 'unknown');
-    throw `${resName} is not a Resource.`;
-};
 flair.Resource.get = (resName) => {
     let resObj = flair.Namespace.getType(resName);
     if (resObj._ && resObj._.type === 'resource') {
-       return resType.get();
+       return resObj.get();
     }
     return null;
 };

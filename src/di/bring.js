@@ -24,7 +24,7 @@ flair.bring = (members, scopeFn) => {
     //      use it as <path>/<file>.js 
     //      NOTE: Path is always in context of the root path - full. Relative paths are not supported.
     //  
-    //  <path>/<file.css|json|html|md|...>
+    //  <path>/<file.css|json|html|...>
     //      if ths is not a js file, it will treat it as any other file and will try to fetch as a resource on client
     //      and using request on server
     //      

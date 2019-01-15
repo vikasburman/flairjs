@@ -48,6 +48,7 @@ flair.Reflector.get = (forTarget) => {
     };
     const CommonInstanceMemberReflector = function(type, target, name, ref) {
         let refl = new CommonMemberReflector(type, target, name);
+        refl.getRef = () => { return ref; };
         refl.getAttributes = () => {
             let items = [],
                 attrs = [];
@@ -81,7 +82,7 @@ flair.Reflector.get = (forTarget) => {
             let attrInfo = null;
             for (let item of target._.instanceOf) {
                 if (item.meta[name]) {
-                    attrs = item.meta[name];
+                    let attrs = item.meta[name];
                     for(let attr of attrs) {
                         if (attr.name === attrName) {
                             attrInfo = new AttrReflector(attr.Attr, attr.name, attr.args, target);
@@ -202,10 +203,10 @@ flair.Reflector.get = (forTarget) => {
                     }
                 }
                 return filtered;
-            }
+            },
             getMembers = (oneMember) => {
                 let members = [],
-                    attrs = [],
+                    attrs = [], // eslint-disable-line no-unused-vars
                     lastMember = null,
                     member = null;
                 for(let instance of target._.instanceOf) {
@@ -262,6 +263,7 @@ flair.Reflector.get = (forTarget) => {
         refl.getFamily = () => {
             let items = [],
                 prv = target._.inherits;
+            // eslint-disable-next-line no-constant-condition
             while(true) {
                 if (prv === null) { break; }
                 items.push(new ClassReflector(prv));
@@ -308,8 +310,8 @@ flair.Reflector.get = (forTarget) => {
             return null;
         };
         refl.getMembers = () => { 
-            let keys = Object.keys(target);
-            _At = keys.indexOf('_');
+            let keys = Object.keys(target),
+                _At = keys.indexOf('_');
             if (_At !== -1) {
                 keys.splice(_At, 1);
             }
@@ -331,6 +333,7 @@ flair.Reflector.get = (forTarget) => {
         refl.getFamily = () => {
             let items = [],
                 prv = target._.inherits;
+            // eslint-disable-next-line no-constant-condition    
             while(true) {
                 if (prv === null) { break; }
                 items.push(new ClassReflector(prv));
@@ -395,7 +398,7 @@ flair.Reflector.get = (forTarget) => {
             let types = target.getTypes(),
                 members = [];
             if (types) {
-                for(type of types) {
+                for(let type of types) {
                     switch(type._.type) {
                         case 'class': members.push(new ClassReflector(type)); break;
                         case 'enum': members.push(new EnumReflector(type)); break;

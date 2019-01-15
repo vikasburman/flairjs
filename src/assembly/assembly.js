@@ -7,6 +7,7 @@ flair.Assembly.register = (...ados) => {
     // {
     //      "name": "", 
     //      "file": "",
+    //      "assets": "",
     //      "desc": "",
     //      "version": "",
     //      "copyright": "",
@@ -18,10 +19,11 @@ flair.Assembly.register = (...ados) => {
         if (typeof asm !== 'object' || Array.isArray(asm.type)) { continue; }
 
         // load assembly
-        if (asmFiles[asm.file]) {
-            throw `Assembly ${asm.file} already registered.`;
+        let asmFile = flair.which(asm.file, true);
+        if (asmFiles[asmFile]) {
+            throw `Assembly ${asmFile} already registered.`;
         } else {
-            asmFiles[asm.file] = {
+            asmFiles[asmFile] = {
                 ado: asm,
                 status: 'not-loaded' // by default file is not loaded as yet
             };
@@ -33,7 +35,7 @@ flair.Assembly.register = (...ados) => {
             if (asmTypes[type]) {
                 throw `Type ${type} already registered.`;
             } else {
-                asmTypes[type] = asm.file; // means this type can be loaded from this assembly file
+                asmTypes[type] = asmFile; // means this type can be loaded from this assembly file
             }
         }
     }

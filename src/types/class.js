@@ -226,7 +226,7 @@ flair.Class = (arg1, arg2, arg3, arg4) => {
                 return false;
             }) !== -1);           
         };
-        const isDefined = (member, ignoreLast) => {
+        const isDefined = (member) => {
             let result = false,
                 last = _this._.instanceOf.length,
                 i = 1;
@@ -240,19 +240,6 @@ flair.Class = (arg1, arg2, arg3, arg4) => {
             }
             return result;
         };            
-        const isPatternMatched = (pattern, name) => {
-            let isMatched = (pattern === '*' ? true : false);
-            if (!isMatched) {
-                if (pattern.indexOf('*') !== -1) { // wild card based match (only *abc OR abc* patterns supported)
-                    pattern = pattern.replace('*', '[\\w]');
-                    pRegEx = new RegExp(pattern);
-                    isMatched = pRegEx.test(name); 
-                } else { // full name match
-                    isMatched = (pattern === name);
-                }
-            }
-            return isMatched;
-        };
         const applyAspects = (funcName, funcAspects) => {
             let fn = _this[funcName],
                 before = [],
@@ -320,7 +307,7 @@ flair.Class = (arg1, arg2, arg3, arg4) => {
 
                 // around func
                 let newFn = fn,
-                    isASync = false,
+                    isASync = false, // eslint-disable-line no-unused-vars
                     _result = null;
                 for(let aroundFn of around) {
                     newFn = aroundFn(ctx, newFn);
@@ -375,7 +362,7 @@ flair.Class = (arg1, arg2, arg3, arg4) => {
         };
         const processJson = (source, target, isDeserialize) => {
             let mappedName = '';
-            for(member in _this) {
+            for(let member in _this) {
                 if (_this.hasOwnProperty(member)) {
                     if ((memberType(member) === 'prop') &&
                         isSerializableMember(member) &&
@@ -456,7 +443,7 @@ flair.Class = (arg1, arg2, arg3, arg4) => {
                 });
             } else {
                 // duplicate check
-                if (isDefined(name, true)) { 
+                if (isDefined(name)) { 
                     if (name === '_constructor') { name = 'constructor'; }
                     if (name === '_dispose') { name = 'dispose'; }
                     throw `${className}.${name} is already defined.`; 
@@ -531,7 +518,7 @@ flair.Class = (arg1, arg2, arg3, arg4) => {
                 }
             } else {
                 // duplicate check
-                if (isDefined(name, true)) { throw `${className}.${name} is already defined.`; }
+                if (isDefined(name)) { throw `${className}.${name} is already defined.`; }
             }
 
             // define or redefine
@@ -620,7 +607,7 @@ flair.Class = (arg1, arg2, arg3, arg4) => {
                         if (typeof setter === 'function') { setter(value); }
                     }
                 });
-            };       
+            }     
 
             // apply attributes in order they are defined
             applyAttr(name);
@@ -636,7 +623,7 @@ flair.Class = (arg1, arg2, arg3, arg4) => {
             if (isSpecialMember(name)) {  throw `${className}.${name} can only be defined as a function.`; }
 
             // duplicate check
-            if (isDefined(name, true)) { throw `${className}.${name} is already defined.`; }
+            if (isDefined(name)) { throw `${className}.${name} is already defined.`; }
 
             // add meta
             meta[name] = [];
@@ -646,6 +633,7 @@ flair.Class = (arg1, arg2, arg3, arg4) => {
             
             // discard attributes
             if (bucket.length > 0) {
+                // eslint-disable-next-line no-console
                 console.warn(`Attributes can only be applied to properties or functions. ${className}.${name} is an event.`);
                 bucket = []; 
             }
@@ -906,6 +894,7 @@ flair.Class = (arg1, arg2, arg3, arg4) => {
             let result = (name === 'Object'),
                 prv = inherits;
             if (!result) {
+                // eslint-disable-next-line no-constant-condition
                 while(true) {
                     if (prv === null) { break; }
                     if (prv._.name === name) { result = true; break; }

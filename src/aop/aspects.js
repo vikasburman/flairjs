@@ -37,8 +37,8 @@ flair.Aspects.register = (pointcut, Aspect) => {
         ns = '',
         cls = '',
         fnc = '',
-        attr = '~',
-        bucket = '';
+        attr = '~',     
+        bucket = '';    
     if (nm.indexOf('/') !== -1) {
         let items = nm.split('/');
         nm = items[0].trim();
@@ -85,25 +85,13 @@ flair.Aspects.register = (pointcut, Aspect) => {
     // add bucket if not already there
     allAspects[bucket] = allAspects[bucket] || [];
     allAspects[bucket].push(Aspect);
-
-    // allAspects[ns] = allAspects[ns] || {};
-    // allAspects[ns][cls] = allAspects[ns][cls] || {};
-    // allAspects[ns][cls][fnc] = allAspects[ns][cls][fnc] || {};
-    // allAspects[ns][cls][fnc] = allAspects[ns][cls][fnc] || {};
-    // allAspects[ns][cls][fnc][attr] = allAspects[ns][cls][fnc][attr] || {};
-    // allAspects[ns][cls][fnc][attr].list = allAspects[ns][cls][fnc][attr].list || [];
-
-    // // store
-    // allAspects[ns][cls][fnc][attr].list.push(Aspect);
 };
 flair.Aspects.get = (className, funcName, attrs) => {
     // get parts
     let funcAspects = [],
         ns = '',
         cls = '',
-        fnc = funcName.trim(),
-        attr = '~',
-        bucket = '';
+        fnc = funcName.trim();
 
     if (className.indexOf('.') !== -1) {
         ns = className.substr(0, className.lastIndexOf('.')).trim();

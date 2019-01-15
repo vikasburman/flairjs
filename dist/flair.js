@@ -5,7 +5,9 @@
  * (c) 2017-2019 Vikas Burman
  * MIT
  */
-(function() {
+
+// eslint-disable-next-line for-direction
+(function() { // eslint-disable-line getter-return
     // the definition
     const def = (opts = null) => {
         let isServer = (new Function("try {return this===global;}catch(e){return false;}"))(),
@@ -17,7 +19,7 @@
         }
         let flair = {},
             noop = () => {},
-            sym = (opts.symbols || []),
+            sym = (opts.symbols || []), // eslint-disable-next-line no-unused-vars
             noopAsync = (resolve, reject) => { resolve(); },
             options = Object.freeze({
                 symbols: Object.freeze(sym),
@@ -69,7 +71,7 @@
             version: '0.15.5',
             copyright: '(c) 2017-2019 Vikas Burman',
             license: 'MIT',
-            lupdate: new Date('Mon, 14 Jan 2019 23:14:20 GMT')
+            lupdate: new Date('Tue, 15 Jan 2019 04:47:24 GMT')
         });
         flair.options = options;
 
@@ -96,6 +98,7 @@
             // {
             //      "name": "", 
             //      "file": "",
+            //      "assets": "",
             //      "desc": "",
             //      "version": "",
             //      "copyright": "",
@@ -107,10 +110,11 @@
                 if (typeof asm !== 'object' || Array.isArray(asm.type)) { continue; }
         
                 // load assembly
-                if (asmFiles[asm.file]) {
-                    throw `Assembly ${asm.file} already registered.`;
+                let asmFile = flair.which(asm.file, true);
+                if (asmFiles[asmFile]) {
+                    throw `Assembly ${asmFile} already registered.`;
                 } else {
-                    asmFiles[asm.file] = {
+                    asmFiles[asmFile] = {
                         ado: asm,
                         status: 'not-loaded' // by default file is not loaded as yet
                     };
@@ -122,7 +126,7 @@
                     if (asmTypes[type]) {
                         throw `Type ${type} already registered.`;
                     } else {
-                        asmTypes[type] = asm.file; // means this type can be loaded from this assembly file
+                        asmTypes[type] = asmFile; // means this type can be loaded from this assembly file
                     }
                 }
             }
@@ -194,11 +198,12 @@
             let nextLevel = flair.Namespace.root,
                 nm = Type._.name,
                 nsName = '',
+                nsList = null,
                 ns = nm.substr(0, nm.lastIndexOf('.'));
             nm = nm.substr(nm.lastIndexOf('.') + 1);
             if (ns) {
                 nsList = ns.split('.');
-                for(nsItem of nsList) {
+                for(let nsItem of nsList) {
                     if (nsItem) {
                         // special name not allowed
                         if (nsItem === '_') { throw `Special name "_" is used as namespace in ${Type._.name}.`; }
@@ -243,7 +248,7 @@
                     level = nextLevel;
                 if (qualifiedName.indexOf('.') !== -1) { // if a qualified name is given
                     let items = qualifiedName.split('.');
-                    for(item of items) {
+                    for(let item of items) {
                         if (item) {
                             // special name not allowed
                             if (item === '_') { throw `Special name "_" is used as name in ${qualifiedName}.`; }
@@ -519,7 +524,7 @@
                         return false;
                     }) !== -1);           
                 };
-                const isDefined = (member, ignoreLast) => {
+                const isDefined = (member) => {
                     let result = false,
                         last = _this._.instanceOf.length,
                         i = 1;
@@ -533,19 +538,6 @@
                     }
                     return result;
                 };            
-                const isPatternMatched = (pattern, name) => {
-                    let isMatched = (pattern === '*' ? true : false);
-                    if (!isMatched) {
-                        if (pattern.indexOf('*') !== -1) { // wild card based match (only *abc OR abc* patterns supported)
-                            pattern = pattern.replace('*', '[\\w]');
-                            pRegEx = new RegExp(pattern);
-                            isMatched = pRegEx.test(name); 
-                        } else { // full name match
-                            isMatched = (pattern === name);
-                        }
-                    }
-                    return isMatched;
-                };
                 const applyAspects = (funcName, funcAspects) => {
                     let fn = _this[funcName],
                         before = [],
@@ -613,7 +605,7 @@
         
                         // around func
                         let newFn = fn,
-                            isASync = false,
+                            isASync = false, // eslint-disable-line no-unused-vars
                             _result = null;
                         for(let aroundFn of around) {
                             newFn = aroundFn(ctx, newFn);
@@ -668,7 +660,7 @@
                 };
                 const processJson = (source, target, isDeserialize) => {
                     let mappedName = '';
-                    for(member in _this) {
+                    for(let member in _this) {
                         if (_this.hasOwnProperty(member)) {
                             if ((memberType(member) === 'prop') &&
                                 isSerializableMember(member) &&
@@ -749,7 +741,7 @@
                         });
                     } else {
                         // duplicate check
-                        if (isDefined(name, true)) { 
+                        if (isDefined(name)) { 
                             if (name === '_constructor') { name = 'constructor'; }
                             if (name === '_dispose') { name = 'dispose'; }
                             throw `${className}.${name} is already defined.`; 
@@ -824,7 +816,7 @@
                         }
                     } else {
                         // duplicate check
-                        if (isDefined(name, true)) { throw `${className}.${name} is already defined.`; }
+                        if (isDefined(name)) { throw `${className}.${name} is already defined.`; }
                     }
         
                     // define or redefine
@@ -913,7 +905,7 @@
                                 if (typeof setter === 'function') { setter(value); }
                             }
                         });
-                    };       
+                    }     
         
                     // apply attributes in order they are defined
                     applyAttr(name);
@@ -929,7 +921,7 @@
                     if (isSpecialMember(name)) {  throw `${className}.${name} can only be defined as a function.`; }
         
                     // duplicate check
-                    if (isDefined(name, true)) { throw `${className}.${name} is already defined.`; }
+                    if (isDefined(name)) { throw `${className}.${name} is already defined.`; }
         
                     // add meta
                     meta[name] = [];
@@ -939,6 +931,7 @@
                     
                     // discard attributes
                     if (bucket.length > 0) {
+                        // eslint-disable-next-line no-console
                         console.warn(`Attributes can only be applied to properties or functions. ${className}.${name} is an event.`);
                         bucket = []; 
                     }
@@ -1199,6 +1192,7 @@
                     let result = (name === 'Object'),
                         prv = inherits;
                     if (!result) {
+                        // eslint-disable-next-line no-constant-condition
                         while(true) {
                             if (prv === null) { break; }
                             if (prv._.name === name) { result = true; break; }
@@ -1310,7 +1304,7 @@
             if (Array.isArray(keyValuePairsOrArray)) {
                 let i = 0;
                 _enum = {};
-                for(key of keyValuePairsOrArray) {
+                for(let key of keyValuePairsOrArray) {
                     _enum[key] = i;
                     i++;
                 }
@@ -1321,8 +1315,8 @@
                 namespace: null,        
                 keys: () => {
                     let items = [];
-                    for(let i in keyValuePairs) {
-                        if (keyValuePairs.hasOwnProperty(key) && key !== '_') {
+                    for(let key in keyValuePairsOrArray) {
+                        if (keyValuePairsOrArray.hasOwnProperty(key) && key !== '_') {
                             items.push(key);
                         }
                     }
@@ -1330,9 +1324,9 @@
                 },
                 values: () => {
                     let items = [];
-                    for(let key in keyValuePairs) {
-                        if (keyValuePairs.hasOwnProperty(key) && key !== '_') {
-                            items.push(keyValuePairs[key]);
+                    for(let key in keyValuePairsOrArray) {
+                        if (keyValuePairsOrArray.hasOwnProperty(key) && key !== '_') {
+                            items.push(keyValuePairsOrArray[key]);
                         }
                     }
                     return items;
@@ -1349,111 +1343,142 @@
             if (enumObj._ && enumObj._.type === 'enum') {
                 return enumObj._.keys();
             }
-            enumName = ((enumObj._ && enumObj._.name) ? enumObj._.name : 'unknown');
+            let enumName = ((enumObj._ && enumObj._.name) ? enumObj._.name : 'unknown');
             throw `${enumName} is not an Enum.`;
         };
         flair.Enum.getValues = (enumObj) => {
             if (enumObj._ && enumObj._.type === 'enum') {
                 return enumObj._.values();
             }
-            enumName = ((enumObj._ && enumObj._.name) ? enumObj._.name : 'unknown');
+            let enumName = ((enumObj._ && enumObj._.name) ? enumObj._.name : 'unknown');
             throw `${enumName} is not an Enum.`;
         };
         flair.Enum.isDefined = (enumObj, keyOrValue) => {
             if (enumObj._ && enumObj._.type === 'enum') {
                 return (enumObj._.keys.indexOf(keyOrValue) !== -1 || enumObj._.values.indexOf(keyOrValue) !== -1) ? true : false;
             }
-            enumName = ((enumObj._ && enumObj._.name) ? enumObj._.name : 'unknown');
+            let enumName = ((enumObj._ && enumObj._.name) ? enumObj._.name : 'unknown');
             throw `${enumName} is not an Enum.`;
         };
         
         // Resource
         // Resource(resName, resFile)
         flair.Resource = (resName, resFile, data) => {
-            // start: this will be processed by build engine
-            let resData = data || '';
+            const b64EncodeUnicode = (str) => { // eslint-disable-line no-unused-vars
+                // first we use encodeURIComponent to get percent-encoded UTF-8,
+                // then we convert the percent encodings into raw bytes which
+                // can be fed into btoa.
+                return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+                    function toSolidBytes(match, p1) {
+                        return String.fromCharCode('0x' + p1);
+                }));
+            };
+            const b64DecodeUnicode = (str) => {
+                // Going backwards: from bytestream, to percent-encoding, to original string.
+                return decodeURIComponent(atob(str).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+            };
+            
+            let resData = data; // data is base64 encoded string, added by build engine
+            let resType = resFile.substr(resFile.lastIndexOf('.') + 1).toLowerCase(),
+                textTypes = ['txt', 'xml', 'js', 'json', 'css', 'html'];
+            
+            // decode
+            if (textTypes.indexOf(resType) !== -1) { // text
+                if (flair.options.env.isServer) {
+                    let buff = new Buffer(resData).toString('base64');
+                    resData = buff.toString('utf8');
+                } else { // client
+                    resData = b64DecodeUnicode(resData); 
+                }
+            } else { // binary
+                if (flair.options.env.isServer) {
+                    resData = new Buffer(resData).toString('base64');
+                } else { // client
+                    // no change, leave it as is
+                }        
+            }
         
             let isLoaded = false;
             let _res = {
                 file: () => { return resFile; },
-                type: () => { return resFile.substr(resFile.lastIndexOf('.') + 1).toLowerCase(); },
+                type: () => { return resType; },
                 get: () => { return resData; },
-                load: Object.freeze({
-                    asJSON: () => {
-                        return JSON.parse(resData);
-                    },
-                    asCSS: () => {
-                        if (flair.options.env.isClient) {
-                            if (!isLoaded) {
-                                let css = flair.options.env.global.document.createElement('style');
-                                css.type = 'text/css';
-                                css.name = resFile;
-                                css.innerHTML = resData;
-                                flair.options.env.global.document.head.appendChild(css);
-                                isLoaded = true;
-                            }
-                            return isLoaded;
-                        }
-                        return false;
-                    },
-                    asHTML: (node, position = '') => {
-                        // position can be: https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML
-                        // if empty, it will replace node html
-                        if (flair.options.env.isClient) {
-                            if (node) {
-                                if (!isLoaded) {
-                                    if (position) {
-                                        node.innerHTML = resData;
-                                    } else {
-                                        node.insertAdjacentHTML(position, resData);
-                                    }
+                load: (...args) => {
+                    if (flair.options.env.isClient) {
+                        if (!isLoaded) {
+                            isLoaded = true;
+                            if (['gif', 'jpeg', 'jpg', 'png'].indexOf(resType) !== -1) { // image types
+                                // args:    node
+                                let node = args[0];
+                                if (node) {
+                                    let image = new Image();
+                                    image.src = 'data:image/png;base64,' + data; // use base64 version itself
+                                    node.appendChild(image);
                                     isLoaded = true;
                                 }
-                                return isLoaded;
-                            }
-                        }
-                        return false;
-                    },
-                    asJS: (cb) => {
-                        if (flair.options.env.isClient) {
-                            if (!isLoaded) {
-                                let js = flair.options.env.global.document.createElement('script');
-                                js.type = 'text/javascript';
-                                js.name = resFile;
-                                js.src = resData;
-                                if (typeof cb === 'function') {
-                                    js.onload = cb;
-                                    js.onerror = () => { isLoaded = false; }
+                            } else { // css, js, html or others
+                                let css, js, node, position = null;
+                                switch(resType) {
+                                    case 'css':     // args: ()
+                                        css = flair.options.env.global.document.createElement('style');
+                                        css.type = 'text/css';
+                                        css.name = resFile;
+                                        css.innerHTML = resData;
+                                        flair.options.env.global.document.head.appendChild(css);
+                                        break;
+                                    case 'js':      // args: (callback)
+                                        js = flair.options.env.global.document.createElement('script');
+                                        js.type = 'text/javascript';
+                                        js.name = resFile;
+                                        js.src = resData;
+                                        if (typeof cb === 'function') {
+                                            js.onload = args[0]; // callback
+                                            js.onerror = () => { isLoaded = false; }
+                                        }
+                                        flair.options.env.global.document.head.appendChild(js);
+                                        break;           
+                                    case 'html':    // args: (node, position)
+                                        // position can be: https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML
+                                        // if empty, it will replace node html
+                                        node = args[0];
+                                        position = args[1] || '';
+                                        if (node) {
+                                            if (position) {
+                                                node.innerHTML = resData;
+                                            } else {
+                                                node.insertAdjacentHTML(position, resData);
+                                            }
+                                        }
+                                        break;
+                                    default:
+                                        // load not supported for all other types
+                                        break;
                                 }
-                                flair.options.env.global.document.head.appendChild(js);
-                                isLoaded = true;
                             }
-                            return isLoaded;                    
                         }
-                        return false;
                     }
-                })
+                    return isLoaded;
+                }
             };
             _res._ = {
                 name: resName,
                 type: 'resource',
                 namespace: null,
                 file: resFile,
-                data: (data) => { 
-                    if (data && !resData) { 
-                        resData = data; // set only once
-                    }
-                    return resData;
-                }
+                data: () => { return resData; }
             };
         
-            // set JSON automatically
-            _res.JSON = {};
-            try {
-                _res.JSON = Object.freeze(_res.load.asJSON());
-            } catch (e) {
-                // ignore
-            };
+            // set json 
+            _res.JSON = null;
+            if (_res.type() === 'json') {
+                try {
+                    _res.JSON = Object.freeze(JSON.parse(resData));
+                } catch (e) {
+                    // ignore
+                }
+            }
         
             // register type with namespace
             flair.Namespace(_res);
@@ -1461,29 +1486,10 @@
             // return
             return Object.freeze(_res);
         };
-        flair.Resource.load = (resObj, ...args) => {
-            if (resObj._ && resObj._.type === 'resource') {
-                let type = resObj.type();
-                switch(type) {
-                    case 'json':
-                        return resObj.load.asJSON(); break;
-                    case 'css':
-                        return resObj.load.asCSS(); break;
-                    case 'js':
-                        return resObj.load.asJS(...args); break;
-                    case 'html':
-                        return resObj.load.asHTML(...args); break;
-                    default:
-                        throw `Unknown resource type: ${type}.`;
-                }
-            }
-            resName = ((resObj._ && resObj._.name) ? resObj._.name : 'unknown');
-            throw `${resName} is not a Resource.`;
-        };
         flair.Resource.get = (resName) => {
             let resObj = flair.Namespace.getType(resName);
             if (resObj._ && resObj._.type === 'resource') {
-               return resType.get();
+               return resObj.get();
             }
             return null;
         };
@@ -1574,21 +1580,21 @@
                 if (typeof intf === 'string') {
                     switch(intf) {
                         case 'public': 
-                            return obj._.pu; break;
+                            return obj._.pu; break; // eslint-disable-line no-unreachable
                         case 'protected': 
                         case 'private':
-                            return obj._.pr; break;
+                            return obj._.pr; break; // eslint-disable-line no-unreachable
                         default:
                             throw new flair.Exception('AS03', `Unknown scope type: ${intf}`);
                     }
                 } else {
                     switch(intf._.type) {
                         case 'interface':
-                            if (obj._.isImplements(intf._.name)) { return obj; }; break;
+                            if (obj._.isImplements(intf._.name)) { return obj; } break;
                         case 'mixin':
-                            if (obj._.isMixed(intf._.name)) { return obj; }; break;
+                            if (obj._.isMixed(intf._.name)) { return obj; } break;
                         case 'class':
-                            if (obj._.isInstanceOf(intf._.name)) { return obj; }; break;
+                            if (obj._.isInstanceOf(intf._.name)) { return obj; } break;
                         default:
                             throw new flair.Exception('AS02', `Unknown/unsupported interface type: ${intf}`);
                     }
@@ -1599,13 +1605,13 @@
             return null;
         };
         // is
-        // is(objOtType, intf)
+        // is(objOrType, intf)
         //  intf: can be a reference
-        flair.is = (objOtType, intf) => {
+        flair.is = (objOrType, intf) => {
         // TODO: check for all types as well
         
             if (typeof intf !== 'string') {
-                return flair.as(obj) !== null;
+                return flair.as(objOrType) !== null;
             } else {
                 throw new flair.Exception('IS01', `Scope types are not supported: ${intf}`);
             }
@@ -1662,7 +1668,7 @@
         //  mix: Mixed type for which mixin is to be checked
         flair.isMixed = (objOrCls, mix) => {
             if (objOrCls._ && (objOrCls._.type === 'class' || objOrCls._.type === 'instance') && mix._ && mix._.type === 'mixin') {
-                if (obj._.isMixed(mix._.name)) { return true; }
+                if (objOrCls._.isMixed(mix._.name)) { return true; }
                 return false;
             } else {
                 throw 'Invalid arguments.';
@@ -1785,8 +1791,8 @@
         flair.Container.register(flair.Class('async', flair.Attribute, function() {
             this.decorator((obj, type, name, descriptor) => {
                 // validate
-                if (['func'].indexOf(type) === -1) { throw `async attribute cannot be applied on ${type} members. (${className}.${name})`; }
-                if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `async attribute cannot be applied on special function. (${className}.${name})`; }
+                if (['func'].indexOf(type) === -1) { throw `async attribute cannot be applied on ${type} members.`; }
+                if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `async attribute cannot be applied on special function.`; }
         
                 // decorate
                 let fn = descriptor.value;
@@ -1805,38 +1811,43 @@
         flair.Container.register(flair.Class('deprecate', flair.Attribute, function() {
             this.decorator((obj, type, name, descriptor) => {
                 // validate
-                if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `deprecate attribute cannot be applied on special function. (${className}.${name})`; }
+                if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `deprecate attribute cannot be applied on special function.`; }
         
                 // decorate
                 let msg = `${name} is deprecated.`;
-                if (typeof this.args[0] !== 'undefined') { msg += ' ' + this.args[0] };
+                let _get, _set, fn, ev = null;
+                if (typeof this.args[0] !== 'undefined') { msg += ' ' + this.args[0] }
                 switch(type) {
                     case 'prop':
                         if (descriptor.get) {
-                            let _get = descriptor.get;                                
+                            _get = descriptor.get;                                
                             descriptor.get = function() {
+                                // eslint-disable-next-line no-console
                                 console.warn(msg);
                                 return _get();
                             }.bind(obj);
                         }
                         if (descriptor.set) {
-                            let _set = descriptor.set;
+                            _set = descriptor.set;
                             descriptor.set = function(value) {
+                                // eslint-disable-next-line no-console
                                 console.warn(msg);
                                 return _set(value);
                             }.bind(obj);
                         }   
                         break;
                     case 'func':
-                        let fn = descriptor.value;
+                        fn = descriptor.value;
                         descriptor.value = function(...args) {
+                            // eslint-disable-next-line no-console
                             console.warn(msg);
                             fn(...args);
                         }.bind(obj);
                         break;
                     case 'event':
-                        let ev = descriptor.value;
+                        ev = descriptor.value;
                         descriptor.value = function(...args) {
+                            // eslint-disable-next-line no-console
                             console.warn(msg);
                                 ev(...args);
                         }.bind(obj);
@@ -1852,7 +1863,7 @@
         flair.Container.register(flair.Class('enumerate', flair.Attribute, function() {
             this.decorator((obj, type, name, descriptor) => {
                 // validate
-                if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `enumerate attribute cannot be applied on special function. (${className}.${name})`; }
+                if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `enumerate attribute cannot be applied on special function.`; }
         
                 // decorate
                 let flag = this.args[0];
@@ -1872,13 +1883,14 @@
         flair.Container.register(flair.Class('inject', flair.Attribute, function() {
             this.decorator((obj, type, name, descriptor) => {
                 // validate
-                if (['func', 'prop'].indexOf(type) === -1) { throw `inject attribute cannot be applied on ${type} members. (${className}.${name})`; }
-                if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `inject attribute cannot be applied on special function. (${className}.${name})`; }
+                if (['func', 'prop'].indexOf(type) === -1) { throw `inject attribute cannot be applied on ${type} members.`; }
+                if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `inject attribute cannot be applied on special function.`; }
         
                 // decorate
                 let Type = this.args[0],
                     typeArgs = this.args[1],
-                    instance = null;
+                    instance = null,
+                    fn = null;
                 if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
                 if (typeof Type === 'string') { 
                     // get contextual type
@@ -1891,7 +1903,7 @@
                 }
                 switch(type) {
                     case 'func':
-                        let fn = descriptor.value;
+                        fn = descriptor.value;
                         descriptor.value = function(...args) {
                             fn(instance, ...args);
                         }.bind(obj);
@@ -1913,13 +1925,14 @@
         flair.Container.register(flair.Class('multiinject', flair.Attribute, function() {
             this.decorator((obj, type, name, descriptor) => {
                 // validate
-                if (['func', 'prop'].indexOf(type) === -1) { throw `multiinject attribute cannot be applied on ${type} members. (${className}.${name})`; }
-                if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `multiinject attribute cannot be applied on special function. (${className}.${name})`; }
+                if (['func', 'prop'].indexOf(type) === -1) { throw `multiinject attribute cannot be applied on ${type} members.`; }
+                if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `multiinject attribute cannot be applied on special function.`; }
         
                 // decorate
                 let Type = this.args[0],
                     typeArgs = this.args[1],
-                    instance = null;
+                    instance = null,
+                    fn = null;
                 if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
                 if (typeof Type === 'string') {
                     // get contextual type
@@ -1928,11 +1941,11 @@
                     // get instance
                     instance = flair.Container.resolve(Type, true, ...typeArgs)
                 } else {
-                    throw `multiinject attribute does not support direct type injections. (${className}.${name})`;
+                    throw `multiinject attribute does not support direct type injections.`;
                 }
                 switch(type) {
                     case 'func':
-                        let fn = descriptor.value;
+                        fn = descriptor.value;
                         descriptor.value = function(...args) {
                             fn(instance, ...args);
                         }.bind(obj);
@@ -1984,8 +1997,8 @@
                 ns = '',
                 cls = '',
                 fnc = '',
-                attr = '~',
-                bucket = '';
+                attr = '~',     
+                bucket = '';    
             if (nm.indexOf('/') !== -1) {
                 let items = nm.split('/');
                 nm = items[0].trim();
@@ -2032,25 +2045,13 @@
             // add bucket if not already there
             allAspects[bucket] = allAspects[bucket] || [];
             allAspects[bucket].push(Aspect);
-        
-            // allAspects[ns] = allAspects[ns] || {};
-            // allAspects[ns][cls] = allAspects[ns][cls] || {};
-            // allAspects[ns][cls][fnc] = allAspects[ns][cls][fnc] || {};
-            // allAspects[ns][cls][fnc] = allAspects[ns][cls][fnc] || {};
-            // allAspects[ns][cls][fnc][attr] = allAspects[ns][cls][fnc][attr] || {};
-            // allAspects[ns][cls][fnc][attr].list = allAspects[ns][cls][fnc][attr].list || [];
-        
-            // // store
-            // allAspects[ns][cls][fnc][attr].list.push(Aspect);
         };
         flair.Aspects.get = (className, funcName, attrs) => {
             // get parts
             let funcAspects = [],
                 ns = '',
                 cls = '',
-                fnc = funcName.trim(),
-                attr = '~',
-                bucket = '';
+                fnc = funcName.trim();
         
             if (className.indexOf('.') !== -1) {
                 ns = className.substr(0, className.lastIndexOf('.')).trim();
@@ -2132,14 +2133,14 @@
         // Serializer
         flair.Serializer = {};
         flair.Serializer.serialize = (instance) => { 
-            if (instance._.type = 'instance') {
+            if (instance._.type === 'instance') {
                 return instance._.serialize(); 
             }
             return null;
         };
         flair.Serializer.deserialize = (Type, json) => {
             let instance = new Type();
-            if (instance._.type = 'instance') {
+            if (instance._.type === 'instance') {
                 instance._.deserialize(json);
                 return instance;
             }
@@ -2197,6 +2198,7 @@
             };
             const CommonInstanceMemberReflector = function(type, target, name, ref) {
                 let refl = new CommonMemberReflector(type, target, name);
+                refl.getRef = () => { return ref; };
                 refl.getAttributes = () => {
                     let items = [],
                         attrs = [];
@@ -2230,7 +2232,7 @@
                     let attrInfo = null;
                     for (let item of target._.instanceOf) {
                         if (item.meta[name]) {
-                            attrs = item.meta[name];
+                            let attrs = item.meta[name];
                             for(let attr of attrs) {
                                 if (attr.name === attrName) {
                                     attrInfo = new AttrReflector(attr.Attr, attr.name, attr.args, target);
@@ -2351,10 +2353,10 @@
                             }
                         }
                         return filtered;
-                    }
+                    },
                     getMembers = (oneMember) => {
                         let members = [],
-                            attrs = [],
+                            attrs = [], // eslint-disable-line no-unused-vars
                             lastMember = null,
                             member = null;
                         for(let instance of target._.instanceOf) {
@@ -2411,6 +2413,7 @@
                 refl.getFamily = () => {
                     let items = [],
                         prv = target._.inherits;
+                    // eslint-disable-next-line no-constant-condition
                     while(true) {
                         if (prv === null) { break; }
                         items.push(new ClassReflector(prv));
@@ -2457,8 +2460,8 @@
                     return null;
                 };
                 refl.getMembers = () => { 
-                    let keys = Object.keys(target);
-                    _At = keys.indexOf('_');
+                    let keys = Object.keys(target),
+                        _At = keys.indexOf('_');
                     if (_At !== -1) {
                         keys.splice(_At, 1);
                     }
@@ -2480,6 +2483,7 @@
                 refl.getFamily = () => {
                     let items = [],
                         prv = target._.inherits;
+                    // eslint-disable-next-line no-constant-condition    
                     while(true) {
                         if (prv === null) { break; }
                         items.push(new ClassReflector(prv));
@@ -2544,7 +2548,7 @@
                     let types = target.getTypes(),
                         members = [];
                     if (types) {
-                        for(type of types) {
+                        for(let type of types) {
                             switch(type._.type) {
                                 case 'class': members.push(new ClassReflector(type)); break;
                                 case 'enum': members.push(new EnumReflector(type)); break;

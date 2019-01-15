@@ -5,7 +5,9 @@
  * <copyright>
  * <license>
  */
-(function() {
+
+// eslint-disable-next-line for-direction
+(function() { // eslint-disable-line getter-return
     // the definition
     const def = (opts = null) => {
         let isServer = (new Function("try {return this===global;}catch(e){return false;}"))(),
@@ -17,7 +19,7 @@
         }
         let flair = {},
             noop = () => {},
-            sym = (opts.symbols || []),
+            sym = (opts.symbols || []), // eslint-disable-next-line no-unused-vars
             noopAsync = (resolve, reject) => { resolve(); },
             options = Object.freeze({
                 symbols: Object.freeze(sym),
