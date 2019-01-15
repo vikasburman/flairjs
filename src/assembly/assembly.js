@@ -2,9 +2,10 @@
 let asmFiles = {},
     asmTypes = {};
 flair.Assembly = (ado) => {
-    if (typeof asm !== 'object' || Array.isArray(asm.types)) { continue; }
-    let asmFile = flair.which(asm.file, true),
-        isLoaded = false;
+    if (typeof ado !== 'object' || Array.isArray(ado.types) || Array.isArray(ado.assets)) {
+        throw `Not an assembly definition object.`;
+     }
+    let asmFile = flair.which(ado.file, true);
 
     let _asm = {
         name: () => { return ado.name; },
@@ -15,13 +16,13 @@ flair.Assembly = (ado) => {
         license: () => { return ado.license; },
         isLoaded: () => { return _asm._.isLoaded; },
         types: () => { return ado.types.slice(); },
-        assets: () => { return ado.assets.slice(); }
-        hasAssets: () => { return ado.assets.length > 0; }
+        assets: () => { return ado.assets.slice(); },
+        hasAssets: () => { return ado.assets.length > 0; },
         load: () => { return flair.Assembly.load(asmFile); }
-    });
+    };
 
     _asm._ = {
-        name: asm.name,
+        name: ado.name,
         type: 'assembly',
         namespace: null,
         ado: Object.freeze(ado),
