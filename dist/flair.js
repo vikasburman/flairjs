@@ -71,7 +71,7 @@
             version: '0.15.8',
             copyright: '(c) 2017-2019 Vikas Burman',
             license: 'MIT',
-            lupdate: new Date('Tue, 15 Jan 2019 23:52:52 GMT')
+            lupdate: new Date('Tue, 15 Jan 2019 23:53:59 GMT')
         });
         flair.options = options;
 
