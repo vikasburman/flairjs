@@ -19,7 +19,7 @@ flair.Resource = (resName, resFile, data) => {
     
     let resData = data; // data is base64 encoded string, added by build engine
     let resType = resFile.substr(resFile.lastIndexOf('.') + 1).toLowerCase(),
-        textTypes = ['txt', 'xml', 'js', 'json', 'css', 'html'];
+        textTypes = ['txt', 'xml', 'js', 'json', 'md', 'css', 'html'];
     
     // decode
     if (textTypes.indexOf(resType) !== -1) { // text
@@ -37,15 +37,14 @@ flair.Resource = (resName, resFile, data) => {
         }        
     }
 
-    let isLoaded = false;
     let _res = {
         file: () => { return resFile; },
         type: () => { return resType; },
         get: () => { return resData; },
         load: (...args) => {
             if (flair.options.env.isClient) {
-                if (!isLoaded) {
-                    isLoaded = true;
+                if (!_res._.isLoaded) {
+                    _res._.isLoaded = true;
                     if (['gif', 'jpeg', 'jpg', 'png'].indexOf(resType) !== -1) { // image types
                         // args:    node
                         let node = args[0];
@@ -53,7 +52,7 @@ flair.Resource = (resName, resFile, data) => {
                             let image = new Image();
                             image.src = 'data:image/png;base64,' + data; // use base64 version itself
                             node.appendChild(image);
-                            isLoaded = true;
+                            _res._.isLoaded = true;
                         }
                     } else { // css, js, html or others
                         let css, js, node, position = null;
@@ -72,7 +71,7 @@ flair.Resource = (resName, resFile, data) => {
                                 js.src = resData;
                                 if (typeof cb === 'function') {
                                     js.onload = args[0]; // callback
-                                    js.onerror = () => { isLoaded = false; }
+                                    js.onerror = () => { _res._.isLoaded = false; }
                                 }
                                 flair.options.env.global.document.head.appendChild(js);
                                 break;           
@@ -96,7 +95,7 @@ flair.Resource = (resName, resFile, data) => {
                     }
                 }
             }
-            return isLoaded;
+            return _res._.isLoaded;
         }
     };
     _res._ = {
@@ -104,6 +103,7 @@ flair.Resource = (resName, resFile, data) => {
         type: 'resource',
         namespace: null,
         file: resFile,
+        isLoaded: false,
         data: () => { return resData; }
     };
 

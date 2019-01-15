@@ -158,8 +158,8 @@ flair.bring = (members, scopeFn) => {
             let option3 = (done) => {
                 let asm = flair.Assembly.get(_member);
                 if (asm) { // if type exists in an assembly
-                    if (!flair.Assembly.isLoaded(asm)) {
-                        flair.Assembly.load(asm).then(() => {
+                    if (!asm.isLoaded()) {
+                        asm.load().then(() => {
                             _resolved = flair.Namespace.getType(_member);
                             done();
                         }).catch((e) => {

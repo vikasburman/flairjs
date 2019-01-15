@@ -1,66 +1,94 @@
 // Assembly
 let asmFiles = {},
     asmTypes = {};
-flair.Assembly = () => {};
+flair.Assembly = (ado) => {
+    if (typeof asm !== 'object' || Array.isArray(asm.types)) { continue; }
+    let asmFile = flair.which(asm.file, true),
+        isLoaded = false;
+
+    let _asm = {
+        name: () => { return ado.name; },
+        file: () => { return asmFile; },
+        desc: () => { return ado.desc; },
+        version: () => { return ado.version; },
+        copyright: () => { return ado.copyright; },
+        license: () => { return ado.license; },
+        isLoaded: () => { return _asm._.isLoaded; },
+        types: () => { return ado.types.slice(); },
+        assets: () => { return ado.assets.slice(); }
+        hasAssets: () => { return ado.assets.length > 0; }
+        load: () => { return flair.Assembly.load(asmFile); }
+    });
+
+    _asm._ = {
+        name: asm.name,
+        type: 'assembly',
+        namespace: null,
+        ado: Object.freeze(ado),
+        isLoaded: false,
+        markLoaded: () => { _asm._.isLoaded = true; }
+    };
+
+    // register type with namespace
+    flair.Namespace(_asm);
+
+    // return
+    return Object.freeze(_asm);
+};
 flair.Assembly.register = (...ados) => { 
     // each ADO is an Assembly Definition Object with following structure:
     // {
     //      "name": "", 
     //      "file": "",
-    //      "assets": "",
     //      "desc": "",
     //      "version": "",
     //      "copyright": "",
     //      "license": "",
-    //      "types": ["", "", ...]
+    //      "types": ["", "", ...],
+    //      "assets": ["", "", ...]
     // }
 
-    for(let asm of ados) {
-        if (typeof asm !== 'object' || Array.isArray(asm.type)) { continue; }
-
-        // load assembly
-        let asmFile = flair.which(asm.file, true);
-        if (asmFiles[asmFile]) {
-            throw `Assembly ${asmFile} already registered.`;
-        } else {
-            asmFiles[asmFile] = {
-                ado: asm,
-                status: 'not-loaded' // by default file is not loaded as yet
-            };
-        }
-
-        // load types
-        for(let type of asm.types) {
-            // qualified names across anywhere should be unique
-            if (asmTypes[type]) {
-                throw `Type ${type} already registered.`;
+    for(let ado of ados) {
+        let asm = flair.Assembly(ado);
+        if (asm) {
+            let asmFile = asm.file();
+            if (asmFiles[asmFile]) {
+                throw `Assembly ${asmFile} already registered.`;
             } else {
-                asmTypes[type] = asmFile; // means this type can be loaded from this assembly file
+                // register
+                asmFiles[asmFile] = asm;
+
+                // load types
+                for(let type of asm.types()) {
+                    // qualified names across anywhere should be unique
+                    if (asmTypes[type]) {
+                        throw `Type ${type} defined in assembly ${asm.name} is already registered.`;
+                    } else {
+                        asmTypes[type] = asm; // means this type can be loaded from this assembly
+                    }
+                }
             }
         }
     }
 };
-flair.Assembly.isRegistered = (file) => {
-    return typeof asmFiles[file] !== 'undefined';
-}
 flair.Assembly.load = (file) => {
     if (flair.Assembly.isRegistered(file)) {
         return new Promise((resolve, reject) => {
-            if (asmFiles[file] === 'loaded') {
+            if (asmFiles[file].isLoaded()) {
                 resolve();
             } else {
                 if (isServer) {
                     try {
                         require(file);
-                        asmFiles[file].status = 'loaded';
+                        asmFiles[file]._.markLoaded();
                         resolve();
                     } catch (e) {
                         reject(e);
                     }
                 } else {
-                    const script = document.createElement('script');
+                    const script = flair.options.env.global.document.createElement('script');
                     script.onload = () => {
-                        asmFiles[file].status = 'loaded';
+                        asmFiles[file]._.markLoaded();
                         resolve();
                     };
                     script.onerror = (e) => {
@@ -68,7 +96,7 @@ flair.Assembly.load = (file) => {
                     };
                     script.async = true;
                     script.src = file;
-                    document.body.appendChild(script);
+                    flair.options.env.global.document.body.appendChild(script);
                 }
             }
           });
@@ -76,9 +104,12 @@ flair.Assembly.load = (file) => {
         throw `Assembly ${file} must be registered first.`;
     }
 };
-flair.Assembly.isLoaded = (file) => {
-    return typeof asmFiles[file] !== 'undefined' && asmFiles[file].status === 'loaded';
+flair.Assembly.isRegistered = (file) => {
+    return typeof asmFiles[file] !== 'undefined';
 };
-flair.Assembly.get = (type) => {
-    return asmTypes[type] || ''; // name of the file where this type is bundled, else ''
+flair.Assembly.isLoaded = (file) => {
+    return typeof asmFiles[file] !== 'undefined' && asmFiles[file].isLoaded();
+};
+flair.Assembly.get = (ofType) => {
+    return asmTypes[ofType] || null;
 };

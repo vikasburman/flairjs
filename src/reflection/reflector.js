@@ -10,6 +10,11 @@ flair.Reflector.get = (forTarget) => {
             if (_Namespace) { return new NamespaceReflector(_Namespace); }
             return null; 
         };
+        this.getAssembly = () => {
+            let _Assembly = flair.Assembly.get(target._.type);
+            if (_Assembly) { return new AssemblyReflector(_Assembly); }
+            return null;
+        }
         this.getTarget = () => { return target; };
         this.isInstance = () => { return target._.type === 'instance'; };
         this.isClass = () => { return target._.type === 'class'; };
@@ -17,6 +22,8 @@ flair.Reflector.get = (forTarget) => {
         this.isStructure = () => { return target._.type === 'structure'; };
         this.isStructureInstance = () => { return target._.type === 'sinstance'; };
         this.isNamespace = () => { return target._.type === 'namespace'; };
+        this.isResource = () => { return target._.type === 'resource'; };
+        this.isAssembly = () => { return target._.type === 'assembly'; };
         this.isMixin = () => { return target._.type === 'mixin'; };
         this.isInterface = () => { return target._.type === 'interface'; };
     };
@@ -409,7 +416,7 @@ flair.Reflector.get = (forTarget) => {
                 }
             }
             return members;
-        }
+        };
         refl.getMember = (qualifiedName) => {
             let Type = target.getType(qualifiedName),
                 member = null;
@@ -426,9 +433,23 @@ flair.Reflector.get = (forTarget) => {
         };
         refl.createInstance = (qualifiedName, ...args) => {
             return target.createInstance(qualifiedName, ...args);
-        }
+        };
         return refl;
     };
+    const AssemblyReflector = function(target) {
+        let refl = new CommonTypeReflector(target);
+        refl.getTypes = () => { 
+            return target.types();
+        };
+        refl.getAssets = () => { 
+            return target.assets();
+        };
+        refl.getADO = () => { return target._.ado; }
+        refl.load = () => {
+            return target.load();
+        };
+        return refl;
+    };    
     const MixinReflector = function(target) {
         let refl = new CommonTypeReflector(target);
         return refl;
@@ -464,6 +485,7 @@ flair.Reflector.get = (forTarget) => {
         case 'resource': ref = new ResourceReflector(forTarget); break;
         case 'structure': ref = new StructureReflector(forTarget); break;
         case 'namespace': ref = new NamespaceReflector(forTarget); break;
+        case 'assembly': ref = new AssemblyReflector(forTarget); break;
         case 'mixin': ref = new MixinReflector(forTarget); break;
         case 'interface': ref = new InterfaceReflector(forTarget); break;
         default:
