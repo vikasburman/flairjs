@@ -54,9 +54,9 @@ Include FlairJS in your html page or load it as a module, and initialize.
 
 When using on client side:
 ```html
-<script type="text/javascript" src="path/flairjs.min.js"></script>
+<script type="text/javascript" src="path/flair.min.js"></script>
 <script>
-   flair({ symbols: ['DEBUG'] }); // initialize
+   flair('DEBUG'); // initialize
 </script>
 ```
 
@@ -65,7 +65,7 @@ When using on client side:
 When using on server side:
 ```html
 const flair = require('flairjs');
-flair({ symbols: ['DEBUG'] }); // initialize
+flair('DEBUG'); // initialize
 ```
 
 **3. Play with Objects**

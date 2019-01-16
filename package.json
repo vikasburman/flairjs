@@ -26,7 +26,8 @@
         "build": "gulp build",
         "test": "gulp test",
         "bump": "gulp bump",
-        "release": "gulp release"
+        "release": "gulp release",
+        "publish": "npm publish"
     },
     "devDependencies": {
         "babel-eslint": "^10.0.1",
