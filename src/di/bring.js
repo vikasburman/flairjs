@@ -11,13 +11,15 @@ flair.bring = (members, scopeFn) => {
     //      if found in an Assembly, it will load Assembly and again look for it Namespace
     //      if still not found, it will resolve to null
     //  
-    //  <name>
-    //      this can be a registered alias or a node js module name (on server side) or an aliased module name (on client side)
-    //      it will first assume it to be alias name amd will try to resolve it, if not resolved,
-    //      it will be loaded using configured moduleLoaderFn
-    //      if no moduleLoaderFn is configured, it will throw an error
+    //  [<name>]
+    //      this can be a registered alias to dynamically pick configured type via DI container
     //  
-    //  <path>/<file>.js
+    //  <name>
+    //      this can be a node js module name (on server side) or a module name (on client side)
+    //      it will be loaded using configured moduleLoaderFn
+    //      if no moduleLoaderFn is configured, it will throw an error if could not be resolved using default module loader
+    //  
+    //  <path>/<file>.js|.mjs
     //      this is a bare file to load to, it will be resolved using configured module loader
     //      to handle PRODUCTION and DEBUG scenarios automatically, use <path>/<file>{.min}.js format. 
     //      it PROD symbol is available, it will use it as <path>/<file>.min.js otherwise it will
@@ -138,13 +140,16 @@ flair.bring = (members, scopeFn) => {
             
             // check if this is an alias registered on DI container
             let option1 = (done) => {
-                if (flair.Container.isRegistered(_member)) {
-                    _resolved = flair.Container.resolve(_member);
-                    if (typeof _resolved === 'string') { // this was an alias to something else, treat it as not resolved
-                        _member = _resolved; // instead continue resolving with this new redirected _member 
-                        _resolved = null;
+                if (_member.startsWith('[') && _member.endsWith(']')) {
+                    let _member2 = _member.substr(1, _member.length -2).trim(); // remove [ and ]
+                    if (flair.Container.isRegistered(_member2)) {
+                        _resolved = flair.Container.resolve(_member2);
+                        if (typeof _resolved === 'string') { // this was an alias to something else, treat it as not resolved
+                            _member = _resolved; // instead continue resolving with this new redirected _member 
+                            _resolved = null;
+                        }
+                        done();
                     }
-                    done();
                 }
             };            
 

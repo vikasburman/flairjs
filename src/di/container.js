@@ -8,7 +8,7 @@ flair.Container = {};
 //  type: actual type to register against alias OR
 //        qualifiedName of the type to resolve with OR
 //        a JS file name that needs to be resolved 
-//        When qualifiedName of a JS file is being defined, it can also be defined using contextual format
+//        When qualifiedName or a JS file is being defined, it can also be defined using contextual format
 //        <serverContent> | <clientContext>
 flair.Container.register = (alias, type) => {
     if (typeof alias === 'function') {
@@ -19,8 +19,12 @@ flair.Container.register = (alias, type) => {
         // get contextual type
         type = flair.which(type);
         
-        // get actual type
-        type = flair.Namespace.getType(type); // type is qualifiedNane here, if not found it will throw error
+        if (type.endsWith('.js') || type.endsWith('.mjs')) { // its a JS file
+            // store as is
+        } else {
+            // get actual type
+            type = flair.Namespace.getType(type); // type is qualifiedNane here, if not found it will throw error
+        }
     }
     if (!container[alias]) { container[alias] = []; }
     container[alias].push(type);
