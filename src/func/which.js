@@ -13,7 +13,7 @@ flair.which = (def, isFile) => {
             }
         }
     } else { // server/client specific decision
-        if (def.indexOf('|')) { 
+        if (def.indexOf('|') !== -1) { 
             let items = def.split('|'),
                 item = '';
             if (flair.options.env.isServer) {

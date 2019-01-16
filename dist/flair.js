@@ -1,8 +1,8 @@
 /**
  * FlairJS
  * True Object Oriented JavaScript
- * Version 0.15.10
- * Wed, 16 Jan 2019 01:54:34 GMT
+ * Version 0.15.11
+ * Wed, 16 Jan 2019 04:57:16 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  */
@@ -69,10 +69,10 @@
 
         flair._ = Object.freeze({
             name: 'FlairJS',
-            version: '0.15.10',
+            version: '0.15.11',
             copyright: '(c) 2017-2019 Vikas Burman',
             license: 'MIT',
-            lupdate: new Date('Wed, 16 Jan 2019 01:54:34 GMT')
+            lupdate: new Date('Wed, 16 Jan 2019 04:57:16 GMT')
         });
         flair.options = options;
 
@@ -129,18 +129,6 @@
             return Object.freeze(_asm);
         };
         flair.Assembly.register = (...ados) => { 
-            // each ADO is an Assembly Definition Object with following structure:
-            // {
-            //      "name": "", 
-            //      "file": "",
-            //      "desc": "",
-            //      "version": "",
-            //      "copyright": "",
-            //      "license": "",
-            //      "types": ["", "", ...],
-            //      "assets": ["", "", ...]
-            // }
-        
             for(let ado of ados) {
                 let asm = flair.Assembly(ado);
                 if (asm) {
@@ -1578,7 +1566,7 @@
                     }
                 }
             } else { // server/client specific decision
-                if (def.indexOf('|')) { 
+                if (def.indexOf('|') !== -1) { 
                     let items = def.split('|'),
                         item = '';
                     if (flair.options.env.isServer) {

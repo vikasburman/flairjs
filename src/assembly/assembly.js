@@ -37,18 +37,6 @@ flair.Assembly = (ado) => {
     return Object.freeze(_asm);
 };
 flair.Assembly.register = (...ados) => { 
-    // each ADO is an Assembly Definition Object with following structure:
-    // {
-    //      "name": "", 
-    //      "file": "",
-    //      "desc": "",
-    //      "version": "",
-    //      "copyright": "",
-    //      "license": "",
-    //      "types": ["", "", ...],
-    //      "assets": ["", "", ...]
-    // }
-
     for(let ado of ados) {
         let asm = flair.Assembly(ado);
         if (asm) {
