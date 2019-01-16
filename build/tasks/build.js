@@ -54,7 +54,13 @@ const doTask = (done) => {
     .on('error', errorHandler('rename'))
     .pipe(replace(destName + '.js', destName + '.min.js'))
     .pipe(gulp.dest('./dist'))
-    .on('end', done)
+    .on('end', () => {
+        // done, print stats
+        let stat = fs.statSync('./dist/' + destName + '.js'),
+            stat_min = fs.statSync('./dist/' + destName + '.min.js');
+        console.log('==> ' + destName + '.js (' + Math.round(stat.size / 1024) + 'kb, ' + Math.round(stat_min.size / 1024) + 'kb minified)\n');
+        done();
+    })
     .on('error', errorHandler('write-minified'));
 };
 exports.build = function(cb) {

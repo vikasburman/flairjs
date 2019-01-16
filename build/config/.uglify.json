@@ -1,11 +1,22 @@
 {
     "js": {
-        "mangle": false,
+        "mangle": true,
         "preserveComments": "license",
         "output": {
         },
         "compress": {
-            "dead_code": true,
+            "sequences": true,
+            "properties": true,
+            "conditionals": true,
+            "comparisons": true,
+            "booleans": true,
+            "loops": false,
+            "unused": false,
+            "if_return": true,
+            "join_vars": true,
+            "dead_code": false,
+            "warnings": true,
+            "negate_iife": true,
             "drop_debugger": true,
             "global_defs": {
                 "global": true,
