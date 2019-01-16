@@ -1,5 +1,4 @@
 const gulp = require('gulp');
-const gulpConfig = require('../config/.gulp.json');
 const eslint = require('gulp-eslint');
 const uglifyjs = require('uglify-js-harmony');
 const uglify = require('gulp-uglify');

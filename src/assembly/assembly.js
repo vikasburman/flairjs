@@ -16,6 +16,7 @@ flair.Assembly = (ado) => {
         license: () => { return ado.license; },
         isLoaded: () => { return _asm._.isLoaded; },
         types: () => { return ado.types.slice(); },
+        settings: () => { return Object.freeze(ado.settings); }
         assets: () => { return ado.assets.slice(); },
         hasAssets: () => { return ado.assets.length > 0; },
         load: () => { return flair.Assembly.load(asmFile); }
@@ -102,3 +103,5 @@ flair.Assembly.isLoaded = (file) => {
 flair.Assembly.get = (ofType) => {
     return asmTypes[ofType] || null;
 };
+flair.Assembly.all = () => { return Object.freeze(asmFiles); }
+flair.Assembly.allTypes = () => { return Object.freeze(asmTypes); }
