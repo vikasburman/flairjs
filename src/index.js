@@ -1,5 +1,5 @@
 /**
- * <basename>.js
+ * <title>
  * <desc>
  * Version <version>
  * <copyright>

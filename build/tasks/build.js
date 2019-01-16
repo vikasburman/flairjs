@@ -11,7 +11,7 @@ const replace = require('gulp-string-replace');
 const fs = require('fs');
 const packageJSON = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
 const errorHandler = require('../utils.js').errorHandler;
-const destName = packageJSON.name;
+const destName = 'flair';
 
 // do
 const doTask = (done) => {
