@@ -76,7 +76,7 @@
         });
         flair.options = options;
 
-        <!-- inject: ./types/exception.js -->
+        <!-- inject: ./misc/exception.js -->
 
         <!-- inject: ./assembly/assembly.js -->
         <!-- inject: ./assembly/namespace.js -->

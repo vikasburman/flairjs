@@ -4,11 +4,15 @@ API Reference
 Types
 ------
 
+Assembly |
 [Class](#/api/types/class) |
 Enum |
 Interface |
 Mixin |
+Namespace |
+Resource |
 Structure
+
 
 Members
 -------
@@ -33,7 +37,9 @@ isImplements |
 isInstanceOf |
 isMixed |
 type |
-using
+using |
+which
+
 
 Classes
 -------
@@ -41,13 +47,14 @@ Classes
 Aspect |
 [Attribute](#/api/classes/attribute)
 
+
 Objects
 -------
 
 Aspects |
 Container |
+Exception |
 flair |
-Namespace |
 [Reflector](#/api/objects/reflector) |
 Serializer
 
