@@ -1,0 +1,10 @@
+build
+docs
+examples
+specs
+src
+node_modules
+gulpfile.js
+yarn.lock
+.yarnclean
+.gitignore
