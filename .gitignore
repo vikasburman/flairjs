@@ -1,6 +1,5 @@
 node_modules/
 package/
-npm-package/
 docs2/
 yarn.lock
 .yarnclean
