@@ -1,5 +1,5 @@
 node_modules/
 package/
+docs2/
 yarn.lock
 .yarnclean
-docs2
