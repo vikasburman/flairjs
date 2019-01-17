@@ -28,7 +28,7 @@
         "bump": "gulp bump",
         "release": "gulp release",
         "package": "gulp package",
-        "start": "open ./example/index.html"
+        "start": "http-server ./example/ | open http://127.0.0.1:8080"
     },
     "devDependencies": {
         "babel-eslint": "^10.0.1",
@@ -44,11 +44,12 @@
         "gulp-string-replace": "^1.1.2",
         "gulp-uglify": "^2.1.2",
         "jasmine": "^2.6.0",
-        "open": "^0.0.5",
         "recursive-readdir-sync": "^1.0.6",
         "uglify-js-harmony": "^2.7.7",
         "uuid": "^3.3.2"
     },
     "dependencies": {
+        "http-server": "^0.11.1",
+        "open": "^0.0.5"
     }
 }

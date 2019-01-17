@@ -97,6 +97,7 @@
         link: '<link>',
         lupdate: new Date('<datetime>')
     });
+    flair.info = flair._;
     flair.options = options;
 
     <!-- inject: ./misc/exception.js -->

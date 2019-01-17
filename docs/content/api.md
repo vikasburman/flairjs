@@ -18,12 +18,11 @@ Structure
 Members
 -------
 
-Constructor |
-Destructor |
-Event |
-Function |
-Key |
-Property
+construct |
+destruct |
+event |
+func |
+prop
 
 
 Functions
@@ -37,7 +36,6 @@ isDerivedFrom |
 isImplements |
 isInstanceOf |
 isMixed |
-type |
 using |
 which
 

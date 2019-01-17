@@ -6,10 +6,163 @@
         <link href="./just-for-example-ui/bootstrap.min.css" rel="stylesheet">
     </head>
     <body>
-        <div id="view"></div>
+        <div id="main">
+            <div class="container-fluid">
+                <nav class="navbar fixed-top navbar-expand-lg navbar-light bg-light">
+                    <a class="navbar-brand" :href="flair.info.link" target="_blank">
+                            <img src="./favicon.ico" width="30" height="30" class="d-inline-block align-top" alt="">
+                            KitchenSink
+                    </a>
+                    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav">
+                            <li class="nav-item active">
+                            <a class="nav-link" href="#home">Home</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                Types
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                                <a class="dropdown-item" href="#assembly">Assembly</a>
+                                <a class="dropdown-item" href="#class">Class</a>
+                                <a class="dropdown-item" href="#enum">Enum</a>
+                                <a class="dropdown-item" href="#interface">Interface</a>
+                                <a class="dropdown-item" href="#mixin">Mixin</a>
+                                <a class="dropdown-item" href="#namespace">Namespace</a>
+                                <a class="dropdown-item" href="#proc">Proc</a>
+                                <a class="dropdown-item" href="#resource">Resource</a>
+                                <a class="dropdown-item" href="#structure">Structure</a>
+                            </div>
+                            </li>
+                            <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                Members
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                                <a class="dropdown-item" href="#constructor">construct</a>
+                                <a class="dropdown-item" href="#destructor">destruct</a>
+                                <a class="dropdown-item" href="#event">event</a>
+                                <a class="dropdown-item" href="#function">func</a>
+                                <a class="dropdown-item" href="#property">prop</a>
+                            </div>
+                            </li>
+                            <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                Functions
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                                <a class="dropdown-item" href="#as">as</a>
+                                <a class="dropdown-item" href="#bring">bring</a>
+                                <a class="dropdown-item" href="#classOf">classOf</a>
+                                <a class="dropdown-item" href="#is">is</a>
+                                <a class="dropdown-item" href="#isderivedfrom">isDerivedFrom</a>
+                                <a class="dropdown-item" href="#isimplements">isImplements</a>
+                                <a class="dropdown-item" href="#isinstanceof">isInstanceOf</a>
+                                <a class="dropdown-item" href="#ismixed">isMixed</a>
+                                <a class="dropdown-item" href="#using">using</a>
+                                <a class="dropdown-item" href="#which">which</a>
+                            </div>
+                            </li>
+                            <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                Classes
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                                <a class="dropdown-item" href="#aspect">Aspect</a>
+                                <a class="dropdown-item" href="#attribute">Attribute</a>
+                            </div>
+                            </li>
+                            <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                Objects
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                                <a class="dropdown-item" href="#aspect">Aspects</a>
+                                <a class="dropdown-item" href="#attribute">Container</a>
+                                <a class="dropdown-item" href="#attribute">Exception</a>
+                                <a class="dropdown-item" href="#attribute">flair</a>
+                                <a class="dropdown-item" href="#attribute">Reflector</a>
+                                <a class="dropdown-item" href="#attribute">Serializer</a>
+                            </div>
+                            </li>                            
+                            <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                Attributes
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                                <a class="dropdown-item" href="#abstract">abstract</a>
+                                <a class="dropdown-item" href="#async">async</a>
+                                <a class="dropdown-item" href="#conditional">conditional</a>
+                                <a class="dropdown-item" href="#deprecate">deprecate</a>
+                                <a class="dropdown-item" href="#enumerate">enumerate</a>
+                                <a class="dropdown-item" href="#hide">hide</a>
+                                <a class="dropdown-item" href="#inject">inject</a>
+                                <a class="dropdown-item" href="#mixed">mixed</a>
+                                <a class="dropdown-item" href="#override">override</a>
+                                <a class="dropdown-item" href="#private">private</a>
+                                <a class="dropdown-item" href="#protected">protected</a>
+                                <a class="dropdown-item" href="#readonly">readonly</a>
+                                <a class="dropdown-item" href="#sealed">sealed</a>
+                                <a class="dropdown-item" href="#serialize">serialize</a>
+                                <a class="dropdown-item" href="#session">session</a>
+                                <a class="dropdown-item" href="#singleton">singleton</a>
+                                <a class="dropdown-item" href="#state">state</a>
+                                <a class="dropdown-item" href="#static">static</a>
+                                <a class="dropdown-item" href="#once">once</a>
+                            </div>
+                            </li>
+                        </ul>
+                    </div>             
+                </nav>
+                <div id="view" style="margin-top: 65px;">
+                </div>
+                <nav class="navbar fixed-bottom navbar-expand-lg navbar-light bg-light">
+                    <span class="navbar-brand">
+                        <small><small>{{ flair.info.name }} <small>v{{ flair.info.version }} (edge)</small></small></small>
+                    </span>
+                </nav>
+            </div>        
+        </div>
+
         <script src="./just-for-example-ui/jquery.min.js"></script>
         <script src="./just-for-example-ui/bootstrap.min.js"></script>
+        <script src="./just-for-example-ui/vue.min.js"></script>
         <script src="./flair.js"></script>
         <script src="./index.js"></script>
+        <script>
+            // view loader
+            var loadView = () => {
+                let view = 'home';
+                if (location.href.indexOf('#') !== -1) {
+                    view = location.href.substr(location.href.indexOf('#')+1);
+                }
+                $.get({
+                    url: './views/' + view + '/index.html', 
+                    cache: false
+                }).then((data) => {
+                    $('#view').html(data);
+                }).fail(() => {
+                    $('#view').html('Error 404: View ' + view + ' not found.');
+                }).always(() => {
+                    window.vue = new Vue({
+                        el: '#main'
+                    });
+                });
+            };
+
+            // on start
+            $(()=> {
+                // load view at start
+                loadView();
+
+                $(window).on('hashchange',function(){ 
+                    // load view at hash change
+                    loadView();
+                });
+            });
+        </script>
     </body>
 </html>

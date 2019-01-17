@@ -2,7 +2,7 @@
  * FlairJS
  * True Object Oriented JavaScript
  * Version 0.15.27
- * Thu, 17 Jan 2019 16:36:45 GMT
+ * Thu, 17 Jan 2019 18:32:02 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  * https://flairjs.com
@@ -95,8 +95,9 @@
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
         link: 'https://flairjs.com',
-        lupdate: new Date('Thu, 17 Jan 2019 16:36:45 GMT')
+        lupdate: new Date('Thu, 17 Jan 2019 18:32:02 GMT')
     });
+    flair.info = flair._;
     flair.options = options;
 
     // Exception
