@@ -1,5 +1,5 @@
-node_modules
-package
+node_modules/
+package/
 yarn.lock
 .yarnclean
 docs2
