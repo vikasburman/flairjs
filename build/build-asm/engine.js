@@ -13,7 +13,6 @@ const CLIEngine = new require("eslint").CLIEngine
 const uglifyjs = require('uglify-js-harmony');
 const uuid = require('uuid/v1');
 const req = require('request');
-const copyDir = require('copy-dir');
 
 let uglifyConfig, 
     eslintConfig,
