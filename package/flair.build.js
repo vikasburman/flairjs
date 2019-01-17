@@ -10,10 +10,14 @@ const path = require('path');
 const fsx = require('fs-extra');
 const del = require('del');
 const CLIEngine = new require("eslint").CLIEngine
-const eslint = new CLIEngine(eslintConfig);
-const eslintFormatter = eslint.getFormatter();
 const uglifyjs = require('uglify-js-harmony');
 const uuid = require('uuid/v1');
+
+let uglifyConfig, 
+    eslintConfig,
+    packageJSON, 
+    eslint, 
+    eslintFormatter = null;
 
 // arguments reader
 let readArgs = function() {
@@ -527,6 +531,12 @@ const doTask = (srcList, srcRoot, distRoot, done) => {
    }
 };
 module.exports = function(options, cb) {
+    // single param
+    if (typeof options === 'function') {
+        cb = options;
+        options = {}
+    }
+    
     // build options
     options = options || {};
     options.src = options.src || './src';
@@ -541,6 +551,10 @@ module.exports = function(options, cb) {
     uglifyConfig = require(options.uglifyConfig);
     eslintConfig = require(options.eslintConfig);
     packageJSON = require(options.packageJSON);
+
+    // get engines
+    eslint = new CLIEngine(eslintConfig);
+    eslintFormatter = eslint.getFormatter();
 
     // build source list
     let srcList = [];

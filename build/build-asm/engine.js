@@ -10,10 +10,14 @@ const path = require('path');
 const fsx = require('fs-extra');
 const del = require('del');
 const CLIEngine = new require("eslint").CLIEngine
-const eslint = new CLIEngine(eslintConfig);
-const eslintFormatter = eslint.getFormatter();
 const uglifyjs = require('uglify-js-harmony');
 const uuid = require('uuid/v1');
+
+let uglifyConfig, 
+    eslintConfig,
+    packageJSON, 
+    eslint, 
+    eslintFormatter = null;
 
 // arguments reader
 let readArgs = function() {
@@ -61,7 +65,7 @@ let delAll = (root) => {
 };
 
 // do
-const doTask = (srcList, srcRoot, distRoot, done) => {
+const doTask = (srcList, srcRoot, destRoot, done) => {
     // srcList is an array of source paths that need to be processed for assembly building
     // injections data
     let injections = [];
@@ -510,14 +514,14 @@ const doTask = (srcList, srcRoot, distRoot, done) => {
         fsx.writeFileSync(dest + '/ados.json', JSON.stringify(adosJSON));
     };
 
-    // delete all dist files
-    delAll(distRoot);
+    // delete all dest files
+    delAll(destRoot);
 
     // process each source folder
     let _src, _dest = '';
     for(let item of srcList) {
         _src = item;
-        _dest = item.replace(srcRoot, distRoot);
+        _dest = item.replace(srcRoot, destRoot);
         process(_src, _dest);
     }
 
@@ -527,10 +531,16 @@ const doTask = (srcList, srcRoot, distRoot, done) => {
    }
 };
 module.exports = function(options, cb) {
+    // single param
+    if (typeof options === 'function') {
+        cb = options;
+        options = {}
+    }
+    
     // build options
     options = options || {};
     options.src = options.src || './src';
-    options.dist = options.dist || './dist';
+    options.dest = options.dest || './dist';
     options.processAsGroups = options.processAsGroups || false; // if true, it will treat first level folders under src as groups and will process each folder as group, otherwise it will treat all folders under src as individual assemblies
     options.uglifyConfig = options.uglifyConfig || './build/config/.uglify.json';
     options.eslintConfig = options.eslintConfig || './build/config/.eslint.json';
@@ -542,6 +552,10 @@ module.exports = function(options, cb) {
     eslintConfig = require(options.eslintConfig);
     packageJSON = require(options.packageJSON);
 
+    // get engines
+    eslint = new CLIEngine(eslintConfig);
+    eslintFormatter = eslint.getFormatter();
+
     // build source list
     let srcList = [];
     if (options.processAsGroups) {
@@ -551,6 +565,6 @@ module.exports = function(options, cb) {
     }
 
     // build
-    doTask(srcList, options.src, options.dist, cb);
+    doTask(srcList, options.src, options.dest, cb);
 };
  

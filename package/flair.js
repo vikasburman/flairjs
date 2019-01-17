@@ -1,8 +1,8 @@
 /**
  * FlairJS
  * True Object Oriented JavaScript
- * Version 0.15.16
- * Thu, 17 Jan 2019 00:10:01 GMT
+ * Version 0.15.17
+ * Thu, 17 Jan 2019 00:40:17 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  */
@@ -69,10 +69,10 @@
 
         flair._ = Object.freeze({
             name: 'FlairJS',
-            version: '0.15.16',
+            version: '0.15.17',
             copyright: '(c) 2017-2019 Vikas Burman',
             license: 'MIT',
-            lupdate: new Date('Thu, 17 Jan 2019 00:10:01 GMT')
+            lupdate: new Date('Thu, 17 Jan 2019 00:40:17 GMT')
         });
         flair.options = options;
 

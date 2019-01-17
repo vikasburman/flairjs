@@ -1,5 +1,5 @@
-const fs = require('fs');
-const packageJSON = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+const fsx = require('fs-extra');
+const packageJSON = JSON.parse(fsx.readFileSync('./package.json', 'utf8'));
 
 // do
 const doTask = (done) => {
@@ -22,7 +22,7 @@ const doTask = (done) => {
     let newVer = ver[0].toString() + '.' + ver[1].toString() + '.' + ver[2].toString();
     console.log('Bumped: ' + packageJSON.version + ' -> ' + newVer);
     packageJSON.version = newVer;
-    fs.writeFileSync('./package.json', JSON.stringify(packageJSON, null, 4), 'utf8');
+    fsx.writeFileSync('./package.json', JSON.stringify(packageJSON, null, 4), 'utf8');
 
     // done
     done();
