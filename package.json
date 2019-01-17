@@ -28,7 +28,7 @@
         "bump": "gulp bump",
         "release": "gulp release",
         "package": "gulp package",
-        "start": "http-server ./example/ | open http://127.0.0.1:8080"
+        "start": "http-server ./docs/example/ | open http://127.0.0.1:8080"
     },
     "devDependencies": {
         "babel-eslint": "^10.0.1",
