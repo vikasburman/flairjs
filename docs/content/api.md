@@ -10,6 +10,7 @@ Enum |
 Interface |
 Mixin |
 Namespace |
+Proc |
 Resource |
 Structure
 

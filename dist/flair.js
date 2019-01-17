@@ -1,8 +1,8 @@
 /**
  * FlairJS
  * True Object Oriented JavaScript
- * Version 0.15.22
- * Thu, 17 Jan 2019 01:20:05 GMT
+ * Version 0.15.23
+ * Thu, 17 Jan 2019 01:49:20 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  */
@@ -69,10 +69,10 @@
 
         flair._ = Object.freeze({
             name: 'FlairJS',
-            version: '0.15.22',
+            version: '0.15.23',
             copyright: '(c) 2017-2019 Vikas Burman',
             license: 'MIT',
-            lupdate: new Date('Thu, 17 Jan 2019 01:20:05 GMT')
+            lupdate: new Date('Thu, 17 Jan 2019 01:49:20 GMT')
         });
         flair.options = options;
 
@@ -207,7 +207,7 @@
             // namespace.name
             
             // only valid types are allowed
-            if (['class', 'enum', 'interface', 'mixin', 'resource', 'structure'].indexOf(Type._.type) === -1) { throw `Type (${Type._.type}) cannot be placed in a namespace.`; }
+            if (['class', 'enum', 'interface', 'mixin', 'resource', 'structure', 'proc'].indexOf(Type._.type) === -1) { throw `Type (${Type._.type}) cannot be placed in a namespace.`; }
         
             // only unattached types are allowed
             if (Type._.namespace) { throw `Type (${Type._.name}) is already contained in a namespace.`; }
@@ -287,7 +287,7 @@
                 } else {
                     _Type = level[qualifiedName];
                 }
-                if (!_Type || !_Type._ || ['class', 'enum', 'interface', 'mixin', 'resource', 'structure'].indexOf(_Type._.type) === -1) { return null; }
+                if (!_Type || !_Type._ || ['class', 'enum', 'interface', 'mixin', 'resource', 'structure', 'proc'].indexOf(_Type._.type) === -1) { return null; }
                 return _Type;
             };
             let createInstance = (qualifiedName, ...args) => {
@@ -1386,6 +1386,32 @@
             throw `${enumName} is not an Enum.`;
         };
         
+        // Proc
+        // Proc(procName, fn)
+        flair.Proc = (procName, isASync, fn) => {
+            if (typeof isASync === 'function') {
+                fn = isASync;
+                isASync = false;
+            }
+            let _fn = fn;
+            _fn.isASync = () => { return isASync; };
+            _fn._ = {
+                name: procName,
+                type: 'proc',
+                namespace: null,        
+                invoke: (...args) => {
+                    fn(...args);
+                }
+            };
+        
+            // register type with namespace
+            flair.Namespace(_fn);
+        
+            // return
+            return Object.freeze(_fn);
+        };
+        
+        
         // Resource
         // Resource(resName, resFile)
         flair.Resource = (resName, resFile, data) => {
@@ -2198,6 +2224,7 @@
                 this.isInstance = () => { return target._.type === 'instance'; };
                 this.isClass = () => { return target._.type === 'class'; };
                 this.isEnum = () => { return target._.type === 'enum'; };
+                this.isProc = () => { return target._.type === 'proc'; };
                 this.isStructure = () => { return target._.type === 'structure'; };
                 this.isStructureInstance = () => { return target._.type === 'sinstance'; };
                 this.isNamespace = () => { return target._.type === 'namespace'; };
@@ -2567,6 +2594,12 @@
                 refl.getValues = () => { return target._.values(); }
                 return refl;
             };
+            const ProcReflector = function(target) {
+                let refl = new CommonTypeReflector(target);
+                refl.isASync = () => { target.isASync(); };
+                refl.invoke = (...args) => { return target._.invoke(...args); }
+                return refl;
+            };    
             const ResourceReflector = function(target) {
                 let refl = new CommonTypeReflector(target);
                 refl.getFile = () => { return target.file(); };
@@ -2661,6 +2694,7 @@
                 case 'sinstance': ref = new StructureInstanceReflector(forTarget); break;
                 case 'class': ref = new ClassReflector(forTarget); break;
                 case 'enum': ref = new EnumReflector(forTarget); break;
+                case 'proc': ref = new ProcReflector(forTarget); break;
                 case 'resource': ref = new ResourceReflector(forTarget); break;
                 case 'structure': ref = new StructureReflector(forTarget); break;
                 case 'namespace': ref = new NamespaceReflector(forTarget); break;
@@ -2684,6 +2718,7 @@
             g.Interface = Object.freeze(flair.Interface); 
             g.Structure = Object.freeze(flair.Structure);  
             g.Enum = Object.freeze(flair.Enum); 
+            g.Proc = Object.freeze(flair.Proc); 
             g.Resource = Object.freeze(flair.Resource); 
             g.Assembly = Object.freeze(flair.Assembly);
             g.Namespace = Object.freeze(flair.Namespace);

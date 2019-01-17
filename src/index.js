@@ -85,6 +85,7 @@
         <!-- inject: ./types/mixin.js -->
         <!-- inject: ./types/interface.js -->
         <!-- inject: ./types/enum.js -->
+        <!-- inject: ./types/proc.js -->
         <!-- inject: ./types/resource.js -->
         <!-- inject: ./types/structure.js -->
         
@@ -125,6 +126,7 @@
             g.Interface = Object.freeze(flair.Interface); 
             g.Structure = Object.freeze(flair.Structure);  
             g.Enum = Object.freeze(flair.Enum); 
+            g.Proc = Object.freeze(flair.Proc); 
             g.Resource = Object.freeze(flair.Resource); 
             g.Assembly = Object.freeze(flair.Assembly);
             g.Namespace = Object.freeze(flair.Namespace);

@@ -7,7 +7,7 @@ flair.Namespace = (Type) => {
     // namespace.name
     
     // only valid types are allowed
-    if (['class', 'enum', 'interface', 'mixin', 'resource', 'structure'].indexOf(Type._.type) === -1) { throw `Type (${Type._.type}) cannot be placed in a namespace.`; }
+    if (['class', 'enum', 'interface', 'mixin', 'resource', 'structure', 'proc'].indexOf(Type._.type) === -1) { throw `Type (${Type._.type}) cannot be placed in a namespace.`; }
 
     // only unattached types are allowed
     if (Type._.namespace) { throw `Type (${Type._.name}) is already contained in a namespace.`; }
@@ -87,7 +87,7 @@ flair.Namespace = (Type) => {
         } else {
             _Type = level[qualifiedName];
         }
-        if (!_Type || !_Type._ || ['class', 'enum', 'interface', 'mixin', 'resource', 'structure'].indexOf(_Type._.type) === -1) { return null; }
+        if (!_Type || !_Type._ || ['class', 'enum', 'interface', 'mixin', 'resource', 'structure', 'proc'].indexOf(_Type._.type) === -1) { return null; }
         return _Type;
     };
     let createInstance = (qualifiedName, ...args) => {
