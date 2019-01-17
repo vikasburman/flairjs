@@ -548,9 +548,9 @@ module.exports = function(options, cb) {
     options.cb = options.cb || cb;
 
     // get files
-    uglifyConfig = fsx.readFileSync(options.uglifyConfig, 'utf8');
-    eslintConfig = fsx.readFileSync(options.eslintConfig, 'utf8');
-    packageJSON = fsx.readFileSync(options.packageJSON, 'utf8');
+    uglifyConfig = JSON.parse(fsx.readFileSync(options.uglifyConfig, 'utf8'));
+    eslintConfig = JSON.parse(fsx.readFileSync(options.eslintConfig, 'utf8'));
+    packageJSON = JSON.parse(fsx.readFileSync(options.packageJSON, 'utf8'));
 
     // get engines
     eslint = new CLIEngine(eslintConfig);
