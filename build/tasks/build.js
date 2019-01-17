@@ -39,6 +39,7 @@ const doTask = (done) => {
     .pipe(replace('<version>', packageJSON.version))
     .pipe(replace('<copyright>', packageJSON.copyright))
     .pipe(replace('<license>', packageJSON.license))
+    .pipe(replace('<link>', packageJSON.link))
     .pipe(replace('<datetime>', new Date().toUTCString()))
     .pipe(gulp.dest('./dist'))
     .on('error', errorHandler('write-assembled'))
