@@ -63,6 +63,9 @@ const doTask = (done) => {
     .pipe(replace(destName + '.js', destName + '.min.js'))
     .pipe(gulp.dest('./dist'))
     .on('end', () => {
+        // update examples copy as well
+        fsx.copyFileSync('./dist/' + destName + '.js', './example/' + destName + '.js');
+
         // done, print stats
         let stat = fsx.statSync('./dist/' + destName + '.js'),
             stat_min = fsx.statSync('./dist/' + destName + '.min.js');

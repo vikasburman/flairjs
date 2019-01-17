@@ -27,7 +27,8 @@
         "test": "gulp test",
         "bump": "gulp bump",
         "release": "gulp release",
-        "package": "gulp package"
+        "package": "gulp package",
+        "start": "open ./example/index.html"
     },
     "devDependencies": {
         "babel-eslint": "^10.0.1",
@@ -43,9 +44,11 @@
         "gulp-string-replace": "^1.1.2",
         "gulp-uglify": "^2.1.2",
         "jasmine": "^2.6.0",
+        "open": "^0.0.5",
         "recursive-readdir-sync": "^1.0.6",
         "uglify-js-harmony": "^2.7.7",
         "uuid": "^3.3.2"
     },
-    "dependencies": {}
+    "dependencies": {
+    }
 }
