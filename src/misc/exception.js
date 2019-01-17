@@ -1,11 +1,11 @@
 // Exception
 // Exception(code, msg, error)
 flair.Exception = function(code, msg, error) {
-    let _ex = this;
+    let _ex = {};
     
-    this.code = code || '';
-    this.message = msg || '';
-    this.error = error || null;
+    _ex.code = code || '';
+    _ex.message = msg || '';
+    _ex.error = error || null;
 
     // return
     return Object.freeze(_ex);

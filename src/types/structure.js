@@ -1,34 +1,34 @@
 // Structure
-// Structure(structureName, factory(args) {})
-flair.Structure = (structureName, factory) => {
-    // build structure definition
-    let Structure = function(...args) {
-        let _this = this;
+// Structure(name, factory)
+//  name: name of the structure
+//  factory: factory function that take constructor arguments
+flair.Structure = (name, factory) => {
+    'use strict';
 
-        // attach instance reflector
-        _this._ = _this._ || {};
-        _this._.type = 'sinstance';
-        _this._.name = structureName;
-        _this._.inherits = Structure;
+    // args validation
+    if (typeof factory !== 'function') { throw flair.Exception('STRU01', 'Invalid structure definition type.'); }
 
-        // construct using factory
-        factory.apply(_this, ...args);
 
-        // return
-        return _this;
+    // structure type
+    let _Structure = function(...args) {
+        let _obj = {};
+
+        // construct structure using factory
+        factory.apply(_obj, ...args);
+
+        // object meta extensions
+        let mex = {
+            inherits: _Structure
+        };
+
+        // return flarized
+        return flarizedInstance('sinstance', _obj, mex);
     };
 
-    // attach structure reflector
-    Structure._ = {
-        name: structureName,
-        type: 'structure',
-        namespace: null        
-    };
-
-    // register type with namespace
-    flair.Namespace(Structure);
+    // meta extensions
+    let mex = {};
 
     // return
-    return Structure;
+    return flarized('structure', name, _Structure, mex)
 };
 

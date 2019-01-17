@@ -2,7 +2,7 @@
  * FlairJS
  * True Object Oriented JavaScript
  * Version 0.15.27
- * Thu, 17 Jan 2019 18:32:02 GMT
+ * Thu, 17 Jan 2019 23:19:04 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  * https://flairjs.com
@@ -40,6 +40,56 @@
             symbols: opts.split(',').map(item => item.trim())
         };
     }
+
+    const guid = () => {
+        return '_xxxxxxxx_xxxx_4xxx_yxxx_xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    };
+    const flarized = (type, name, obj, mex = {}) => {
+        // check
+        if (!name || typeof name !== 'string') { throw `000000: Invalid type name ${name}.`; }
+
+        // add meta information
+        let _ = mex; // whatever meta extensions are provided
+        _.name = name;
+        _.type = type;
+        _.namespace = null;
+        _.assembly = () => { return flair.Assembly.get(name) || null; };
+        _.id = guid();
+        _.__ = {}; // store any dynamic information here under this unfreezed area
+
+        // attach meta
+        obj._ = _;
+
+        // register obj with namespace
+        flair.Namespace(obj); // instances are not
+
+
+        // freeze meta
+        obj._ = Object.freeze(obj._);
+
+        // return freezed
+        return Object.freeze(obj);
+    };
+    const flarizedInstance = (type, obj, mex = {}) => {
+        // add meta information
+        let _ = mex; // whatever meta extensions are provided
+        _.type = type;
+        _.id = guid();
+        _.__ = {}; // store any dynamic information here under this unfreezed area
+
+        // attach meta
+        obj._ = _;
+
+        // freeze meta
+        obj._ = Object.freeze(obj._);
+
+        // return freezed
+        return Object.freeze(obj);
+    };    
+
     let flair = {},
         noop = () => {},
         sym = (opts.symbols || []), // eslint-disable-next-line no-unused-vars
@@ -95,7 +145,7 @@
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
         link: 'https://flairjs.com',
-        lupdate: new Date('Thu, 17 Jan 2019 18:32:02 GMT')
+        lupdate: new Date('Thu, 17 Jan 2019 23:19:04 GMT')
     });
     flair.info = flair._;
     flair.options = options;
@@ -103,11 +153,11 @@
     // Exception
     // Exception(code, msg, error)
     flair.Exception = function(code, msg, error) {
-        let _ex = this;
+        let _ex = {};
         
-        this.code = code || '';
-        this.message = msg || '';
-        this.error = error || null;
+        _ex.code = code || '';
+        _ex.message = msg || '';
+        _ex.error = error || null;
     
         // return
         return Object.freeze(_ex);
@@ -1345,67 +1395,66 @@
         return meta;
     };
     // Enum
-    // Enum(enumName, {key: value})
-    flair.Enum = (enumName, keyValuePairsOrArray) => {
-        let _enum = keyValuePairsOrArray;
-        if (Array.isArray(keyValuePairsOrArray)) {
-            let i = 0;
-            _enum = {};
-            for(let key of keyValuePairsOrArray) {
-                _enum[key] = i;
-                i++;
+    // Enum(name, data)
+    //  name: name of the enum
+    //  data: object with key/values or an array of values
+    flair.Enum = (name, data) => {
+        'use strict';
+    
+        // args validation
+        if (!(typeof data === 'object' || Array.isArray(data))) { throw flair.Exception('ENUM01', 'Invalid enum data.'); }
+    
+        // enum type
+        let _Enum = data;
+        if (Array.isArray(data)) {
+            let i = 0,
+                _Enum = {};
+            for(let value of data) {
+                _Enum[i] = value; i++;
             }
         } 
-        _enum._ = {
-            name: enumName,
-            type: 'enum',
-            namespace: null,        
+    
+        // meta extensions
+        let mex = {
             keys: () => {
-                let items = [];
-                for(let key in keyValuePairsOrArray) {
-                    if (keyValuePairsOrArray.hasOwnProperty(key) && key !== '_') {
-                        items.push(key);
+                let keys = [];
+                for(let key in _Enum) {
+                    if (_Enum.hasOwnProperty(key) && key !== '_') {
+                        keys.push(key);
                     }
                 }
-                return items;
+                return keys;
             },
             values: () => {
-                let items = [];
-                for(let key in keyValuePairsOrArray) {
-                    if (keyValuePairsOrArray.hasOwnProperty(key) && key !== '_') {
-                        items.push(keyValuePairsOrArray[key]);
+                let values = [];
+                for(let key in _Enum) {
+                    if (_Enum.hasOwnProperty(key) && key !== '_') {
+                        values.push(_Enum[key]);
                     }
                 }
-                return items;
+                return values;
             }
         };
     
-        // register type with namespace
-        flair.Namespace(_enum);
-    
         // return
-        return Object.freeze(_enum);
+        return flarized('enum', name, _Enum, mex);
     };
-    flair.Enum.getKeys = (enumObj) => {
-        if (enumObj._ && enumObj._.type === 'enum') {
-            return enumObj._.keys();
+    flair.Enum.getKeys = (obj) => {
+        try {
+            return obj._.keys();
+        } catch (e) {
+            throw flair.Exception('ENUM02', 'Object is not an Enum.', e);
         }
-        let enumName = ((enumObj._ && enumObj._.name) ? enumObj._.name : 'unknown');
-        throw `${enumName} is not an Enum.`;
     };
-    flair.Enum.getValues = (enumObj) => {
-        if (enumObj._ && enumObj._.type === 'enum') {
-            return enumObj._.values();
+    flair.Enum.getValues = (obj) => {
+        try {
+            return obj._.values();
+        } catch (e) {
+            throw flair.Exception('ENUM02', 'Object is not an Enum.', e);
         }
-        let enumName = ((enumObj._ && enumObj._.name) ? enumObj._.name : 'unknown');
-        throw `${enumName} is not an Enum.`;
     };
-    flair.Enum.isDefined = (enumObj, keyOrValue) => {
-        if (enumObj._ && enumObj._.type === 'enum') {
-            return (enumObj._.keys.indexOf(keyOrValue) !== -1 || enumObj._.values.indexOf(keyOrValue) !== -1) ? true : false;
-        }
-        let enumName = ((enumObj._ && enumObj._.name) ? enumObj._.name : 'unknown');
-        throw `${enumName} is not an Enum.`;
+    flair.Enum.isDefined = (obj, keyOrValue) => {
+        return (flair.Enum.getKeys().indexOf(keyOrValue) !== -1 || flair.Enum.getValues().indexOf(keyOrValue) !== -1);
     };
     
     // Proc
@@ -1568,37 +1617,37 @@
     };
     
     // Structure
-    // Structure(structureName, factory(args) {})
-    flair.Structure = (structureName, factory) => {
-        // build structure definition
-        let Structure = function(...args) {
-            let _this = this;
+    // Structure(name, factory)
+    //  name: name of the structure
+    //  factory: factory function that take constructor arguments
+    flair.Structure = (name, factory) => {
+        'use strict';
     
-            // attach instance reflector
-            _this._ = _this._ || {};
-            _this._.type = 'sinstance';
-            _this._.name = structureName;
-            _this._.inherits = Structure;
+        // args validation
+        if (typeof factory !== 'function') { throw flair.Exception('STRU01', 'Invalid structure definition type.'); }
     
-            // construct using factory
-            factory.apply(_this, ...args);
     
-            // return
-            return _this;
+        // structure type
+        let _Structure = function(...args) {
+            let _obj = {};
+    
+            // construct structure using factory
+            factory.apply(_obj, ...args);
+    
+            // object meta extensions
+            let mex = {
+                inherits: _Structure
+            };
+    
+            // return flarized
+            return flarizedInstance('sinstance', _obj, mex);
         };
     
-        // attach structure reflector
-        Structure._ = {
-            name: structureName,
-            type: 'structure',
-            namespace: null        
-        };
-    
-        // register type with namespace
-        flair.Namespace(Structure);
+        // meta extensions
+        let mex = {};
     
         // return
-        return Structure;
+        return flarized('structure', name, _Structure, mex)
     };
     
     
@@ -2231,7 +2280,7 @@
                 return null; 
             };
             this.getAssembly = () => {
-                let _Assembly = flair.Assembly.get(target._.type);
+                let _Assembly = flair.Assembly.get(target._.name);
                 if (_Assembly) { return new AssemblyReflector(_Assembly); }
                 return null;
             }

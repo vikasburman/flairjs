@@ -1,63 +1,62 @@
 // Enum
-// Enum(enumName, {key: value})
-flair.Enum = (enumName, keyValuePairsOrArray) => {
-    let _enum = keyValuePairsOrArray;
-    if (Array.isArray(keyValuePairsOrArray)) {
-        let i = 0;
-        _enum = {};
-        for(let key of keyValuePairsOrArray) {
-            _enum[key] = i;
-            i++;
+// Enum(name, data)
+//  name: name of the enum
+//  data: object with key/values or an array of values
+flair.Enum = (name, data) => {
+    'use strict';
+
+    // args validation
+    if (!(typeof data === 'object' || Array.isArray(data))) { throw flair.Exception('ENUM01', 'Invalid enum data.'); }
+
+    // enum type
+    let _Enum = data;
+    if (Array.isArray(data)) {
+        let i = 0,
+            _Enum = {};
+        for(let value of data) {
+            _Enum[i] = value; i++;
         }
     } 
-    _enum._ = {
-        name: enumName,
-        type: 'enum',
-        namespace: null,        
+
+    // meta extensions
+    let mex = {
         keys: () => {
-            let items = [];
-            for(let key in keyValuePairsOrArray) {
-                if (keyValuePairsOrArray.hasOwnProperty(key) && key !== '_') {
-                    items.push(key);
+            let keys = [];
+            for(let key in _Enum) {
+                if (_Enum.hasOwnProperty(key) && key !== '_') {
+                    keys.push(key);
                 }
             }
-            return items;
+            return keys;
         },
         values: () => {
-            let items = [];
-            for(let key in keyValuePairsOrArray) {
-                if (keyValuePairsOrArray.hasOwnProperty(key) && key !== '_') {
-                    items.push(keyValuePairsOrArray[key]);
+            let values = [];
+            for(let key in _Enum) {
+                if (_Enum.hasOwnProperty(key) && key !== '_') {
+                    values.push(_Enum[key]);
                 }
             }
-            return items;
+            return values;
         }
     };
 
-    // register type with namespace
-    flair.Namespace(_enum);
-
     // return
-    return Object.freeze(_enum);
+    return flarized('enum', name, _Enum, mex);
 };
-flair.Enum.getKeys = (enumObj) => {
-    if (enumObj._ && enumObj._.type === 'enum') {
-        return enumObj._.keys();
+flair.Enum.getKeys = (obj) => {
+    try {
+        return obj._.keys();
+    } catch (e) {
+        throw flair.Exception('ENUM02', 'Object is not an Enum.', e);
     }
-    let enumName = ((enumObj._ && enumObj._.name) ? enumObj._.name : 'unknown');
-    throw `${enumName} is not an Enum.`;
 };
-flair.Enum.getValues = (enumObj) => {
-    if (enumObj._ && enumObj._.type === 'enum') {
-        return enumObj._.values();
+flair.Enum.getValues = (obj) => {
+    try {
+        return obj._.values();
+    } catch (e) {
+        throw flair.Exception('ENUM02', 'Object is not an Enum.', e);
     }
-    let enumName = ((enumObj._ && enumObj._.name) ? enumObj._.name : 'unknown');
-    throw `${enumName} is not an Enum.`;
 };
-flair.Enum.isDefined = (enumObj, keyOrValue) => {
-    if (enumObj._ && enumObj._.type === 'enum') {
-        return (enumObj._.keys.indexOf(keyOrValue) !== -1 || enumObj._.values.indexOf(keyOrValue) !== -1) ? true : false;
-    }
-    let enumName = ((enumObj._ && enumObj._.name) ? enumObj._.name : 'unknown');
-    throw `${enumName} is not an Enum.`;
+flair.Enum.isDefined = (obj, keyOrValue) => {
+    return (flair.Enum.getKeys().indexOf(keyOrValue) !== -1 || flair.Enum.getValues().indexOf(keyOrValue) !== -1);
 };

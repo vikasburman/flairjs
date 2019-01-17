@@ -11,7 +11,7 @@ flair.Reflector.get = (forTarget) => {
             return null; 
         };
         this.getAssembly = () => {
-            let _Assembly = flair.Assembly.get(target._.type);
+            let _Assembly = flair.Assembly.get(target._.name);
             if (_Assembly) { return new AssemblyReflector(_Assembly); }
             return null;
         }
