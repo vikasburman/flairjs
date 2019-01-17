@@ -7,8 +7,9 @@ const uglifyConfig = require('../config/.uglify.json');
 const rename = require('gulp-rename');
 const inject = require('gulp-inject-file');
 const replace = require('gulp-string-replace');
-const fs = require('fs');
-const packageJSON = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+const fsx = require('fs-extra');
+const path = require('path');
+const packageJSON = JSON.parse(fsx.readFileSync('./package.json', 'utf8'));
 const errorHandler = require('../utils.js').errorHandler;
 const destName = 'flair';
 
@@ -55,8 +56,8 @@ const doTask = (done) => {
     .pipe(gulp.dest('./dist'))
     .on('end', () => {
         // done, print stats
-        let stat = fs.statSync('./dist/' + destName + '.js'),
-            stat_min = fs.statSync('./dist/' + destName + '.min.js');
+        let stat = fsx.statSync('./dist/' + destName + '.js'),
+            stat_min = fsx.statSync('./dist/' + destName + '.min.js');
         console.log('==> ' + destName + '.js (' + Math.round(stat.size / 1024) + 'kb, ' + Math.round(stat_min.size / 1024) + 'kb minified)\n');
         done();
     })

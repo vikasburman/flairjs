@@ -15,6 +15,11 @@ gulp.task('test', (done) => {
     require('./build/tasks/test.js').test(done);
 });
 
+// task: package
+gulp.task('package', (done) => {
+    require('./build/tasks/package.js').pack(done);
+});
+
 // task: release
 gulp.task('release', ['bump', 'build', 'test'], () => {
 });

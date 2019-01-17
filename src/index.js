@@ -151,6 +151,11 @@
         return Object.freeze(flair);
     };
 
+    // add cli for server specific version
+    if ((new Function("try {return this===global;}catch(e){return false;}"))()) { // server
+        def.build = require('./flair.build.js');
+    }
+
     // export
     if (typeof (typeof module !== 'undefined' && module !== null ? module.exports : void 0) === 'object') {
         module.exports = def;
