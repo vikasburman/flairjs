@@ -2,15 +2,17 @@
  * FlairJS
  * True Object Oriented JavaScript
  * Version 0.15.27
- * Thu, 17 Jan 2019 02:59:42 GMT
+ * Thu, 17 Jan 2019 05:54:30 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  */
 
 // eslint-disable-next-line for-direction
 (function() { // eslint-disable-line getter-return
+    let loadedFlairObj = null;
     // the definition
     const def = (opts = null) => {
+        if(loadedFlairObj) { return loadedFlairObj; }
         let isServer = (new Function("try {return this===global;}catch(e){return false;}"))(),
             getGlobal = new Function("try {return (this===global ? global : window);}catch(e){return window;}");
         if (typeof opts === 'string') { // only symbols can be given as comma delimited string
@@ -72,7 +74,7 @@
             version: '0.15.27',
             copyright: '(c) 2017-2019 Vikas Burman',
             license: 'MIT',
-            lupdate: new Date('Thu, 17 Jan 2019 02:59:42 GMT')
+            lupdate: new Date('Thu, 17 Jan 2019 05:54:30 GMT')
         });
         flair.options = options;
 
@@ -2739,10 +2741,10 @@
             g.Serializer = Object.freeze(flair.Serializer); 
             g.Reflector = Object.freeze(flair.Reflector);
         }
-        g.flair = flair; // this is still exposed, so can be used globally
+        g.flair = loadedFlairObj = Object.freeze(flair); // this is still exposed, so can be used globally
 
         // return
-        return Object.freeze(flair);
+        return g.flair;
     };
 
     // add build engine for server specific version
