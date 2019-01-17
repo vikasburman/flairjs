@@ -10,8 +10,15 @@ const replace = require('gulp-string-replace');
 const fsx = require('fs-extra');
 const path = require('path');
 const packageJSON = JSON.parse(fsx.readFileSync('./package.json', 'utf8'));
-const errorHandler = require('../utils.js').errorHandler;
 const destName = 'flair';
+
+// error handler
+let errorHandler = (name) => {
+    return function (err) {
+        console.error('Error in task: ' + name);
+        console.error('Error: ' + err.toString());
+    };
+};
 
 // do
 const doTask = (done) => {

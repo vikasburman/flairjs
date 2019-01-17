@@ -1,10 +1,17 @@
 const gulp = require('gulp');
 const jasmineNode = require('gulp-jasmine');
 const jasminConfig = require('../config/.jasmine.json');
-const errorHandler = require('../utils.js').errorHandler;
 const tests = [
     "./src/**/*.spec.js"
 ];
+
+// error handler
+let errorHandler = (name) => {
+    return function (err) {
+        console.error('Error in task: ' + name);
+        console.error('Error: ' + err.toString());
+    };
+};
 
 // do
 const doTask = (done) => {

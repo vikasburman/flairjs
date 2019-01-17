@@ -21,7 +21,7 @@ gulp.task('package', (done) => {
 });
 
 // task: release
-gulp.task('release', ['bump', 'build', 'test'], () => {
+gulp.task('release', ['bump', 'build', 'test', 'package'], () => {
 });
 
 // task: default
