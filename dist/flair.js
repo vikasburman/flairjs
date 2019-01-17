@@ -1,8 +1,8 @@
 /**
  * FlairJS
  * True Object Oriented JavaScript
- * Version 0.15.17
- * Thu, 17 Jan 2019 00:40:17 GMT
+ * Version 0.15.18
+ * Thu, 17 Jan 2019 00:59:23 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  */
@@ -69,10 +69,10 @@
 
         flair._ = Object.freeze({
             name: 'FlairJS',
-            version: '0.15.17',
+            version: '0.15.18',
             copyright: '(c) 2017-2019 Vikas Burman',
             license: 'MIT',
-            lupdate: new Date('Thu, 17 Jan 2019 00:40:17 GMT')
+            lupdate: new Date('Thu, 17 Jan 2019 00:59:23 GMT')
         });
         flair.options = options;
 
@@ -2710,7 +2710,7 @@
         return Object.freeze(flair);
     };
 
-    // add cli for server specific version
+    // add build engine for server specific version
     if ((new Function("try {return this===global;}catch(e){return false;}"))()) { // server
         def.build = require('./flair.build.js');
     }

@@ -43,7 +43,7 @@ Getting Started
 ---
 **1. Install**
 
-Install using `npm install flairjs` or download [latest release](https://github.com/vikasburman/flairjs/releases/latest). All you need is to have `flairjs.min.js` available, whatever approach you want to take.
+Install using `npm install flairjs` or download [latest release](https://github.com/vikasburman/flairjs/releases/latest). All you need is to have `flair.min.js` available, whatever approach you want to take.
 
 
 **2. Include**
