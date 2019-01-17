@@ -12,9 +12,12 @@ const del = require('del');
 const CLIEngine = new require("eslint").CLIEngine
 const uglifyjs = require('uglify-js-harmony');
 const uuid = require('uuid/v1');
+const req = require('request');
+const copyDir = require('copy-dir');
 
 let uglifyConfig, 
     eslintConfig,
+    depsConfig,
     packageJSON, 
     eslint, 
     eslintFormatter = null;
@@ -62,6 +65,36 @@ let getFolders = (root, excludeRoot) => {
 };
 let delAll = (root) => {
   del.sync([root + '/**', '!' + root]);
+};
+
+const copyDeps = (deps, done) => {
+    const processNext = (items) => {
+        if (items.length !== 0) {
+            let item = items.shift();
+            if (item.src.startsWith('http')) {
+                req(item.src, (err, res, body) => {
+                    if (err) {
+                        throw `Failed to fetch dependency: ${item.src}. \n\n ${err}`;
+                    }
+                    fsx.ensureFileSync(item.dest);
+                    fsx.writeFileSync(item.dest, body, 'utf8');
+                    processNext(items);
+                });
+            } else { // local file / folder path
+                if (fsx.lstatSync(item.src).isDirectory()) {
+                    copyDir.sync(item.src, item.dest);
+                } else {
+                    fsx.copyFileSync(item.src, item.dest);
+                }
+                processNext(items);
+            }
+        } else {
+            // done
+            done();
+        }
+    };
+
+    processNext(deps.slice());
 };
 
 // do
@@ -544,27 +577,38 @@ module.exports = function(options, cb) {
     options.processAsGroups = options.processAsGroups || false; // if true, it will treat first level folders under src as groups and will process each folder as group, otherwise it will treat all folders under src as individual assemblies
     options.uglifyConfig = options.uglifyConfig || './build/config/.uglify.json';
     options.eslintConfig = options.eslintConfig || './build/config/.eslint.json';
+    options.depsConfig = options.depsConfig || './build/config/.deps.json';
     options.packageJSON = options.packageJSON || './package.json';
     options.cb = options.cb || cb;
 
     // get files
     uglifyConfig = JSON.parse(fsx.readFileSync(options.uglifyConfig, 'utf8'));
     eslintConfig = JSON.parse(fsx.readFileSync(options.eslintConfig, 'utf8'));
+    depsConfig = JSON.parse(fsx.readFileSync(options.depsConfig, 'utf8'));
     packageJSON = JSON.parse(fsx.readFileSync(options.packageJSON, 'utf8'));
 
     // get engines
     eslint = new CLIEngine(eslintConfig);
     eslintFormatter = eslint.getFormatter();
 
-    // build source list
-    let srcList = [];
-    if (options.processAsGroups) {
-        srcList = getFolders(options.src, true);
-    } else {
-        srcList.push(options.src);
-    }
+    // after copy process
+    let afterCopy = () => {
+        // build source list
+        let srcList = [];
+        if (options.processAsGroups) {
+            srcList = getFolders(options.src, true);
+        } else {
+            srcList.push(options.src);
+        }
 
-    // build
-    doTask(srcList, options.src, options.dest, cb);
+        // build
+        doTask(srcList, options.src, options.dest, cb);
+    };
+
+    // update dependencies in source folder, if configured
+    if (depsConfig.update) {
+        copyDeps(depsConfig.deps, afterCopy)
+    } else {
+        afterCopy();
+    }
 };
- 
