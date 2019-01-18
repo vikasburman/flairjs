@@ -1,1 +1,31 @@
-Home
+<h1>{{ flair.info.name }}</h1>
+
+<h6>State</h6>
+<table class="table"><tbody>
+<tr><td style="width: 25%">Initialized</td>
+    <td>{{ flair.isInitialized ? 'Yes': 'No' }}</td></tr>
+</tbody></table>
+
+<h6>Build</h6>
+<table class="table"><tbody>
+<tr><td style="width: 25%">Version</td>
+    <td>{{ flair.info.version }}</td></tr>
+<tr><td style="width: 25%">Date</td>
+    <td>{{ new Date(flair.info.lupdate).toUTCString() }}</td></tr>
+</tbody></table>
+
+<h6>Environment</h6>
+<table class="table"><tbody>
+<tr><td style="width: 25%">Type</td>
+    <td>{{ flair.options.env.type }}</td></tr>
+<tr><td style="width: 25%">Symbols</td>
+    <td>{{ flair.options.symbols.join(',') || '(none)' }}</td></tr>
+<tr><td style="width: 25%">Globals</td>
+    <td>{{ flair.options.env.supressGlobals ? 'Not defined' : 'Defined' }}</td></tr>    
+</tbody></table>
+
+<h6>Members <sup>{{ flair.members.length }}</sup></h6>
+<table class="table"><tbody>
+    <tr><td v-for="name in flair.members">{{ name }}</td></tr>
+</tbody></table>
+<br><br><br><br>

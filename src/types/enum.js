@@ -60,3 +60,6 @@ flair.Enum.getValues = (obj) => {
 flair.Enum.isDefined = (obj, keyOrValue) => {
     return (flair.Enum.getKeys().indexOf(keyOrValue) !== -1 || flair.Enum.getValues().indexOf(keyOrValue) !== -1);
 };
+
+// add to members list
+flair.members.push('Enum');

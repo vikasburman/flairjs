@@ -2,7 +2,7 @@
  * FlairJS
  * True Object Oriented JavaScript
  * Version 0.15.27
- * Thu, 17 Jan 2019 23:19:04 GMT
+ * Fri, 18 Jan 2019 20:04:58 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  * https://flairjs.com
@@ -18,16 +18,22 @@
         factory.build = require('./flair.build.js');
     }
 
+    // state;
+    factory.isInitialized = false;
+
+    // freezed version
+    let _factory = Object.freeze(factory);
+
     if (typeof define === 'function' && define.amd) { // AMD support
-        define(function() { return factory; });
+        define(function() { return _factory; });
     } else if (typeof exports === 'object') { // CommonJS and Node.js module support
         if (module !== undefined && module.exports) {
-            exports = module.exports = factory; // Node.js specific `module.exports`
+            exports = module.exports = _factory; // Node.js specific `module.exports`
         }
-        exports.flair = factory; // CommonJS module 1.1.1 spec
-        module.exports = exports = factory; // CommonJS
+        exports.flair = _factory; // CommonJS module 1.1.1 spec
+        module.exports = exports = _factory; // CommonJS
     } else if (this === window) { // client side global
-        this.flair = factory;
+        this.flair = _factory;
     }
 }).call(this, (opts) => {
     'use strict';
@@ -35,6 +41,7 @@
     if(this.flair && typeof this.flair !== 'function') { return this.flair; }
     let isServer = (new Function("try {return this===global;}catch(e){return false;}"))(),
         getGlobal = new Function("try {return (this===global ? global : window);}catch(e){return window;}");
+    if (!opts) { opts = {}; }
     if (typeof opts === 'string') { // only symbols can be given as comma delimited string
         opts = {
             symbols: opts.split(',').map(item => item.trim())
@@ -66,7 +73,6 @@
         // register obj with namespace
         flair.Namespace(obj); // instances are not
 
-
         // freeze meta
         obj._ = Object.freeze(obj._);
 
@@ -80,17 +86,17 @@
         _.id = guid();
         _.__ = {}; // store any dynamic information here under this unfreezed area
 
-        // attach meta
-        obj._ = _;
-
-        // freeze meta
-        obj._ = Object.freeze(obj._);
+        // attach freezed meta
+        obj._ = Object.freeze(_);
 
         // return freezed
         return Object.freeze(obj);
     };    
 
-    let flair = {},
+    let flair = {
+            isInitialized: true,
+            members: []
+        },
         noop = () => {},
         sym = (opts.symbols || []), // eslint-disable-next-line no-unused-vars
         noopAsync = (resolve, reject) => { resolve(); },
@@ -145,7 +151,7 @@
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
         link: 'https://flairjs.com',
-        lupdate: new Date('Thu, 17 Jan 2019 23:19:04 GMT')
+        lupdate: new Date('Fri, 18 Jan 2019 20:04:58 GMT')
     });
     flair.info = flair._;
     flair.options = options;
@@ -1457,6 +1463,8 @@
         return (flair.Enum.getKeys().indexOf(keyOrValue) !== -1 || flair.Enum.getValues().indexOf(keyOrValue) !== -1);
     };
     
+    // add to members list
+    flair.members.push('Enum');
     // Proc
     // Proc(procName, fn)
     flair.Proc = (procName, isASync, fn) => {
@@ -2775,34 +2783,12 @@
 
     // expose to global environment
     let g = options.env.global;
-    if (!options.env.supressGlobals) { 
-        g.Exception = Object.freeze(flair.Exception); 
-        g.Class = Object.freeze(flair.Class); 
-        g.Mixin = Object.freeze(flair.Mixin); 
-        g.Interface = Object.freeze(flair.Interface); 
-        g.Structure = Object.freeze(flair.Structure);  
-        g.Enum = Object.freeze(flair.Enum); 
-        g.Proc = Object.freeze(flair.Proc); 
-        g.Resource = Object.freeze(flair.Resource); 
-        g.Assembly = Object.freeze(flair.Assembly);
-        g.Namespace = Object.freeze(flair.Namespace);
-        g.which = Object.freeze(flair.which); 
-        g.bring = Object.freeze(flair.bring); 
-        g.using = Object.freeze(flair.using); 
-        g.as = Object.freeze(flair.as);
-        g.is = Object.freeze(flair.is);
-        g.isDerivedFrom = Object.freeze(flair.isDerivedFrom);
-        g.isImplements = Object.freeze(flair.isImplements);
-        g.isInstanceOf = Object.freeze(flair.isInstanceOf);
-        g.isMixed = Object.freeze(flair.isMixed);
-        g.classOf = Object.freeze(flair.classOf);
-        g.Attribute = Object.freeze(flair.Attribute); 
-        g.Aspects = Object.freeze(flair.Aspects); 
-        g.Aspect = Object.freeze(flair.Aspect); 
-        g.Container = Object.freeze(flair.Container);
-        g.Serializer = Object.freeze(flair.Serializer); 
-        g.Reflector = Object.freeze(flair.Reflector);
+    if (!options.env.supressGlobals) {
+        for(let name of flair.members) {
+            g[name] = Object.freeze(flair[name]);
+        }
     }
+    flair.members = Object.freeze(flair.members);
     g.flair = Object.freeze(flair); // this is still exposed, so can be used globally
 
     // return

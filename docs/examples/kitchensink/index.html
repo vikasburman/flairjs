@@ -4,10 +4,11 @@
         <meta charset="utf-8">
         <title>KitchenSink - FlairJS - True Object Oriented JavaScript</title>
         <link href="./css/bootstrap.min.css" rel="stylesheet">
+        <link href="./css/highlight.vs.css" rel="stylesheet">
     </head>
     <body>
         <div id="main">
-            <div class="container-fluid">
+            <div class="container">
                 <nav class="navbar fixed-top navbar-expand-lg navbar-light bg-light">
                     <a class="navbar-brand" :href="flair.info.link" target="_blank">
                             <img src="./favicon.ico" width="30" height="30" class="d-inline-block align-top" alt="">
@@ -117,39 +118,121 @@
                         </ul>
                     </div>             
                 </nav>
-                <div id="view" style="margin-top: 65px;">
+                <div id="view" style="margin-top: 75px;">
+                    <div id="text" class="row-md-1" style="max-height: 150px; overflow: scroll;">
+                        <div id="md" class="col"></div>
+                        <br/>
+                    </div>
+                    <div id="code">
+                    <div class="row">
+                        <div class="col-7">
+                            <ul class="nav nav-tabs">
+                                <li class="nav-item">
+                                    <a id="js-link" class="nav-link active" href="javascript: showtab('js');">Javascript</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a id="html-link" class="nav-link" href="javascript: showtab('html');">Html</a>
+                                </li>                                
+                            </ul>
+                        </div>
+                        <div class="col-5">
+                            <ul class="nav nav-tabs">
+                                <li class="nav-item">
+                                    <a class="nav-link active">Result</a>
+                                </li>
+                            </ul>
+                        </div>                        
+                    </div>
+                    <div class="row">
+                        <div class="col-7">
+                            <div class="row">&nbsp;</div>
+                            <div class="row-md-1">
+                                <pre id="js-host"><code id="js" class="javascript"></code></pre>
+                                <pre id="html-host"><code id="html" class="html"></code></pre>
+                                <br><br><br><br>
+                            </div>
+                        </div>
+                        <div class="col-5">
+                            <div class="row">&nbsp;</div>                            
+                            <div class="row-md-1">
+                                <div id="result"></div>
+                            </div>
+                        </div>                        
+                    </div>
+                    </div>
                 </div>
-                <nav class="navbar fixed-bottom navbar-expand-lg navbar-light bg-light">
-                    <span class="navbar-brand">
-                        <small><small>{{ flair.info.name }} <small>v{{ flair.info.version }} (edge)</small></small></small>
-                    </span>
-                </nav>
             </div>        
         </div>
 
         <script src="./js/jquery.min.js"></script>
         <script src="./js/bootstrap.min.js"></script>
+        <script src="./js/highlight.min.js"></script>
+        <script src="./js/showdown.min.js"></script>
         <script src="./js/vue.min.js"></script>
         <script src="./js/flair.js"></script>
-        <script src="./index.js"></script>
         <script>
+            // show tab
+            var showtab = (id) => {
+                if (id === 'js') {
+                    $('#js-link').addClass('active');
+                    $('#html-link').removeClass('active');
+                    $('#js').text(jsText);
+                    $('#html-host').hide();
+                    $('#js-host').show();
+                    hljs.highlightBlock($('#js')[0]);
+                } else {
+                    $('#html-link').addClass('active');
+                    $('#js-link').removeClass('active');
+                    $('#html').text(htmlText);
+                    $('#js-host').hide();
+                    $('#html-host').show();
+                    hljs.highlightBlock($('#html')[0]);
+                };
+            };
+
             // view loader
             var loadView = () => {
-                let view = 'home';
+                let view = 'home'
+                window.data = {};
+                window.jsText = '',
+                window.htmlText = '';
                 if (location.href.indexOf('#') !== -1) {
                     view = location.href.substr(location.href.indexOf('#')+1);
                 }
-                $.get({
-                    url: './views/' + view + '/index.html', 
+                $.getScript({
+                    url: './views/' + view + '/index.js', 
+                    dataType: "script",                    
                     cache: false
                 }).then((data) => {
-                    $('#view').html(data);
-                }).fail(() => {
-                    $('#view').html('Error 404: View ' + view + ' not found.');
-                }).always(() => {
-                    window.vue = new Vue({
-                        el: '#main'
+                    jsText = data;
+                    $.get({
+                        url: './views/' + view + '/index.md', 
+                        cache: false                        
+                    }).then((data) => {
+                        let converter = new showdown.Converter();
+                        $('#md').html(converter.makeHtml(data));
+                        $('#text').show();
+                        $.get({
+                            url: './views/' + view + '/index.html', 
+                            cache: false                        
+                        }).then((data) => {
+                            htmlText = data;
+                            $('#result').html(data);
+                            showtab('js');
+                            new Vue({
+                                el: '#main'
+                            });                             
+                            $('#code').show();
+                        }).fail(() => {
+                            $('#code').hide();
+                        });                        
+                    }).fail(() => {
+                        $('#text').hide();
                     });
+                }).fail((e) => {
+                    $('#md').html('Error 404: Not found.');
+                    $('#text').show();
+                    $('#code').hide();
                 });
             };
 
