@@ -19,6 +19,8 @@ flair.Reflector.get = (forTarget) => {
         this.isInstance = () => { return target._.type === 'instance'; };
         this.isClass = () => { return target._.type === 'class'; };
         this.isEnum = () => { return target._.type === 'enum'; };
+        this.isException = () => { return target._.type === 'exception'; };
+        this.isArgs = () => { return target._.type === 'args'; };
         this.isProc = () => { return target._.type === 'proc'; };
         this.isStructure = () => { return target._.type === 'structure'; };
         this.isStructureInstance = () => { return target._.type === 'sinstance'; };
@@ -188,6 +190,17 @@ flair.Reflector.get = (forTarget) => {
         refl.getValue = () => { return target[name]; }
         return refl;
     };
+    const ExceptionReflector = function(target) {
+        let refl = new CommonTypeReflector(target);
+        refl.getExceptionType = () => { return target.type; }
+        refl.getMessage = () => { return target.message; }
+        refl.getRaw = () => { return target.error; }
+        return refl;
+    };   
+    const ArgsReflector = function(target) {
+        let refl = new CommonTypeReflector(target);
+        return refl;
+    };       
     const InstanceReflector = function(target) {
         let refl = new CommonTypeReflector(target),
             filterMembers = (members, type, attrs) => {
@@ -489,6 +502,8 @@ flair.Reflector.get = (forTarget) => {
         case 'sinstance': ref = new StructureInstanceReflector(forTarget); break;
         case 'class': ref = new ClassReflector(forTarget); break;
         case 'enum': ref = new EnumReflector(forTarget); break;
+        case 'exception': ref = new ExceptionReflector(forTarget); break;
+        case 'args': ref = new ArgsReflector(forTarget); break;
         case 'proc': ref = new ProcReflector(forTarget); break;
         case 'resource': ref = new ResourceReflector(forTarget); break;
         case 'structure': ref = new StructureReflector(forTarget); break;

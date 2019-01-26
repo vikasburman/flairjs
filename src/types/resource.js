@@ -19,7 +19,7 @@ flair.Resource = (resName, resFile, data) => {
     
     let resData = data; // data is base64 encoded string, added by build engine
     let resType = resFile.substr(resFile.lastIndexOf('.') + 1).toLowerCase(),
-        textTypes = ['txt', 'xml', 'js', 'json', 'md', 'css', 'html'];
+        textTypes = ['txt', 'xml', 'js', 'json', 'md', 'css', 'html', 'svg'];
     
     // decode
     if (textTypes.indexOf(resType) !== -1) { // text

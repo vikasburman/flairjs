@@ -38,60 +38,24 @@
 }).call(this, (opts) => {
     'use strict';
 
+    // return as is, if initialized once
     if(this.flair && typeof this.flair !== 'function') { return this.flair; }
+
+    // environment
     let isServer = (new Function("try {return this===global;}catch(e){return false;}"))(),
         getGlobal = new Function("try {return (this===global ? global : window);}catch(e){return window;}");
-    if (!opts) { opts = {}; }
-    if (typeof opts === 'string') { // only symbols can be given as comma delimited string
-        opts = {
-            symbols: opts.split(',').map(item => item.trim())
-        };
+    if (!opts) { 
+        opts = {}; 
+    } else if (typeof opts === 'string') { // only symbols can be given as comma delimited string
+        opts = { symbols: opts.split(',').map(item => item.trim()) };
     }
 
-    const guid = () => {
-        return '_xxxxxxxx_xxxx_4xxx_yxxx_xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-        });
-    };
-    const flarized = (type, name, obj, mex = {}) => {
-        // check
-        if (!name || typeof name !== 'string') { throw `000000: Invalid type name ${name}.`; }
+    // core support objects
+    <!-- inject: ./misc/_exception.js -->
+    <!-- inject: ./misc/_args.js -->
 
-        // add meta information
-        let _ = mex; // whatever meta extensions are provided
-        _.name = name;
-        _.type = type;
-        _.namespace = null;
-        _.assembly = () => { return flair.Assembly.get(name) || null; };
-        _.id = guid();
-        _.__ = {}; // store any dynamic information here under this unfreezed area
-
-        // attach meta
-        obj._ = _;
-
-        // register obj with namespace
-        flair.Namespace(obj); // instances are not
-
-        // freeze meta
-        obj._ = Object.freeze(obj._);
-
-        // return freezed
-        return Object.freeze(obj);
-    };
-    const flarizedInstance = (type, obj, mex = {}) => {
-        // add meta information
-        let _ = mex; // whatever meta extensions are provided
-        _.type = type;
-        _.id = guid();
-        _.__ = {}; // store any dynamic information here under this unfreezed area
-
-        // attach freezed meta
-        obj._ = Object.freeze(_);
-
-        // return freezed
-        return Object.freeze(obj);
-    };    
+    // helpers
+    <!-- inject: ./misc/helpers.js -->
 
     let flair = {
             isInitialized: true,
@@ -142,7 +106,7 @@
     
     // special symbols
     if (options.env.isProd && options.env.isDebug) { // when both are given
-        throw `DEBUG and PROD symbols are mutually exclusive. Use only one.`;
+        throw new _Exception('InvalidOption', `DEBUG and PROD symbols are mutually exclusive. Use only one of these symbols.`);
     }
 
     flair._ = Object.freeze({
@@ -156,7 +120,8 @@
     flair.info = flair._;
     flair.options = options;
 
-    <!-- inject: ./misc/exception.js -->
+    <!-- inject: ./types/exception.js -->
+    <!-- inject: ./types/args.js -->
     <!-- inject: ./assembly/assembly.js -->
     <!-- inject: ./assembly/namespace.js -->
     <!-- inject: ./types/class.js -->

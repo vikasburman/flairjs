@@ -2,7 +2,7 @@
  * FlairJS
  * True Object Oriented JavaScript
  * Version 0.15.27
- * Fri, 18 Jan 2019 20:04:58 GMT
+ * Sat, 26 Jan 2019 18:36:15 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  * https://flairjs.com
@@ -38,16 +38,99 @@
 }).call(this, (opts) => {
     'use strict';
 
+    // return as is, if initialized once
     if(this.flair && typeof this.flair !== 'function') { return this.flair; }
+
+    // environment
     let isServer = (new Function("try {return this===global;}catch(e){return false;}"))(),
         getGlobal = new Function("try {return (this===global ? global : window);}catch(e){return window;}");
-    if (!opts) { opts = {}; }
-    if (typeof opts === 'string') { // only symbols can be given as comma delimited string
-        opts = {
-            symbols: opts.split(',').map(item => item.trim())
-        };
+    if (!opts) { 
+        opts = {}; 
+    } else if (typeof opts === 'string') { // only symbols can be given as comma delimited string
+        opts = { symbols: opts.split(',').map(item => item.trim()) };
     }
 
+    // core support objects
+    const _Exception = function(type, msg, error) {
+        let _ex = this;
+        if (type && !type.endsWith('Exception')) { type += 'Exception'; }
+    
+        _ex.type = type || 'UndefinedException';
+        _ex.message = msg || '';
+        _ex.error = error || null;
+    
+        // flarized (in-place)
+        _ex._ = Object.freeze({
+            inherits: _Exception,
+            type: 'exception',
+            id: guid(),
+            __: {}
+        });
+    
+        // return freezed
+        return Object.freeze(_ex);
+    };
+    const _Args = function(...patterns) {
+       let _args = (...args) => {
+            // each pattern is an expected set of types - like what method overload options
+            // with data types, e.g., a function can have following 4 ways of accepting parameters
+            // name1: string
+            // name1: string, name2: string
+            // name3: object
+            // name3: object, name4: string
+            // it will process each combination against give args and if none of the pattern matches
+            // or more than one parameter matches, it will throw exceptions
+            // it will return the pattern index that matches
+            // and will set this[argName] to their values
+            // note, special names like raw, count, define cannot be defined names
+            if (args.length === 0) { throw new _Exception('InvalidArgument', 'Argument patterns must be defined.'); }
+    
+            // process each pattern - exit with first matching pattern
+            let types, items = null,
+                name, type = '',
+                pIndex = -1,
+                aIndex = -1,
+                matched = false,
+                mCount = 0,
+                values = {
+                    raw: args || [],
+                    count: args.length,
+                    type: -1
+                };
+            for(let pattern of patterns) {
+                pIndex++; aIndex=-1; matched = false; mCount = 0;
+                types = pattern.split(',');
+                for(let item of types) {
+                    aIndex++;
+                    items = item.split(':');
+                    name = items[0].trim() || '',
+                    type = items[1].trim() || '';
+                    if (!name || !type) { throw new _Exception('InvalidArgument', `Argument pattern must contain both name and type. (${pattern}).`); }
+                    if (['raw', 'count', 'type'].indexOf(name) !== -1) { throw new _Exception('InvalidArgument', `Argument name cannot be a reserved name. (${name}).`); }
+                    if (aIndex > values.count) { matched = false; break; }
+                    if (typeof values.raw[aIndex] != type) { matched = false; break; }
+                    values[name] = values.raw[aIndex]; matched = true; mCount++;
+                }
+                if (matched && mCount === values.count) {values.type = pIndex; break; }
+            }
+    
+            // return
+            return values;
+        };
+    
+        // flarized (in-place)
+        _args._ = Object.freeze({
+            inherits: _Args,
+            type: 'args',
+            id: guid(),
+            __: {}
+        });
+    
+        // return freezed
+        return Object.freeze(_args);
+    };
+
+    // helpers
     const guid = () => {
         return '_xxxxxxxx_xxxx_4xxx_yxxx_xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
             var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
@@ -56,8 +139,8 @@
     };
     const flarized = (type, name, obj, mex = {}) => {
         // check
-        if (!name || typeof name !== 'string') { throw `000000: Invalid type name ${name}.`; }
-
+        if (!name || typeof name !== 'string') { throw new _Exception('InvalidArgumentException', `Invalid type name ${name}.`); }
+    
         // add meta information
         let _ = mex; // whatever meta extensions are provided
         _.name = name;
@@ -66,16 +149,16 @@
         _.assembly = () => { return flair.Assembly.get(name) || null; };
         _.id = guid();
         _.__ = {}; // store any dynamic information here under this unfreezed area
-
+    
         // attach meta
         obj._ = _;
-
+    
         // register obj with namespace
         flair.Namespace(obj); // instances are not
-
+    
         // freeze meta
         obj._ = Object.freeze(obj._);
-
+    
         // return freezed
         return Object.freeze(obj);
     };
@@ -85,13 +168,14 @@
         _.type = type;
         _.id = guid();
         _.__ = {}; // store any dynamic information here under this unfreezed area
-
+    
         // attach freezed meta
         obj._ = Object.freeze(_);
-
+    
         // return freezed
         return Object.freeze(obj);
-    };    
+    };
+    
 
     let flair = {
             isInitialized: true,
@@ -142,7 +226,7 @@
     
     // special symbols
     if (options.env.isProd && options.env.isDebug) { // when both are given
-        throw `DEBUG and PROD symbols are mutually exclusive. Use only one.`;
+        throw new _Exception('InvalidOption', `DEBUG and PROD symbols are mutually exclusive. Use only one of these symbols.`);
     }
 
     flair._ = Object.freeze({
@@ -151,24 +235,23 @@
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
         link: 'https://flairjs.com',
-        lupdate: new Date('Fri, 18 Jan 2019 20:04:58 GMT')
+        lupdate: new Date('Sat, 26 Jan 2019 18:36:15 GMT')
     });
     flair.info = flair._;
     flair.options = options;
 
     // Exception
-    // Exception(code, msg, error)
-    flair.Exception = function(code, msg, error) {
-        let _ex = {};
-        
-        _ex.code = code || '';
-        _ex.message = msg || '';
-        _ex.error = error || null;
+    // Exception(type, msg, error)
+    flair.Exception = _Exception;
     
-        // return
-        return Object.freeze(_ex);
-    };
+    // add to members list
+    flair.members.push('Exception');
+    // Args
+    // Args(...patterns)
+    flair.Args = _Args;
     
+    // add to members list
+    flair.members.push('Args');
     // Assembly
     let asmFiles = {},
         asmTypes = {};
@@ -1512,7 +1595,7 @@
         
         let resData = data; // data is base64 encoded string, added by build engine
         let resType = resFile.substr(resFile.lastIndexOf('.') + 1).toLowerCase(),
-            textTypes = ['txt', 'xml', 'js', 'json', 'md', 'css', 'html'];
+            textTypes = ['txt', 'xml', 'js', 'json', 'md', 'css', 'html', 'svg'];
         
         // decode
         if (textTypes.indexOf(resType) !== -1) { // text
@@ -2296,6 +2379,8 @@
             this.isInstance = () => { return target._.type === 'instance'; };
             this.isClass = () => { return target._.type === 'class'; };
             this.isEnum = () => { return target._.type === 'enum'; };
+            this.isException = () => { return target._.type === 'exception'; };
+            this.isArgs = () => { return target._.type === 'args'; };
             this.isProc = () => { return target._.type === 'proc'; };
             this.isStructure = () => { return target._.type === 'structure'; };
             this.isStructureInstance = () => { return target._.type === 'sinstance'; };
@@ -2465,6 +2550,17 @@
             refl.getValue = () => { return target[name]; }
             return refl;
         };
+        const ExceptionReflector = function(target) {
+            let refl = new CommonTypeReflector(target);
+            refl.getExceptionType = () => { return target.type; }
+            refl.getMessage = () => { return target.message; }
+            refl.getRaw = () => { return target.error; }
+            return refl;
+        };   
+        const ArgsReflector = function(target) {
+            let refl = new CommonTypeReflector(target);
+            return refl;
+        };       
         const InstanceReflector = function(target) {
             let refl = new CommonTypeReflector(target),
                 filterMembers = (members, type, attrs) => {
@@ -2766,6 +2862,8 @@
             case 'sinstance': ref = new StructureInstanceReflector(forTarget); break;
             case 'class': ref = new ClassReflector(forTarget); break;
             case 'enum': ref = new EnumReflector(forTarget); break;
+            case 'exception': ref = new ExceptionReflector(forTarget); break;
+            case 'args': ref = new ArgsReflector(forTarget); break;
             case 'proc': ref = new ProcReflector(forTarget); break;
             case 'resource': ref = new ResourceReflector(forTarget); break;
             case 'structure': ref = new StructureReflector(forTarget); break;

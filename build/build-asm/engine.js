@@ -294,7 +294,7 @@ const doTask = (srcList, srcRoot, destRoot, done) => {
         resName = resName.substr(0, resName.indexOf('.res'));
 
         // read file
-        if (['txt', 'xml', 'js', 'md', 'json', 'css', 'html'].indexOf(ext) === -1) { // utf8 encoding
+        if (['txt', 'xml', 'js', 'md', 'json', 'css', 'html', 'svg'].indexOf(ext) === -1) { // utf8 encoding
             content = fsx.readFileSync(resFile, 'utf8');
         } else { // no encoding
             content = fsx.readFileSync(resFile);

@@ -1,0 +1,274 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width">
+  <meta content="flairjs" property="og:title">
+  <meta content="True Object Oriented JavaScript" name="description">
+
+  <title>FlairJS - True Object Oriented JavaScript</title>
+
+  <link href="css/theme-white.css" rel="stylesheet">
+  <link href="css/theme.css" rel="stylesheet">
+
+  <script src="js/jquery.min.js"></script>
+  <script src="js/jquery.scrollTo.min.js"></script>
+  <script src="js/theme-white.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/md.js"></script>
+  <script src="https://buttons.github.io/buttons.js"></script>
+
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.13.1/styles/default.min.css">
+  <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.13.1/highlight.min.js"></script>
+
+  <script>
+    let loadFile = function(url, url404, onDone, onFail) {
+      $.get(url, function(fileText) {
+        onDone(fileText);
+      }).fail(function() {
+        if (url404) {
+          $.get(url404, function(fileText) {
+            onFail(fileText);
+          }).fail(function() {
+            onFail();
+          });
+        } else {
+          onFail();
+        }
+      });
+    };
+    let getMenu = function($content) {
+        var root = {items: [], id: '', level: 0, $: null};
+        var cache = [root];
+
+        function mkdir_p(level) {
+          cache.length = level + 1;
+          var obj = cache[level];
+          if (!obj) {
+            var parent = (level > 1) ? mkdir_p(level-1) : root;
+            obj = { items: [], level: level };
+            cache = cache.concat([obj, obj]);
+            parent.items.push(obj);
+          }
+          return obj;
+        }
+
+        $content.find('h1, h2, h3').each(function() {
+          var $el = $(this);
+          var level = +(this.nodeName.substr(1));
+
+          var parent = mkdir_p(level-1);
+
+          var obj = { section: $el.text(), items: [], level: level, id: $el.attr('id'), $: $el };
+          parent.items.push(obj);
+          cache[level] = obj;
+        });
+
+        return root;
+      };
+    let renderMenu = function(menu) {
+      var $el = $("<ul>");
+  
+      function process(node, $parent) {
+        var id = node.id || 'root';
+  
+        var $li = $('<li>')
+          .attr('id', id + '-item')
+          .addClass('level-' + node.level)
+          .appendTo($parent);
+  
+        if (node.section) {
+          var $a = $('<a>')
+            .html(node.section)
+            .attr('id', id + '-link')
+            .addClass('level-' + node.level)
+            .appendTo($li);
+
+            if (typeof node.id === 'string') {
+              if (node.id) {
+                $a.attr('href', '#' + node.id);
+              }
+            } else if (node.$) {
+              $a.attr('style', "cursor:pointer;");
+              $a.on('click', () => {
+                $('body').scrollTo(node.$); 
+              });
+            }
+
+            if (node.desc) {
+              $a.append('<p>' + node.desc + '<p>');
+            }
+        }
+  
+        if (node.items.length > 0) {
+          var $ul = $('<ul>')
+            .addClass('level-' + (node.level+1))
+            .attr('id', id + '-list')
+            .appendTo($li);
+  
+          node.items.forEach(function(item) {
+            process(item, $ul);
+          });
+        }
+      }
+  
+      process(menu, $el);
+      return $el;
+    };
+    let renderMd = function(token) {
+      $('.content-root').show();      
+      if (!token) { token = 'overview' }
+      let url = "https://flairjs.com/content/" + token + '.md',
+          url404 = "https://flairjs.com/content/404.md";
+
+      loadFile(url, url404, 
+      (fileText) => {
+          if (fileText) {
+            var converter = new Markdown.Converter();
+            var htmlContent = converter.makeHtml(fileText);
+            $(".content").html(htmlContent);
+            $(".menu2").html(renderMenu(getMenu($(".content"))));
+            if ($('.menu2').children().children().html()) {
+              $($('.menu2').children().children().children().children().children()[0]).html('On This Page');
+              $(".menu2").show();
+            } else {
+              $(".menu2").hide();
+            }
+         
+            if ($('.content')[0] && $('.content')[0].firstChild && $('.content')[0].firstChild.data && $('.content')[0].firstChild.data.trim().startsWith('nav:')) {
+              let tlMenu = $('.content')[0].firstChild.data.trim().split(':')[1].trim(),
+                  tlMenuUrl = "https://flairjs.com/content/" + tlMenu;
+              loadFile(tlMenuUrl, '', (jsonContent) => {
+                if (jsonContent) {
+                  $(".menu1").html(renderMenu(jsonContent));
+                  $(".menu1").show();
+                } else {
+                  $(".menu1").hide();
+                }
+              }, () => {
+                $(".menu1").hide();
+              });
+            } else {
+              $(".menu1").hide();
+            }
+          } else {
+            $(".content").html();
+            $(".menu1").hide();
+            $(".menu2").hide();
+          }
+
+          // highlight
+          $('pre code').each(function(i, block) {
+            hljs.highlightBlock(block);
+          });          
+      }, 
+      (fileText404) => {
+        if (fileText404) {
+          var converter = new Markdown.Converter();
+          var htmlContent = converter.makeHtml(fileText404);
+          $(".content").html(htmlContent);
+        } else {
+          $(".content").html();
+        }
+        $(".menu1").hide();
+        $(".menu2").hide();
+      });
+    };
+    let onChange = function() {
+      let hashtag = location.hash.substr(1);
+      if (hashtag.startsWith('/')) { hashtag = hashtag.substr(1); }
+      if (hashtag) {
+        $('.title-area').hide();
+        $('.content-root').show();
+        renderMd(hashtag);
+      } else {
+        $('.title-area').show();
+        $('.content-root').hide();
+      }
+    };
+    $(document).ready(function() {
+      $(window).on('hashchange', function(e) {
+        onChange();
+      });
+      onChange(); // first time
+    });
+  </script>  
+</head>
+<body role="flatdoc" class="big-h3 large-brief">
+    <div class="title-area title-card" style="background-image: url(img/bg.jpg); background-size:100% 100%;">
+        <div class="in">
+        <div class="headline">
+            <h1><span style="padding: 0!important; border: none!important; color:darkblue">Flair</span><span style="padding: 0!important; border: none!important; color:maroon">JS</span></h1>
+            <h1>True Object Oriented JavaScript</h1>
+            <p>Powerful .Net/Java style object oriented concepts in plain vanilla JavaScript.
+                <div style="text-align: justify;"><h6>Basic object oriented concepts like, inheritance, encapsulation, polymorphism, events, together with 
+                    advance features like aspect oriented and attribute based programming, custom attributes, serialization, 
+                    dependency injection and reflection, etc. are all nicely baked in this tiny javascript library.
+                    All of these are available via pure JavaScript syntax, without any build-time transpilation or compilation 
+                    of your codebase.
+                    <br/><br/>
+                    The forward-looking and future-proof design of the library, plays well with ongoing Ecmascript advancements, and uses available 
+                    new JavaScript constructs behind the scenes, wherever possible and supported.
+                    <br/><br/>
+                    This works in web browsers and in other JavaScript environments like <a href="https://nodejs.org">Node</a> and <a href="https://nwjs.io/">NW.js</a>.
+                    
+                </h6></div>
+            </p>
+            <h5><a href="https://github.com/vikasburman/flairjs/releases/latest" target="_blank"><span style="color:black">Download</span></a></h5>
+            <h6>Edge: <a href="https://raw.githubusercontent.com/vikasburman/flairjs/master/dist/flair.js" target="_blank">development</a>, <a href="https://raw.githubusercontent.com/vikasburman/flairjs/master/dist/flair.min.js" target="_blank">minified</a>
+                | Other: <a href="https://github.com/vikasburman/flairjs/releases/" target="_blank">releases</a>, <a href="#/changelog">news</a>
+                | License: <a href="https://github.com/vikasburman/flairjs/blob/master/LICENSE" target="_blank">MIT</a>
+                <br/><br/>&copy; 2017-2019 <a href="https://www.linkedin.com/in/vikasburman/" target="_blank">Vikas Burman</a>
+            </h6>        
+        </div>
+        </div>
+    </div>
+    <div class="header" id="start">
+    <div class="left">
+      <h1><a href="/"><b><span style="color:darkblue">Flair</span><span style="color:maroon">JS</span></b></a></h1>
+      <ul>
+        <li><a href="#/overview">Overview</a></li>
+        <li><a href="#/guides">Guides</a></li>
+        <li><a href="#/api">API</a></li>
+        <li><a href="#/examples">Examples</a></li>
+        <li><a href="https://gearsjs.com" target="_blank"><span style="color:green">Gears</span><span style="color:maroon">JS</span></a></li>
+      </ul>
+    </div>
+    <div class="right">
+      <ul>
+        <li><a href="https://github.com/vikasburman/flairjs" target="_blank">View on GitHub</a></li>
+      </ul>
+    </div>
+    </div>
+    <div class="content-root">
+        <div class="menubar">
+          <div class="menu1 menu section">
+          </div>      
+          <div class="menu2 menu section" role="flatdoc-menu">
+          </div>
+          <div class="bottom section">
+              <a class="github-button" href="https://github.com/vikasburman/flairjs/releases/latest" data-icon="octicon-cloud-download" data-size="large" aria-label="Download vikasburman/flairjs on GitHub">Download</a>
+              <br/>
+              <h6><a href="https://raw.githubusercontent.com/vikasburman/flairjs/master/dist/flair.js" target="_blank">edge</a> | <a href="https://raw.githubusercontent.com/vikasburman/flairjs/master/dist/flair.min.js" target="_blank">edge (min)</a> | <a href="https://github.com/vikasburman/flairjs/releases/" target="_blank">others</a> | <a href="https://www.npmjs.com/package/flairjs" target="_blank">npm</a></h6>
+              <br/>
+              <img src="https://travis-ci.com/vikasburman/flairjs.svg?branch=master"/>
+              <a href="https://snyk.io/test/github/vikasburman/flairjs?targetFile=package.json"><img src="https://snyk.io/test/github/vikasburman/flairjs/badge.svg?targetFile=package.json" alt="Known Vulnerabilities" data-canonical-src="https://snyk.io/test/github/vikasburman/flairjs?targetFile=package.json" style="max-width:100%;"></a>
+              <a href="https://badge.fury.io/js/flairjs"><img src="https://badge.fury.io/js/flairjs.svg" alt="npm version" height="18"></a>
+              <br/><br/>
+              <a class="github-button" href="https://github.com/vikasburman" data-show-count="true" aria-label="Follow @vikasburman on GitHub">Follow @vikasburman</a>
+              <a class="github-button" href="https://github.com/vikasburman/flairjs" data-icon="octicon-star" data-show-count="true" aria-label="Star vikasburman/flairjs on GitHub">Star</a>
+              <a class="github-button" href="https://github.com/vikasburman/flairjs/subscription" data-icon="octicon-eye" data-show-count="true" aria-label="Watch vikasburman/flairjs on GitHub">Watch</a>
+              <a class="github-button" href="https://github.com/vikasburman/flairjs/fork" data-icon="octicon-repo-forked" data-show-count="true" aria-label="Fork vikasburman/flairjs on GitHub">Fork</a>          
+              <a class="github-button" href="https://github.com/vikasburman/flairjs/issues" data-icon="octicon-issue-opened" data-show-count="true" aria-label="Issue vikasburman/flairjs on GitHub">Issue</a>          
+              <br/><br/>
+              <small>&copy; 2017-2019 <a href="https://www.linkedin.com/in/vikasburman/" target="_blank">Vikas Burman</a>
+              <br/>Released under <a href="https://github.com/vikasburman/flairjs/blob/master/LICENSE" target="_blank">MIT License</a>
+              </small>
+          </div>     
+        </div>
+        <div role="flatdoc-content" class="content">
+        </div>
+    </div>
+</body>
+</html>

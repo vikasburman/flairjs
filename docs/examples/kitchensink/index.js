@@ -55,6 +55,7 @@
         });
 
         attr('deprecate', 'Use capacity instead.');
+        //a.deprecate('Use capacity instead.');
         this.prop('cc', 0);
         this.prop('capacity', 0);
 
