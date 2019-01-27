@@ -2,7 +2,7 @@
  * FlairJS
  * True Object Oriented JavaScript
  * Version 0.15.27
- * Sun, 27 Jan 2019 04:44:12 GMT
+ * Sun, 27 Jan 2019 05:40:40 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  * https://flairjs.com
@@ -64,20 +64,11 @@
 
     // core support objects
     const _Exception = function(type, msg, error) {
-        let _ex = this;
         if (type && !type.endsWith('Exception')) { type+= 'Exception'; }
     
-        _ex.type = type || 'UndefinedException';
-        _ex.message = msg || '';
+        let _ex = new Error(msg || '');
+        _ex.name = type || 'UndefinedException';
         _ex.error = error || null;
-    
-        // flarized (in-place)
-        _ex._ = Object.freeze({
-            inherits: _Exception,
-            type: 'exception',
-            id: guid(),
-            __: {}
-        });
     
         // return freezed
         return Object.freeze(_ex);
@@ -95,7 +86,7 @@
             // it will return the pattern index that matches
             // and will set this[argName] to their values
             // note, special names like raw, count, define cannot be defined names
-            if (args.length === 0) { throw new _Exception('InvalidArg', 'Argument must be defined. (patterns)'); }
+            if (args.length === 0) { throw new _Exception('InvalidArgument', 'Argument must be defined. (patterns)'); }
     
             // process each pattern - exit with first matching pattern
             let types, items = null,
@@ -107,7 +98,8 @@
                 values = {
                     raw: args || [],
                     count: args.length,
-                    type: -1
+                    type: -1,
+                    isInvalid: () => { return values.type === -1; }
                 };
             for(let pattern of patterns) {
                 pIndex++; aIndex=-1; matched = false; mCount = 0;
@@ -115,10 +107,15 @@
                 for(let item of types) {
                     aIndex++;
                     items = item.split(':');
-                    name = items[0].trim() || '',
-                    type = items[1].trim() || '';
-                    if (!name || !type) { throw new _Exception('InvalidArg', `Argument pattern must contain both name and type. (${pattern})`); }
-                    if (['raw', 'count', 'type'].indexOf(name) !== -1) { throw new _Exception('InvalidArg', `Argument name cannot be a reserved name. (${name})`); }
+                    if (items.length !== 2) { 
+                        name = pIndex.toString() + '_' + aIndex.toString();
+                        type = item.trim() || '';
+                    } else {
+                        name = items[0].trim() || '',
+                        type = items[1].trim() || '';
+                    }
+                    if (!name || !type) { throw new _Exception('InvalidArgument', `Argument pattern must contain both name and type. (${pattern})`); }
+                    if (['raw', 'count', 'type'].indexOf(name) !== -1) { throw new _Exception('InvalidArgument', `Argument name cannot be a reserved name. (${name})`); }
                     if (aIndex > values.count) { matched = false; break; }
                     if (typeof values.raw[aIndex] != type) { matched = false; break; }
                     values[name] = values.raw[aIndex]; matched = true; mCount++;
@@ -129,14 +126,6 @@
             // return
             return values;
         };
-    
-        // flarized (in-place)
-        _args._ = Object.freeze({
-            inherits: _Args,
-            type: 'args',
-            id: guid(),
-            __: {}
-        });
     
         // return freezed
         return Object.freeze(_args);
@@ -231,9 +220,9 @@
                     client: opts.fileLoaderClient || null
                 }),
                 define: (type, fn) => {
-                    // NOTE: only once these can be defined after loading
+                    if (_Args('string, function')(type, fn).isInvalid()) { throw new _Exception('InvalidArgument', `Arguments type error. (${type})`); }
                     let loaderOverrides = flair.options.loaderOverrides;
-                    switch(type) {
+                    switch(type) { // NOTE: only once these can be defined after loading
                         case 'sm': loaderOverrides.moduleLoaderServer = loaderOverrides.moduleLoaderServer || fn; break;
                         case 'cm': loaderOverrides.moduleLoaderClient = loaderOverrides.moduleLoaderClient || fn; break;
                         case 'sf': loaderOverrides.fileLoaderServer = loaderOverrides.fileLoaderServer || fn; break;
@@ -260,7 +249,7 @@
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
         link: 'https://flairjs.com',
-        lupdate: new Date('Sun, 27 Jan 2019 04:44:12 GMT')
+        lupdate: new Date('Sun, 27 Jan 2019 05:40:40 GMT')
     });
     flair.info = flair._;
     flair.options = options;
@@ -2407,8 +2396,6 @@
             this.isInstance = () => { return target._.type === 'instance'; };
             this.isClass = () => { return target._.type === 'class'; };
             this.isEnum = () => { return target._.type === 'enum'; };
-            this.isException = () => { return target._.type === 'exception'; };
-            this.isArgs = () => { return target._.type === 'args'; };
             this.isProc = () => { return target._.type === 'proc'; };
             this.isStructure = () => { return target._.type === 'structure'; };
             this.isStructureInstance = () => { return target._.type === 'sinstance'; };
@@ -2578,17 +2565,6 @@
             refl.getValue = () => { return target[name]; }
             return refl;
         };
-        const ExceptionReflector = function(target) {
-            let refl = new CommonTypeReflector(target);
-            refl.getExceptionType = () => { return target.type; }
-            refl.getMessage = () => { return target.message; }
-            refl.getRaw = () => { return target.error; }
-            return refl;
-        };   
-        const ArgsReflector = function(target) {
-            let refl = new CommonTypeReflector(target);
-            return refl;
-        };       
         const InstanceReflector = function(target) {
             let refl = new CommonTypeReflector(target),
                 filterMembers = (members, type, attrs) => {
@@ -2890,8 +2866,6 @@
             case 'sinstance': ref = new StructureInstanceReflector(forTarget); break;
             case 'class': ref = new ClassReflector(forTarget); break;
             case 'enum': ref = new EnumReflector(forTarget); break;
-            case 'exception': ref = new ExceptionReflector(forTarget); break;
-            case 'args': ref = new ArgsReflector(forTarget); break;
             case 'proc': ref = new ProcReflector(forTarget); break;
             case 'resource': ref = new ResourceReflector(forTarget); break;
             case 'structure': ref = new StructureReflector(forTarget); break;

@@ -50,7 +50,8 @@ describe('Load:', () => {
             beforeAll(() => {
                 Flair({
                     symbols: ['TEST', 'DEBUG'], 
-                    supressGlobals: true });
+                    supressGlobals: true 
+                });
             });
         
             it('should load global flair object', () => {
@@ -73,70 +74,76 @@ describe('Load:', () => {
                 expect(global.Reflector).toBeUndefined();
             });
             
-            describe('Re-Init (With Globals):', () => {
-                beforeAll(() => {
-                    Flair('TEST, DEBUG, SPECIAL, CLIENT');
-                });
-            
-                it('should load global flair object', () => {
-                    expect(flair).toBeDefined();
-                });            
-                it('should identify TEST environment', () => {
-                    expect(flair.options.env.isTesting).toBeTruthy();
-                });        
-                it('should identify mocked client environment', () => {
-                    expect(flair.options.env.isServer).toBeFalsy();
-                    expect(flair.options.env.isClient).toBeTruthy();
-                });        
-                it('should identify DEBUG mode', () => {
-                    expect(flair.options.env.isDebug).toBeTruthy();
-                });        
-                it('should have SPECIAL symbol', () => {
-                    expect(flair.options.symbols.indexOf('SPECIAL')).toBeGreaterThan(-1);
-                });     
-                it('should define global members', () => {
-                    expect(Exception).toBeDefined();
-                    expect(Enum).toBeDefined();
-                    expect(Class).toBeDefined();
-                    expect(Reflector).toBeDefined();
-                });                           
+            describe('Re-Init (With Conflicting Options):', () => {
+                it('should throw', () => {
+                    expect(() => { Flair('DEBUG, PROD'); }).toThrowError();
+                });                
 
-                describe('Configure custom loaders:', () => {
-                    let mockFunc1 = () => { return '1'; },
-                        mockFunc2 = () => { return '2'; };
+                describe('Re-Init (With Globals):', () => {
                     beforeAll(() => {
-                        flair.options.loaders.define('cm', mockFunc1);
-                        flair.options.loaders.define('sm', mockFunc2);
-                        flair.options.loaders.define('sf', mockFunc1);
-                        flair.options.loaders.define('cf', mockFunc2);
-                        flair.options.loaders.define('cm', mockFunc2);
+                        Flair('TEST, DEBUG, SPECIAL, CLIENT');
                     });
                 
-                    it('should have custom loaders defined', () => {
-                        expect(flair.options.loaderOverrides.moduleLoaderClient).toBe(mockFunc1);
-                        expect(flair.options.loaderOverrides.moduleLoaderServer).toBe(mockFunc2);
-                        expect(flair.options.loaderOverrides.fileLoaderServer).toBe(mockFunc1);
-                        expect(flair.options.loaderOverrides.fileLoaderClient).toBe(mockFunc2);
-                    });
-    
-                    describe('Unload:', () => {
-                        beforeAll(() => {
-                            Flair('END');
-                        });
+                    it('should load global flair object', () => {
+                        expect(flair).toBeDefined();
+                    });            
+                    it('should identify TEST environment', () => {
+                        expect(flair.options.env.isTesting).toBeTruthy();
+                    });        
+                    it('should identify mocked client environment', () => {
+                        expect(flair.options.env.isServer).toBeFalsy();
+                        expect(flair.options.env.isClient).toBeTruthy();
+                    });        
+                    it('should identify DEBUG mode', () => {
+                        expect(flair.options.env.isDebug).toBeTruthy();
+                    });        
+                    it('should have SPECIAL symbol', () => {
+                        expect(flair.options.symbols.indexOf('SPECIAL')).toBeGreaterThan(-1);
+                    });     
+                    it('should define global members', () => {
+                        expect(Exception).toBeDefined();
+                        expect(Enum).toBeDefined();
+                        expect(Class).toBeDefined();
+                        expect(Reflector).toBeDefined();
+                    });                           
 
-                        it('should not have flair object available anymore', () => {
-                            expect(global.flair).toBeUndefined();
-                        }); 
-                        it('should not have global members available anymore', () => {
-                            expect(global.Exception).toBeUndefined();
-                            expect(global.Enum).toBeUndefined();
-                            expect(global.Class).toBeUndefined();
-                            expect(global.Reflector).toBeUndefined();
-                        });                    
-                        it('should still have Flair factory available', () => {
-                            expect(Flair).toBeDefined();
+                    describe('Configure custom loaders:', () => {
+                        let mockFunc1 = () => { return '1'; },
+                            mockFunc2 = () => { return '2'; };
+                        beforeAll(() => {
+                            flair.options.loaders.define('cm', mockFunc1);
+                            flair.options.loaders.define('sm', mockFunc2);
+                            flair.options.loaders.define('sf', mockFunc1);
+                            flair.options.loaders.define('cf', mockFunc2);
+                            flair.options.loaders.define('cm', mockFunc2);
                         });
                     
+                        it('should have custom loaders defined', () => {
+                            expect(flair.options.loaderOverrides.moduleLoaderClient).toBe(mockFunc1);
+                            expect(flair.options.loaderOverrides.moduleLoaderServer).toBe(mockFunc2);
+                            expect(flair.options.loaderOverrides.fileLoaderServer).toBe(mockFunc1);
+                            expect(flair.options.loaderOverrides.fileLoaderClient).toBe(mockFunc2);
+                        });
+        
+                        describe('Unload:', () => {
+                            beforeAll(() => {
+                                Flair('END');
+                            });
+
+                            it('should not have flair object available anymore', () => {
+                                expect(global.flair).toBeUndefined();
+                            }); 
+                            it('should not have global members available anymore', () => {
+                                expect(global.Exception).toBeUndefined();
+                                expect(global.Enum).toBeUndefined();
+                                expect(global.Class).toBeUndefined();
+                                expect(global.Reflector).toBeUndefined();
+                            });                    
+                            it('should still have Flair factory available', () => {
+                                expect(Flair).toBeDefined();
+                            });
+                        
+                        });
                     });
                 });
             });

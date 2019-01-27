@@ -111,9 +111,9 @@
                     client: opts.fileLoaderClient || null
                 }),
                 define: (type, fn) => {
-                    // NOTE: only once these can be defined after loading
+                    if (_Args('string, function')(type, fn).isInvalid()) { throw new _Exception('InvalidArgument', `Arguments type error. (${type})`); }
                     let loaderOverrides = flair.options.loaderOverrides;
-                    switch(type) {
+                    switch(type) { // NOTE: only once these can be defined after loading
                         case 'sm': loaderOverrides.moduleLoaderServer = loaderOverrides.moduleLoaderServer || fn; break;
                         case 'cm': loaderOverrides.moduleLoaderClient = loaderOverrides.moduleLoaderClient || fn; break;
                         case 'sf': loaderOverrides.fileLoaderServer = loaderOverrides.fileLoaderServer || fn; break;

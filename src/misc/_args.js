@@ -11,7 +11,7 @@ const _Args = function(...patterns) {
         // it will return the pattern index that matches
         // and will set this[argName] to their values
         // note, special names like raw, count, define cannot be defined names
-        if (args.length === 0) { throw new _Exception('InvalidArg', 'Argument must be defined. (patterns)'); }
+        if (args.length === 0) { throw new _Exception('InvalidArgument', 'Argument must be defined. (patterns)'); }
 
         // process each pattern - exit with first matching pattern
         let types, items = null,
@@ -23,7 +23,8 @@ const _Args = function(...patterns) {
             values = {
                 raw: args || [],
                 count: args.length,
-                type: -1
+                type: -1,
+                isInvalid: () => { return values.type === -1; }
             };
         for(let pattern of patterns) {
             pIndex++; aIndex=-1; matched = false; mCount = 0;
@@ -31,10 +32,15 @@ const _Args = function(...patterns) {
             for(let item of types) {
                 aIndex++;
                 items = item.split(':');
-                name = items[0].trim() || '',
-                type = items[1].trim() || '';
-                if (!name || !type) { throw new _Exception('InvalidArg', `Argument pattern must contain both name and type. (${pattern})`); }
-                if (['raw', 'count', 'type'].indexOf(name) !== -1) { throw new _Exception('InvalidArg', `Argument name cannot be a reserved name. (${name})`); }
+                if (items.length !== 2) { 
+                    name = pIndex.toString() + '_' + aIndex.toString();
+                    type = item.trim() || '';
+                } else {
+                    name = items[0].trim() || '',
+                    type = items[1].trim() || '';
+                }
+                if (!name || !type) { throw new _Exception('InvalidArgument', `Argument pattern must contain both name and type. (${pattern})`); }
+                if (['raw', 'count', 'type'].indexOf(name) !== -1) { throw new _Exception('InvalidArgument', `Argument name cannot be a reserved name. (${name})`); }
                 if (aIndex > values.count) { matched = false; break; }
                 if (typeof values.raw[aIndex] != type) { matched = false; break; }
                 values[name] = values.raw[aIndex]; matched = true; mCount++;
@@ -45,14 +51,6 @@ const _Args = function(...patterns) {
         // return
         return values;
     };
-
-    // flarized (in-place)
-    _args._ = Object.freeze({
-        inherits: _Args,
-        type: 'args',
-        id: guid(),
-        __: {}
-    });
 
     // return freezed
     return Object.freeze(_args);
