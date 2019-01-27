@@ -931,3 +931,6 @@ flair.Class = (arg1, arg2, arg3, arg4) => {
     // return
     return Class;
 };
+
+// add to members list
+flair.members.push('Class');

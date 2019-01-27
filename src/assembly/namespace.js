@@ -119,3 +119,5 @@ flair.Namespace.createInstance = (qualifiedName, ...args) => {
     }
     return null;
 };
+
+// In Reset func, clean all static and singleton flags as well for all registered classes

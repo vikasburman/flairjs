@@ -518,3 +518,5 @@ flair.Reflector.get = (forTarget) => {
     // return
     return ref;
 };
+// add to members list
+flair.members.push('Reflector');

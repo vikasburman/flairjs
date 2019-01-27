@@ -1,10 +1,10 @@
 // following is added already in examples html
 // <script src="./js/flair.js"></script>
 
-// initialize flair (debug mode)
-if (!flair.isInitialized) { flair('DEBUG'); }
+// initialize Flair (debug mode)
+Flair('DEBUG');
 
-// and flair is available
+// and 'flair' is available
 // here onwards
 
 // NOTE: Examples are using vue.js for

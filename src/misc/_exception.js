@@ -1,6 +1,6 @@
 const _Exception = function(type, msg, error) {
     let _ex = this;
-    if (type && !type.endsWith('Exception')) { type += 'Exception'; }
+    if (type && !type.endsWith('Exception')) { type+= 'Exception'; }
 
     _ex.type = type || 'UndefinedException';
     _ex.message = msg || '';

@@ -11,7 +11,7 @@ const _Args = function(...patterns) {
         // it will return the pattern index that matches
         // and will set this[argName] to their values
         // note, special names like raw, count, define cannot be defined names
-        if (args.length === 0) { throw new _Exception('InvalidArgument', 'Argument patterns must be defined.'); }
+        if (args.length === 0) { throw new _Exception('InvalidArg', 'Argument must be defined. (patterns)'); }
 
         // process each pattern - exit with first matching pattern
         let types, items = null,
@@ -33,8 +33,8 @@ const _Args = function(...patterns) {
                 items = item.split(':');
                 name = items[0].trim() || '',
                 type = items[1].trim() || '';
-                if (!name || !type) { throw new _Exception('InvalidArgument', `Argument pattern must contain both name and type. (${pattern}).`); }
-                if (['raw', 'count', 'type'].indexOf(name) !== -1) { throw new _Exception('InvalidArgument', `Argument name cannot be a reserved name. (${name}).`); }
+                if (!name || !type) { throw new _Exception('InvalidArg', `Argument pattern must contain both name and type. (${pattern})`); }
+                if (['raw', 'count', 'type'].indexOf(name) !== -1) { throw new _Exception('InvalidArg', `Argument name cannot be a reserved name. (${name})`); }
                 if (aIndex > values.count) { matched = false; break; }
                 if (typeof values.raw[aIndex] != type) { matched = false; break; }
                 values[name] = values.raw[aIndex]; matched = true; mCount++;

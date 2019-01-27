@@ -2,7 +2,6 @@
     "create": true,
     "dest": "./package",
     "files": [
-        { "src": "./build/build-asm/engine.js", "dest": "flair.build.js" },
         { "src": "./dist" },
         { "src": "./package.json"},
         { "src": "./LICENSE" },

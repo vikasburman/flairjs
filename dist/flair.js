@@ -2,7 +2,7 @@
  * FlairJS
  * True Object Oriented JavaScript
  * Version 0.15.27
- * Sat, 26 Jan 2019 18:36:15 GMT
+ * Sun, 27 Jan 2019 04:44:12 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  * https://flairjs.com
@@ -12,16 +12,11 @@
 (function(factory) { // eslint-disable-line getter-return
     'use strict';
 
-    // add build time support for server
-    // build engine to create assemblies
-    if ((new Function("try {return this===global;}catch(e){return false;}"))()) { // server
-        factory.build = require('./flair.build.js');
-    }
+    // add build engine to create assemblies on server
+    let isServer = (typeof global !== 'undefined');
+    if (isServer) { factory.build = require('./flair.build.js'); }
 
-    // state;
-    factory.isInitialized = false;
-
-    // freezed version
+    // freeze
     let _factory = Object.freeze(factory);
 
     if (typeof define === 'function' && define.amd) { // AMD support
@@ -30,20 +25,37 @@
         if (module !== undefined && module.exports) {
             exports = module.exports = _factory; // Node.js specific `module.exports`
         }
-        exports.flair = _factory; // CommonJS module 1.1.1 spec
         module.exports = exports = _factory; // CommonJS
-    } else if (this === window) { // client side global
-        this.flair = _factory;
+    } else if (!isServer) {
+        window.Flair = _factory; // expose factory as global
     }
-}).call(this, (opts) => {
+}).call((new Function("try {return global;}catch(e){return window;}"))(), (opts) => {
     'use strict';
 
-    // return as is, if initialized once
-    if(this.flair && typeof this.flair !== 'function') { return this.flair; }
+    // reset everything and then proceed to set a clean environment
+    let isServer = (new Function("try {return this===global;}catch(e){return false;}"))(),
+        _global = (isServer ? global : window);
+    if(_global.flair) { 
+        // reset all globals
+        let resetFunc = null,
+            internalAPI = null;
+        for(let name of _global.flair.members) {
+            internalAPI = _global.flair[name]._;
+            resetFunc = (internalAPI && internalAPI.reset) ? internalAPI.reset : null;
+            if (typeof resetFunc === 'function') {
+                resetFunc();
+            }
+            delete _global[name];
+        }
+        
+        // delete main global
+        delete _global.flair;
+
+        // special case (mostly for testing)
+        if (typeof opts === 'string' && opts === 'END') { return; } // don't continue with reset
+    }
 
     // environment
-    let isServer = (new Function("try {return this===global;}catch(e){return false;}"))(),
-        getGlobal = new Function("try {return (this===global ? global : window);}catch(e){return window;}");
     if (!opts) { 
         opts = {}; 
     } else if (typeof opts === 'string') { // only symbols can be given as comma delimited string
@@ -53,7 +65,7 @@
     // core support objects
     const _Exception = function(type, msg, error) {
         let _ex = this;
-        if (type && !type.endsWith('Exception')) { type += 'Exception'; }
+        if (type && !type.endsWith('Exception')) { type+= 'Exception'; }
     
         _ex.type = type || 'UndefinedException';
         _ex.message = msg || '';
@@ -83,7 +95,7 @@
             // it will return the pattern index that matches
             // and will set this[argName] to their values
             // note, special names like raw, count, define cannot be defined names
-            if (args.length === 0) { throw new _Exception('InvalidArgument', 'Argument patterns must be defined.'); }
+            if (args.length === 0) { throw new _Exception('InvalidArg', 'Argument must be defined. (patterns)'); }
     
             // process each pattern - exit with first matching pattern
             let types, items = null,
@@ -105,8 +117,8 @@
                     items = item.split(':');
                     name = items[0].trim() || '',
                     type = items[1].trim() || '';
-                    if (!name || !type) { throw new _Exception('InvalidArgument', `Argument pattern must contain both name and type. (${pattern}).`); }
-                    if (['raw', 'count', 'type'].indexOf(name) !== -1) { throw new _Exception('InvalidArgument', `Argument name cannot be a reserved name. (${name}).`); }
+                    if (!name || !type) { throw new _Exception('InvalidArg', `Argument pattern must contain both name and type. (${pattern})`); }
+                    if (['raw', 'count', 'type'].indexOf(name) !== -1) { throw new _Exception('InvalidArg', `Argument name cannot be a reserved name. (${name})`); }
                     if (aIndex > values.count) { matched = false; break; }
                     if (typeof values.raw[aIndex] != type) { matched = false; break; }
                     values[name] = values.raw[aIndex]; matched = true; mCount++;
@@ -178,23 +190,36 @@
     
 
     let flair = {
-            isInitialized: true,
             members: []
         },
         noop = () => {},
         sym = (opts.symbols || []), // eslint-disable-next-line no-unused-vars
         noopAsync = (resolve, reject) => { resolve(); },
-        options = Object.freeze({
+        _args = (isServer ? process.argv : new window.URLSearchParams(window.location.search)),
+        isTesting = (sym.indexOf('TEST') !== -1);
+
+    // forced server/client mocking for test environment
+    if (isTesting) {
+        if (sym.indexOf('SERVER') !== -1) { 
+            isServer = true;
+        } else if (sym.indexOf('CLIENT') !== -1) {
+            isServer = false;
+        }
+    }
+
+    // options
+    let options = Object.freeze({
             symbols: Object.freeze(sym),
             env: Object.freeze({
                 type: opts.env || (isServer ? 'server' : 'client'),
+                isTesting: isTesting,
                 isServer: isServer,
                 isClient: !isServer,
                 isProd: (sym.indexOf('PROD') !== -1),
                 isDebug: (sym.indexOf('DEBUG') !== -1),
-                global: getGlobal(),
+                global: _global,
                 supressGlobals: (typeof opts.supressGlobals === 'undefined' ? false : opts.supressGlobals),
-                args: (isServer ? process.argv : new URLSearchParams(location.search))
+                args: _args
             }),
             loaders: Object.freeze({
                 module: Object.freeze({ // (file) => {} that gives a promise to resolve with the module object, on success
@@ -235,7 +260,7 @@
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
         link: 'https://flairjs.com',
-        lupdate: new Date('Sat, 26 Jan 2019 18:36:15 GMT')
+        lupdate: new Date('Sun, 27 Jan 2019 04:44:12 GMT')
     });
     flair.info = flair._;
     flair.options = options;
@@ -482,6 +507,7 @@
         return null;
     };
     
+    // In Reset func, clean all static and singleton flags as well for all registered classes
     // Class
     // Class(className, function() {})
     // Class(className, inherits, function() {})
@@ -1416,6 +1442,8 @@
         return Class;
     };
     
+    // add to members list
+    flair.members.push('Class');
     // Mixin
     // Mixin(mixinName, function() {})
     flair.Mixin = (mixinName, factory) => {
@@ -2878,17 +2906,18 @@
         // return
         return ref;
     };
+    // add to members list
+    flair.members.push('Reflector');
 
     // expose to global environment
-    let g = options.env.global;
     if (!options.env.supressGlobals) {
         for(let name of flair.members) {
-            g[name] = Object.freeze(flair[name]);
+            _global[name] = Object.freeze(flair[name]);
         }
     }
     flair.members = Object.freeze(flair.members);
-    g.flair = Object.freeze(flair); // this is still exposed, so can be used globally
+    _global.flair = Object.freeze(flair); // this is still exposed, so can be used globally
 
     // return
-    return g.flair;
+    return _global.flair;
 });

@@ -63,6 +63,9 @@ const doTask = (done) => {
     .pipe(replace(destName + '.js', destName + '.min.js'))
     .pipe(gulp.dest('./dist'))
     .on('end', () => {
+        // copy build engine
+        fsx.copyFileSync('./build/build-asm/engine.js', './dist/' + destName + '.build.js');
+
         // update examples copy as well
         fsx.copyFileSync('./dist/' + destName + '.js', './docs/examples/kitchensink/js/' + destName + '.js');
 

@@ -1,6 +1,6 @@
 
     // initialize with required symbols
-    flair({ symbols: ['DEBUG'] });
+    Flair({ symbols: ['DEBUG'] });
 
     var myProc = Proc('core.abc.proc', (a1) => {
         console.log(a1);

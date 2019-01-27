@@ -43,13 +43,14 @@
         "gulp-rename": "^1.2.2",
         "gulp-string-replace": "^1.1.2",
         "gulp-uglify": "^2.1.2",
-        "jasmine": "^2.6.0",
+        "http-server": "^0.11.1",
+        "jasmine": "^3.3.1",
+        "open": "^0.0.5",
         "recursive-readdir-sync": "^1.0.6",
+        "request": "^2.88.0",
         "uglify-js-harmony": "^2.7.7",
         "uuid": "^3.3.2"
     },
     "dependencies": {
-        "http-server": "^0.11.1",
-        "open": "^0.0.5"
     }
 }
