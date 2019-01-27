@@ -42,9 +42,7 @@
         for(let name of _global.flair.members) {
             internalAPI = _global.flair[name]._;
             resetFunc = (internalAPI && internalAPI.reset) ? internalAPI.reset : null;
-            if (typeof resetFunc === 'function') {
-                resetFunc();
-            }
+            if (typeof resetFunc === 'function') { resetFunc(); }
             delete _global[name];
         }
         
@@ -69,9 +67,7 @@
     // helpers
     <!-- inject: ./misc/helpers.js -->
 
-    let flair = {
-            members: []
-        },
+    let flair = { members: [] },
         noop = () => {},
         sym = (opts.symbols || []), // eslint-disable-next-line no-unused-vars
         noopAsync = (resolve, reject) => { resolve(); },

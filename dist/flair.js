@@ -2,7 +2,7 @@
  * FlairJS
  * True Object Oriented JavaScript
  * Version 0.15.27
- * Sun, 27 Jan 2019 05:40:40 GMT
+ * Sun, 27 Jan 2019 16:56:33 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  * https://flairjs.com
@@ -42,9 +42,7 @@
         for(let name of _global.flair.members) {
             internalAPI = _global.flair[name]._;
             resetFunc = (internalAPI && internalAPI.reset) ? internalAPI.reset : null;
-            if (typeof resetFunc === 'function') {
-                resetFunc();
-            }
+            if (typeof resetFunc === 'function') { resetFunc(); }
             delete _global[name];
         }
         
@@ -63,68 +61,115 @@
     }
 
     // core support objects
-    const _Exception = function(type, msg, error) {
-        if (type && !type.endsWith('Exception')) { type+= 'Exception'; }
+    // _Exception
+    // _Exception()
+    // _Exception(type)
+    // _Exception(error)
+    // _Exception(type, message)
+    // _Exception(type, error)
+    // _Exception(type, message, error)
+    const _Exception = function(arg1, arg2, arg3) {
+        let typ = '', msg = '',
+            err = null;
+        if (arg1) {
+            if (typeof arg1 === 'string') { 
+                typ = arg1; 
+            } else if (typeof arg1 === 'object') {
+                typ = arg1.name || 'UnknownException';
+                err = arg1;
+                msg = err.message;
+            } else {
+                typ = 'UndefinedException';
+            }
+        } else {
+            typ = 'UndefinedException';
+        }
+        if (arg2) {
+            if (typeof arg2 === 'string') { 
+                msg = arg2; 
+            } else if (typeof arg2 === 'object') {
+                if (!err) { 
+                    err = arg2; 
+                    typ = typ || err.name;
+                    msg = err.message;
+                }
+            } else {
+                typ = 'UndefinedException';
+            }               
+        } else {
+            if (err) { 
+                typ = typ || err.name;
+                msg = err.message; 
+            }
+        }
+        if (arg3) {
+            if (typeof arg3 === 'object') { 
+                if (!err) { err = arg3; }
+            }
+        }
+        if (typ && !typ.endsWith('Exception')) { typ+= 'Exception'; }
     
         let _ex = new Error(msg || '');
-        _ex.name = type || 'UndefinedException';
-        _ex.error = error || null;
+        _ex.name = typ || 'UndefinedException';
+        _ex.error = err || null;
     
         // return freezed
         return Object.freeze(_ex);
     };
+    // _Args
+    // _Args(...patterns)
     const _Args = function(...patterns) {
-       let _args = (...args) => {
-            // each pattern is an expected set of types - like what method overload options
+        if (patterns.length === 0) { throw new _Exception('InvalidArgument', 'Argument must be defined. (patterns)'); }
+    
+        let _args = (...args) => {
+            // each pattern is an expected set of type names - like what method overload options
             // with data types, e.g., a function can have following 4 ways of accepting parameters
             // name1: string
             // name1: string, name2: string
             // name3: object
             // name3: object, name4: string
             // it will process each combination against give args and if none of the pattern matches
-            // or more than one parameter matches, it will throw exceptions
-            // it will return the pattern index that matches
-            // and will set this[argName] to their values
-            // note, special names like raw, count, define cannot be defined names
-            if (args.length === 0) { throw new _Exception('InvalidArgument', 'Argument must be defined. (patterns)'); }
+            // it will set index as -1, it there are more than one matches, it will stop at first match
+            // it will set pattern index that matches
+            // and will set [argName] to their values
+            // note, special names like raw, index cannot be defined names
     
             // process each pattern - exit with first matching pattern
-            let types, items = null,
-                name, type = '',
-                pIndex = -1,
-                aIndex = -1,
+            let types = null, items = null,
+                name = '', type = '',
+                pIndex = -1, aIndex = -1,
                 matched = false,
                 mCount = 0,
-                values = {
+                result = {
                     raw: args || [],
-                    count: args.length,
-                    type: -1,
-                    isInvalid: () => { return values.type === -1; }
+                    index: -1,
+                    isInvalid: () => { return result.index === -1; }
                 };
-            for(let pattern of patterns) {
-                pIndex++; aIndex=-1; matched = false; mCount = 0;
-                types = pattern.split(',');
-                for(let item of types) {
-                    aIndex++;
-                    items = item.split(':');
-                    if (items.length !== 2) { 
-                        name = pIndex.toString() + '_' + aIndex.toString();
-                        type = item.trim() || '';
-                    } else {
-                        name = items[0].trim() || '',
-                        type = items[1].trim() || '';
+            if (patterns) {
+                for(let pattern of patterns) {
+                    pIndex++; aIndex=-1; matched = false; mCount = 0;
+                    types = pattern.split(',');
+                    for(let item of types) {
+                        aIndex++;
+                        items = item.split(':');
+                        if (items.length !== 2) { 
+                            name = `_${pIndex}_${aIndex}`; // e.g., _0_0 or _1_2, etc.
+                            type = item.trim() || '';
+                        } else {
+                            name = items[0].trim() || '',
+                            type = items[1].trim() || '';
+                        }
+                        if (['raw', 'index'].indexOf(name) !== -1) { throw new _Exception('InvalidArgument', `Argument name cannot be a reserved name. (${name})`); }
+                        if (aIndex > result.raw.length) { matched = false; break; }
+                        if (typeof result.raw[aIndex] != type) { matched = false; break; }
+                        result[name] = result.raw[aIndex]; matched = true; mCount++;
                     }
-                    if (!name || !type) { throw new _Exception('InvalidArgument', `Argument pattern must contain both name and type. (${pattern})`); }
-                    if (['raw', 'count', 'type'].indexOf(name) !== -1) { throw new _Exception('InvalidArgument', `Argument name cannot be a reserved name. (${name})`); }
-                    if (aIndex > values.count) { matched = false; break; }
-                    if (typeof values.raw[aIndex] != type) { matched = false; break; }
-                    values[name] = values.raw[aIndex]; matched = true; mCount++;
+                    if (matched && mCount === result.raw.length) {result.index = pIndex; break; }
                 }
-                if (matched && mCount === values.count) {values.type = pIndex; break; }
             }
     
             // return
-            return values;
+            return result;
         };
     
         // return freezed
@@ -178,9 +223,7 @@
     };
     
 
-    let flair = {
-            members: []
-        },
+    let flair = { members: [] },
         noop = () => {},
         sym = (opts.symbols || []), // eslint-disable-next-line no-unused-vars
         noopAsync = (resolve, reject) => { resolve(); },
@@ -249,13 +292,18 @@
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
         link: 'https://flairjs.com',
-        lupdate: new Date('Sun, 27 Jan 2019 05:40:40 GMT')
+        lupdate: new Date('Sun, 27 Jan 2019 16:56:33 GMT')
     });
     flair.info = flair._;
     flair.options = options;
 
     // Exception
-    // Exception(type, msg, error)
+    // Exception()
+    // Exception(type)
+    // Exception(error)
+    // Exception(type, message)
+    // Exception(type, error)
+    // Exception(type, message, error)
     flair.Exception = _Exception;
     
     // add to members list
