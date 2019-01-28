@@ -1,9 +1,14 @@
 const _typeOf = (obj) => {
-    if (!obj) { throw new _Exception('MissingArgument', 'Argument must be defined. (obj)'); }
     let _type = '';
 
+    // undefined
+    if (typeof obj === 'undefined') { _type = 'undefined'; }
+
+    // null
+    if (!_type && obj === null) { _type = 'null'; }
+
     // array
-    if (Array.isArray(obj)) { _type = 'array'; }
+    if (!_type && Array.isArray(obj)) { _type = 'array'; }
 
     // date
     if (!_type && (obj instanceof Date)) { _type = 'date'; }

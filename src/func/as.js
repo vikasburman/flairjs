@@ -19,7 +19,7 @@
  * @returns null OR obj - if can be used as specified type, return same object, else null
  */ 
 flair.as = (obj, type) => {
-    if (flair.is(obj, type)) { return obj; }
+    if (_is(obj, type)) { return obj; }
     return null;
 };
 

@@ -9,8 +9,8 @@ describe('---- typeOf.js ----', () => {
     });
 
     describe('Without Params', () => {
-        it('should throw', () => {
-            expect(() => { return typeOf(); }).toThrow();
+        it('should return undefined', () => {
+            expect(typeOf()).toEqual('undefined');
         });
     });
 
@@ -23,8 +23,10 @@ describe('---- typeOf.js ----', () => {
     describe('With Javascript Types', () => {
         it('should be valid', () => {
             expect(typeOf(true)).toEqual('boolean');
+            expect(typeOf(false)).toEqual('boolean');
             expect(typeOf([])).toEqual('array');
             expect(typeOf(new Date())).toEqual('date');
+            expect(typeOf(null)).toEqual('null');
         });        
     });    
 

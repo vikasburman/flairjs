@@ -19,7 +19,7 @@ flair.Container.register(flair.Class('multiinject', flair.Attribute, function() 
         if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
         if (typeof Type === 'string') {
             // get contextual type
-            Type = flair.which(Type);
+            Type = which(Type);
 
             // get instance
             instance = flair.Container.resolve(Type, true, ...typeArgs)

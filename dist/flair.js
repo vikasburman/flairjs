@@ -2,7 +2,7 @@
  * FlairJS
  * True Object Oriented JavaScript
  * Version 0.15.27
- * Mon, 28 Jan 2019 06:04:54 GMT
+ * Mon, 28 Jan 2019 15:18:48 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  * https://flairjs.com
@@ -110,11 +110,16 @@
         return Object.freeze(_ex);
     };
     const _typeOf = (obj) => {
-        if (!obj) { throw new _Exception('MissingArgument', 'Argument must be defined. (obj)'); }
         let _type = '';
     
+        // undefined
+        if (typeof obj === 'undefined') { _type = 'undefined'; }
+    
+        // null
+        if (!_type && obj === null) { _type = 'null'; }
+    
         // array
-        if (Array.isArray(obj)) { _type = 'array'; }
+        if (!_type && Array.isArray(obj)) { _type = 'array'; }
     
         // date
         if (!_type && (obj instanceof Date)) { _type = 'date'; }
@@ -129,7 +134,8 @@
         return _type;
     };
     const _is = (obj, type) => {
-        if (!obj && !type) { throw new _Exception('MissingArgument', 'Argument must be defined. (obj, type)'); }
+        // obj may be undefined or null or false, so don't check
+        if (_typeOf(type) !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
         let isMatched = false, 
             _typ = '';
     
@@ -318,7 +324,31 @@
         // return freezed
         return Object.freeze(obj);
     };
-    
+    const which = (def, isFile) => {
+        if (isFile) { // debug/prod specific decision
+            // pick minified or dev version
+            if (def.indexOf('{.min}') !== -1) {
+                if (flair.options.env.isProd) {
+                    return def.replace('{.min}', '.min'); // a{.min}.js => a.min.js
+                } else {
+                    return def.replace('{.min}', ''); // a{.min}.js => a.js
+                }
+            }
+        } else { // server/client specific decision
+            if (def.indexOf('|') !== -1) { 
+                let items = def.split('|'),
+                    item = '';
+                if (flair.options.env.isServer) {
+                    item = items[0].trim();
+                } else {
+                    item = items[1].trim();
+                }
+                if (item === 'x') { item = ''; } // special case to explicitely mark absence of a type
+                return item;
+            }            
+        }
+        return def; // as is
+    };
 
     let flair = { members: [] },
         noop = () => {},
@@ -389,7 +419,7 @@
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
         link: 'https://flairjs.com',
-        lupdate: new Date('Mon, 28 Jan 2019 06:04:54 GMT')
+        lupdate: new Date('Mon, 28 Jan 2019 15:18:48 GMT')
     });
     flair.info = flair._;
     flair.options = options;
@@ -446,7 +476,7 @@
         if (typeof ado !== 'object' || Array.isArray(ado.types) || Array.isArray(ado.assets)) {
             throw `Not an assembly definition object.`;
          }
-        let asmFile = flair.which(ado.file, true);
+        let asmFile = which(ado.file, true);
     
         let _asm = {
             name: () => { return ado.name; },
@@ -684,7 +714,7 @@
      * @returns flair type OR null - if assembly which contains this type is loaded, it will return type or will return null
      */ 
     flair.Types = (name) => { 
-        if (!name) { throw new _Exception('MissingArgument', 'Argument must be defined. (name)'); }
+        if (_typeOf(name) !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is not valid. (name)'); }
         return flair.Namespace.getType(name); 
     }
     
@@ -1970,48 +2000,50 @@
     
     // add to members list
     flair.members.push('Structure');
-    // which
-    // which(def, isFile)
-    //  def: definition to check
-    //  isFile: if definition is a file 
-    flair.which = (def, isFile) => {
-        if (isFile) { // debug/prod specific decision
-            // pick minified or dev version
-            if (def.indexOf('{.min}') !== -1) {
-                if (flair.options.env.isProd) {
-                    return def.replace('{.min}', '.min'); // a{.min}.js => a.min.js
-                } else {
-                    return def.replace('{.min}', ''); // a{.min}.js => a.js
-                }
-            }
-        } else { // server/client specific decision
-            if (def.indexOf('|') !== -1) { 
-                let items = def.split('|'),
-                    item = '';
-                if (flair.options.env.isServer) {
-                    item = items[0].trim();
-                } else {
-                    item = items[1].trim();
-                }
-                if (item === 'x') { item = ''; } // special case to explicitely mark absence of a type
-                return item;
-            }            
-        }
-        return def; // as is
-    };
     
-    // using
-    // using(object, scopeFn)
-    flair.using = (obj, scopeFn) => {
+    /**
+     * @name using
+     * @description Ensures the dispose of the given object instance is called, even if there was an error 
+     *              in executing processor function
+     * @example
+     *  using(obj, fn)
+     * @params
+     *  obj: object - object that needs to be processed by processor function
+     *                If a disposer is not defined for the object, it will not do anything
+     *  fn: function - processor function
+     * @returns any - returns anything that is returned by processor function, it may also be a promise
+     */ 
+    flair.using = (obj, fn) => {
+        if (_typeOf(obj) !== 'instance') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+        if (_typeOf(fn) !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (fn)'); }
+    
+        let result = null,
+            isDone = false,
+            isPromiseReturned = false,
+            doDispose = () => {
+                if (!isDone && typeof obj._.dispose === 'function') {
+                    isDone = true; obj._.dispose();
+                }
+            };
         try {
-            scopeFn(obj);
-        } finally {
-            if (obj._ && typeof obj._.dispose === 'function') {
-                obj._.dispose();
+            result = fn(obj);
+            if(result && typeof result.finally === 'function') { // a promise is returned
+                isPromiseReturned = true;
+                result = result.finally((args) => {
+                    doDispose();
+                    return args;
+                });
             }
+        } finally {
+            if (!isPromiseReturned) { doDispose(); }
         }
+    
+        // return
+        return result;
     };
     
+    // add to members list
+    flair.members.push('using');
     /**
      * @name as
      * @description Checks if given object can be consumed as an instance of given type.
@@ -2033,7 +2065,7 @@
      * @returns null OR obj - if can be used as specified type, return same object, else null
      */ 
     flair.as = (obj, type) => {
-        if (flair.is(obj, type)) { return obj; }
+        if (_is(obj, type)) { return obj; }
         return null;
     };
     
@@ -2165,7 +2197,7 @@
         }
         if (typeof alias === 'string' && typeof type === 'string') {
             // get contextual type
-            type = flair.which(type);
+            type = which(type);
             
             if (type.endsWith('.js') || type.endsWith('.mjs')) { // its a JS file
                 // store as is
@@ -2367,7 +2399,7 @@
             if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
             if (typeof Type === 'string') { 
                 // get contextual type
-                Type = flair.which(Type);
+                Type = which(Type);
     
                 // get instance
                 instance = flair.Container.resolve(Type, false, ...typeArgs)
@@ -2409,7 +2441,7 @@
             if (!Array.isArray(typeArgs)) { typeArgs = [typeArgs]; }
             if (typeof Type === 'string') {
                 // get contextual type
-                Type = flair.which(Type);
+                Type = which(Type);
     
                 // get instance
                 instance = flair.Container.resolve(Type, true, ...typeArgs)

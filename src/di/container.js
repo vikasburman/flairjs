@@ -17,7 +17,7 @@ flair.Container.register = (alias, type) => {
     }
     if (typeof alias === 'string' && typeof type === 'string') {
         // get contextual type
-        type = flair.which(type);
+        type = which(type);
         
         if (type.endsWith('.js') || type.endsWith('.mjs')) { // its a JS file
             // store as is

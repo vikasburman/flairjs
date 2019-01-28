@@ -136,7 +136,7 @@ flair.bring = (members, scopeFn) => {
                 _resolved = null;
 
             // pick contextual member
-            _member = flair.which(_member);
+            _member = which(_member);
             
             // check if this is an alias registered on DI container
             let option1 = (done) => {
@@ -180,7 +180,7 @@ flair.bring = (members, scopeFn) => {
                 if (ext) {
                     if (ext === 'js' || ext === 'mjs') {
                         // pick contextual file
-                        _member = flair.which(_member, true);
+                        _member = which(_member, true);
                         
                         // this will be loaded as module in next option as a module
                         done();

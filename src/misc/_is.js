@@ -1,5 +1,6 @@
 const _is = (obj, type) => {
-    if (!obj && !type) { throw new _Exception('MissingArgument', 'Argument must be defined. (obj, type)'); }
+    // obj may be undefined or null or false, so don't check
+    if (_typeOf(type) !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
     let isMatched = false, 
         _typ = '';
 

@@ -5,7 +5,7 @@ flair.Assembly = (ado) => {
     if (typeof ado !== 'object' || Array.isArray(ado.types) || Array.isArray(ado.assets)) {
         throw `Not an assembly definition object.`;
      }
-    let asmFile = flair.which(ado.file, true);
+    let asmFile = which(ado.file, true);
 
     let _asm = {
         name: () => { return ado.name; },

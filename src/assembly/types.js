@@ -13,7 +13,7 @@
  * @returns flair type OR null - if assembly which contains this type is loaded, it will return type or will return null
  */ 
 flair.Types = (name) => { 
-    if (!name) { throw new _Exception('MissingArgument', 'Argument must be defined. (name)'); }
+    if (_typeOf(name) !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is not valid. (name)'); }
     return flair.Namespace.getType(name); 
 }
 

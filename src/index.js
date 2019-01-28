@@ -155,7 +155,6 @@
     <!-- inject: ./types/proc.js -->
     <!-- inject: ./types/resource.js -->
     <!-- inject: ./types/structure.js -->
-    <!-- inject: ./func/which.js -->
     <!-- inject: ./func/bring.js -->
     <!-- inject: ./func/using.js -->
     <!-- inject: ./func/as.js -->
