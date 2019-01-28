@@ -1,12 +1,16 @@
-// isMixed
-// isMixed(objOrCls, mix)
-//  objOrCls: object or class to check for mixin
-//  mix: Mixed type for which mixin is to be checked
-flair.isMixed = (objOrCls, mix) => {
-    if (objOrCls._ && (objOrCls._.type === 'class' || objOrCls._.type === 'instance') && mix._ && mix._.type === 'mixin') {
-        if (objOrCls._.isMixed(mix._.name)) { return true; }
-        return false;
-    } else {
-        throw 'Invalid arguments.';
-    }
-};
+/**
+ * @name isMixed
+ * @description Checks if given flair class instance or class has mixed with given mixin.
+ * @example
+ *  isMixed(obj, mixin)
+ * @params
+ *  obj: object - flair object that needs to be checked
+ *  mixin: string OR mixin - mixin to be checked for, it can be following:
+ *                           > fully qualified mixin name
+ *                           > mixin type reference
+ * @returns boolean - true/false
+ */ 
+flair.isMixed = _is.mixed;
+
+// add to members list
+flair.members.push('isMixed');

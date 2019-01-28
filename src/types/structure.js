@@ -18,7 +18,11 @@ flair.Structure = (name, factory) => {
 
         // object meta extensions
         let mex = {
-            inherits: _Structure
+            inherits: _Structure,
+            isInstanceOf: (nm) => {
+                if (nm._ && nm._.name) { nm = nm._.name; } // TODO: fix
+                return _Structure._.name === nm;
+            }
         };
 
         // return flarized
@@ -32,3 +36,5 @@ flair.Structure = (name, factory) => {
     return flarized('structure', name, _Structure, mex)
 };
 
+// add to members list
+flair.members.push('Structure');

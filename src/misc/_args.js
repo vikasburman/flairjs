@@ -1,21 +1,22 @@
-// _Args
-// _Args(...patterns)
-const _Args = function(...patterns) {
+const _Args = (...patterns) => {
     if (patterns.length === 0) { throw new _Exception('InvalidArgument', 'Argument must be defined. (patterns)'); }
 
+    /**
+     * @description Args validator function that validates against given patterns
+     * @example
+     *  (...args)
+     * @params
+     *  args: any - multiple arguments to match against given pattern sets
+     * @returns result object, having:
+     *  raw: (array) - original arguments as passed
+     *  index: (number) - index of pattern-set that matches for given arguments, -1 if no match found
+     *                    if more than one patterns may match, it will stop at first match
+     *  isInvalid: (function) - function to check if any match could not be achieved
+     *  <name(s)>: <value(s)> - argument name as given in pattern having corresponding argument value
+     *                          if a name was not given in pattern, a default unique name will be created
+     *                          special names like 'raw', 'index' and 'isInvalid' cannot be used.
+     */    
     let _args = (...args) => {
-        // each pattern is an expected set of type names - like what method overload options
-        // with data types, e.g., a function can have following 4 ways of accepting parameters
-        // name1: string
-        // name1: string, name2: string
-        // name3: object
-        // name3: object, name4: string
-        // it will process each combination against give args and if none of the pattern matches
-        // it will set index as -1, it there are more than one matches, it will stop at first match
-        // it will set pattern index that matches
-        // and will set [argName] to their values
-        // note, special names like raw, index cannot be defined names
-
         // process each pattern - exit with first matching pattern
         let types = null, items = null,
             name = '', type = '',
@@ -41,9 +42,9 @@ const _Args = function(...patterns) {
                         name = items[0].trim() || '',
                         type = items[1].trim() || '';
                     }
-                    if (['raw', 'index'].indexOf(name) !== -1) { throw new _Exception('InvalidArgument', `Argument name cannot be a reserved name. (${name})`); }
+                    if (['raw', 'index', 'isInvalid'].indexOf(name) !== -1) { throw new _Exception('InvalidArgument', `Argument name cannot be a reserved name. (${name})`); }
                     if (aIndex > result.raw.length) { matched = false; break; }
-                    if (typeof result.raw[aIndex] != type) { matched = false; break; }
+                    if (!_is(result.raw[aIndex], type)) { matched = false; break; }
                     result[name] = result.raw[aIndex]; matched = true; mCount++;
                 }
                 if (matched && mCount === result.raw.length) {result.index = pIndex; break; }

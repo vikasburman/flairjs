@@ -25,7 +25,7 @@ describe('---- exception.js ----', () => {
         });
     });
 
-    describe('With Various Combination of Params)', () => {
+    describe('With Various Combination of Params', () => {
         it('should have Exception suffixed in name', () => {
             let ex = new Exception('InvalidArgument');
             expect(ex.name).toEqual('InvalidArgumentException');

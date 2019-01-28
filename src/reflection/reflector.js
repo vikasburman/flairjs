@@ -1,6 +1,5 @@
 // Reflector
-flair.Reflector = {};
-flair.Reflector.get = (forTarget) => {
+flair.Reflector = function (forTarget) {
     // define
     const CommonTypeReflector = function(target) {
         this.getType = () => { return target._.type; };

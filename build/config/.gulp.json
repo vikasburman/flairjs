@@ -1,0 +1,5 @@
+{
+    "specs": [
+        "./specs/**/*.spec.js"
+    ]
+}

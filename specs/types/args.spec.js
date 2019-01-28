@@ -10,20 +10,20 @@ describe('---- args.js ----', () => {
 
     describe('Without Params', () => {
         it('should throw', () => {
-            expect(() => { return new Args(); }).toThrow();
+            expect(() => { return Args(); }).toThrow();
         });
     });
 
     describe('With Params', () => {
         it('should not throw', () => {
-            expect(typeof new Args('string')).toEqual('function')
+            expect(typeof Args('string')).toEqual('function')
         });
     });
 
     describe('With Unnamed Arguments', () => {
         let args = null;
         beforeAll(() => {
-            args = new Args('string, string', 'string, number')('test1', 'test2');
+            args = Args('string, string', 'string, number')('test1', 'test2');
         });
         it('should be a valid match', () => {
             expect(args.isInvalid()).toBeFalsy();
@@ -39,14 +39,14 @@ describe('---- args.js ----', () => {
 
     describe('With Reserved Named Arguments', () => {
         it('should throw', () => {
-            expect(() => { return new Args('name: string, index: number')('test1', 10); }).toThrow();
+            expect(() => { return Args('name: string, index: number')('test1', 10); }).toThrow();
         });        
     });   
-    
+
     describe('With Named Arguments - All Arguments', () => {
         let args = null;
         beforeAll(() => {
-            args = new Args('name: string, type: string', 'name: string, place: number')('test1', 10);
+            args = Args('name: string, type: string', 'name: string, place: number')('test1', 10);
         });
         it('should be a valid match', () => {
             expect(args.isInvalid()).toBeFalsy();
@@ -66,7 +66,7 @@ describe('---- args.js ----', () => {
     describe('With Named Arguments - Some Arguments', () => {
         let args = null;
         beforeAll(() => {
-            args = new Args('name: string, type: string', 'name: string, place: number', 'name: string')('test1');
+            args = Args('name: string, type: string', 'name: string, place: number', 'name: string')('test1');
         });
         it('should be a valid match', () => {
             expect(args.isInvalid()).toBeFalsy();
@@ -87,9 +87,9 @@ describe('---- args.js ----', () => {
         let args = null,
             result1 = result2 = result3 = result4 = null;
         beforeAll(() => {
-            args = new Args('type: string', 'type: number', 'type: object', 'type: object, name: string');
+            args = Args('type: string', 'type: array', 'type: object', 'type: object, name: string');
             result1 = args('test1');
-            result2 = args(10);
+            result2 = args([]);
             result3 = args({});
             result4 = args({}, 'test1');
         });
@@ -117,7 +117,7 @@ describe('---- args.js ----', () => {
     describe('With Named Arguments - Conflicting Patterns', () => {
         let args = null;
         beforeAll(() => {
-            args = new Args('type: string, name: string', 'type2: string, name2: string')('test1', 'test2');
+            args = Args('type: string, name: string', 'type2: string, name2: string')('test1', 'test2');
         });
         it('should be a valid match', () => {
             expect(args.isInvalid()).toBeFalsy();
@@ -133,6 +133,5 @@ describe('---- args.js ----', () => {
             expect(args.type2).toBeUndefined();
             expect(args.name2).toBeUndefined();
         });        
-
-    });    
+    });   
 });

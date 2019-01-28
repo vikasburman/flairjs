@@ -62,6 +62,8 @@
 
     // core support objects
     <!-- inject: ./misc/_exception.js -->
+    <!-- inject: ./misc/_typeOf.js -->
+    <!-- inject: ./misc/_is.js -->
     <!-- inject: ./misc/_args.js -->
 
     // helpers
@@ -145,6 +147,7 @@
     <!-- inject: ./types/args.js -->
     <!-- inject: ./assembly/assembly.js -->
     <!-- inject: ./assembly/namespace.js -->
+    <!-- inject: ./assembly/types.js -->
     <!-- inject: ./types/class.js -->
     <!-- inject: ./types/mixin.js -->
     <!-- inject: ./types/interface.js -->
@@ -156,8 +159,8 @@
     <!-- inject: ./func/bring.js -->
     <!-- inject: ./func/using.js -->
     <!-- inject: ./func/as.js -->
+    <!-- inject: ./func/typeOf.js -->
     <!-- inject: ./func/is.js -->
-    <!-- inject: ./func/classOf.js -->
     <!-- inject: ./func/isDerivedFrom.js -->
     <!-- inject: ./func/isImplements.js -->
     <!-- inject: ./func/isInstanceOf.js -->

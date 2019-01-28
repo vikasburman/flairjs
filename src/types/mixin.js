@@ -7,6 +7,8 @@ flair.Mixin = (mixinName, factory) => {
         type: 'mixin',
         namespace: null        
     };
+// TODO: check that mixin either can be defined as structure or should have at least basic class definition approach or allow mixing classes itself
+
 
     // register type with namespace
     flair.Namespace(factory);
@@ -14,3 +16,6 @@ flair.Mixin = (mixinName, factory) => {
     // return
     return factory;
 };
+
+// add to members list
+flair.members.push('Mixin');

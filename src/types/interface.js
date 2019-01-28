@@ -48,3 +48,6 @@ flair.Interface = (interfaceName, factory) => {
     // return
     return meta;
 };
+
+// add to members list
+flair.members.push('Interface');

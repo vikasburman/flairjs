@@ -1,12 +1,16 @@
-// isImplements
-// isImplements(objOrCls, intf)
-//  objOrCls: object or class to check for interface
-//  intf: Interface type for which implementation is to be checked
-flair.isImplements = (objOrCls, intf) => {
-    if (objOrCls._ && (objOrCls._.type === 'class' || objOrCls._.type === 'instance') && intf._ && intf._.type === 'interface') {
-        if (objOrCls._.isImplements(intf._.name)) { return true; }
-        return false;
-    } else {
-        throw 'Invalid arguments.';
-    }
-};
+/**
+ * @name isImplements
+ * @description Checks if given flair class instance or class implements given interface.
+ * @example
+ *  isImplements(obj, intf)
+ * @params
+ *  obj: object - flair object that needs to be checked
+ *  intf: string OR interface - interface to be checked for, it can be following:
+ *                              > fully qualified interface name
+ *                              > interface type reference
+ * @returns boolean - true/false
+ */ 
+flair.isImplements = _is.implements;
+
+// add to members list
+flair.members.push('isImplements');

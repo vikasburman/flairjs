@@ -1,7 +1,7 @@
 // Enum
-// Enum(name, data)
+// Enum(name, def)
 //  name: name of the enum
-//  data: object with key/values or an array of values
+//  def: object with key/values or an array of values
 flair.Enum = (name, data) => {
     'use strict';
 

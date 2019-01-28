@@ -1,10 +1,3 @@
-// _Exception
-// _Exception()
-// _Exception(type)
-// _Exception(error)
-// _Exception(type, message)
-// _Exception(type, error)
-// _Exception(type, message, error)
 const _Exception = function(arg1, arg2, arg3) {
     let typ = '', msg = '',
         err = null;

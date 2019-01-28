@@ -697,13 +697,15 @@ flair.Class = (arg1, arg2, arg3, arg4) => {
         _this._.instanceOf.push({name: className, type: Class, meta: meta, mixins: mixins, interfaces: interfaces});
         _this._.inherits = Class;
         _this._.isInstanceOf = (name) => {
+            if (name._ && name._.name) { name = name._.name; } // TODO: Fix it 
             return (_this._.instanceOf.findIndex((item) => { return item.name === name; }) !== -1);
         };
         _this._.raw = (name) => {
             if (meta[name] && meta[name].raw) { return meta[name].raw; }
             return null;
         },
-        _this._.isMixed = (name) => {
+        _this._.isMixed = (name) => { // TODO: if any derived class is mixed with this, it should also be checked.
+            if (name._ && name._.name) { name = name._.name; } // TODO: Fix it 
             let result = false;
             for (let item of _this._.instanceOf) {
                 for(let mixin of item.mixins) {
@@ -715,7 +717,8 @@ flair.Class = (arg1, arg2, arg3, arg4) => {
             }
             return result;                    
         };
-        _this._.isImplements = (name) => {
+        _this._.isImplements = (name) => { // TODO: If any derived class imolements this interface, it should check that as well
+            if (name._ && name._.name) { name = name._.name; } // TODO: Fix it 
             let result = false;
             for (let item of _this._.instanceOf) {
                 for(let _interface of item.interfaces) {
@@ -891,6 +894,7 @@ flair.Class = (arg1, arg2, arg3, arg4) => {
         isSingleton: () => { return false; },
         isSealed: () => { return false; },
         isDerivedFrom: (name) => {
+            if (name._ && name._.name) { name = name._.name; } // TODO: Fix it 
             let result = (name === 'Object'),
                 prv = inherits;
             if (!result) {
@@ -903,7 +907,8 @@ flair.Class = (arg1, arg2, arg3, arg4) => {
             }
             return result;
         },
-        isMixed: (name) => {
+        isMixed: (name) => { // TODO: if any parent class is mixed with this, it should also be checked.
+            if (name._ && name._.name) { name = name._.name; } // TODO: Fix it 
             let result = false;
             for(let mixin of mixins) {
                 if (mixin._.name === name) {
@@ -912,7 +917,8 @@ flair.Class = (arg1, arg2, arg3, arg4) => {
             }
             return result;                    
         },
-        isImplements: (name) => {
+        isImplements: (name) => { // TODO: if any parent class is mixed with this, it should also be checked.
+            if (name._ && name._.name) { name = name._.name; } // TODO: Fix it 
             let result = false;
             for(let _interface of interfaces) {
                 if (_interface._.name === name) {
