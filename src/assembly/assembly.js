@@ -105,3 +105,8 @@ flair.Assembly.get = (ofType) => {
 };
 flair.Assembly.all = () => { return Object.freeze(asmFiles); }
 flair.Assembly.allTypes = () => { return Object.freeze(asmTypes); }
+
+// reset api
+flair.Assembly._ = {
+    reset: () => { asmFiles = {}; asmTypes = {}; }
+};

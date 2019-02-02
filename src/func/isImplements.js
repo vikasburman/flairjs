@@ -1,6 +1,6 @@
 /**
  * @name isImplements
- * @description Checks if given flair class instance or class implements given interface.
+ * @description Checks if given flair class instance or class implements given interface
  * @example
  *  isImplements(obj, intf)
  * @params
@@ -9,6 +9,8 @@
  *                              > fully qualified interface name
  *                              > interface type reference
  * @returns boolean - true/false
+ * @throws
+ *  InvalidArgumentException
  */ 
 flair.isImplements = _is.implements;
 

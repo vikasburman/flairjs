@@ -11,8 +11,6 @@ const fsx = require('fs-extra');
 const del = require('del');
 const CLIEngine = new require("eslint").CLIEngine
 const uglifyjs = require('uglify-js-harmony');
-const uuid = require('uuid/v1');
-const req = require('request');
 
 let uglifyConfig, 
     eslintConfig,
@@ -71,13 +69,22 @@ const copyDeps = (deps, done) => {
         if (items.length !== 0) {
             let item = items.shift();
             if (item.src.startsWith('http')) {
-                req(item.src, (err, res, body) => {
-                    if (err) {
-                        throw `Failed to fetch dependency: ${item.src}. \n\n ${err}`;
-                    }
-                    fsx.ensureFileSync(item.dest);
-                    fsx.writeFileSync(item.dest, body, 'utf8');
-                    processNext(items);
+                let httpOrhttps = null,
+                    body = '';
+                if (item.src.startsWith('https')) {
+                    httpOrhttps = require('https');
+                } else {
+                    httpOrhttps = require('http'); // for urls where it is not defined
+                }
+                httpOrhttps.get(file, (resp) => {
+                    resp.on('data', (chunk) => { body += chunk; });
+                    resp.on('end', () => { 
+                        fsx.ensureFileSync(item.dest);
+                        fsx.writeFileSync(item.dest, body, 'utf8');
+                        processNext(items);
+                    });
+                }).on('error', (e) => {
+                    throw `Failed to fetch dependency: ${item.src}. \n\n ${e}`;
                 });
             } else { // local file / folder path
                 if (fsx.lstatSync(item.src).isDirectory()) {
@@ -104,7 +111,10 @@ const doTask = (srcList, srcRoot, destRoot, done) => {
 
     // get guid
     const guid = () => { 
-        return uuid().replace(new RegExp('-', 'g'), '_'); 
+        return '_xxxxxxxx_xxxx_4xxx_yxxx_xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });        
     };
 
     // find injection

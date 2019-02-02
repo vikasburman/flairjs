@@ -12,6 +12,9 @@
  *  type: string - error name or type
  *  message: string - error message
  *  error: object - inner error or exception object
+ * @constructs Exception object
+ * @throws
+ *  None
  */  
 flair.Exception = _Exception;
 

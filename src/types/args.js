@@ -18,7 +18,9 @@
  *                                  >> for structure instances:
  *                                     isInstance of given as structure type
  *                          name: argument name which will be used to store extracted value by parser
- * @returns validator function that is configured for specified patterns
+ * @returns function - validator function that is configured for specified patterns
+ * @throws
+ *  InvalidArgumentException 
  */ 
 flair.Args = _Args;
 

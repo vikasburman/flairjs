@@ -1,6 +1,6 @@
 /**
  * @name is
- * @description Checks if given object is of a given type.
+ * @description Checks if given object is of a given type
  * @example
  *  is(obj, type)
  * @params
@@ -17,6 +17,8 @@
  *                           >> for structure instances:
  *                              isInstance of given as structure type
  * @returns boolean - true/false
+ * @throws
+ *  InvalidArgumentException
  */ 
 flair.is = _is;
 

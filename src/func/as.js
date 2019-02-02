@@ -1,6 +1,6 @@
 /**
  * @name as
- * @description Checks if given object can be consumed as an instance of given type.
+ * @description Checks if given object can be consumed as an instance of given type
  * @example
  *  as(obj, type)
  * @params
@@ -16,7 +16,9 @@
  *                              isMixed given as mixin
  *                           >> for structure instances:
  *                              isInstance of given as structure type
- * @returns null OR obj - if can be used as specified type, return same object, else null
+ * @returns object - if can be used as specified type, return same object, else null
+ * @throws
+ *  InvalidArgumentException
  */ 
 flair.as = (obj, type) => {
     if (_is(obj, type)) { return obj; }

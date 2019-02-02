@@ -5,7 +5,7 @@
 //      type class name on server | type class name on client
 //  - typeArgs: constructor args to pass when type class instance is created
 // NOTE: types being referred here must be available in container so sync resolve can happen
-flair.Container.register(flair.Class('multiinject', flair.Attribute, function() {
+flair.Container.register('multiinject', flair.Class('multiinject', flair.Attribute, function() {
     this.decorator((obj, type, name, descriptor) => {
         // validate
         if (['func', 'prop'].indexOf(type) === -1) { throw `multiinject attribute cannot be applied on ${type} members.`; }

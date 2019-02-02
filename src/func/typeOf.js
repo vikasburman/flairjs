@@ -1,6 +1,6 @@
 /**
  * @name typeOf
- * @description Finds the type of given object.
+ * @description Finds the type of given object
  * @example
  *  typeOf(obj)
  * @params
@@ -9,6 +9,8 @@
  *                   it can be following:
  *                    > expected native javascript data types like 'string', 'number', 'function', 'array', 'date', etc.
  *                    > inbuilt flair object types like 'class', 'structure', 'enum', etc.
+ * @throws
+ *  None
  */ 
 flair.typeOf = _typeOf;
 

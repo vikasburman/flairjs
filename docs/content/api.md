@@ -29,15 +29,14 @@ Functions
 ---------
 
 [as](#/api/functions/as) |
-bring |
-classOf |
+include |
 is | 
 isDerivedFrom |
 isImplements |
 isInstanceOf |
 isMixed |
-using |
-which
+typeOf |
+using
 
 
 Classes

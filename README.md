@@ -112,7 +112,7 @@ let Car = Class('Car', Vehicle, function(attr) {
         // subscribe to started event of base class
         this.started.subscribe((e) => {
             // read event args, this and parent class properties
-            console.log(this.model + ' (' + this.cc + 'cc) ' + e.name + ' at: ' + e.args.when);
+            console.log(`${this.model} (${this.cc}cc) ${e.name} at: ${e.args.when}`);
         });
         console.log('Car constructed!');    
     });

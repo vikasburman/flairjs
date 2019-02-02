@@ -1,7 +1,7 @@
 // deprecate
 // deprecate([message])
 //  - message: any custom message
-flair.Container.register(flair.Class('deprecate', flair.Attribute, function() {
+flair.Container.register('deprecate', flair.Class('deprecate', flair.Attribute, function() {
     this.decorator((obj, type, name, descriptor) => {
         // validate
         if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `deprecate attribute cannot be applied on special function.`; }

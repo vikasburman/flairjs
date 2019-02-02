@@ -1,6 +1,6 @@
 /**
  * @name isMixed
- * @description Checks if given flair class instance or class has mixed with given mixin.
+ * @description Checks if given flair class instance or class has mixed with given mixin
  * @example
  *  isMixed(obj, mixin)
  * @params
@@ -9,6 +9,8 @@
  *                           > fully qualified mixin name
  *                           > mixin type reference
  * @returns boolean - true/false
+ * @throws
+ *  InvalidArgumentException
  */ 
 flair.isMixed = _is.mixed;
 

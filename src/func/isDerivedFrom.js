@@ -9,6 +9,8 @@
  *                            > fully qualified class type name
  *                            > class type reference
  * @returns boolean - true/false
+ * @throws
+ *  InvalidArgumentException
  */ 
 flair.isDerivedFrom = _is.derivedFrom;
 

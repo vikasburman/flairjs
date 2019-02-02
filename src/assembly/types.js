@@ -1,8 +1,3 @@
-// type
-// type(qualifiedName)
-//  qualifiedName: qualifiedName of type to get
-
-
 /**
  * @name Types
  * @description Get reference to a registered type definition
@@ -10,7 +5,10 @@
  *  Types(name)
  * @params
  *  name: string - qualified type name whose reference is needed
- * @returns flair type OR null - if assembly which contains this type is loaded, it will return type or will return null
+ * @returns object - if assembly which contains this type is loaded, it will return flair type object OR will return null
+ * @throws
+ *  InvalidArgumentException
+ *  InvalidNameException
  */ 
 flair.Types = (name) => { 
     if (_typeOf(name) !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is not valid. (name)'); }

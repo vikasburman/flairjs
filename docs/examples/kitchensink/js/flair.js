@@ -2,7 +2,7 @@
  * FlairJS
  * True Object Oriented JavaScript
  * Version 0.15.27
- * Mon, 28 Jan 2019 15:18:48 GMT
+ * Sat, 02 Feb 2019 22:51:29 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  * https://flairjs.com
@@ -227,7 +227,7 @@
          *  (...args)
          * @params
          *  args: any - multiple arguments to match against given pattern sets
-         * @returns result object, having:
+         * @returns object - result object, having:
          *  raw: (array) - original arguments as passed
          *  index: (number) - index of pattern-set that matches for given arguments, -1 if no match found
          *                    if more than one patterns may match, it will stop at first match
@@ -235,6 +235,8 @@
          *  <name(s)>: <value(s)> - argument name as given in pattern having corresponding argument value
          *                          if a name was not given in pattern, a default unique name will be created
          *                          special names like 'raw', 'index' and 'isInvalid' cannot be used.
+         * @throws
+         *   InvalidArgumentException
          */    
         let _args = (...args) => {
             // process each pattern - exit with first matching pattern
@@ -419,7 +421,7 @@
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
         link: 'https://flairjs.com',
-        lupdate: new Date('Mon, 28 Jan 2019 15:18:48 GMT')
+        lupdate: new Date('Sat, 02 Feb 2019 22:51:29 GMT')
     });
     flair.info = flair._;
     flair.options = options;
@@ -438,6 +440,9 @@
      *  type: string - error name or type
      *  message: string - error message
      *  error: object - inner error or exception object
+     * @constructs Exception object
+     * @throws
+     *  None
      */  
     flair.Exception = _Exception;
     
@@ -463,7 +468,9 @@
      *                                  >> for structure instances:
      *                                     isInstance of given as structure type
      *                          name: argument name which will be used to store extracted value by parser
-     * @returns validator function that is configured for specified patterns
+     * @returns function - validator function that is configured for specified patterns
+     * @throws
+     *  InvalidArgumentException 
      */ 
     flair.Args = _Args;
     
@@ -577,6 +584,11 @@
     flair.Assembly.all = () => { return Object.freeze(asmFiles); }
     flair.Assembly.allTypes = () => { return Object.freeze(asmTypes); }
     
+    // reset api
+    flair.Assembly._ = {
+        reset: () => { asmFiles = {}; asmTypes = {}; }
+    };
+    
     // Namespace
     // Namespace(Type)
     flair.Namespace = (Type) => {
@@ -653,7 +665,7 @@
                 let items = qualifiedName.split('.');
                 for(let item of items) {
                     if (item) {
-                        // special name not allowed
+                        // special name not allowed InvalidNameException
                         if (item === '_') { throw `Special name "_" is used as name in ${qualifiedName}.`; }
         
                         // pick next level
@@ -698,12 +710,17 @@
         return null;
     };
     
+    // reset api
+    flair.Namespace._ = {
+        reset: () => { 
+            // flair.Namespace.root = {}; 
+        }
+    };
+    
     // In Reset func, clean all static and singleton flags as well for all registered classes
-    // type
-    // type(qualifiedName)
-    //  qualifiedName: qualifiedName of type to get
     
-    
+    // add to members list
+    flair.members.push('Namespace');
     /**
      * @name Types
      * @description Get reference to a registered type definition
@@ -711,7 +728,10 @@
      *  Types(name)
      * @params
      *  name: string - qualified type name whose reference is needed
-     * @returns flair type OR null - if assembly which contains this type is loaded, it will return type or will return null
+     * @returns object - if assembly which contains this type is loaded, it will return flair type object OR will return null
+     * @throws
+     *  InvalidArgumentException
+     *  InvalidNameException
      */ 
     flair.Types = (name) => { 
         if (_typeOf(name) !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is not valid. (name)'); }
@@ -2000,7 +2020,6 @@
     
     // add to members list
     flair.members.push('Structure');
-    
     /**
      * @name using
      * @description Ensures the dispose of the given object instance is called, even if there was an error 
@@ -2012,6 +2031,9 @@
      *                If a disposer is not defined for the object, it will not do anything
      *  fn: function - processor function
      * @returns any - returns anything that is returned by processor function, it may also be a promise
+     * @throws
+     *  InvalidArgumentException
+     *  Any exception that is raised in given function, is passed as is
      */ 
     flair.using = (obj, fn) => {
         if (_typeOf(obj) !== 'instance') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
@@ -2046,7 +2068,7 @@
     flair.members.push('using');
     /**
      * @name as
-     * @description Checks if given object can be consumed as an instance of given type.
+     * @description Checks if given object can be consumed as an instance of given type
      * @example
      *  as(obj, type)
      * @params
@@ -2062,7 +2084,9 @@
      *                              isMixed given as mixin
      *                           >> for structure instances:
      *                              isInstance of given as structure type
-     * @returns null OR obj - if can be used as specified type, return same object, else null
+     * @returns object - if can be used as specified type, return same object, else null
+     * @throws
+     *  InvalidArgumentException
      */ 
     flair.as = (obj, type) => {
         if (_is(obj, type)) { return obj; }
@@ -2073,7 +2097,7 @@
     flair.members.push('as');
     /**
      * @name typeOf
-     * @description Finds the type of given object.
+     * @description Finds the type of given object
      * @example
      *  typeOf(obj)
      * @params
@@ -2082,6 +2106,8 @@
      *                   it can be following:
      *                    > expected native javascript data types like 'string', 'number', 'function', 'array', 'date', etc.
      *                    > inbuilt flair object types like 'class', 'structure', 'enum', etc.
+     * @throws
+     *  None
      */ 
     flair.typeOf = _typeOf;
     
@@ -2089,7 +2115,7 @@
     flair.members.push('typeOf');
     /**
      * @name is
-     * @description Checks if given object is of a given type.
+     * @description Checks if given object is of a given type
      * @example
      *  is(obj, type)
      * @params
@@ -2106,6 +2132,8 @@
      *                           >> for structure instances:
      *                              isInstance of given as structure type
      * @returns boolean - true/false
+     * @throws
+     *  InvalidArgumentException
      */ 
     flair.is = _is;
     
@@ -2122,6 +2150,8 @@
      *                            > fully qualified class type name
      *                            > class type reference
      * @returns boolean - true/false
+     * @throws
+     *  InvalidArgumentException
      */ 
     flair.isDerivedFrom = _is.derivedFrom;
     
@@ -2130,7 +2160,7 @@
     
     /**
      * @name isImplements
-     * @description Checks if given flair class instance or class implements given interface.
+     * @description Checks if given flair class instance or class implements given interface
      * @example
      *  isImplements(obj, intf)
      * @params
@@ -2139,6 +2169,8 @@
      *                              > fully qualified interface name
      *                              > interface type reference
      * @returns boolean - true/false
+     * @throws
+     *  InvalidArgumentException
      */ 
     flair.isImplements = _is.implements;
     
@@ -2157,6 +2189,8 @@
      *                         > fully qualified type name
      *                         > type reference
      * @returns boolean - true/false
+     * @throws
+     *  InvalidArgumentException
      */ 
     flair.isInstanceOf = _is.instanceOf;
     
@@ -2164,7 +2198,7 @@
     flair.members.push('isInstanceOf');
     /**
      * @name isMixed
-     * @description Checks if given flair class instance or class has mixed with given mixin.
+     * @description Checks if given flair class instance or class has mixed with given mixin
      * @example
      *  isMixed(obj, mixin)
      * @params
@@ -2173,71 +2207,173 @@
      *                           > fully qualified mixin name
      *                           > mixin type reference
      * @returns boolean - true/false
+     * @throws
+     *  InvalidArgumentException
      */ 
     flair.isMixed = _is.mixed;
     
     // add to members list
     flair.members.push('isMixed');
-    // Container
     let container = {};
-    flair.Container = {};
     
-    // register(type)
-    // register(alias, type)
-    //  alias: type alias to register a type with
-    //  type: actual type to register against alias OR
-    //        qualifiedName of the type to resolve with OR
-    //        a JS file name that needs to be resolved 
-    //        When qualifiedName or a JS file is being defined, it can also be defined using contextual format
-    //        <serverContent> | <clientContext>
-    flair.Container.register = (alias, type) => {
-        if (typeof alias === 'function') {
-            type = alias;
-            alias = type._.name;
-        }
-        if (typeof alias === 'string' && typeof type === 'string') {
-            // get contextual type
-            type = which(type);
-            
-            if (type.endsWith('.js') || type.endsWith('.mjs')) { // its a JS file
-                // store as is
+    /**
+     * @name Container
+     * @description Returns registered types associated with given alias
+     * @example
+     *  Container(alias)
+     *  Container(alias, isAll)
+     * @params
+     *  alias: string - name of alias to return registered items for
+     *  isAll: boolean - whether to return all items or only first item
+     * @returns array/item - depending upon the value of isAll, return only first or all registered items
+     *                        returns null, if nothing is registered for given alias
+     * @throws
+     *  InvalidArgumentException
+     */ 
+    flair.Container = (alias, isAll) => {
+        if (typeof alias !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
+        if (isAll) {
+            return (container[alias] || []).slice();
+        } else {
+            if (container[alias] && container[alias].length > 0) {
+                return container[alias][0];
             } else {
-                // get actual type
-                type = flair.Namespace.getType(type); // type is qualifiedNane here, if not found it will throw error
+                return null;
             }
         }
+    };
+    
+    /**
+     * @name isRegistered
+     * @description Checks if given alias is registered with container
+     * @example
+     *  isRegistered(alias)
+     * @params
+     *  alias: string - name of alias to check
+     * @returns boolean - true/false
+     * @throws
+     *  InvalidArgumentException
+     */ 
+    flair.Container.isRegistered = (alias) => {
+        if (typeof alias !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
+        return (typeof container[alias] !== 'undefined' &&  container[alias].length > 0);
+    };
+    
+    /**
+     * @name register
+     * @description Register an actual type object OR a qualified name of a type OR a file, to resolve against given alias
+     * @example
+     *  register(alias, type)
+     * @params
+     *  alias: string - name of alias to register given type or qualified name
+     *  type: object/string - it can be following:
+     *      object - actual flair type or any non-primitive object
+     *      string - qualified name of flair type OR path/name of a .js/.mjs file
+     *      
+     *      NOTE: Each type definition can also be defined for contextual consideration as:
+     *      '<typeA> | <typeB>'
+     *      when running on server, <typeA> would be considered, and when running on client <typeB> will be used* 
+     * @returns boolean - true/false
+     * @throws
+     *  InvalidArgumentException
+     *  UnsupportedTypeException
+     */ 
+    flair.Container.register = (alias, type) => {
+        if (typeof alias !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is not valid. (alias)'); }
+        if (!type) { throw new _Exception('InvalidArgument', 'Argument type is not valid. (type)'); }
+    
+        // get what is being registered
+        if (_is(type, 'flair')) {
+            // flair type
+        } else if (typeof type === 'object') {
+            // some object
+        } else if (typeof type === 'string') {
+            // get contextual type for Server/Client scenario
+            type = which(type);
+    
+            if (type.endsWith('.js') || type.endsWith('.mjs')) { 
+                // its a JS file
+            } else { 
+                // qualified name
+                // or it can be some other type of file as well like css, jpeg, anything and it is allowed
+            }
+        } else { // unknown type
+            throw new _Exception('UnsupportedType', `Type is not supported. (${_typeOf(type)})`);
+        }
+    
+        // register
         if (!container[alias]) { container[alias] = []; }
         container[alias].push(type);
+    
+        // return
+        return true;
     };
-    flair.Container.isRegistered = (alias) => {
-        return typeof container[alias] !== 'undefined';
-    };
-    flair.Container.get = (alias) => {
-        return (container[alias] || []).slice();
-    };
+    
+    /**
+     * @name resolve
+     * @description Returns registered type(s) or associated with given alias
+     * @example
+     *  resolve(alias)
+     *  resolve(alias, isMultiResolve)
+     *  resolve(alias, isMultiResolve, ...args)
+     * @params
+     *  alias: string - name of alias to resolve
+     *  isMultiResolve: boolean - should it resolve with all registered types or only first registered
+     *  args: any - any number of arguments to pass to instance created for registered class or structure type
+     * @returns array - having list of resolved types, qualified names or urls or created instances
+     * @throws
+     *  InvalidArgumentException
+     *  Any exception that is generated by constructor while creating instance of a Type is passed as is
+     */ 
     flair.Container.resolve = (alias, isMultiResolve, ...args) => {
+        if (typeof alias !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is not valid. (alias)'); }
+        if (typeof isMultiResolve !== 'boolean') { throw new _Exception('InvalidArgument', 'Argument type is not valid. (isMultiResolve)'); }
+    
         let result = null,
             getResolvedObject = (Type) => {
                 let obj = Type; // whatever it was
-                if (Type._ && Type._.type && ['class', 'structure'].indexOf(Type._.type) !== -1) { 
-                    obj = new Type(...args); // only class and structure need a new instance
+                if (typeof Type === 'string') {
+                    if (Type.endsWith('.js') || Type.endsWith('.mjs')) { 
+                        // file, leave it as is
+                    } else { // try to resolve it from a loaded type
+                        let _Type = flair.Namespace.getType(Type); 
+                        if (_Type) { Type = _Type; }
+                    }
+                }
+    
+                if (['class', 'structure'].indexOf(_typeOf(Type)) !== -1) { // only class and structure need a new instance
+                    if (args) {
+                        obj = new Type(...args); 
+                    } else {
+                        obj = new Type(); 
+                    }
                 }
                 return obj;
-            }
-        if (container[alias] && container[alias].length > 0) { 
+            };
+        
+        if (container[alias] && container[alias].length > 0) {
             if (isMultiResolve) {
                 result = [];
                 for(let Type of container[alias]) {
                     result.push(getResolvedObject(Type));
                 }
             } else {
-                let Type = container[alias][0];
+                let Type = container[alias][0]; // pick first
                 result = getResolvedObject(Type);
             }
         }
+    
+        // resolved
         return result;
     };
     
+    // reset api
+    flair.Container._ = {
+        reset: () => { container = {}; }
+    };
+    
+    // add to members list
+    flair.members.push('Container');
     // Attribute
     flair.Attribute = flair.Class('Attribute', function(attr) {
         let decoratorFn = null;
@@ -2294,7 +2430,7 @@
     
     // async
     // async() 
-    flair.Container.register(flair.Class('async', flair.Attribute, function() {
+    flair.Container.register('async', flair.Class('async', flair.Attribute, function() {
         this.decorator((obj, type, name, descriptor) => {
             // validate
             if (['func'].indexOf(type) === -1) { throw `async attribute cannot be applied on ${type} members.`; }
@@ -2314,7 +2450,7 @@
     // deprecate
     // deprecate([message])
     //  - message: any custom message
-    flair.Container.register(flair.Class('deprecate', flair.Attribute, function() {
+    flair.Container.register('deprecate', flair.Class('deprecate', flair.Attribute, function() {
         this.decorator((obj, type, name, descriptor) => {
             // validate
             if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `deprecate attribute cannot be applied on special function.`; }
@@ -2366,7 +2502,7 @@
     // enumerate
     // enumerate(flag)
     //  - flag: true/false
-    flair.Container.register(flair.Class('enumerate', flair.Attribute, function() {
+    flair.Container.register('enumerate', flair.Class('enumerate', flair.Attribute, function() {
         this.decorator((obj, type, name, descriptor) => {
             // validate
             if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `enumerate attribute cannot be applied on special function.`; }
@@ -2377,6 +2513,322 @@
         });
     }));
     
+    let incCycle = [];
+    /**
+     * @name include
+     * @description Fetch, load and/or resolve an external dependency for required context
+     * @example
+     *  include(deps, fn)
+     * @params
+     *  deps: array - array of strings, each defining a dependency to fetch/load or resolve
+     *      >> each dep definition string should be defined using following syntax:
+     *          'name: definition'
+     *          e.g., fs: fs OR MyClass: my.namespace.MyClass
+     * 
+     *          >> Each definition can take following form:
+     *          >> <namespace>.<name>
+     *              >> e.g., 'my.namespace.MyClass'
+     *              >> this will be looked in given namespace first, so an already loaded type will be picked first
+     *              >> if not found in given namespace, it will look for the assembly where this type might be registered
+     *              >> if found in a registered assembly, it will load that assembly and again look for it in given namespace
+     *          >> [<name>]
+     *              >> e.g., '[IBase]'
+     *              >> this can be a registered alias to any type and is resolved via DI container
+     *              >> if resolved type is an string, it will again pass through <namespace>.<name> resolution process
+     *          >> <name>
+     *              >> e.g., 'fs'
+     *              >> this can be a NodeJS module name (on server side) or a JavaScript module name (on client side)
+     *              >> it will be loaded using configured moduleLoaderFn
+     *              >> if no moduleLoaderFn is configured, it will throw an error if could not be resolved using default module loaders
+     *          >> <path>/<file>.js|.mjs
+     *              >> e.g., '/my/path/somefile.js'
+     *              >> this can be a bare file to load to, it will be resolved using configured fileLoaderFn
+     *              >> path is always treated in context of the root path - full, relative paths from current place are not supported
+     *              >> to handle PRODUCTION and DEBUG scenarios automatically, use <path>/<file>{.min}.js|.mjs format. 
+     *              >> it PROD symbol is available, it will use it as <path>/<file>.min.js otherwise it will use <path>/<file>.js
+     *          >> <path>/<file.css|json|html|...>
+     *              >> e.g., '/my/path/somefile.css'
+     *              >>  if ths is not a js|mjs file, it will treat it as a resource file and will use fetch/require, as applicable
+     *      
+     *          NOTE: Each dep definition can also be defined for contextual consideration as:
+     *          '<depA> | <depB>'
+     *          when running on server, <depA> would be considered, and when running on client <depB> will be used
+     * 
+     *          IMPORTANT: Each dependency is resolved with a Resolved Object
+     *  fn: function - function where to pass resolved dependencies
+     *          >> this func is passed an extractor function (generally named as deps) and if there was any error in deps definitions
+     *           (<name>) returns null if failed or not defined, or the dependency, if loaded
+     *           (<name>, true) returns dependency or throw actual exception that caused dependency load to fail
+     * @returns void
+     * @throws
+     *  None
+     */ 
+    flair.include = (deps, fn) => {
+        let _depsType = _typeOf(deps),
+            _depsError = null;
+        if (_depsType !== 'string' && _depsType !== 'array') { _depsError = new _Exception('InvalidArgument', 'Argument type is invalid. (deps)'); }
+        if (!_depsError && _depsType === 'string') { deps = [deps]; }
+        if (!_depsError && typeof fn !== 'function') { _depsError = new _Exception('InvalidArgument', 'Argument type is invalid. (fn)'); }
+    
+        let resolvedItems = {},
+            _deps = (_depsError ? null : deps.slice());
+    
+        let loader = (isServer, isModule, file) => {
+            let loaders = flair.options.loaders,
+                loaderOverrides = flair.options.loaderOverrides,
+                loader = null;
+            return new Promise((resolve, reject) => {
+                let ext = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
+                if (isServer) {
+                    if (isModule) {
+                        loader = loaders.module.server || loaderOverrides.moduleLoaderServer || null;
+                        if (typeof loader === 'function') {
+                            loader(file).then(resolve).catch(reject);
+                        } else {
+                            try {
+                                resolve(require(file));
+                            } catch(e) {
+                                reject(e);
+                            }
+                        }
+                    } else { // file
+                        loader = loaders.file.server || loaderOverrides.fileLoaderServer || null;
+                        if (typeof loader === 'function') {
+                            loader(file).then(resolve).catch(reject);
+                        } else {
+                            try {
+                                let httpOrhttps = null,
+                                    body = '';
+                                if (file.startsWith('https')) {
+                                    httpOrhttps = require('https');
+                                } else {
+                                    httpOrhttps = require('http'); // for urls where it is not defined
+                                }
+                                httpOrhttps.get(file, (resp) => {
+                                    resp.on('data', (chunk) => { body += chunk; });
+                                    resp.on('end', () => { 
+                                        if (ext === 'json') { 
+                                            resolve(JSON.parse(body));
+                                        } else {
+                                            resolve(body);
+                                        }
+                                    });
+                                }).on('error', reject);
+                            } catch(e) {
+                                reject(e);
+                            }
+                        }
+                    }
+                } else { // client
+                    if (isModule) {
+                        loader = loaders.module.client || loaderOverrides.moduleLoaderClient || null;
+                        if (typeof loader === 'function') {
+                            loader(file).then(resolve).catch(reject);
+                        } else { 
+                            try {
+                                if (typeof require !== 'undefined') { // if requirejs type library having require() is available to load modules / files on client
+                                    require([file], resolve, reject);
+                                } else { // load it as file on browser, this could be a problem for module types // TODO: this needs to be changed, when there is a case
+                                    let js = flair.options.env.global.document.createElement('script');
+                                    js.type = 'text/javascript';
+                                    js.name = file;
+                                    js.src = file;
+                                    js.onload = resolve;
+                                    js.onerror = reject;
+                                    flair.options.env.global.document.head.appendChild(js);
+                                }
+                            } catch(e) {
+                                reject(e);
+                            }
+                        }
+                    } else { // file
+                        loader = loaders.file.client || loaderOverrides.fileLoaderClient || null;
+                        if (typeof loader === 'function') {
+                            loader(file).then(resolve).catch(reject);
+                        } else {
+                            fetch(file).then((response) => {
+                                if (response.status !== 200) {
+                                    reject(response.status);
+                                } else {
+                                    if (ext === 'json') { // special case of JSON
+                                        response.json().then(resolve).catch(reject);
+                                    } else {
+                                        resolve(response.text());
+                                    }
+                                }
+                            }).catch(reject);
+                        }                    
+                    }
+                }
+            });
+        };
+    
+        /**
+         * @description Dependency extractor function that helps in extracting dependencies by name
+         * @example
+         *  (name)
+         *  (name, isThrow)
+         * @params
+         *  name: string - name of the dependency to extract
+         *  isThrow: bool - if dependency could not be loaded, whether to re-throw the actual exception that made it failed to load
+         * @returns dependency object or null
+         */
+        let _dep_extract = (name, isThrow) => {
+            if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is not valid. (name)'); }
+            if (!resolvedItems[name]) { throw new _Exception('InvalidName', `Given name is not valid. (${name})`); }
+            if (resolvedItems[name].error && isThrow) { throw resolvedItems[name].error; }
+            return resolvedItems[name].dep;
+        };
+    
+        let processedAll = () => {
+            if (typeof fn === 'function') {
+                fn(_dep_extract, _depsError); 
+            }
+        };
+    
+        let resolveNext = () => {
+            if (_depsError || _deps.length === 0) {
+                processedAll(); return;
+            } else {
+                let _dep = _deps.shift().trim(),
+                    _depName = '',
+                    _resolved = null,
+                    _error = null;
+    
+                // get dep name
+                if (_dep === '') { _depsError = new _Exception('InvalidArgument', `Argument type is invalid. (deps)`); processedAll(); return; }
+                let _items = _dep.split(':');
+                if (_items.length !== 2) { _depsError = new _Exception('InvalidArgument', `Argument type is invalid. (${_dep})`); processedAll(); return; }
+                _depName = _items[0].trim();
+                _dep = _items[1].trim();
+                if (resolvedItems[_depName]) { _depsError = new _Exception('DuplicateName', `Duplicate names are not allowed. (${_depName})`); processedAll(); return; }
+                resolvedItems[_depName] = {
+                    error: null,
+                    dep: null
+                };
+    
+                // pick contextual dep
+                _dep = which(_dep);
+    
+                // check if this is an alias registered on DI container
+                let option1 = (done) => {
+                    if (_dep.startsWith('[') && _dep.endsWith(']') && _dep.indexOf('.') === -1) {
+                        let _dep2 = _dep.substr(1, _dep.length -2).trim(); // remove [ and ]
+                        if (flair.Container.isRegistered(_dep2)) {
+                            _resolved = flair.Container(_dep2); // first registered item
+                            if (typeof _resolved === 'string') { // this was an alias to something else, treat it as not resolved
+                                _dep = _resolved; // instead continue resolving with this new redirected _dep 
+                                _resolved = null;
+                            }
+                        }
+                    }
+                    done();
+                };            
+    
+                // check if it is available in any namespace
+                let option2 = (done) => {
+                    _resolved = flair.Namespace.getType(_dep); done();
+                };
+    
+                // check if it is available in any unloaded assembly
+                let option3 = (done) => {
+                    let asm = flair.Assembly.get(_dep);
+                    if (asm) { // if type exists in an assembly
+                        if (!asm.isLoaded()) {
+                            asm.load().then(() => {
+                                _resolved = flair.Namespace.getType(_dep); done();
+                            }).catch((e) => {
+                                _error = new _Exception('AssemblyLoad', `Assembly load operation failed with error: ${e}. (${asm.file()})`); done();
+                            });
+                        } else {
+                            _resolved = flair.Namespace.getType(_dep); done();
+                        }
+                    } else {
+                        done();
+                    }
+                };
+    
+                // check if this is a file
+                let option4 = (done) => {
+                    let ext = _dep.substr(_dep.lastIndexOf('.') + 1).toLowerCase();
+                    if (ext) {
+                        if (ext === 'js' || ext === 'mjs') {
+                            // pick contextual file for DEBUG/PROD
+                            _dep = which(_dep, true);
+                            
+                            // this will be loaded as module in next option as a module
+                            done();
+                        } else { // some other file (could be json, css, html, etc.)
+                            loader(flair.options.env.isServer, false, _dep).then((content) => {
+                                _resolved = content; done();
+                            }).catch((e) => {
+                                _error = new _Exception('FileLoad', `File load operation failed with error: ${e}. (${_dep})`); done();
+                            });
+                        }
+                    } else { // not a file
+                        done();
+                    }
+                };
+    
+                // check if this is a module
+                let option5 = (done) => {
+                    loader(flair.options.env.isServer, true, _dep).then((content) => { // as last option, try to load it as module
+                        _resolved = content; done();
+                    }).catch((e) => {
+                        _error = new _Exception('ModuleLoad', `Module load operation failed with error: ${e}. (${_dep})`); done();
+                    });                
+                };
+    
+                // done
+                let resolved = (isExcludePop) => {
+                    resolvedItems[_depName].error = _error;
+                    resolvedItems[_depName].dep = _resolved; 
+                    if (!isExcludePop) { incCycle.pop(); } // removed the last added dep
+                    resolveNext();
+                };
+    
+                // process
+                if (_dep === '') { // nothing is defined to process
+                    resolved(true); return;
+                } else {
+                    // cycle break check
+                    if (incCycle.indexOf(_dep) !== -1) {
+                        _error = new _Exception('CircularDependency', `Circular dependency identified. (${_dep})`);
+                        resolved(true); return;
+                    } else {
+                        incCycle.push(_dep);
+                    }
+    
+                    // run
+                    option1(() => {
+                        if (!_resolved) { option2(() => {
+                            if (!_resolved) { option3(() => {
+                                if (!_resolved) { option4(() => {
+                                    if (!_resolved) { option5(() => {
+                                        if (!_resolved) {
+                                            _error = new _Exception('DependencyResolution', `Failed to resolve dependency. ${_dep}`);
+                                            resolved(); return;
+                                        } else { resolved(); }
+                                    }) } else { resolved(); }
+                                }) } else { resolved(); }
+                            }) } else { resolved(); }
+                        }) } else { resolved(); }
+                    }); 
+                }
+            }
+        }
+    
+        // start processing
+        resolveNext();
+    };
+    
+    // reset api
+    flair.include._ = {
+        reset: () => { incCycle = []; }
+    };
+    
+    // add to members list
+    flair.members.push('include');
     // inject
     // inject(type, [typeArgs])
     //  - type: 
@@ -2385,12 +2837,12 @@
     //      type class name on server | type class name on client
     //  - typeArgs: constructor args to pass when type class instance is created
     // NOTE: types being referred here must be available in container so sync resolve can happen
-    flair.Container.register(flair.Class('inject', flair.Attribute, function() {
+    flair.Container.register('inject', flair.Class('inject', flair.Attribute, function() {
         this.decorator((obj, type, name, descriptor) => {
             // validate
             if (['func', 'prop'].indexOf(type) === -1) { throw `inject attribute cannot be applied on ${type} members.`; }
             if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `inject attribute cannot be applied on special function.`; }
-    
+    // TODO: allow on constructor as well
             // decorate
             let Type = this.args[0],
                 typeArgs = this.args[1],
@@ -2410,7 +2862,7 @@
                 case 'func':
                     fn = descriptor.value;
                     descriptor.value = function(...args) {
-                        fn(instance, ...args);
+                        fn(instance, ...args); // TODO: push at the end
                     }.bind(obj);
                     break;
                 case 'prop':
@@ -2427,7 +2879,7 @@
     //      type class name on server | type class name on client
     //  - typeArgs: constructor args to pass when type class instance is created
     // NOTE: types being referred here must be available in container so sync resolve can happen
-    flair.Container.register(flair.Class('multiinject', flair.Attribute, function() {
+    flair.Container.register('multiinject', flair.Class('multiinject', flair.Attribute, function() {
         this.decorator((obj, type, name, descriptor) => {
             // validate
             if (['func', 'prop'].indexOf(type) === -1) { throw `multiinject attribute cannot be applied on ${type} members.`; }
@@ -3154,6 +3606,7 @@
         // return
         return ref;
     };
+    
     // add to members list
     flair.members.push('Reflector');
 

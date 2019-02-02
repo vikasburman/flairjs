@@ -502,5 +502,6 @@ flair.Reflector = function (forTarget) {
     // return
     return ref;
 };
+
 // add to members list
 flair.members.push('Reflector');

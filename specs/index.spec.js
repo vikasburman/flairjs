@@ -18,7 +18,11 @@ describe('---- index.js ----', () => {
 
         describe('Init:', () => {
             beforeAll(() => {
-                Flair();
+                try {
+                    Flair();
+                } catch(e) {
+                    console.log(e);
+                }
             });
 
             it('should load global flair object', () => {

@@ -11,6 +11,8 @@
  *                         > fully qualified type name
  *                         > type reference
  * @returns boolean - true/false
+ * @throws
+ *  InvalidArgumentException
  */ 
 flair.isInstanceOf = _is.instanceOf;
 

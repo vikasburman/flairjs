@@ -7,7 +7,7 @@ const _Args = (...patterns) => {
      *  (...args)
      * @params
      *  args: any - multiple arguments to match against given pattern sets
-     * @returns result object, having:
+     * @returns object - result object, having:
      *  raw: (array) - original arguments as passed
      *  index: (number) - index of pattern-set that matches for given arguments, -1 if no match found
      *                    if more than one patterns may match, it will stop at first match
@@ -15,6 +15,8 @@ const _Args = (...patterns) => {
      *  <name(s)>: <value(s)> - argument name as given in pattern having corresponding argument value
      *                          if a name was not given in pattern, a default unique name will be created
      *                          special names like 'raw', 'index' and 'isInvalid' cannot be used.
+     * @throws
+     *   InvalidArgumentException
      */    
     let _args = (...args) => {
         // process each pattern - exit with first matching pattern

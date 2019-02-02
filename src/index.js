@@ -155,7 +155,6 @@
     <!-- inject: ./types/proc.js -->
     <!-- inject: ./types/resource.js -->
     <!-- inject: ./types/structure.js -->
-    <!-- inject: ./func/bring.js -->
     <!-- inject: ./func/using.js -->
     <!-- inject: ./func/as.js -->
     <!-- inject: ./func/typeOf.js -->
@@ -169,6 +168,7 @@
     <!-- inject: ./attributes/async.js -->
     <!-- inject: ./attributes/deprecate.js -->
     <!-- inject: ./attributes/enumerate.js -->
+    <!-- inject: ./di/include.js -->
     <!-- inject: ./di/inject.js -->
     <!-- inject: ./di/multiinject.js -->
     <!-- inject: ./aop/aspects.js -->

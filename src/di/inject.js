@@ -6,12 +6,12 @@
 //      type class name on server | type class name on client
 //  - typeArgs: constructor args to pass when type class instance is created
 // NOTE: types being referred here must be available in container so sync resolve can happen
-flair.Container.register(flair.Class('inject', flair.Attribute, function() {
+flair.Container.register('inject', flair.Class('inject', flair.Attribute, function() {
     this.decorator((obj, type, name, descriptor) => {
         // validate
         if (['func', 'prop'].indexOf(type) === -1) { throw `inject attribute cannot be applied on ${type} members.`; }
         if (['_constructor', '_dispose'].indexOf(name) !== -1) { throw `inject attribute cannot be applied on special function.`; }
-
+// TODO: allow on constructor as well
         // decorate
         let Type = this.args[0],
             typeArgs = this.args[1],
@@ -31,7 +31,7 @@ flair.Container.register(flair.Class('inject', flair.Attribute, function() {
             case 'func':
                 fn = descriptor.value;
                 descriptor.value = function(...args) {
-                    fn(instance, ...args);
+                    fn(instance, ...args); // TODO: push at the end
                 }.bind(obj);
                 break;
             case 'prop':

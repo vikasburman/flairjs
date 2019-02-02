@@ -74,7 +74,7 @@ flair.Namespace = (Type) => {
             let items = qualifiedName.split('.');
             for(let item of items) {
                 if (item) {
-                    // special name not allowed
+                    // special name not allowed InvalidNameException
                     if (item === '_') { throw `Special name "_" is used as name in ${qualifiedName}.`; }
     
                     // pick next level
@@ -119,4 +119,14 @@ flair.Namespace.createInstance = (qualifiedName, ...args) => {
     return null;
 };
 
+// reset api
+flair.Namespace._ = {
+    reset: () => { 
+        // flair.Namespace.root = {}; 
+    }
+};
+
 // In Reset func, clean all static and singleton flags as well for all registered classes
+
+// add to members list
+flair.members.push('Namespace');

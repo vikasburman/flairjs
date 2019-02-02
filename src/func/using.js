@@ -9,6 +9,9 @@
  *                If a disposer is not defined for the object, it will not do anything
  *  fn: function - processor function
  * @returns any - returns anything that is returned by processor function, it may also be a promise
+ * @throws
+ *  InvalidArgumentException
+ *  Any exception that is raised in given function, is passed as is
  */ 
 flair.using = (obj, fn) => {
     if (_typeOf(obj) !== 'instance') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
