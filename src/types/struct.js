@@ -2,7 +2,7 @@
 // Structure(name, factory)
 //  name: name of the structure
 //  factory: factory function that take constructor arguments
-flair.Structure = (name, factory) => {
+flair.Struct = (name, factory) => {
     // args validation
     if (typeof factory !== 'function') { throw flair.Exception('STRU01', 'Invalid structure definition type.'); }
 
@@ -31,8 +31,8 @@ flair.Structure = (name, factory) => {
     let mex = {};
 
     // return
-    return flarized('structure', name, _Structure, mex)
+    return flarizedType('struct', name, _Structure, mex)
 };
 
 // add to members list
-flair.members.push('Structure');
+flair.members.push('Struct');

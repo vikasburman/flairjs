@@ -8,14 +8,14 @@
  *  type: string OR type - type to be checked for, it can be following:
  *                         > expected native javascript data types like 'string', 'number', 'function', 'array', 'date', etc.
  *                         > any 'flair' object or type
- *                         > inbuilt flair object types like 'class', 'structure', 'enum', etc.
+ *                         > inbuilt flair object types like 'class', 'struct', 'enum', etc.
  *                         > custom flair object instance types which are checked in following order:
  *                           >> for class instances: 
  *                              isInstanceOf given as type
  *                              isImplements given as interface 
  *                              isMixed given as mixin
- *                           >> for structure instances:
- *                              isInstance of given as structure type
+ *                           >> for struct instances:
+ *                              isInstance of given as struct type
  * @returns boolean - true/false
  * @throws
  *  InvalidArgumentException

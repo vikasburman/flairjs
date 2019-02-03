@@ -20,44 +20,48 @@ let asmFiles = {},
  * @returns object - flair assembly object
  * @throws
  *  InvalidArgumentException
- *  InvalidFormatException
  */ 
 flair.Assembly = (ado) => {
-    if (typeof ado !== 'object') { throw new _Exception('InvalidArgument', 'Argument type is not valid. (ado)'); }
+    if (typeof ado !== 'object') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (ado)'); }
     if (_typeOf(ado.types) !== 'array' || 
         _typeOf(ado.assets) !== 'array' ||
         typeof ado.name !== 'string' ||
         typeof ado.file !== 'string') {
-        throw new _Exception('InvalidFormat', 'Object format is not valid. (ado)');
+        throw new _Exception('InvalidArgument', 'Argument type is invalid. (ado)');
     }
     
-    // minified/dev contextual pick
-    let asmFile = which(ado.file, true);
+    // assembly object
+    keepOpen();
+    let _Assembly = flair.Struct('Assembly', function(attr) {
+        this.construct((ado) => {
+            let asmFile = which(ado.file, true); // minified/dev contextual pick
 
-     // assembly object
-    let _Assembly = {
-        name: ado.name,
-        file: asmFile,
-        desc: ado.desc || '',
-        version: ado.version || '',
-        copyright: ado.copyright || '',
-        license: ado.license || '',
-        types: Object.freeze(ado.types.slice()),
-        settings:  Object.freeze(ado.settings || {}),
-        assets: Object.freeze(ado.assets.slice()),
-        hasAssets: (ado.assets.length > 0),
+        });
+        
+        attr('readonly');
+        this.prop('name');
+
+        this.file = asmFile;
+        this.desc = ado.desc || '';
+        this.version = ado.version || '';
+        this.copyright = ado.copyright || '';
+        this.license = ado.license || '';
+        this.types = Object.freeze(ado.types.slice());
+        this.settings = Object.freeze(ado.settings || {});
+        this.assets = Object.freeze(ado.assets.slice());
+        this.hasAssets = (ado.assets.length > 0);
         isLoaded: () => { return mex.isLoaded; },
         load: () => { return flair.Assembly.load(asmFile); },
         getType: (name) => {
-            if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is not valid. (name)'); }
+            if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
             if (!mex.isLoaded) { throw new _Exception('NotLoaded', `Object is not loaded. (${asmFile})`); }
-            if(_Assembly.types.indexOf(name) === -1) { throw new _Exception('NotFound', `Object is not found. (${name})`); }
+            if(_Assembly.types.indexOf(name) === -1) { throw new _Exception('NotFound', `Type is not found. (${name})`); }
             let Type = flair.Namespace.getType(name);
-            if (!Type) { throw new _Exception('NotRegistered', `Object is not registered. (${name})`); }
+            if (!Type) { throw new _Exception('NotRegistered', `Type is not registered. (${name})`); }
             return Type;
         },
         createInstance: (name, ...args) => {
-            if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is not valid. (name)'); }
+            if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
             let Type = _Assembly.getType(name),
                 obj = null;
             if (args) {
@@ -67,6 +71,12 @@ flair.Assembly = (ado) => {
             }
             return obj;
         }
+
+    });
+
+    let _Assembly = {
+        name: ado.name,
+        file: asmFile,
     };
 
     // meta extensions
@@ -100,18 +110,17 @@ flair.Assembly = (ado) => {
  * @returns boolean - true/false
  * @throws
  *  InvalidArgumentException
- *  InvalidFormatException
  *  DuplicateNameException
  */ 
 flair.Assembly.register = (...ados) => { 
-    if (!ados) { throw new _Exception('InvalidArgument', 'Argument type is not valid. (ados)'); }
+    if (!ados) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (ados)'); }
 
     let success = false;
     for(let ado of ados) {
         let asm = flair.Assembly(ado),
             asmFile = asm.file;
         if (asmFiles[asmFile]) {
-            throw new _Exception('DuplicateName', `Duplicate names are not allowed. (${asmFile})`);
+            throw new _Exception('DuplicateName', `Assembly is already registered. (${asmFile})`);
         } else {
             // register
             asmFiles[asmFile] = asm;
@@ -120,7 +129,7 @@ flair.Assembly.register = (...ados) => {
             for(let type of asm.types) {
                 // qualified names across anywhere should be unique
                 if (asmTypes[type]) {
-                    throw new _Exception('DuplicateName', `Duplicate names are not allowed. (${type})`);
+                    throw new _Exception('DuplicateName', `Type is already registered. (${type})`);
                 } else {
                     asmTypes[type] = asm; // means this type can be loaded from this assembly
                 }
@@ -145,13 +154,13 @@ flair.Assembly.register = (...ados) => {
  * @returns object - promise object
  * @throws
  *  InvalidArgumentException
- *  NotRegisteredException
+ *  NotFoundException
  *  FileLoadException
  */
 flair.Assembly.load = (file) => {
     return new Promise((resolve, reject) => {
-        if (typeof file !== 'string') { reject(new _Exception('InvalidArgument', 'Argument type is not valid. (file)')); return; }
-        if (!flair.Assembly.isRegistered(file)) { reject(new _Exception('NotRegistered', `Object is not registered. (${file})`)); return; }
+        if (typeof file !== 'string') { reject(new _Exception('InvalidArgument', 'Argument type is invalid. (file)')); return; }
+        if (!flair.Assembly.isRegistered(file)) { reject(new _Exception('NotFound', `Assembly is not registered. (${file})`)); return; }
 
         if (asmFiles[file].isLoaded()) { resolve(); return; }
             
@@ -161,7 +170,7 @@ flair.Assembly.load = (file) => {
                 asmFiles[file]._.markLoaded();
                 resolve();
             } catch (e) {
-                reject(new _Exception('FileLoad', `File load failed. (${file})`, e));
+                reject(new _Exception('FileLoad', `File load operation failed. (${file})`, e));
             }
         } else {
             const script = flair.options.env.global.document.createElement('script');
@@ -170,7 +179,7 @@ flair.Assembly.load = (file) => {
                 resolve();
             };
             script.onerror = (e) => {
-                reject(new _Exception('FileLoad', `File load failed. (${file})`, e));
+                reject(new _Exception('FileLoad', `File load operation failed. (${file})`, e));
             };
             script.async = true;
             script.src = file;

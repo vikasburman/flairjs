@@ -159,8 +159,8 @@ flair.include = (deps, fn) => {
      * @returns dependency object or null
      */
     let _dep_extract = (name, isThrow) => {
-        if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is not valid. (name)'); }
-        if (!resolvedItems[name]) { throw new _Exception('InvalidName', `Given name is not valid. (${name})`); }
+        if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+        if (!resolvedItems[name]) { throw new _Exception('InvalidName', `Name is not valid. (${name})`); }
         if (resolvedItems[name].error && isThrow) { throw resolvedItems[name].error; }
         return resolvedItems[name].dep;
     };

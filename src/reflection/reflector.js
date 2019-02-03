@@ -19,8 +19,8 @@ flair.Reflector = function (forTarget) {
         this.isClass = () => { return target._.type === 'class'; };
         this.isEnum = () => { return target._.type === 'enum'; };
         this.isProc = () => { return target._.type === 'proc'; };
-        this.isStructure = () => { return target._.type === 'structure'; };
-        this.isStructureInstance = () => { return target._.type === 'sinstance'; };
+        this.isStruct = () => { return target._.type === 'struct'; };
+        this.isStructInstance = () => { return target._.type === 'sinstance'; };
         this.isNamespace = () => { return target._.type === 'namespace'; };
         this.isResource = () => { return target._.type === 'resource'; };
         this.isAssembly = () => { return target._.type === 'assembly'; };
@@ -308,11 +308,11 @@ flair.Reflector = function (forTarget) {
         refl.isImplements = (name) => { return target._.isImplements(name); };
         return refl;              
     };
-    const StructureInstanceReflector = function(target) {
+    const StructInstanceReflector = function(target) {
         let refl = new CommonTypeReflector(target);
-        refl.getStructure = () => { 
+        refl.getStruct = () => { 
             if (target._.inherits !== null) {
-                return new StructureReflector(target._.inherits);
+                return new StructReflector(target._.inherits);
             }
             return null;
         };
@@ -401,7 +401,7 @@ flair.Reflector = function (forTarget) {
         refl.getContent = () => { return target.get(); };
         return refl;
     };
-    const StructureReflector = function(target) {
+    const StructReflector = function(target) {
         let refl = new CommonTypeReflector(target);
         return refl;
     };            
@@ -415,7 +415,7 @@ flair.Reflector = function (forTarget) {
                     switch(type._.type) {
                         case 'class': members.push(new ClassReflector(type)); break;
                         case 'enum': members.push(new EnumReflector(type)); break;
-                        case 'structure': members.push(new StructureReflector(type)); break;
+                        case 'struct': members.push(new StructReflector(type)); break;
                         case 'mixin': members.push(new MixinReflector(type)); break;
                         case 'interface': members.push(new InterfaceReflector(type)); break;                    
                     }
@@ -430,7 +430,7 @@ flair.Reflector = function (forTarget) {
                 switch(Type._.type) {
                     case 'class': member = new ClassReflector(Type); break;
                     case 'enum': member = new EnumReflector(Type); break;
-                    case 'structure': member = new StructureReflector(Type); break;
+                    case 'struct': member = new StructReflector(Type); break;
                     case 'mixin': member = new MixinReflector(Type); break;
                     case 'interface': member = new InterfaceReflector(Type); break;                    
                 }
@@ -485,12 +485,12 @@ flair.Reflector = function (forTarget) {
     let ref = null;
     switch(forTarget._.type) {
         case 'instance': ref = new InstanceReflector(forTarget); break;
-        case 'sinstance': ref = new StructureInstanceReflector(forTarget); break;
+        case 'sinstance': ref = new StructInstanceReflector(forTarget); break;
         case 'class': ref = new ClassReflector(forTarget); break;
         case 'enum': ref = new EnumReflector(forTarget); break;
         case 'proc': ref = new ProcReflector(forTarget); break;
         case 'resource': ref = new ResourceReflector(forTarget); break;
-        case 'structure': ref = new StructureReflector(forTarget); break;
+        case 'struct': ref = new StructReflector(forTarget); break;
         case 'namespace': ref = new NamespaceReflector(forTarget); break;
         case 'assembly': ref = new AssemblyReflector(forTarget); break;
         case 'mixin': ref = new MixinReflector(forTarget); break;

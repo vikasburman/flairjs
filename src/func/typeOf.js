@@ -8,7 +8,7 @@
  * @returns string - type of the given object
  *                   it can be following:
  *                    > expected native javascript data types like 'string', 'number', 'function', 'array', 'date', etc.
- *                    > inbuilt flair object types like 'class', 'structure', 'enum', etc.
+ *                    > inbuilt flair object types like 'class', 'struct', 'enum', etc.
  * @throws
  *  None
  */ 

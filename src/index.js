@@ -145,6 +145,7 @@
 
     <!-- inject: ./types/exception.js -->
     <!-- inject: ./types/args.js -->
+    <!-- inject: ./types/struct.js -->
     <!-- inject: ./assembly/assembly.js -->
     <!-- inject: ./assembly/namespace.js -->
     <!-- inject: ./assembly/types.js -->
@@ -154,7 +155,6 @@
     <!-- inject: ./types/enum.js -->
     <!-- inject: ./types/proc.js -->
     <!-- inject: ./types/resource.js -->
-    <!-- inject: ./types/structure.js -->
     <!-- inject: ./func/using.js -->
     <!-- inject: ./func/as.js -->
     <!-- inject: ./func/typeOf.js -->

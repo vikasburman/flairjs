@@ -37,7 +37,7 @@ _is.instanceOf = (obj, type) => {
         _typeType = _typeOf(type),
         isMatched = false;
     if (['instance', 'sinstance'].indexOf(_objType) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
-    if (['string', 'class', 'interface', 'structure', 'mixin'].indexOf(_typeType) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
+    if (['string', 'class', 'interface', 'struct', 'mixin'].indexOf(_typeType) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
 
     switch(_objType) {
         case 'instance':
@@ -58,7 +58,7 @@ _is.instanceOf = (obj, type) => {
         case 'sinstance':
             switch(_typeType) {
                 case 'string':
-                case 'structure':
+                case 'struct':
                     isMatched = obj._.isInstanceOf(type); 
                     break;
             }

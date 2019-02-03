@@ -11,7 +11,7 @@
  *  InvalidNameException
  */ 
 flair.Types = (name) => { 
-    if (_typeOf(name) !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is not valid. (name)'); }
+    if (_typeOf(name) !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
     return flair.Namespace.getType(name); 
 }
 

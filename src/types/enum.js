@@ -41,7 +41,7 @@ flair.Enum = (name, data) => {
     };
 
     // return
-    return flarized('enum', name, _Enum, mex);
+    return flarizedType('enum', name, _Enum, mex);
 };
 flair.Enum.getKeys = (obj) => {
     try {
