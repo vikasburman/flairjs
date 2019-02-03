@@ -247,7 +247,7 @@ flair.include = (deps, fn) => {
                         loader(flair.options.env.isServer, false, _dep).then((content) => {
                             _resolved = content; done();
                         }).catch((e) => {
-                            _error = new _Exception('FileLoad', `File load operation failed with error: ${e}. (${_dep})`); done();
+                            _error = new _Exception('FileLoad', `File load failed. (${_dep})`, e); done();
                         });
                     }
                 } else { // not a file

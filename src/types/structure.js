@@ -3,8 +3,6 @@
 //  name: name of the structure
 //  factory: factory function that take constructor arguments
 flair.Structure = (name, factory) => {
-    'use strict';
-
     // args validation
     if (typeof factory !== 'function') { throw flair.Exception('STRU01', 'Invalid structure definition type.'); }
 

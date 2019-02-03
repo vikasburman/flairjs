@@ -445,10 +445,10 @@ flair.Reflector = function (forTarget) {
     const AssemblyReflector = function(target) {
         let refl = new CommonTypeReflector(target);
         refl.getTypes = () => { 
-            return target.types();
+            return target.types;
         };
         refl.getAssets = () => { 
-            return target.assets();
+            return target.assets;
         };
         refl.getADO = () => { return target._.ado; }
         refl.load = () => {

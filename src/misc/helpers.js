@@ -6,7 +6,7 @@ const guid = () => {
 };
 const flarized = (type, name, obj, mex = {}) => {
     // check
-    if (!name || typeof name !== 'string') { throw new _Exception('InvalidArgumentException', `Invalid type name ${name}.`); }
+    if (!name || typeof name !== 'string') { throw new _Exception('InvalidArgument', `Argument type is invalid. (name)`); }
 
     // add meta information
     let _ = mex; // whatever meta extensions are provided
@@ -21,7 +21,7 @@ const flarized = (type, name, obj, mex = {}) => {
     obj._ = _;
 
     // register obj with namespace
-    flair.Namespace(obj); // instances are not
+    flair.Namespace(obj); 
 
     // freeze meta
     obj._ = Object.freeze(obj._);
