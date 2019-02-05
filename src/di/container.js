@@ -20,7 +20,7 @@ flair.Container = (alias, isAll) => {
         return (container[alias] || []).slice();
     } else {
         if (container[alias] && container[alias].length > 0) {
-            return container[alias][0];
+            return container[alias][0]; 
         } else {
             return null;
         }

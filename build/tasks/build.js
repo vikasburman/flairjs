@@ -7,6 +7,7 @@ const uglifyConfig = require('../config/.uglify.json');
 const rename = require('gulp-rename');
 const inject = require('gulp-inject-file');
 const replace = require('gulp-string-replace');
+const replaceOptions = { logs: enabled = false };
 const fsx = require('fs-extra');
 const path = require('path');
 const packageJSON = JSON.parse(fsx.readFileSync('./package.json', 'utf8'));
@@ -33,14 +34,14 @@ const doTask = (done) => {
         path.basename = destName;
     }))
     .on('error', errorHandler('rename'))     
-    .pipe(replace('<basename>', packageJSON.name))
-    .pipe(replace('<title>', packageJSON.title))
-    .pipe(replace('<desc>', packageJSON.description))
-    .pipe(replace('<version>', packageJSON.version))
-    .pipe(replace('<copyright>', packageJSON.copyright))
-    .pipe(replace('<license>', packageJSON.license))
-    .pipe(replace('<link>', packageJSON.link))
-    .pipe(replace('<datetime>', new Date().toUTCString()))
+    .pipe(replace('<basename>', packageJSON.name, replaceOptions))
+    .pipe(replace('<title>', packageJSON.title, replaceOptions))
+    .pipe(replace('<desc>', packageJSON.description, replaceOptions))
+    .pipe(replace('<version>', packageJSON.version, replaceOptions))
+    .pipe(replace('<copyright>', packageJSON.copyright, replaceOptions))
+    .pipe(replace('<license>', packageJSON.license, replaceOptions))
+    .pipe(replace('<link>', packageJSON.link, replaceOptions))
+    .pipe(replace('<datetime>', new Date().toUTCString(), replaceOptions))
     .pipe(gulp.dest('./dist'))
     .on('error', errorHandler('write-assembled'))
 
@@ -60,7 +61,7 @@ const doTask = (done) => {
         path.extname = '.min.js'; // from <name.whatever>.js to <name.whatever>.min.js
     }))
     .on('error', errorHandler('rename'))
-    .pipe(replace(destName + '.js', destName + '.min.js'))
+    .pipe(replace(destName + '.js', destName + '.min.js', replaceOptions))
     .pipe(gulp.dest('./dist'))
     .on('end', () => {
         // copy build engine

@@ -107,6 +107,7 @@ flair.Reflector = function (forTarget) {
             }
             return false;
         };
+        // TODO: Update these as per new API ._.member and ._.attrs
         refl.isDeprecated = () => { return target._._.hasAttrEx('deprecate', name); };
         refl.isConditional = () => { return target._._.hasAttrEx('conditional', name); };
         refl.isOverridden = () => { return target._._.hasAttrEx('override', name); };

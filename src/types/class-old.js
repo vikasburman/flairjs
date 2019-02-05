@@ -1,10 +1,9 @@
-const _Base = (type, name, mex, bex) => {
-    let Base = function() {
-
-    };
-
-
-
+// Class
+// Class(className, function() {})
+// Class(className, inherits, function() {})
+// Class(className, [mixins/interfaces], function() {})
+// Class(className, inherits, [mixins/interfaces], function() {})
+flair.Class = (arg1, arg2, arg3, arg4) => {
     let className = arg1,
         inherits = null,
         mixins = [],
@@ -41,7 +40,8 @@ const _Base = (type, name, mex, bex) => {
             _this = {},
             _exposed_this = {},
             singleInstance = null,
-
+            bucket = [],
+            meta = {},
             props = {},
             events = [],
             classArgs = [],
@@ -95,7 +95,9 @@ const _Base = (type, name, mex, bex) => {
         const isAbstractClass = () => {
             return hasAttr('abstract', meta['_constructor']);
         };
-  
+        const isSpecialMember = (member) => {
+            return ['constructor', 'dispose', '_constructor', '_dispose', '_'].indexOf(member) !== -1;
+        };   
         const isOwnMember = (member) => {
             return typeof meta[member] !== 'undefined';
         };
@@ -137,11 +139,35 @@ const _Base = (type, name, mex, bex) => {
         const isSerializableMember = (member) => {
             return hasAttrEx('serialize', member);
         };
-
+        const isConditionalMemberOK = (member) => {
+            let isOK = true,
+                _meta = meta[member],
+                condition = '';
+            if (_meta) {
+                for(let item of _meta) {
+                    if (item.name === 'conditional') {
+                        isOK = false;
+                        condition = (item.args && item.args.length > 0 ? item.args[0] : '');
+                        switch(condition) {
+                            case 'server':
+                                isOK = (options.env.isServer === true); break;
+                            case 'client':
+                                isOK = (options.env.isServer === false); break;
+                            default:
+                                isOK = options.symbols.indexOf(condition) !== -1; break;
+                        }
+                        break;                       
+                    }
+                }
+            }
+            return isOK;
+        };
         const doCopy = (member) => {
             Object.defineProperty(_exposed_this, member, Object.getOwnPropertyDescriptor(_this, member));
         };            
-
+        const isArrowFunction = (fn) => {
+            return (!(fn).hasOwnProperty('prototype'));
+        }; 
         const attr = (attrName, ...args) => {
             let Attr = null;
             if (typeof attrName === 'string') {
@@ -152,11 +178,68 @@ const _Base = (type, name, mex, bex) => {
             }
             bucket.push({name: attrName, Attr: Attr, args: args});
         };                
-
-
-
-
-             
+        const getAttrArgs = (attrName, member) => {
+            let attrArgs = null;
+            for(let item of _this._.instanceOf) {
+                if (item.meta[member]) {
+                    for(let attrItem of item.meta[member]) {
+                        if (attrItem.name === attrName) {
+                            attrArgs = attrItem.args;
+                            break;
+                        }
+                    }
+                    if (attrArgs) { break; }
+                }
+            }
+            return (attrArgs !== null ? attrArgs : []);
+        };
+        const applyAttr = (targetName) => {
+            let Attr = null,
+                targetType = meta[targetName].type,
+                attrArgs = null,
+                attrInstance = null,
+                decorator = null;
+            for(let info of meta[targetName]) {
+                Attr = info.Attr;
+                if (Attr) {
+                    attrArgs = info.args || [];
+                    attrInstance = new Attr(...attrArgs);
+                    decorator = attrInstance.decorator();
+                    if (typeof decorator === 'function') {
+                        let descriptor = Object.getOwnPropertyDescriptor(_this, targetName);
+                        decorator(_this, targetType, targetName, descriptor);
+                        Object.defineProperty(_this, targetName, descriptor);
+                    }
+                }
+            }
+        };
+        const hasAttr = (attrName, _meta) => {
+            let has = false;
+            if (_meta) {
+                has = (_meta.findIndex((item) => { return item.name === attrName; }) !== -1);
+            }
+            return has;
+        };
+        const hasAttrEx = (attrName, member) => {
+            return (_this._.instanceOf.findIndex((item) => {
+                if (item.meta[member]) { return hasAttr(attrName, item.meta[member]); }
+                return false;
+            }) !== -1);           
+        };
+        const isDefined = (member) => {
+            let result = false,
+                last = _this._.instanceOf.length,
+                i = 1;
+            for(let instance of _this._.instanceOf) {
+                if (instance.meta[member]) {
+                    if (i !== last) {
+                        result = true; break;
+                    }
+                }
+                i++;
+            }
+            return result;
+        };            
         const applyAspects = (funcName, funcAspects) => {
             let fn = _this[funcName],
                 before = [],
@@ -299,8 +382,308 @@ const _Base = (type, name, mex, bex) => {
             }
         };
 
+        _this.func = (name, fn) => {
+            // constructor shorthand definition
+            if (typeof name === 'function') { fn = name; name = 'constructor'; }
 
- 
+            // validate
+            if (name === '_') { throw `${className}.${name} is not allowed.`; }
+            if (!fn) { fn = noop; }
+
+            // special names
+            if (isSpecialMember(name)) {
+                name = '_' + name;
+            }
+
+            // add mixed attr
+            if (mixin_being_applied !== null) {
+                attr('mixed', mixin_being_applied);
+            }
+
+            // collect attributes
+            meta[name] = [].concat(bucket);
+            meta[name].type = 'func';
+            meta[name].aspects = [];
+            meta[name].interfaces = [];
+            bucket = [];
+            let attrs = meta[name];
+
+            // conditional check
+            if (!isConditionalMemberOK(name)) {
+                delete meta[name]; return;
+            }
+
+            // define
+            if (hasAttr('override', attrs)) {
+                // check
+                let desc = Object.getOwnPropertyDescriptor(_this, name);
+                if (!desc || typeof desc.value !== 'function') {
+                    if (name === '_constructor') { name = 'constructor'; }
+                    if (name === '_dispose') { name = 'dispose'; }
+                    throw `${className}.${name} is not a function to override.`;
+                }
+                if (hasAttrEx('sealed', name) && !hasAttr('sealed', attrs)) {
+                    if (name === '_constructor') { name = 'constructor'; }
+                    if (name === '_dispose') { name = 'dispose'; }
+                    throw `${className}.${name} cannot override a sealed function.`;
+                }
+
+                // redefine
+                let base = _this[name].bind(_this);
+                Object.defineProperty(_this, name, {
+                    value: function(...args) {
+                        // run fn with base
+                        let fnArgs = [base].concat(args);
+                        if (isArrowFunction(fn)) {
+                            return fn(...fnArgs);
+                        } else { // normal func
+                            return fn.apply(_this, fnArgs);
+                        }
+                    }.bind(_this)
+                });
+            } else {
+                // duplicate check
+                if (isDefined(name)) { 
+                    if (name === '_constructor') { name = 'constructor'; }
+                    if (name === '_dispose') { name = 'dispose'; }
+                    throw `${className}.${name} is already defined.`; 
+                }
+
+                // define
+                Object.defineProperty(_this, name, {
+                    configurable: true,
+                    enumerable: true,
+                    writable: false,
+                    value: function(...args) {
+                        if (isArrowFunction(fn)) {
+                            return fn(...args);
+                        } else { // normal func
+                            return fn.apply(_this, args);
+                        }
+                    }.bind(_this)
+                });
+            }
+
+            // apply attributes in order they are defined
+            applyAttr(name);   
+
+            // finally hold the references for reflector
+            meta[name].ref = _this[name];
+            meta[name].raw = fn;
+        };
+        _this.construct = (...args) => {
+            _this.func.apply(_this, ['constructor'].concat(args));
+        };
+        _this.destruct = (...args) => {
+            _this.func.apply(_this, ['dispose'].concat(args));
+        };
+        _this.prop = (name, valueOrGetter, setter) => {
+            // special names
+            if (isSpecialMember(name)) {  throw `${className}.${name} can only be defined as a function.`; }
+
+            // default value
+            if (typeof valueOrGetter === 'undefined' && typeof setter === 'undefined') { valueOrGetter = null; }
+
+            // add mixed attr
+            if (mixin_being_applied !== null) {
+                attr('mixed', mixin_being_applied);
+            }
+
+            // collect attributes
+            meta[name] = [].concat(bucket);
+            meta[name].type = 'prop';
+            meta[name].aspects = [];
+            meta[name].interfaces = [];
+            bucket = [];
+            let attrs = meta[name];
+
+            // conditional check
+            if (!isConditionalMemberOK(name)) {
+                delete meta[name]; return;
+            }
+        
+            // define
+            if (hasAttr('override', attrs)) {
+                // when overriding a property, it can only be redefined completely
+                // check
+                let desc = Object.getOwnPropertyDescriptor(_this, name);
+                if (!desc || typeof desc.get !== 'function') {
+                    throw `Not a property to override. (${className}.${name})`;
+                }
+                if (hasAttrEx('sealed', name) && !hasAttr('sealed', attrs)) {
+                    throw `Cannot override a sealed property. (${className}.${name})`;
+                }
+                if (hasAttrEx('static', name) && !hasAttr('static', attrs)) { 
+                    throw `Cannot override a static property. (${className}.${name})`;
+                }
+            } else {
+                // duplicate check
+                if (isDefined(name)) { throw `${className}.${name} is already defined.`; }
+            }
+
+            // define or redefine
+            if (typeof valueOrGetter !== 'function') {
+                let propHost = null,
+                    uniqueName = '',
+                    isStorageHost = false;
+                if (hasAttrEx('static', name)) { 
+                    uniqueName = name;
+                    if (hasAttrEx('session', name) || hasAttrEx('state', name)) {
+                        throw `A static property cannot be stored in session/state. (${className}.${name})`;
+                    }
+                    propHost = staticInterface;
+                    if (!propHost[uniqueName]) { 
+                        propHost[uniqueName] = valueOrGetter; // shared (static) copy
+                    }
+                } else if (hasAttrEx('session', name)) {
+                    if (!sessionStorage) {
+                        throw `Session store (sessionStorage) is not available. (${className}.${name})`;
+                    }
+                    uniqueName = className + '_' + name;
+                    propHost = sessionStorage;
+                    isStorageHost = true;
+                    if (typeof propHost[uniqueName] === 'undefined') {
+                        propHost[uniqueName] = JSON.stringify({value: valueOrGetter}); 
+                    }
+                } else if (hasAttrEx('state', name)) {
+                    if (!sessionStorage) {
+                        throw `State store (localStorage) is not available. (${className}.${name})`;
+                    }
+                    uniqueName = className + '_' + name;
+                    propHost = localStorage;
+                    isStorageHost = true;
+                    if (typeof propHost[uniqueName] === 'undefined') {
+                        propHost[uniqueName] = JSON.stringify({value: valueOrGetter});
+                    }
+                } else {
+                    uniqueName = name;
+                    propHost = props;
+                    propHost[uniqueName] = valueOrGetter; // private copy
+                }
+                Object.defineProperty(_this, name, {
+                    __proto__: null,
+                    configurable: true,
+                    enumerable: true,
+                    get: () => { 
+                        if (isStorageHost) { 
+                            return JSON.parse(propHost[uniqueName]).value;
+                        } else {
+                            return propHost[uniqueName]; 
+                        }
+                    },
+                    set: hasAttr('readonly', attrs) ? (value) => {
+                        if (_this._.constructing || (hasAttr('once', attrs) && !propHost[uniqueName])) {
+                            if (isStorageHost) {
+                                propHost[uniqueName] = JSON.stringify({value: value});
+                            } else {
+                                propHost[uniqueName] = value;
+                            }
+                        } else {
+                            throw `${name} is readonly.`;
+                        }
+                    } : (value) => {
+                        if (isStorageHost) { 
+                            propHost[uniqueName] = JSON.stringify({value: value});
+                        } else {
+                            propHost[uniqueName] = value;
+                        }
+                    }                            
+                });
+            } else {
+                if (hasAttr('static', attrs)) { throw `Static properties cannot be defined with a getter/setter. (${className}.${name})`; }
+                if (hasAttr('session', attrs) || hasAttr('state', attrs)) { throw `Properties defined with a getter/setter cannot be stored in session/state. (${className}.${name})`; }
+                Object.defineProperty(_this, name, {
+                    __proto__: null,
+                    configurable: true,
+                    enumerable: true,
+                    get: valueOrGetter,
+                    set: hasAttr('readonly', attrs) ? (value) => { 
+                        if (_this._.constructing || (hasAttr('once', attrs) && !valueOrGetter())) {
+                            if (typeof setter === 'function') { setter(value); }
+                        } else {
+                            throw `${name} is readonly.`;
+                        }
+                    } : (value) => {
+                        if (typeof setter === 'function') { setter(value); }
+                    }
+                });
+            }     
+
+            // apply attributes in order they are defined
+            applyAttr(name);
+
+            // finally hold the reference for reflector
+            meta[name].ref = {
+                get: () => { return _this[name]; },
+                set: (value) => { _this[name] = value; }
+            };
+        };
+        _this.event = (name, argProcessor) => {
+            // special names
+            if (isSpecialMember(name)) {  throw `${className}.${name} can only be defined as a function.`; }
+
+            // duplicate check
+            if (isDefined(name)) { throw `${className}.${name} is already defined.`; }
+
+            // add meta
+            meta[name] = [];
+            meta[name].type = 'event';  
+            meta[name].aspects = [];
+            meta[name].interfaces = [];
+            
+            // discard attributes
+            if (bucket.length > 0) {
+                // eslint-disable-next-line no-console
+                console.warn(`Attributes can only be applied to properties or functions. ${className}.${name} is an event.`);
+                bucket = []; 
+            }
+
+            // define event
+            let _event = function(...args) {
+                // preprocess args
+                let processedArgs = {};
+                if (typeof argProcessor === 'function') {
+                    processedArgs = argProcessor(...args);
+                }
+
+                // define event arg
+                let e = {
+                        name: name,
+                        args: processedArgs,
+                        stop: false
+                    };
+                for(let handler of events) {
+                    handler(e);
+                    if (e.stop) { break; }
+                }
+            }.bind(_this);
+            _event.subscribe = (fn) => {
+                events.push(fn);
+            };
+            _event.subscribe.all = () => {
+                return events.slice();
+            };
+            _event.unsubscribe = (fn) => {
+                let index = events.indexOf(fn);
+                if (index !== -1) {
+                    events.splice(index, 1);
+                }
+            };
+            _event.unsubscribe.all = () => {
+                events = [];
+            };
+            Object.defineProperty(_this, name, {
+                configurable: false,
+                enumerable: true,
+                value: _event,
+                writable: false
+            });
+
+            // finally hold the reference for reflector
+            meta[name].ref = _this[name];
+        };
+        _this.noop = noop;
+        _this.noopAsync = noopAsync;
 
         // attach instance reflector
         _this._ = _this._ || {};

@@ -1,8 +1,9 @@
 {
     "js": {
         "mangle": true,
-        "preserveComments": "license",
         "output": {
+            "beautify": false,
+            "comments": "some"
         },
         "compress": {
             "sequences": true,
@@ -10,7 +11,7 @@
             "conditionals": true,
             "comparisons": true,
             "booleans": true,
-            "loops": false,
+            "loops": true,
             "unused": false,
             "if_return": true,
             "join_vars": true,

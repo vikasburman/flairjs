@@ -1,0 +1,14 @@
+                if (cfg.static) {
+                    if (attrs.has('static', name, true)) { 
+                        uniqueName = name;
+                        if (cfg.storage) {
+                            if (attrs.has('session', name, true) || attrs.has('state', name, true)) {
+                                throw new _Exception('InvalidOperation', `A static property cannot be stored in session/state. (${name})`); 
+                            }
+                        }
+                        propHost = staticInterface;
+                        if (!propHost[uniqueName]) { 
+                            propHost[uniqueName] = valueOrGetterOrGetSetObject; // shared (static) copy
+                        }
+                    }
+                }

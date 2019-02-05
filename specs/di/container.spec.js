@@ -36,7 +36,7 @@ describe('---- container.js ----', () => {
 
         it('should register flair types', () => {
             expect(Container.register('something', Class('myClass', function() {}))).toBeTruthy();
-            expect(Container.register('something', Structure('myStructure', function() {}))).toBeTruthy();
+            expect(Container.register('something', Struct('myStruct', function() {}))).toBeTruthy();
             expect(Container.register('something', Interface('myInterface', function() {}))).toBeTruthy();
         });
     }); 

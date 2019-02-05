@@ -137,3 +137,5 @@ flair.Aspects.get = (className, funcName, attrs) => {
     // return
     return funcAspects;
 };
+
+// TODO: MOVE get method as Aspects() itself - this is how it is used in weave function

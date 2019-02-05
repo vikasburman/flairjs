@@ -1,0 +1,5 @@
+both in aspoects and attributes application move function/event members to newly wrapped item
+check at central place what attributes can be applied on what members
+applyAttrs and weaving should also consider obj vs staticInterface
+doubel check all has(attrName, name) calls to see where deepCheck is to be done and where current is to be ignored or only current needs to be checked
+publish attr should publish event outside to pub/sub
