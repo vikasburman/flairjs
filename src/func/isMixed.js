@@ -12,7 +12,12 @@
  * @throws
  *  InvalidArgumentException
  */ 
-flair.isMixed = _is.mixed;
+const _isMixed = (obj, mixin) => {
+    if (['instance', 'class'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+    if (['string', 'mixin'].indexOf(_typeOf(mixin)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (mixin)'); }
+    return obj._.isMixed(mixin);
+};
 
-// add to members list
+// attach
+flair.isMixed = _isMixed;
 flair.members.push('isMixed');

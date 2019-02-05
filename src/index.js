@@ -13,67 +13,77 @@
 (function(factory) { // eslint-disable-line getter-return
     'use strict';
 
-    // module definition pattern
-    <!-- inject: ./misc/_module.js -->
+    // add factory extensions for server-side CLI processing
+    let isServer = (typeof global !== 'undefined');
+    if (isServer) { factory.build = require('./flair.build.js'); }
+    
+    // freeze factory
+    let _factory = Object.freeze(factory);
+    
+    // expose as module and globally
+    if (typeof define === 'function' && define.amd) { // AMD support
+        define(function() { return _factory; });
+    } else if (typeof exports === 'object') { // CommonJS and Node.js module support
+        if (module !== undefined && module.exports) {
+            exports = module.exports = _factory; // Node.js specific `module.exports`
+        }
+        module.exports = exports = _factory; // CommonJS
+    } else if (!isServer) {
+        window.Flair = _factory; // expose factory as global
+    }
 
 }).call((new Function("try {return global;}catch(e){return window;}"))(), (opts) => {
     'use strict';
 
-    // reset everything and then proceed to set a clean environment
+    // locals
     let isServer = (new Function("try {return this===global;}catch(e){return false;}"))(),
-        _global = (isServer ? global : window);
+        _global = (isServer ? global : window),
+        flair = {}, 
+        sym = [],
+        isTesting = false,
+        noop = () => {},
+        options = {};   
 
-    if(_global.flair) { 
+    // reset, if already initialized
+    if(_global.flair) {
+        // reset all globals
+        let fn = null;
+        for(let name of _global.flair.members) {
+            fn = _global.flair[name]._ ? _global.flair[name]._.reset : null;
+            if (typeof fn === 'function') { fn(); }
+            delete _global[name];
+        }
 
-        // reset logic
-        <!-- inject: ./misc/_reset.js -->
+        // delete main global
+        delete _global.flair;
 
-        // special case (mostly for testing)
-        if (typeof opts === 'string' && opts === 'END') { return; } // don't continue with reset
+        // continue to load or end
+        if (typeof opts === 'string' && opts === 'END') { return; }
     }
 
-    // environment
+    // process options
     if (!opts) { 
-        opts = {}; 
+        opts = {};
     } else if (typeof opts === 'string') { // only symbols can be given as comma delimited string
         opts = { symbols: opts.split(',').map(item => item.trim()) };
     }
+    options.symbols = Object.freeze(opts.symbols || []);
+    sym = options.symbols,
+    isTesting = (sym.indexOf('TEST') !== -1);
+    options.env = Object.freeze({
+        type: (isServer ? 'server' : 'client'),
+        global: _global,
+        isTesting: isTesting,
+        isServer: (!isTesting ? isServer : (sym.indexOf('SERVER') !== -1 ? true : isServer)),
+        isClient: (!isTesting ? !isServer : (sym.indexOf('CLIENT') !== -1 ? true : !isServer)),
+        isProd: (sym.indexOf('DEBUG') === -1 && sym.indexOf('PROD') !== -1),
+        isDebug: (sym.indexOf('DEBUG') !== -1),
+        suppressGlobals: (typeof suppressGlobals !== 'undefined' ? opts.suppressGlobals : options.symbols.indexOf('SUPPRESS') !== -1),
+        args: (isServer ? process.argv : new window.URLSearchParams(window.location.search))
+    });
 
-    // core support objects
-    <!-- inject: ./misc/_exception.js -->
-    <!-- inject: ./misc/_typeOf.js -->
-    <!-- inject: ./misc/_is.js -->
-    <!-- inject: ./misc/_args.js -->
-    <!-- inject: ./misc/_attr.js -->
-
-    // helper functions
-    <!-- inject: ./misc/_helpers.js -->
-
-    // primary type builder
-    <!-- inject: ./misc/_builder.js -->
-
-    let flair = { members: [] },
-        noop = () => {},
-        sym = (opts.symbols || []), // eslint-disable-next-line no-unused-vars
-        noopAsync = (resolve, reject) => { resolve(); },
-        _args = (isServer ? process.argv : new window.URLSearchParams(window.location.search)),
-        isTesting = (sym.indexOf('TEST') !== -1),
-        options = null;
-
-    // forced server/client mocking for test environment
-    if (isTesting) {
-        if (sym.indexOf('SERVER') !== -1) { 
-            isServer = true;
-        } else if (sym.indexOf('CLIENT') !== -1) {
-            isServer = false;
-        }
-    }
-
-    // options definition
-    <!-- inject: ./misc/_options.js -->
-
-    // flair meta information
-    flair._ = Object.freeze({
+    // flair information
+    flair.info = Object.freeze({
         name: '<title>',
         version: '<version>',
         copyright: '<copyright>',
@@ -81,13 +91,23 @@
         link: '<link>',
         lupdate: new Date('<datetime>')
     });
-    flair.info = flair._;
-    flair.options = options;
+    flair.members = [];
+    flair.options = Object.freeze(options);
 
-    // exposed members
+    // members
+    <!-- inject: ./misc/_helpers.js -->
     <!-- inject: ./types/exception.js -->
-    <!-- inject: ./types/args.js -->
-    <!-- inject: ./types/attr.js -->
+    <!-- inject: ./func/args.js -->
+    <!-- inject: ./func/typeOf.js -->
+    <!-- inject: ./func/isInstanceOf.js -->
+    <!-- inject: ./func/is.js -->
+    <!-- inject: ./func/isDerivedFrom.js -->
+    <!-- inject: ./func/isImplements.js -->
+    <!-- inject: ./func/isMixed.js -->
+    <!-- inject: ./func/as.js -->
+    <!-- inject: ./func/using.js -->
+    <!-- inject: ./func/attr.js -->
+    <!-- inject: ./misc/_builder.js -->
     <!-- inject: ./types/struct.js -->
     <!-- inject: ./assembly/assembly.js -->
     <!-- inject: ./assembly/namespace.js -->
@@ -98,14 +118,6 @@
     <!-- inject: ./types/enum.js -->
     <!-- inject: ./types/proc.js -->
     <!-- inject: ./types/resource.js -->
-    <!-- inject: ./func/using.js -->
-    <!-- inject: ./func/as.js -->
-    <!-- inject: ./func/typeOf.js -->
-    <!-- inject: ./func/is.js -->
-    <!-- inject: ./func/isDerivedFrom.js -->
-    <!-- inject: ./func/isImplements.js -->
-    <!-- inject: ./func/isInstanceOf.js -->
-    <!-- inject: ./func/isMixed.js -->
     <!-- inject: ./di/container.js -->
     <!-- inject: ./attributes/attribute.js -->
     <!-- inject: ./attributes/async.js -->
@@ -117,10 +129,10 @@
     <!-- inject: ./aop/aspects.js -->
     <!-- inject: ./aop/aspect.js -->
     <!-- inject: ./serialization/serializer.js -->
-    <!-- inject: ./reflection/reflector.js -->
-
-    // expose to global environment
-    if (!options.env.supressGlobals) {
+    <!-- inject: ./reflection/reflector.js -->    
+  
+    // set global
+    if (!options.env.suppressGlobals) {
         for(let name of flair.members) {
             _global[name] = Object.freeze(flair[name]);
         }

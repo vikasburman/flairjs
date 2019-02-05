@@ -84,6 +84,15 @@ const buildTypeInstance = (type, Type, typeName, mex, inherits, mixinsAndInterfa
             }
             return result;                        
         },
+        isProperty: (memberName) => {
+            return member.type(memberName) === 'prop';
+        },
+        isEvent: (memberName) => {
+            return member.type(memberName) === 'event';
+        },
+        isFunction: (memberName) => {
+            return member.type(memberName) === 'func';
+        },
         attrs: (memberName) => {
             if (meta[memberName]) {
                 return meta[memberName].slice();
@@ -515,7 +524,7 @@ const buildTypeInstance = (type, Type, typeName, mex, inherits, mixinsAndInterfa
 
             // attach definition helpers
             if (cfg.func) { obj.func = helpers._func; }
-            if (cfg.prop) { obj.prop = helpers._prop; obj.props = helpers._props; }
+            if (cfg.prop) { obj.prop = helpers._prop; }
             if (cfg.event) { obj.event = helpers._event; }
             if (cfg.construct) { obj.construct = helpers._construct; }
             if (cfg.dispose) { obj.dispose = helpers._dispose; }
@@ -543,7 +552,7 @@ const buildTypeInstance = (type, Type, typeName, mex, inherits, mixinsAndInterfa
             
             // detach definition helpers
             if (cfg.func) { delete obj.func; }
-            if (cfg.prop) { delete obj.prop; delete obj.props; }
+            if (cfg.prop) { delete obj.prop; }
             if (cfg.event) { delete obj.event; }
             if (cfg.construct) { delete obj.construct; }
             if (cfg.dispose) { delete obj.dispose; }
@@ -591,6 +600,11 @@ const buildTypeInstance = (type, Type, typeName, mex, inherits, mixinsAndInterfa
                 }
                 if (cfg.hide) { if (isCopy && member.isHidden(memberName)) { isCopy = false; } }
                 if (isCopy) { doCopy(memberName); }
+
+                // rewire event definition when at the top level object creation step
+                if (isCopy && !isNeedProtected && member.isEvent(memberName)) {
+                    exposed_obj[memberName].rewire(exposed_obj);
+                }
             }
 
             // sealed attribute for members are handled at the end
@@ -760,26 +774,28 @@ const buildTypeInstance = (type, Type, typeName, mex, inherits, mixinsAndInterfa
                         if (!staticInterface[name]) {
                             staticInterface[name] = _theFn;
                         }
+                        isDefinedHere = true;
                     }
-                } else {
-                    _theFn = function(...args) {
-                        if (funcs.isArrow(fn)) {
-                            return fn(...args);
-                        } else { // normal func
-                            return fn.apply(obj, args);
-                        }
-                    }.bind(obj);
-
-                    // define on object, even if this is static func, this will
-                    // ensure consistency, the only diff is that static function runs in context of
-                    // static interface as 'this' as opposed to obj being 'this' for instance func
-                    Object.defineProperty(obj, name, {
-                        configurable: true,
-                        enumerable: true,
-                        value: _theFn
-                    });                    
                 }
             }
+            if (!isDefinedHere) { // normal func
+                _theFn = function(...args) {
+                    if (funcs.isArrow(fn)) {
+                        return fn(...args);
+                    } else { // function
+                        return fn.apply(obj, args);
+                    }
+                }.bind(obj);
+            }
+
+            // define on object, even if this is static func, this will
+            // ensure consistency, the only diff is that static function runs in context of
+            // static interface as 'this' as opposed to obj being 'this' for instance func
+            Object.defineProperty(obj, name, {
+                configurable: true,
+                enumerable: true,
+                value: _theFn
+            });
 
             // apply custom attributes
             if (cfg.customAttrs) {
@@ -791,10 +807,10 @@ const buildTypeInstance = (type, Type, typeName, mex, inherits, mixinsAndInterfa
             meta[name].raw = fn;
         },
         _construct: (fn) => {
-            helpers._func.apply(obj, [_constructName, fn]);
+            helpers._func(_constructName, fn);
         },
         _dispose: (fn) => {
-            helpers._func.apply(obj, [_disposeName, fn]);
+            helpers._func(_disposeName, fn);
         },
         _prop: (name, valueOrGetterOrGetSetObject, setter) => {
             if (!name || typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
@@ -1023,26 +1039,6 @@ const buildTypeInstance = (type, Type, typeName, mex, inherits, mixinsAndInterfa
                 set: (value) => { obj[name] = value; }
             };
         },
-        _props: (attrsOrProps, props) => {
-            let attrsList = [],
-                propsList = [];
-            if (_typeOf(attrsOrProps) === 'array' && _typeOf(props) === 'array') {
-                attrsList = attrsOrProps,
-                propsList = props;
-            } else if (_typeOf(attrsOrProps) === 'array') {
-                propsList = attrsOrProps;
-            } else {
-                throw new _Exception('InvalidArgument', 'Argument type is invalid. (props)');
-            }
-
-            // define bulk properties
-            for(let propName of propsList) {
-                for(let attrName of attrsList) { // apply all attributes before defining property
-                    _attr(attrName);
-                }
-                obj.prop(propName); // define property with default value
-            }
-        },
         _event: (name, argsProcessor) => {
             if (!name || typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
             if (argsProcessor && typeof argsProcessor !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (argsProcessor)'); }
@@ -1137,41 +1133,62 @@ const buildTypeInstance = (type, Type, typeName, mex, inherits, mixinsAndInterfa
             argsProcessor = meta[name].argsProcessor;
 
             // define or redefine
-            let _event = function(...args) {
+            let _event = {};
+            _event._ = Object.freeze({
+                subscribers: []
+            });
+            _event.subscribe = (fn) => {
+                if (typeof fn !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (fn)'); }
+                _event._.subscribers.push(fn);
+            };
+            _event.subscribe.all = () => {
+                return _event._.subscribers.slice();
+            };
+            _event.unsubscribe = (fn) => {
+                if (typeof fn !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (fn)'); }
+                let index = _event._.subscribers.indexOf(fn);
+                if (index !== -1) { _event._.subscribers.splice(index, 1); }
+            };
+            _event.unsubscribe.all = () => {
+                _event._.subscribers.length = 0; // remove all
+            };
+            _event.raise = (...args) => {
                 // preprocess args
                 let processedArgs = {};
-                if (argsProcessor) { processedArgs = argsProcessor(...args); }
-
+                if (typeof argsProcessor === 'function') { processedArgs = argsProcessor(...args); }
+        
                 // define event arg
                 let e = {
                     name: name,
                     args: Object.freeze(processedArgs),
                     stop: false
                 };
-
+        
                 // raise event
-                for(let handler of events) {
+                for(let handler of _event._.subscribers) {
                     handler(e);
                     if (e.stop) { break; }
                 }
-            }.bind(obj);
+            };
+            _event.rewire = (targetObj) => {
+                // internal method that does not make outside, this is called
+                // during exposed object building process to rewire event either as an object
+                // or as a function - for external world it is an object without the ability of being
+                // called, while for internal world (or derived types), it is a function, which can
+                // be called to raise the event
+                // this is self destructing method, and delete itself as well
 
-            // add event object members
-            _event.subscribe = (fn) => {
-                if (typeof fn !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (fn)'); }
-                events.push(fn);
-            };
-            _event.subscribe.all = () => {
-                return events.slice();
-            };
-            _event.unsubscribe = (fn) => {
-                if (typeof fn !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (fn)'); }
-                let index = events.indexOf(fn);
-                if (index !== -1) { events.splice(index, 1); }
-            };
-            _event.unsubscribe.all = () => {
-                events = [];
-            };
+                let eventAsFn = targetObj[name].raise;
+                eventAsFn._ = targetObj[name]._;
+                eventAsFn.subscribe = targetObj[name].subscribe; // .all comes with it
+                eventAsFn.unsubscribe = targetObj[name].unsubscribe; // .all comes with it
+                obj[name] = eventAsFn; // updating this internal object itself
+
+                // on target object
+                delete targetObj[name].raise;
+                delete targetObj[name].rewire;
+            }
+            events.push(_event);
 
             // define
             Object.defineProperty(obj, name, {
@@ -1216,6 +1233,14 @@ const buildTypeInstance = (type, Type, typeName, mex, inherits, mixinsAndInterfa
         funcs.weave();
     }
 
+    // prepare object to expose
+    funcs.buildExposedObj();
+
+    // validate interfaces
+    if (cfg.interfaces) {
+        funcs.validateInterfaces();                
+    }
+
     // when on top level instance
     if (!isNeedProtected) {
         if (cfg.construct) {
@@ -1224,14 +1249,6 @@ const buildTypeInstance = (type, Type, typeName, mex, inherits, mixinsAndInterfa
         if (cfg.dispose) {
             funcs.processDestructor();
         }
-    }
-
-    // prepare object to expose
-    funcs.buildExposedObj();
-
-    // validate interfaces
-    if (cfg.interfaces) {
-        funcs.validateInterfaces();                
     }
 
     // public and (protected+private) instance interface

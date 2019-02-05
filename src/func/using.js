@@ -13,7 +13,7 @@
  *  InvalidArgumentException
  *  Any exception that is raised in given function, is passed as is
  */ 
-flair.using = (obj, fn) => {
+const _using = (obj, fn) => {
     if (_typeOf(obj) !== 'instance') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
     if (_typeOf(fn) !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (fn)'); }
 
@@ -42,5 +42,6 @@ flair.using = (obj, fn) => {
     return result;
 };
 
-// add to members list
+// attach
+flair.using = _using;
 flair.members.push('using');

@@ -29,7 +29,7 @@
  * @throws
  *  InvalidArgumentException
  */
-flair.Struct = (name, mixinsAndInterfaces, factory) => {
+const _Struct = (name, mixinsAndInterfaces, factory) => {
     if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
     if (_typeOf(mixinsAndInterfaces) === 'array') {
         if (typeof factory !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (factory)'); }
@@ -85,5 +85,6 @@ flair.Struct = (name, mixinsAndInterfaces, factory) => {
     return builder(cfg);
 };
 
-// add to members list
+// attach
+flair.Struct = _Struct;
 flair.members.push('Struct');

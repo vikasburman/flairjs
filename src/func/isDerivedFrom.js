@@ -12,7 +12,12 @@
  * @throws
  *  InvalidArgumentException
  */ 
-flair.isDerivedFrom = _is.derivedFrom;
+const _isDerivedFrom = (type, parent) => {
+    if (_typeOf(type) !== 'class') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
+    if (['string', 'class'].indexOf(_typeOf(parent)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (parent)'); }
+    return type._.isDerivedFrom(parent);
+}; 
 
-// add to members list
+// attach
+flair.isDerivedFrom = _isDerivedFrom;
 flair.members.push('isDerivedFrom');

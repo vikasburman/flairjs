@@ -20,10 +20,11 @@
  * @throws
  *  InvalidArgumentException
  */ 
-flair.as = (obj, type) => {
+const _as = (obj, type) => {
     if (_is(obj, type)) { return obj; }
     return null;
 };
 
-// add to members list
+// attach
+flair.as = _as;
 flair.members.push('as');

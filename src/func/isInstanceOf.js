@@ -14,7 +14,43 @@
  * @throws
  *  InvalidArgumentException
  */ 
-flair.isInstanceOf = _is.instanceOf;
+const _isInstanceOf = (obj, type) => {
+    let _objType = _typeOf(obj),
+        _typeType = _typeOf(type),
+        isMatched = false;
+    if (['instance', 'sinstance'].indexOf(_objType) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+    if (['string', 'class', 'interface', 'struct', 'mixin'].indexOf(_typeType) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
 
-// add to members list
+    switch(_objType) {
+        case 'instance':
+            switch(_typeType) {
+                case 'class':
+                    isMatched = obj._.isInstanceOf(type); break;
+                case 'interface':
+                    isMatched = obj._.isImplements(type); break;
+                case 'mixin':
+                    isMatched = obj._.isMixed(type); break;
+                case 'string':
+                    isMatched = obj._.isInstanceOf(type);
+                    if (!isMatched) { isMatched = obj._.isImplements(type); }
+                    if (!isMatched) { isMatched = obj._.isMixed(type); }
+                    break;
+            }
+            break;
+        case 'sinstance':
+            switch(_typeType) {
+                case 'string':
+                case 'struct':
+                    isMatched = obj._.isInstanceOf(type); 
+                    break;
+            }
+            break;
+    }
+
+    // return
+    return isMatched;
+};
+
+// attach
+flair.isInstanceOf = _isInstanceOf;
 flair.members.push('isInstanceOf');

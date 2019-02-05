@@ -12,7 +12,12 @@
  * @throws
  *  InvalidArgumentException
  */ 
-flair.isImplements = _is.implements;
+const _isImplements = (obj, intf) => {
+    if (['instance', 'class'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+    if (['string', 'interface'].indexOf(_typeOf(intf)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (intf)'); }
+    return obj._.isImplements(intf);
+};
 
-// add to members list
+// attach
+flair.isImplements = _isImplements;
 flair.members.push('isImplements');

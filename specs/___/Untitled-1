@@ -3,3 +3,31 @@ check at central place what attributes can be applied on what members
 applyAttrs and weaving should also consider obj vs staticInterface
 doubel check all has(attrName, name) calls to see where deepCheck is to be done and where current is to be ignored or only current needs to be checked
 publish attr should publish event outside to pub/sub
+
+
+ports
+    - connect(in/out, name, fn)
+    - disconnect(in/out, name, fn)
+        - all
+    - in
+        - sessionStorage
+        - localStorage
+        - require
+        - fetch
+        - eventBus
+    - out
+        - error
+        - event
+        - construct
+        - dispose
+        - execute
+        - access
+        - external
+
+        Each out will be passed a telemetery object with all details
+        Each in will be used based on exposed API of that type
+        
+        
+
+
+

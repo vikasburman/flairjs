@@ -46,6 +46,7 @@ flair.Assembly = (ado) => {
             this.hasAssets = (ado.assets.length > 0);
         });
         
+        /// TODO: props is no longer supported
         this.props(['readonly'], ['ado', 'name', 'file', 'desc', 'version', 'copyright', 'license', 'types', 'hasAssets']);
         
         this.prop('isLoaded', false);

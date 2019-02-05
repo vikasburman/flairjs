@@ -20,16 +20,19 @@ describe('---- struct.js ----', () => {
             let ST = Struct('MyStruct', function() {
                 let run = () => {
                     console.log('Hello!!!!!!');
+                    
                     return 10;
                 };
 
                 this.construct = (a1) => {
                     this.cc = a1;
-                    console.log('created! ' + this.cc);
+                    this.started.subscribe(this.onStart);
+                    //console.log('created! ' + this.cc);
+                    this.started('inside', 20);
+                    console.log(this.started);
                 };
 
                 //this.dispose = () => {};
-
         
                 this.xyz = () => {
                     this.cc = 20000;
@@ -40,11 +43,14 @@ describe('---- struct.js ----', () => {
                 this.abc = () => {
                     this.xyz();
                 };
-
       
                 attr('event');
                 this.started = (args1, args2) => {
-                    return { values: [args1, args2] };
+                    return { values: [args1, args2, this.cc] };
+                };
+
+                this.onStart = (e) => {
+                    console.log(e.name + ' - ' + e.args.values);
                 };
 
                 attr('private');
@@ -61,17 +67,17 @@ describe('---- struct.js ----', () => {
                 
             });
 
-            attr('abstract');
+      
             let MyStruct = Struct('MyStruct', function() {
                 let run = () => {
                     console.log('Hello!!!!!!');
                     return 10;
                 };
 
-                attr('abstract');
-                this.construct((a1) => {
-                    this.cc = a1;
-                    console.log('created! ' + this.cc);
+        
+                this.construct((stt) => {
+                    //stt.started('outside - but inside other', 50);
+                    //console.log('created! ' + this.cc);
                 });
 
                 //this.dispose(() => {});
@@ -90,7 +96,6 @@ describe('---- struct.js ----', () => {
                     console.log('ME TOO - ' + this.cc);
                     return run();
                 });
-
 
                 this.func('abc', () => {
                     this.xyz();
@@ -114,15 +119,16 @@ describe('---- struct.js ----', () => {
             
             
             //console.log(ST);
-            //let st = new ST(1000);
-            let st2 = new MyStruct(1000);
+            let st = new ST(1000);
+            console.log(st.started);
+            //st.started('outside', 40);
+            let st2 = new MyStruct(st);
             //st.cc2 = 20;
             //console.log(st.cc);
             //st2.hello2 = 20;
             //console.log(st2.hello2);
             //console.log(MyStruct.hello());
-            console.log(st2._._.type.isAbstract());
-
+            //console.log(st2._._.type.isAbstract());
 
         });
 

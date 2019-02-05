@@ -3,7 +3,7 @@
  * FlairJS
  * True Object Oriented JavaScript
  * Version 0.15.27
- * Tue, 05 Feb 2019 04:57:42 GMT
+ * Tue, 05 Feb 2019 20:26:06 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  * https://flairjs.com
@@ -13,14 +13,14 @@
 (function(factory) { // eslint-disable-line getter-return
     'use strict';
 
-    // module definition pattern
-    // add build engine to create assemblies on server
+    // add factory extensions for server-side CLI processing
     let isServer = (typeof global !== 'undefined');
     if (isServer) { factory.build = require('./flair.build.js'); }
     
-    // freeze
+    // freeze factory
     let _factory = Object.freeze(factory);
     
+    // expose as module and globally
     if (typeof define === 'function' && define.amd) { // AMD support
         define(function() { return _factory; });
     } else if (typeof exports === 'object') { // CommonJS and Node.js module support
@@ -35,41 +35,115 @@
 }).call((new Function("try {return global;}catch(e){return window;}"))(), (opts) => {
     'use strict';
 
-    // reset everything and then proceed to set a clean environment
+    // locals
     let isServer = (new Function("try {return this===global;}catch(e){return false;}"))(),
-        _global = (isServer ? global : window);
+        _global = (isServer ? global : window),
+        flair = {}, 
+        noop = () => {},
+        options = {};   
 
-    if(_global.flair) { 
-
-        // reset logic
+    // reset, if already initialized
+    if(_global.flair) {
         // reset all globals
-        let resetFunc = null,
-        internalAPI = null;
+        let fn = null;
         for(let name of _global.flair.members) {
-            internalAPI = _global.flair[name]._;
-            resetFunc = (internalAPI && internalAPI.reset) ? internalAPI.reset : null;
-            if (typeof resetFunc === 'function') { resetFunc(); }
+            fn = _global.flair[name]._ ? _global.flair[name]._.reset : null;
+            if (typeof fn === 'function') { fn(); }
             delete _global[name];
         }
-        
+
         // delete main global
         delete _global.flair;
 
-        // special case (mostly for testing)
-        if (typeof opts === 'string' && opts === 'END') { return; } // don't continue with reset
+        // continue to load or end
+        if (typeof opts === 'string' && opts === 'END') { return; }
     }
 
-    // environment
+    // process options
     if (!opts) { 
-        opts = {}; 
+        opts = {};
     } else if (typeof opts === 'string') { // only symbols can be given as comma delimited string
         opts = { symbols: opts.split(',').map(item => item.trim()) };
     }
+    options.symbols = Object.freeze(opts.symbols || []);
+    options.env = Object.freeze({
+        type: (isServer ? 'server' : 'client'),
+        global: _global,
+        isTesting: (options.symbols.indexOf('TEST') !== -1),
+        isServer: ((options.symbols.indexOf('TEST') === -1) ? isServer : (options.symbols.indexOf('SERVER') !== -1 ? true : isServer)),
+        isClient: ((options.symbols.indexOf('TEST') === -1) ? !isServer : (options.symbols.indexOf('CLIENT') !== -1 ? true : !isServer)),
+        isProd: (options.symbols.indexOf('DEBUG') === -1 && options.symbols.indexOf('PROD') !== -1),
+        isDebug: (options.symbols.indexOf('DEBUG') !== -1),
+        suppressGlobals: (typeof suppressGlobals !== 'undefined' ? opts.suppressGlobals : options.symbols.indexOf('SUPPRESS') !== -1),
+        args: (isServer ? process.argv : new window.URLSearchParams(window.location.search))
+    });
 
-    // core support objects
+    // flair information
+    flair.info = Object.freeze({
+        name: 'FlairJS',
+        version: '0.15.27',
+        copyright: '(c) 2017-2019 Vikas Burman',
+        license: 'MIT',
+        link: 'https://flairjs.com',
+        lupdate: new Date('Tue, 05 Feb 2019 20:26:06 GMT')
+    });
+    flair.members = [];
+    flair.options = Object.freeze(options);
+
+    // members
+    const guid = () => {
+        return '_xxxxxxxx_xxxx_4xxx_yxxx_xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    };
+    const which = (def, isFile) => {
+        if (isFile) { // debug/prod specific decision
+            // pick minified or dev version
+            if (def.indexOf('{.min}') !== -1) {
+                if (flair.options.env.isProd) {
+                    return def.replace('{.min}', '.min'); // a{.min}.js => a.min.js
+                } else {
+                    return def.replace('{.min}', ''); // a{.min}.js => a.js
+                }
+            }
+        } else { // server/client specific decision
+            if (def.indexOf('|') !== -1) { 
+                let items = def.split('|'),
+                    item = '';
+                if (flair.options.env.isServer) {
+                    item = items[0].trim();
+                } else {
+                    item = items[1].trim();
+                }
+                if (item === 'x') { item = ''; } // special case to explicitely mark absence of a type
+                return item;
+            }            
+        }
+        return def; // as is
+    };
+    
+    
+    /**
+     * @name Exception
+     * @description Lightweight Exception class that extends Error object and serves as base of all exceptions
+     * @example
+     *  Exception()
+     *  Exception(type)
+     *  Exception(error)
+     *  Exception(type, message)
+     *  Exception(type, error)
+     *  Exception(type, message, error)
+     * @params
+     *  type: string - error name or type
+     *  message: string - error message
+     *  error: object - inner error or exception object
+     * @constructs Exception object
+     * @throws
+     *  None
+     */  
     const _Exception = function(arg1, arg2, arg3) {
-        let typ = '', msg = '',
-            err = null;
+        let typ = '', msg = '', err = null;
         if (arg1) {
             if (typeof arg1 === 'string') { 
                 typ = arg1; 
@@ -112,118 +186,38 @@
         _ex.name = typ || 'UndefinedException';
         _ex.error = err || null;
     
-        // return freezed
+        // return
         return Object.freeze(_ex);
     };
-    const _typeOf = (obj) => {
-        let _type = '';
     
-        // undefined
-        if (typeof obj === 'undefined') { _type = 'undefined'; }
+    // expose
+    flair.Exception = _Exception;
+    flair.members.push('Exception');
     
-        // null
-        if (!_type && obj === null) { _type = 'null'; }
-    
-        // array
-        if (!_type && Array.isArray(obj)) { _type = 'array'; }
-    
-        // date
-        if (!_type && (obj instanceof Date)) { _type = 'date'; }
-    
-        // flair types
-        if (!_type && obj._ && obj._.type) { _type = obj._.type; }
-    
-        // native javascript types
-        if (!_type) { _type = typeof obj; }
-    
-        // return
-        return _type;
-    };
-    const _is = (obj, type) => {
-        // obj may be undefined or null or false, so don't check
-        if (_typeOf(type) !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
-        let isMatched = false, 
-            _typ = '';
-    
-        if (obj) {
-            // array
-            if (type === 'array' || type === 'Array') { isMatched = Array.isArray(obj); }
-    
-            // date
-            if (!isMatched && (type === 'date' || type === 'Date')) { isMatched = (obj instanceof Date); }
-    
-            // flair
-            if (!isMatched && (type === 'flair' && obj._ && obj._.type)) { isMatched = true; }
-    
-            // native javascript types
-            if (!isMatched) { isMatched = (typeof obj === type); }
-    
-            // flair types
-            if (!isMatched) {
-                if (obj._ && obj._.type) { 
-                    _typ = obj._.type;
-                    isMatched = _typ === type; 
-                }
-            }
-            
-            // flair custom types
-            if (!isMatched && _typ && ['instance', 'sinstance'].indexOf(_typ) !== -1) { isMatched = _is.instanceOf(obj, type); }
-        }
-    
-        // return
-        return isMatched;
-    };
-    _is.instanceOf = (obj, type) => {
-        let _objType = _typeOf(obj),
-            _typeType = _typeOf(type),
-            isMatched = false;
-        if (['instance', 'sinstance'].indexOf(_objType) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
-        if (['string', 'class', 'interface', 'struct', 'mixin'].indexOf(_typeType) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
-    
-        switch(_objType) {
-            case 'instance':
-                switch(_typeType) {
-                    case 'class':
-                        isMatched = obj._.isInstanceOf(type); break;
-                    case 'interface':
-                        isMatched = obj._.isImplements(type); break;
-                    case 'mixin':
-                        isMatched = obj._.isMixed(type); break;
-                    case 'string':
-                        isMatched = obj._.isInstanceOf(type);
-                        if (!isMatched) { isMatched = obj._.isImplements(type); }
-                        if (!isMatched) { isMatched = obj._.isMixed(type); }
-                        break;
-                }
-                break;
-            case 'sinstance':
-                switch(_typeType) {
-                    case 'string':
-                    case 'struct':
-                        isMatched = obj._.isInstanceOf(type); 
-                        break;
-                }
-                break;
-        }
-    
-        // return
-        return isMatched;
-    };
-    _is.derivedFrom = (type, parent) => {
-        if (_typeOf(type) !== 'class') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
-        if (['string', 'class'].indexOf(_typeOf(parent)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (parent)'); }
-        return type._.isDerivedFrom(parent);
-    }; 
-    _is.implements = (obj, intf) => {
-        if (['instance', 'class'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
-        if (['string', 'interface'].indexOf(_typeOf(intf)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (intf)'); }
-        return obj._.isImplements(intf);
-    };
-    _is.mixed = (obj, mixin) => {
-        if (['instance', 'class'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
-        if (['string', 'mixin'].indexOf(_typeOf(mixin)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (mixin)'); }
-        return obj._.isMixed(mixin);
-    };
+    /**
+     * @name Args
+     * @description Lightweight args pattern processor proc that returns a validator function to validate arguments against given arg patterns
+     * @example
+     *  Args(...patterns)
+     * @params
+     *  patterns: string(s) - multiple pattern strings, each representing one pattern set
+     *                        each pattern set can take following forms:
+     *                        'type, type, type, ...' OR 'name: type, name: type, name: type, ...'
+     *                          type: can be following:
+     *                              > expected native javascript data types like 'string', 'number', 'function', 'array', etc.
+     *                              > inbuilt flair object types like 'class', 'struct', 'enum', etc.
+     *                              > custom flair object instance types which are checked in following order:
+     *                                  >> for class instances: 
+     *                                     isInstanceOf given as type
+     *                                     isImplements given as interface 
+     *                                     isMixed given as mixin
+     *                                  >> for struct instances:
+     *                                     isInstance of given as struct type
+     *                          name: argument name which will be used to store extracted value by parser
+     * @returns function - validator function that is configured for specified patterns
+     * @throws
+     *  InvalidArgumentException 
+     */ 
     const _Args = (...patterns) => {
         if (patterns.length === 0) { throw new _Exception('InvalidArgument', 'Argument must be defined. (patterns)'); }
     
@@ -286,7 +280,329 @@
         // return freezed
         return Object.freeze(_args);
     };
-    let _attr = (name, ...args) => {
+    
+    // attach
+    flair.Args = _Args;
+    flair.members.push('Args');
+    /**
+     * @name typeOf
+     * @description Finds the type of given object
+     * @example
+     *  typeOf(obj)
+     * @params
+     *  obj: object - object that needs to be checked
+     * @returns string - type of the given object
+     *                   it can be following:
+     *                    > expected native javascript data types like 'string', 'number', 'function', 'array', 'date', etc.
+     *                    > inbuilt flair object types like 'class', 'struct', 'enum', etc.
+     * @throws
+     *  None
+     */ 
+    const _typeOf = (obj) => {
+        let _type = '';
+    
+        // undefined
+        if (typeof obj === 'undefined') { _type = 'undefined'; }
+    
+        // null
+        if (!_type && obj === null) { _type = 'null'; }
+    
+        // array
+        if (!_type && Array.isArray(obj)) { _type = 'array'; }
+    
+        // date
+        if (!_type && (obj instanceof Date)) { _type = 'date'; }
+    
+        // flair types
+        if (!_type && obj._ && obj._.type) { _type = obj._.type; }
+    
+        // native javascript types
+        if (!_type) { _type = typeof obj; }
+    
+        // return
+        return _type;
+    };
+    
+    // expose
+    flair.typeOf = _typeOf;
+    flair.members.push('typeOf');
+    /**
+     * @name isInstanceOf
+     * @description Checks if given flair class/struct instance is an instance of given class/struct type or
+     *              if given class instance implements given interface or has given mixin mixed somewhere in class 
+     *              hierarchy
+     * @example
+     *  isInstanceOf(obj, type)
+     * @params
+     *  obj: object - flair object that needs to be checked
+     *  type: string OR class OR struct OR interface OR mixin - type to be checked for, it can be following:
+     *                         > fully qualified type name
+     *                         > type reference
+     * @returns boolean - true/false
+     * @throws
+     *  InvalidArgumentException
+     */ 
+    const _isInstanceOf = (obj, type) => {
+        let _objType = _typeOf(obj),
+            _typeType = _typeOf(type),
+            isMatched = false;
+        if (['instance', 'sinstance'].indexOf(_objType) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+        if (['string', 'class', 'interface', 'struct', 'mixin'].indexOf(_typeType) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
+    
+        switch(_objType) {
+            case 'instance':
+                switch(_typeType) {
+                    case 'class':
+                        isMatched = obj._.isInstanceOf(type); break;
+                    case 'interface':
+                        isMatched = obj._.isImplements(type); break;
+                    case 'mixin':
+                        isMatched = obj._.isMixed(type); break;
+                    case 'string':
+                        isMatched = obj._.isInstanceOf(type);
+                        if (!isMatched) { isMatched = obj._.isImplements(type); }
+                        if (!isMatched) { isMatched = obj._.isMixed(type); }
+                        break;
+                }
+                break;
+            case 'sinstance':
+                switch(_typeType) {
+                    case 'string':
+                    case 'struct':
+                        isMatched = obj._.isInstanceOf(type); 
+                        break;
+                }
+                break;
+        }
+    
+        // return
+        return isMatched;
+    };
+    
+    // attach
+    flair.isInstanceOf = _isInstanceOf;
+    flair.members.push('isInstanceOf');
+    /**
+     * @name is
+     * @description Checks if given object is of a given type
+     * @example
+     *  is(obj, type)
+     * @params
+     *  obj: object - object that needs to be checked
+     *  type: string OR type - type to be checked for, it can be following:
+     *                         > expected native javascript data types like 'string', 'number', 'function', 'array', 'date', etc.
+     *                         > any 'flair' object or type
+     *                         > inbuilt flair object types like 'class', 'struct', 'enum', etc.
+     *                         > custom flair object instance types which are checked in following order:
+     *                           >> for class instances: 
+     *                              isInstanceOf given as type
+     *                              isImplements given as interface 
+     *                              isMixed given as mixin
+     *                           >> for struct instances:
+     *                              isInstance of given as struct type
+     * @returns boolean - true/false
+     * @throws
+     *  InvalidArgumentException
+     */ 
+    const _is = (obj, type) => {
+        // obj may be undefined or null or false, so don't check
+        if (_typeOf(type) !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
+        let isMatched = false, 
+            _typ = '';
+    
+        if (obj) {
+            // array
+            if (type === 'array' || type === 'Array') { isMatched = Array.isArray(obj); }
+    
+            // date
+            if (!isMatched && (type === 'date' || type === 'Date')) { isMatched = (obj instanceof Date); }
+    
+            // flair
+            if (!isMatched && (type === 'flair' && obj._ && obj._.type)) { isMatched = true; }
+    
+            // native javascript types
+            if (!isMatched) { isMatched = (typeof obj === type); }
+    
+            // flair types
+            if (!isMatched) {
+                if (obj._ && obj._.type) { 
+                    _typ = obj._.type;
+                    isMatched = _typ === type; 
+                }
+            }
+            
+            // flair custom types
+            if (!isMatched && _typ && ['instance', 'sinstance'].indexOf(_typ) !== -1) { isMatched = _isInstanceOf(obj, type); }
+        }
+    
+        // return
+        return isMatched;
+    };
+    
+    // attach
+    flair.is = _is;
+    flair.members.push('is');
+    /**
+     * @name isDerivedFrom
+     * @description Checks if given flair class type is derived from given class type, directly or indirectly
+     * @example
+     *  isDerivedFrom(type, parent)
+     * @params
+     *  type: class - flair class type that needs to be checked
+     *  parent: string OR class - class type to be checked for being in parent hierarchy, it can be following:
+     *                            > fully qualified class type name
+     *                            > class type reference
+     * @returns boolean - true/false
+     * @throws
+     *  InvalidArgumentException
+     */ 
+    const _isDerivedFrom = (type, parent) => {
+        if (_typeOf(type) !== 'class') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
+        if (['string', 'class'].indexOf(_typeOf(parent)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (parent)'); }
+        return type._.isDerivedFrom(parent);
+    }; 
+    
+    // attach
+    flair.isDerivedFrom = _isDerivedFrom;
+    flair.members.push('isDerivedFrom');
+    
+    /**
+     * @name isImplements
+     * @description Checks if given flair class instance or class implements given interface
+     * @example
+     *  isImplements(obj, intf)
+     * @params
+     *  obj: object - flair object that needs to be checked
+     *  intf: string OR interface - interface to be checked for, it can be following:
+     *                              > fully qualified interface name
+     *                              > interface type reference
+     * @returns boolean - true/false
+     * @throws
+     *  InvalidArgumentException
+     */ 
+    const _isImplements = (obj, intf) => {
+        if (['instance', 'class'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+        if (['string', 'interface'].indexOf(_typeOf(intf)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (intf)'); }
+        return obj._.isImplements(intf);
+    };
+    
+    // attach
+    flair.isImplements = _isImplements;
+    flair.members.push('isImplements');
+    /**
+     * @name isMixed
+     * @description Checks if given flair class instance or class has mixed with given mixin
+     * @example
+     *  isMixed(obj, mixin)
+     * @params
+     *  obj: object - flair object that needs to be checked
+     *  mixin: string OR mixin - mixin to be checked for, it can be following:
+     *                           > fully qualified mixin name
+     *                           > mixin type reference
+     * @returns boolean - true/false
+     * @throws
+     *  InvalidArgumentException
+     */ 
+    const _isMixed = (obj, mixin) => {
+        if (['instance', 'class'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+        if (['string', 'mixin'].indexOf(_typeOf(mixin)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (mixin)'); }
+        return obj._.isMixed(mixin);
+    };
+    
+    // attach
+    flair.isMixed = _isMixed;
+    flair.members.push('isMixed');
+    /**
+     * @name as
+     * @description Checks if given object can be consumed as an instance of given type
+     * @example
+     *  as(obj, type)
+     * @params
+     *  obj: object - object that needs to be checked
+     *  type: string OR type - type to be checked for, it can be following:
+     *                         > expected native javascript data types like 'string', 'number', 'function', 'array', 'date', etc.
+     *                         > any 'flair' object or type
+     *                         > inbuilt flair object types like 'class', 'struct', 'enum', etc.
+     *                         > custom flair object instance types which are checked in following order:
+     *                           >> for class instances: 
+     *                              isInstanceOf given as type
+     *                              isImplements given as interface 
+     *                              isMixed given as mixin
+     *                           >> for struct instances:
+     *                              isInstance of given as struct type
+     * @returns object - if can be used as specified type, return same object, else null
+     * @throws
+     *  InvalidArgumentException
+     */ 
+    const _as = (obj, type) => {
+        if (_is(obj, type)) { return obj; }
+        return null;
+    };
+    
+    // attach
+    flair.as = _as;
+    flair.members.push('as');
+    /**
+     * @name using
+     * @description Ensures the dispose of the given object instance is called, even if there was an error 
+     *              in executing processor function
+     * @example
+     *  using(obj, fn)
+     * @params
+     *  obj: object - object that needs to be processed by processor function
+     *                If a disposer is not defined for the object, it will not do anything
+     *  fn: function - processor function
+     * @returns any - returns anything that is returned by processor function, it may also be a promise
+     * @throws
+     *  InvalidArgumentException
+     *  Any exception that is raised in given function, is passed as is
+     */ 
+    const _using = (obj, fn) => {
+        if (_typeOf(obj) !== 'instance') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+        if (_typeOf(fn) !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (fn)'); }
+    
+        let result = null,
+            isDone = false,
+            isPromiseReturned = false,
+            doDispose = () => {
+                if (!isDone && typeof obj._.dispose === 'function') {
+                    isDone = true; obj._.dispose();
+                }
+            };
+        try {
+            result = fn(obj);
+            if(result && typeof result.finally === 'function') { // a promise is returned
+                isPromiseReturned = true;
+                result = result.finally((args) => {
+                    doDispose();
+                    return args;
+                });
+            }
+        } finally {
+            if (!isPromiseReturned) { doDispose(); }
+        }
+    
+        // return
+        return result;
+    };
+    
+    // attach
+    flair.using = _using;
+    flair.members.push('using');
+    /**
+     * @name attr
+     * @description Decorator function to apply attributes on type and member definitions
+     * @example
+     *  attr(attrName)
+     *  attr(attrName, ...args)
+     * @params
+     *  attrName: string - Name of the attribute, it can be an internal attribute or a DI container registered attribute name
+     *  args: any - Any arguments that may be needed by attribute
+     * @returns void
+     * @throws
+     *  InvalidArgumentException 
+     */ 
+    const _attr = (name, ...args) => {
         if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
     
         let Attr = null;
@@ -298,57 +614,26 @@
         }
     
         // push in its own bucket
-        _attr.bucket.push({name: name, Attr: Attr, args: args});
+        _attr._.bucket.push({name: name, Attr: Attr, args: args});
     };
-    _attr.bucket = [];
+    _attr._ = Object.freeze({
+        bucket: []
+    });
     _attr.collect = () => {
-        let attrs = _attr.bucket.slice();
+        let attrs = _attr._.bucket.slice();
         _attr.clear();
         return attrs;
     }
     _attr.has = (name) => {
-        return (_attr.bucket.findIndex(item => item.name === name) !== -1);
+        return (_attr._.bucket.findIndex(item => item.name === name) !== -1);
     };
     _attr.clear = () => {
-        _attr.bucket.length = 0; // remove all
+        _attr._.bucket.length = 0; // remove all
     };
     
-
-    // helper functions
-    const guid = () => {
-        return '_xxxxxxxx_xxxx_4xxx_yxxx_xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-        });
-    };
-    const which = (def, isFile) => {
-        if (isFile) { // debug/prod specific decision
-            // pick minified or dev version
-            if (def.indexOf('{.min}') !== -1) {
-                if (flair.options.env.isProd) {
-                    return def.replace('{.min}', '.min'); // a{.min}.js => a.min.js
-                } else {
-                    return def.replace('{.min}', ''); // a{.min}.js => a.js
-                }
-            }
-        } else { // server/client specific decision
-            if (def.indexOf('|') !== -1) { 
-                let items = def.split('|'),
-                    item = '';
-                if (flair.options.env.isServer) {
-                    item = items[0].trim();
-                } else {
-                    item = items[1].trim();
-                }
-                if (item === 'x') { item = ''; } // special case to explicitely mark absence of a type
-                return item;
-            }            
-        }
-        return def; // as is
-    };
-    
-
-    // primary type builder
+    // attach
+    flair.attr = _attr;
+    flair.members.push('attr');
     const copyMembers = (sources, dest) => {
         for(let src of sources) {
             if (src) {
@@ -434,6 +719,15 @@
                     }
                 }
                 return result;                        
+            },
+            isProperty: (memberName) => {
+                return member.type(memberName) === 'prop';
+            },
+            isEvent: (memberName) => {
+                return member.type(memberName) === 'event';
+            },
+            isFunction: (memberName) => {
+                return member.type(memberName) === 'func';
             },
             attrs: (memberName) => {
                 if (meta[memberName]) {
@@ -866,7 +1160,7 @@
     
                 // attach definition helpers
                 if (cfg.func) { obj.func = helpers._func; }
-                if (cfg.prop) { obj.prop = helpers._prop; obj.props = helpers._props; }
+                if (cfg.prop) { obj.prop = helpers._prop; }
                 if (cfg.event) { obj.event = helpers._event; }
                 if (cfg.construct) { obj.construct = helpers._construct; }
                 if (cfg.dispose) { obj.dispose = helpers._dispose; }
@@ -894,7 +1188,7 @@
                 
                 // detach definition helpers
                 if (cfg.func) { delete obj.func; }
-                if (cfg.prop) { delete obj.prop; delete obj.props; }
+                if (cfg.prop) { delete obj.prop; }
                 if (cfg.event) { delete obj.event; }
                 if (cfg.construct) { delete obj.construct; }
                 if (cfg.dispose) { delete obj.dispose; }
@@ -942,6 +1236,11 @@
                     }
                     if (cfg.hide) { if (isCopy && member.isHidden(memberName)) { isCopy = false; } }
                     if (isCopy) { doCopy(memberName); }
+    
+                    // rewire event definition when at the top level object creation step
+                    if (isCopy && !isNeedProtected && member.isEvent(memberName)) {
+                        exposed_obj[memberName].rewire(exposed_obj);
+                    }
                 }
     
                 // sealed attribute for members are handled at the end
@@ -1111,26 +1410,28 @@
                             if (!staticInterface[name]) {
                                 staticInterface[name] = _theFn;
                             }
+                            isDefinedHere = true;
                         }
-                    } else {
-                        _theFn = function(...args) {
-                            if (funcs.isArrow(fn)) {
-                                return fn(...args);
-                            } else { // normal func
-                                return fn.apply(obj, args);
-                            }
-                        }.bind(obj);
-    
-                        // define on object, even if this is static func, this will
-                        // ensure consistency, the only diff is that static function runs in context of
-                        // static interface as 'this' as opposed to obj being 'this' for instance func
-                        Object.defineProperty(obj, name, {
-                            configurable: true,
-                            enumerable: true,
-                            value: _theFn
-                        });                    
                     }
                 }
+                if (!isDefinedHere) { // normal func
+                    _theFn = function(...args) {
+                        if (funcs.isArrow(fn)) {
+                            return fn(...args);
+                        } else { // function
+                            return fn.apply(obj, args);
+                        }
+                    }.bind(obj);
+                }
+    
+                // define on object, even if this is static func, this will
+                // ensure consistency, the only diff is that static function runs in context of
+                // static interface as 'this' as opposed to obj being 'this' for instance func
+                Object.defineProperty(obj, name, {
+                    configurable: true,
+                    enumerable: true,
+                    value: _theFn
+                });
     
                 // apply custom attributes
                 if (cfg.customAttrs) {
@@ -1142,10 +1443,10 @@
                 meta[name].raw = fn;
             },
             _construct: (fn) => {
-                helpers._func.apply(obj, [_constructName, fn]);
+                helpers._func(_constructName, fn);
             },
             _dispose: (fn) => {
-                helpers._func.apply(obj, [_disposeName, fn]);
+                helpers._func(_disposeName, fn);
             },
             _prop: (name, valueOrGetterOrGetSetObject, setter) => {
                 if (!name || typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
@@ -1374,26 +1675,6 @@
                     set: (value) => { obj[name] = value; }
                 };
             },
-            _props: (attrsOrProps, props) => {
-                let attrsList = [],
-                    propsList = [];
-                if (_typeOf(attrsOrProps) === 'array' && _typeOf(props) === 'array') {
-                    attrsList = attrsOrProps,
-                    propsList = props;
-                } else if (_typeOf(attrsOrProps) === 'array') {
-                    propsList = attrsOrProps;
-                } else {
-                    throw new _Exception('InvalidArgument', 'Argument type is invalid. (props)');
-                }
-    
-                // define bulk properties
-                for(let propName of propsList) {
-                    for(let attrName of attrsList) { // apply all attributes before defining property
-                        _attr(attrName);
-                    }
-                    obj.prop(propName); // define property with default value
-                }
-            },
             _event: (name, argsProcessor) => {
                 if (!name || typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
                 if (argsProcessor && typeof argsProcessor !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (argsProcessor)'); }
@@ -1488,41 +1769,62 @@
                 argsProcessor = meta[name].argsProcessor;
     
                 // define or redefine
-                let _event = function(...args) {
+                let _event = {};
+                _event._ = Object.freeze({
+                    subscribers: []
+                });
+                _event.subscribe = (fn) => {
+                    if (typeof fn !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (fn)'); }
+                    _event._.subscribers.push(fn);
+                };
+                _event.subscribe.all = () => {
+                    return _event._.subscribers.slice();
+                };
+                _event.unsubscribe = (fn) => {
+                    if (typeof fn !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (fn)'); }
+                    let index = _event._.subscribers.indexOf(fn);
+                    if (index !== -1) { _event._.subscribers.splice(index, 1); }
+                };
+                _event.unsubscribe.all = () => {
+                    _event._.subscribers.length = 0; // remove all
+                };
+                _event.raise = (...args) => {
                     // preprocess args
                     let processedArgs = {};
-                    if (argsProcessor) { processedArgs = argsProcessor(...args); }
-    
+                    if (typeof argsProcessor === 'function') { processedArgs = argsProcessor(...args); }
+            
                     // define event arg
                     let e = {
                         name: name,
                         args: Object.freeze(processedArgs),
                         stop: false
                     };
-    
+            
                     // raise event
-                    for(let handler of events) {
+                    for(let handler of _event._.subscribers) {
                         handler(e);
                         if (e.stop) { break; }
                     }
-                }.bind(obj);
+                };
+                _event.rewire = (targetObj) => {
+                    // internal method that does not make outside, this is called
+                    // during exposed object building process to rewire event either as an object
+                    // or as a function - for external world it is an object without the ability of being
+                    // called, while for internal world (or derived types), it is a function, which can
+                    // be called to raise the event
+                    // this is self destructing method, and delete itself as well
     
-                // add event object members
-                _event.subscribe = (fn) => {
-                    if (typeof fn !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (fn)'); }
-                    events.push(fn);
-                };
-                _event.subscribe.all = () => {
-                    return events.slice();
-                };
-                _event.unsubscribe = (fn) => {
-                    if (typeof fn !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (fn)'); }
-                    let index = events.indexOf(fn);
-                    if (index !== -1) { events.splice(index, 1); }
-                };
-                _event.unsubscribe.all = () => {
-                    events = [];
-                };
+                    let eventAsFn = targetObj[name].raise;
+                    eventAsFn._ = targetObj[name]._;
+                    eventAsFn.subscribe = targetObj[name].subscribe; // .all comes with it
+                    eventAsFn.unsubscribe = targetObj[name].unsubscribe; // .all comes with it
+                    obj[name] = eventAsFn; // updating this internal object itself
+    
+                    // on target object
+                    delete targetObj[name].raise;
+                    delete targetObj[name].rewire;
+                }
+                events.push(_event);
     
                 // define
                 Object.defineProperty(obj, name, {
@@ -1567,6 +1869,14 @@
             funcs.weave();
         }
     
+        // prepare object to expose
+        funcs.buildExposedObj();
+    
+        // validate interfaces
+        if (cfg.interfaces) {
+            funcs.validateInterfaces();                
+        }
+    
         // when on top level instance
         if (!isNeedProtected) {
             if (cfg.construct) {
@@ -1575,14 +1885,6 @@
             if (cfg.dispose) {
                 funcs.processDestructor();
             }
-        }
-    
-        // prepare object to expose
-        funcs.buildExposedObj();
-    
-        // validate interfaces
-        if (cfg.interfaces) {
-            funcs.validateInterfaces();                
         }
     
         // public and (protected+private) instance interface
@@ -1819,151 +2121,6 @@
         );
     };
     
-
-    let flair = { members: [] },
-        noop = () => {},
-        sym = (opts.symbols || []), // eslint-disable-next-line no-unused-vars
-        noopAsync = (resolve, reject) => { resolve(); },
-        _args = (isServer ? process.argv : new window.URLSearchParams(window.location.search)),
-        isTesting = (sym.indexOf('TEST') !== -1),
-        options = null;
-
-    // forced server/client mocking for test environment
-    if (isTesting) {
-        if (sym.indexOf('SERVER') !== -1) { 
-            isServer = true;
-        } else if (sym.indexOf('CLIENT') !== -1) {
-            isServer = false;
-        }
-    }
-
-    // options definition
-    options = Object.freeze({
-        symbols: Object.freeze(sym),
-        env: Object.freeze({
-            type: opts.env || (isServer ? 'server' : 'client'),
-            isTesting: isTesting,
-            isServer: isServer,
-            isClient: !isServer,
-            isProd: (sym.indexOf('PROD') !== -1),
-            isDebug: (sym.indexOf('DEBUG') !== -1),
-            global: _global,
-            supressGlobals: (typeof opts.supressGlobals === 'undefined' ? false : opts.supressGlobals),
-            args: _args
-        }),
-        loaders: Object.freeze({
-            module: Object.freeze({ // (file) => {} that gives a promise to resolve with the module object, on success
-                server: opts.moduleLoaderServer || null,
-                client: opts.moduleLoaderClient || null  
-            }),
-            file: Object.freeze({ // (file) => {} that gives a promise to resolve with file content, on success
-                server: opts.fileLoaderServer || null,
-                client: opts.fileLoaderClient || null
-            }),
-            define: (type, fn) => {
-                if (_Args('string, function')(type, fn).isInvalid()) { throw new _Exception('InvalidArgument', `Arguments type error. (${type})`); }
-                let loaderOverrides = flair.options.loaderOverrides;
-                switch(type) { // NOTE: only once these can be defined after loading
-                    case 'sm': loaderOverrides.moduleLoaderServer = loaderOverrides.moduleLoaderServer || fn; break;
-                    case 'cm': loaderOverrides.moduleLoaderClient = loaderOverrides.moduleLoaderClient || fn; break;
-                    case 'sf': loaderOverrides.fileLoaderServer = loaderOverrides.fileLoaderServer || fn; break;
-                    case 'cf': loaderOverrides.fileLoaderClient = loaderOverrides.fileLoaderClient || fn; break;
-                }
-            }
-        }),
-        loaderOverrides: {
-            moduleLoaderServer: null,
-            moduleLoaderClient: null,
-            fileLoaderServer: null,
-            fileLoaderClient: null
-        }
-    });
-    
-    // special symbols
-    if (options.env.isProd && options.env.isDebug) { // when both are given
-        throw new _Exception('InvalidOption', `DEBUG and PROD symbols are mutually exclusive. Use only one of these symbols.`);
-    }
-
-    // flair meta information
-    flair._ = Object.freeze({
-        name: 'FlairJS',
-        version: '0.15.27',
-        copyright: '(c) 2017-2019 Vikas Burman',
-        license: 'MIT',
-        link: 'https://flairjs.com',
-        lupdate: new Date('Tue, 05 Feb 2019 04:57:42 GMT')
-    });
-    flair.info = flair._;
-    flair.options = options;
-
-    // exposed members
-    /**
-     * @name Exception
-     * @description Lightweight Exception class that extends Error object and serves as base of all exceptions
-     * @example
-     *  Exception()
-     *  Exception(type)
-     *  Exception(error)
-     *  Exception(type, message)
-     *  Exception(type, error)
-     *  Exception(type, message, error)
-     * @params
-     *  type: string - error name or type
-     *  message: string - error message
-     *  error: object - inner error or exception object
-     * @constructs Exception object
-     * @throws
-     *  None
-     */  
-    flair.Exception = _Exception;
-    
-    // add to members list
-    flair.members.push('Exception');
-    /**
-     * @name Args
-     * @description Lightweight args pattern processor proc that returns a validator function to validate arguments against given arg patterns
-     * @example
-     *  Args(...patterns)
-     * @params
-     *  patterns: string(s) - multiple pattern strings, each representing one pattern set
-     *                        each pattern set can take following forms:
-     *                        'type, type, type, ...' OR 'name: type, name: type, name: type, ...'
-     *                          type: can be following:
-     *                              > expected native javascript data types like 'string', 'number', 'function', 'array', etc.
-     *                              > inbuilt flair object types like 'class', 'struct', 'enum', etc.
-     *                              > custom flair object instance types which are checked in following order:
-     *                                  >> for class instances: 
-     *                                     isInstanceOf given as type
-     *                                     isImplements given as interface 
-     *                                     isMixed given as mixin
-     *                                  >> for struct instances:
-     *                                     isInstance of given as struct type
-     *                          name: argument name which will be used to store extracted value by parser
-     * @returns function - validator function that is configured for specified patterns
-     * @throws
-     *  InvalidArgumentException 
-     */ 
-    flair.Args = _Args;
-    
-    // add to members list
-    flair.members.push('Args');
-    /**
-     * @name attr
-     * @description Decorator function to apply attributes on type and member definitions
-     * @example
-     *  attr(attrName)
-     *  attr(attrName, ...args)
-     * @params
-     *  attrName: string - Name of the attribute, it can be an internal attribute or a DI container registered attribute name
-     *  args: any - Any arguments that may be needed by attribute
-     * @returns void
-     * @throws
-     *  InvalidArgumentException 
-     */ 
-    flair.attr = _attr;
-    
-    // add to members list
-    flair.members.push('attr');
     /**
      * @name Struct
      * @description Constructs a Struct type.
@@ -1995,7 +2152,7 @@
      * @throws
      *  InvalidArgumentException
      */
-    flair.Struct = (name, mixinsAndInterfaces, factory) => {
+    const _Struct = (name, mixinsAndInterfaces, factory) => {
         if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
         if (_typeOf(mixinsAndInterfaces) === 'array') {
             if (typeof factory !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (factory)'); }
@@ -2051,7 +2208,8 @@
         return builder(cfg);
     };
     
-    // add to members list
+    // attach
+    flair.Struct = _Struct;
     flair.members.push('Struct');
     let asmFiles = {},
         asmTypes = {};
@@ -2101,6 +2259,7 @@
                 this.hasAssets = (ado.assets.length > 0);
             });
             
+            /// TODO: props is no longer supported
             this.props(['readonly'], ['ado', 'name', 'file', 'desc', 'version', 'copyright', 'license', 'types', 'hasAssets']);
             
             this.prop('isLoaded', false);
@@ -2863,200 +3022,6 @@
         return null;
     };
     
-    /**
-     * @name using
-     * @description Ensures the dispose of the given object instance is called, even if there was an error 
-     *              in executing processor function
-     * @example
-     *  using(obj, fn)
-     * @params
-     *  obj: object - object that needs to be processed by processor function
-     *                If a disposer is not defined for the object, it will not do anything
-     *  fn: function - processor function
-     * @returns any - returns anything that is returned by processor function, it may also be a promise
-     * @throws
-     *  InvalidArgumentException
-     *  Any exception that is raised in given function, is passed as is
-     */ 
-    flair.using = (obj, fn) => {
-        if (_typeOf(obj) !== 'instance') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
-        if (_typeOf(fn) !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (fn)'); }
-    
-        let result = null,
-            isDone = false,
-            isPromiseReturned = false,
-            doDispose = () => {
-                if (!isDone && typeof obj._.dispose === 'function') {
-                    isDone = true; obj._.dispose();
-                }
-            };
-        try {
-            result = fn(obj);
-            if(result && typeof result.finally === 'function') { // a promise is returned
-                isPromiseReturned = true;
-                result = result.finally((args) => {
-                    doDispose();
-                    return args;
-                });
-            }
-        } finally {
-            if (!isPromiseReturned) { doDispose(); }
-        }
-    
-        // return
-        return result;
-    };
-    
-    // add to members list
-    flair.members.push('using');
-    /**
-     * @name as
-     * @description Checks if given object can be consumed as an instance of given type
-     * @example
-     *  as(obj, type)
-     * @params
-     *  obj: object - object that needs to be checked
-     *  type: string OR type - type to be checked for, it can be following:
-     *                         > expected native javascript data types like 'string', 'number', 'function', 'array', 'date', etc.
-     *                         > any 'flair' object or type
-     *                         > inbuilt flair object types like 'class', 'struct', 'enum', etc.
-     *                         > custom flair object instance types which are checked in following order:
-     *                           >> for class instances: 
-     *                              isInstanceOf given as type
-     *                              isImplements given as interface 
-     *                              isMixed given as mixin
-     *                           >> for struct instances:
-     *                              isInstance of given as struct type
-     * @returns object - if can be used as specified type, return same object, else null
-     * @throws
-     *  InvalidArgumentException
-     */ 
-    flair.as = (obj, type) => {
-        if (_is(obj, type)) { return obj; }
-        return null;
-    };
-    
-    // add to members list
-    flair.members.push('as');
-    /**
-     * @name typeOf
-     * @description Finds the type of given object
-     * @example
-     *  typeOf(obj)
-     * @params
-     *  obj: object - object that needs to be checked
-     * @returns string - type of the given object
-     *                   it can be following:
-     *                    > expected native javascript data types like 'string', 'number', 'function', 'array', 'date', etc.
-     *                    > inbuilt flair object types like 'class', 'struct', 'enum', etc.
-     * @throws
-     *  None
-     */ 
-    flair.typeOf = _typeOf;
-    
-    // add to members list
-    flair.members.push('typeOf');
-    /**
-     * @name is
-     * @description Checks if given object is of a given type
-     * @example
-     *  is(obj, type)
-     * @params
-     *  obj: object - object that needs to be checked
-     *  type: string OR type - type to be checked for, it can be following:
-     *                         > expected native javascript data types like 'string', 'number', 'function', 'array', 'date', etc.
-     *                         > any 'flair' object or type
-     *                         > inbuilt flair object types like 'class', 'struct', 'enum', etc.
-     *                         > custom flair object instance types which are checked in following order:
-     *                           >> for class instances: 
-     *                              isInstanceOf given as type
-     *                              isImplements given as interface 
-     *                              isMixed given as mixin
-     *                           >> for struct instances:
-     *                              isInstance of given as struct type
-     * @returns boolean - true/false
-     * @throws
-     *  InvalidArgumentException
-     */ 
-    flair.is = _is;
-    
-    // add to members list
-    flair.members.push('is');
-    /**
-     * @name isDerivedFrom
-     * @description Checks if given flair class type is derived from given class type, directly or indirectly
-     * @example
-     *  isDerivedFrom(type, parent)
-     * @params
-     *  type: class - flair class type that needs to be checked
-     *  parent: string OR class - class type to be checked for being in parent hierarchy, it can be following:
-     *                            > fully qualified class type name
-     *                            > class type reference
-     * @returns boolean - true/false
-     * @throws
-     *  InvalidArgumentException
-     */ 
-    flair.isDerivedFrom = _is.derivedFrom;
-    
-    // add to members list
-    flair.members.push('isDerivedFrom');
-    
-    /**
-     * @name isImplements
-     * @description Checks if given flair class instance or class implements given interface
-     * @example
-     *  isImplements(obj, intf)
-     * @params
-     *  obj: object - flair object that needs to be checked
-     *  intf: string OR interface - interface to be checked for, it can be following:
-     *                              > fully qualified interface name
-     *                              > interface type reference
-     * @returns boolean - true/false
-     * @throws
-     *  InvalidArgumentException
-     */ 
-    flair.isImplements = _is.implements;
-    
-    // add to members list
-    flair.members.push('isImplements');
-    /**
-     * @name isInstanceOf
-     * @description Checks if given flair class/struct instance is an instance of given class/struct type or
-     *              if given class instance implements given interface or has given mixin mixed somewhere in class 
-     *              hierarchy
-     * @example
-     *  isInstanceOf(obj, type)
-     * @params
-     *  obj: object - flair object that needs to be checked
-     *  type: string OR class OR struct OR interface OR mixin - type to be checked for, it can be following:
-     *                         > fully qualified type name
-     *                         > type reference
-     * @returns boolean - true/false
-     * @throws
-     *  InvalidArgumentException
-     */ 
-    flair.isInstanceOf = _is.instanceOf;
-    
-    // add to members list
-    flair.members.push('isInstanceOf');
-    /**
-     * @name isMixed
-     * @description Checks if given flair class instance or class has mixed with given mixin
-     * @example
-     *  isMixed(obj, mixin)
-     * @params
-     *  obj: object - flair object that needs to be checked
-     *  mixin: string OR mixin - mixin to be checked for, it can be following:
-     *                           > fully qualified mixin name
-     *                           > mixin type reference
-     * @returns boolean - true/false
-     * @throws
-     *  InvalidArgumentException
-     */ 
-    flair.isMixed = _is.mixed;
-    
-    // add to members list
-    flair.members.push('isMixed');
     let container = {};
     
     /**
@@ -4452,10 +4417,10 @@
     };
     
     // add to members list
-    flair.members.push('Reflector');
-
-    // expose to global environment
-    if (!options.env.supressGlobals) {
+    flair.members.push('Reflector');    
+  
+    // set global
+    if (!options.env.suppressGlobals) {
         for(let name of flair.members) {
             _global[name] = Object.freeze(flair[name]);
         }
