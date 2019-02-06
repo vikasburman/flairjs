@@ -68,58 +68,58 @@ describe('---- struct.js ----', () => {
             });
 
       
-            let MyStruct = Struct('MyStruct', function() {
-                let run = () => {
-                    console.log('Hello!!!!!!');
-                    return 10;
-                };
+            // let MyStruct = Struct('MyStruct', function() {
+            //     let run = () => {
+            //         console.log('Hello!!!!!!');
+            //         return 10;
+            //     };
 
         
-                this.construct((stt) => {
-                    //stt.started('outside - but inside other', 50);
-                    //console.log('created! ' + this.cc);
-                });
+            //     this.construct((stt) => {
+            //         //stt.started('outside - but inside other', 50);
+            //         //console.log('created! ' + this.cc);
+            //     });
 
-                //this.dispose(() => {});
+            //     //this.dispose(() => {});
 
-                this.func('hello', function() {
-                    console.log(this.cc);
-                    console.log(this.hello2);
-                });
+            //     this.func('hello', function() {
+            //         console.log(this.cc);
+            //         console.log(this.hello2);
+            //     });
 
-                attr('static');
-                this.prop('hello2', 10);
+            //     attr('static');
+            //     this.prop('hello2', 10);
 
-                this.func('xyz', () => {
-                    this.cc = 20000;
-                    //this.func('abc', (() => {}));
-                    console.log('ME TOO - ' + this.cc);
-                    return run();
-                });
+            //     this.func('xyz', () => {
+            //         this.cc = 20000;
+            //         //this.func('abc', (() => {}));
+            //         console.log('ME TOO - ' + this.cc);
+            //         return run();
+            //     });
 
-                this.func('abc', () => {
-                    this.xyz();
-                });
+            //     this.func('abc', () => {
+            //         this.xyz();
+            //     });
       
-                this.event('started', (args1, args2) => {
-                    return { values: [args1, args2] };
-                });
+            //     this.event('started', (args1, args2) => {
+            //         return { values: [args1, args2] };
+            //     });
 
-                attr('private');
-                this.prop('cc', 200);
+            //     attr('private');
+            //     this.prop('cc', 200);
 
-                let _cc2 = 10;
-                this.prop('cc2', {
-                    get: () => { return _cc2; },
-                    set: (value) => {
-                        _cc2 = value;
-                    }
-                });
-            });
+            //     let _cc2 = 10;
+            //     this.prop('cc2', {
+            //         get: () => { return _cc2; },
+            //         set: (value) => {
+            //             _cc2 = value;
+            //         }
+            //     });
+            // });
             
             
-            //console.log(ST);
-            //let st = new ST(1000);
+            console.log(ST);
+            let st = new ST(1000);
             //console.log(st.started);
             //st.started('outside', 40);
             //let st2 = new MyStruct(st);

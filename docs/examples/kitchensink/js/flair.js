@@ -3,7 +3,7 @@
  * FlairJS
  * True Object Oriented JavaScript
  * Version 0.15.27
- * Wed, 06 Feb 2019 02:06:09 GMT
+ * Wed, 06 Feb 2019 02:39:07 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  * https://flairjs.com
@@ -89,7 +89,7 @@
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
         link: 'https://flairjs.com',
-        lupdate: new Date('Wed, 06 Feb 2019 02:06:09 GMT')
+        lupdate: new Date('Wed, 06 Feb 2019 02:39:07 GMT')
     });
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -1370,20 +1370,40 @@
                     set: (_obj, prop, value) => {
                         if (isBuildingObj) {
                             if (prop === 'construct') {
-                                obj.construct(value);
+                                if (cfg.construct) {
+                                    helpers._construct(value);
+                                } else {
+                                    throw new _Exception('InvalidOperation', `Constructor cannot be defined on this type. (${typeName})`);
+                                }
                             } else if (prop === 'dispose') {
-                                obj.dispose(value);
+                                if (cfg.dispose) {
+                                    helpers._dispose(value);
+                                } else {
+                                    throw new _Exception('InvalidOperation', `Dispose cannot be defined on this type. (${typeName})`);
+                                }
                             } else if (['func', 'prop', 'event'].indexOf(prop) !== -1) {
                                 throw new _Exception('InvalidOperation', `Inbuilt helper functions cannot be reassigned. (${prop})`);
                             } else {
                                 if (typeof value === 'function') { // function or event
                                     if (_attr.has('event')) {
-                                        obj.event(prop, value);
+                                        if (cfg.event) {
+                                            helpers._event(prop, value);
+                                        } else {
+                                            throw new _Exception('InvalidOperation', `Event cannot be defined on this type. (${typeName})`);
+                                        }
                                     } else { // function
-                                        obj.func(prop, value);
+                                        if (cfg.func) {
+                                            helpers._func(prop, value);
+                                        } else {
+                                            throw new _Exception('InvalidOperation', `Function cannot be defined on this type. (${typeName})`);
+                                        }
                                     }
                                 } else { // property
-                                    obj.prop(prop, value);
+                                    if (cfg.prop) {
+                                        helpers._prop(prop, value);
+                                    } else {
+                                        throw new _Exception('InvalidOperation', `Property cannot be defined on this type. (${typeName})`);
+                                    }
                                 }
                             }
                         } else {
@@ -1397,13 +1417,6 @@
                         return true;
                     }
                 });
-    
-                // attach definition helpers
-                if (cfg.func) { obj.func = helpers._func; }
-                if (cfg.prop) { obj.prop = helpers._prop; }
-                if (cfg.event) { obj.event = helpers._event; }
-                if (cfg.construct) { obj.construct = helpers._construct; }
-                if (cfg.dispose) { obj.dispose = helpers._dispose; }
     
                 // construct using factory
                 factory.apply(proxy);
@@ -1425,13 +1438,6 @@
                         }
                     }            
                 }    
-                
-                // detach definition helpers
-                if (cfg.func) { delete obj.func; }
-                if (cfg.prop) { delete obj.prop; }
-                if (cfg.event) { delete obj.event; }
-                if (cfg.construct) { delete obj.construct; }
-                if (cfg.dispose) { delete obj.dispose; }
      
                 // building ends
                 isBuildingObj = false;
@@ -2713,7 +2719,7 @@
         // namespace.name
         
         // only valid types are allowed
-        if (['class', 'enum', 'interface', 'mixin', 'struct', 'resource', 'proc'].indexOf(Type._.type) === -1) { throw `Type (${Type._.type}) cannot be placed in a namespace.`; }
+        if (['class', 'enum', 'interface', 'mixin', 'struct', 'resource'].indexOf(Type._.type) === -1) { throw `Type (${Type._.type}) cannot be placed in a namespace.`; }
     
         // only unattached types are allowed
         if (Type._.namespace) { throw `Type (${Type._.name}) is already contained in a namespace.`; }
@@ -3093,32 +3099,6 @@
     
     // add to members list
     flair.members.push('Enum');
-    // Proc
-    // Proc(procName, fn)
-    flair.Proc = (procName, isASync, fn) => {
-        if (typeof isASync === 'function') {
-            fn = isASync;
-            isASync = false;
-        }
-        let _fn = fn;
-        _fn.isASync = () => { return isASync; };
-        _fn._ = {
-            name: procName,
-            type: 'proc',
-            namespace: null,        
-            invoke: (...args) => {
-                fn(...args);
-            }
-        };
-    
-        // register type with namespace
-        flair.Namespace(_fn);
-    
-        // return
-        return Object.freeze(_fn);
-    };
-    
-    
     // Resource
     // Resource(resName, resFile)
     flair.Resource = (resName, resFile, data) => {
@@ -4147,7 +4127,6 @@
             this.isInstance = () => { return target._.type === 'instance'; };
             this.isClass = () => { return target._.type === 'class'; };
             this.isEnum = () => { return target._.type === 'enum'; };
-            this.isProc = () => { return target._.type === 'proc'; };
             this.isStruct = () => { return target._.type === 'struct'; };
             this.isStructInstance = () => { return target._.type === 'sinstance'; };
             this.isNamespace = () => { return target._.type === 'namespace'; };
@@ -4518,12 +4497,6 @@
             refl.getValues = () => { return target._.values(); }
             return refl;
         };
-        const ProcReflector = function(target) {
-            let refl = new CommonTypeReflector(target);
-            refl.isASync = () => { target.isASync(); };
-            refl.invoke = (...args) => { return target._.invoke(...args); }
-            return refl;
-        };    
         const ResourceReflector = function(target) {
             let refl = new CommonTypeReflector(target);
             refl.getFile = () => { return target.file(); };
@@ -4618,7 +4591,6 @@
             case 'sinstance': ref = new StructInstanceReflector(forTarget); break;
             case 'class': ref = new ClassReflector(forTarget); break;
             case 'enum': ref = new EnumReflector(forTarget); break;
-            case 'proc': ref = new ProcReflector(forTarget); break;
             case 'resource': ref = new ResourceReflector(forTarget); break;
             case 'struct': ref = new StructReflector(forTarget); break;
             case 'namespace': ref = new NamespaceReflector(forTarget); break;
@@ -4647,7 +4619,7 @@
     _Channel.define('raw', 'flair.system.raw');             // type and instances creation telemetry
     _Channel.define('exec', 'flair.system.execute');        // member access execution telemetry
     _Channel.define('info', 'flair.system.info');           // info, warning and exception telemetry
-    _Channel.define('incl', 'flair.system.include');        // file or module include telemetry
+    _Channel.define('fetch', 'flair.system.fetch');         // file or module include telemetry
 
     // set global
     if (!options.env.suppressGlobals) {

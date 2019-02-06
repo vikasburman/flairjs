@@ -119,7 +119,6 @@
     <!-- inject: ./types/mixin.js -->
     <!-- inject: ./types/interface.js -->
     <!-- inject: ./types/enum.js -->
-    <!-- inject: ./types/proc.js -->
     <!-- inject: ./types/resource.js -->
     <!-- inject: ./di/container.js -->
     <!-- inject: ./attributes/attribute.js -->

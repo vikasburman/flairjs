@@ -18,7 +18,6 @@ flair.Reflector = function (forTarget) {
         this.isInstance = () => { return target._.type === 'instance'; };
         this.isClass = () => { return target._.type === 'class'; };
         this.isEnum = () => { return target._.type === 'enum'; };
-        this.isProc = () => { return target._.type === 'proc'; };
         this.isStruct = () => { return target._.type === 'struct'; };
         this.isStructInstance = () => { return target._.type === 'sinstance'; };
         this.isNamespace = () => { return target._.type === 'namespace'; };
@@ -389,12 +388,6 @@ flair.Reflector = function (forTarget) {
         refl.getValues = () => { return target._.values(); }
         return refl;
     };
-    const ProcReflector = function(target) {
-        let refl = new CommonTypeReflector(target);
-        refl.isASync = () => { target.isASync(); };
-        refl.invoke = (...args) => { return target._.invoke(...args); }
-        return refl;
-    };    
     const ResourceReflector = function(target) {
         let refl = new CommonTypeReflector(target);
         refl.getFile = () => { return target.file(); };
@@ -489,7 +482,6 @@ flair.Reflector = function (forTarget) {
         case 'sinstance': ref = new StructInstanceReflector(forTarget); break;
         case 'class': ref = new ClassReflector(forTarget); break;
         case 'enum': ref = new EnumReflector(forTarget); break;
-        case 'proc': ref = new ProcReflector(forTarget); break;
         case 'resource': ref = new ResourceReflector(forTarget); break;
         case 'struct': ref = new StructReflector(forTarget); break;
         case 'namespace': ref = new NamespaceReflector(forTarget); break;

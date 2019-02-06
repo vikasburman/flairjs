@@ -496,20 +496,40 @@ const buildTypeInstance = (type, Type, typeName, mex, inherits, mixinsAndInterfa
                 set: (_obj, prop, value) => {
                     if (isBuildingObj) {
                         if (prop === 'construct') {
-                            obj.construct(value);
+                            if (cfg.construct) {
+                                helpers._construct(value);
+                            } else {
+                                throw new _Exception('InvalidOperation', `Constructor cannot be defined on this type. (${typeName})`);
+                            }
                         } else if (prop === 'dispose') {
-                            obj.dispose(value);
+                            if (cfg.dispose) {
+                                helpers._dispose(value);
+                            } else {
+                                throw new _Exception('InvalidOperation', `Dispose cannot be defined on this type. (${typeName})`);
+                            }
                         } else if (['func', 'prop', 'event'].indexOf(prop) !== -1) {
                             throw new _Exception('InvalidOperation', `Inbuilt helper functions cannot be reassigned. (${prop})`);
                         } else {
                             if (typeof value === 'function') { // function or event
                                 if (_attr.has('event')) {
-                                    obj.event(prop, value);
+                                    if (cfg.event) {
+                                        helpers._event(prop, value);
+                                    } else {
+                                        throw new _Exception('InvalidOperation', `Event cannot be defined on this type. (${typeName})`);
+                                    }
                                 } else { // function
-                                    obj.func(prop, value);
+                                    if (cfg.func) {
+                                        helpers._func(prop, value);
+                                    } else {
+                                        throw new _Exception('InvalidOperation', `Function cannot be defined on this type. (${typeName})`);
+                                    }
                                 }
                             } else { // property
-                                obj.prop(prop, value);
+                                if (cfg.prop) {
+                                    helpers._prop(prop, value);
+                                } else {
+                                    throw new _Exception('InvalidOperation', `Property cannot be defined on this type. (${typeName})`);
+                                }
                             }
                         }
                     } else {
@@ -523,13 +543,6 @@ const buildTypeInstance = (type, Type, typeName, mex, inherits, mixinsAndInterfa
                     return true;
                 }
             });
-
-            // attach definition helpers
-            if (cfg.func) { obj.func = helpers._func; }
-            if (cfg.prop) { obj.prop = helpers._prop; }
-            if (cfg.event) { obj.event = helpers._event; }
-            if (cfg.construct) { obj.construct = helpers._construct; }
-            if (cfg.dispose) { obj.dispose = helpers._dispose; }
 
             // construct using factory
             factory.apply(proxy);
@@ -551,13 +564,6 @@ const buildTypeInstance = (type, Type, typeName, mex, inherits, mixinsAndInterfa
                     }
                 }            
             }    
-            
-            // detach definition helpers
-            if (cfg.func) { delete obj.func; }
-            if (cfg.prop) { delete obj.prop; }
-            if (cfg.event) { delete obj.event; }
-            if (cfg.construct) { delete obj.construct; }
-            if (cfg.dispose) { delete obj.dispose; }
  
             // building ends
             isBuildingObj = false;

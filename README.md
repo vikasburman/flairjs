@@ -37,7 +37,7 @@ Features
 * **Serialization:** Seamless serialization and deserialization of class objects for persistance and transfer.
 * **Reflection:** Meta programming made easy with advance reflection support on all live objects and base types.
 * **Type organization:** Organization of types under individual namespaces and assemblies.
-* **Others:** Singleton, Static classes and members, State storage, Event handling, Async method calls, Auto-disposable objects, deprecate member notifications, etc.
+* **Others:** Singleton, Static classes and members, State storage, Event handling, Async method calls, Auto-disposable objects, deprecate member notifications, Telemetry, Extension ports, etc.
 
 Getting Started
 ---
@@ -80,31 +80,32 @@ Here is a quick example:
 let Vehicle = Class('Vehicle', function() {
     
     // constructor
-    this.construct((capacity) => {
+    this.construct = (capacity) => {
         this.cc = capacity;
         console.log('Vehicle constructed!');    
-    });
+    };
     
     // property
-    this.prop('cc', 0);
+    this.cc = 0;
 
     // method
-    this.func('start', () => {
+    this.start = () => {
         // raise event with current time of start
         this.started(Date.now());
-    });
+    };
 
     // event
-    this.event('started', (time) => {
+    attr('event');
+    this.started = (time) => {
         return { when: time }; // event args
-    });
+    };
 });
 
 // define Car, derived from Vehicle
-let Car = Class('Car', Vehicle, function(attr) {
+let Car = Class('Car', Vehicle, function() {
     
-    attr('override'); // constructor overridding
-    this.construct((base, model, capacity) => {
+    attr('override'); // constructor overriding
+    this.construct = (base, model, capacity) => {
         // call base class's constructor
         base(capacity);
         this.model = model;
@@ -118,12 +119,12 @@ let Car = Class('Car', Vehicle, function(attr) {
     });
 
     attr('readonly'); // model is readonly, but can still be defined in constructor
-    this.prop('model', '');
+    this.model = '';
 
     // dispose car via destructor
-    this.destruct(() => {
+    this.dispose = () => {
         console.log('Car disposed!');
-    });     
+    };     
 });
 
 // auto disposable block
