@@ -101,6 +101,10 @@ let Vehicle = Class('Vehicle', function() {
     };
 });
 
+```
+
+```javascript
+
 // define Car, derived from Vehicle
 let Car = Class('Car', Vehicle, function() {
     
