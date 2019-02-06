@@ -8,8 +8,6 @@
  *  attrName: string - Name of the attribute, it can be an internal attribute or a DI container registered attribute name
  *  args: any - Any arguments that may be needed by attribute
  * @returns void
- * @throws
- *  InvalidArgumentException 
  */ 
 const _attr = (name, ...args) => {
     if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }

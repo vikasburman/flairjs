@@ -17,8 +17,6 @@
  *                           >> for struct instances:
  *                              isInstance of given as struct type
  * @returns object - if can be used as specified type, return same object, else null
- * @throws
- *  InvalidArgumentException
  */ 
 const _as = (obj, type) => {
     if (_is(obj, type)) { return obj; }

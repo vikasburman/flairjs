@@ -1,6 +1,6 @@
 /**
  * @name isImplements
- * @description Checks if given flair class instance or class implements given interface
+ * @description Checks if given flair class/struct instance or class implements given interface
  * @example
  *  isImplements(obj, intf)
  * @params
@@ -9,11 +9,9 @@
  *                              > fully qualified interface name
  *                              > interface type reference
  * @returns boolean - true/false
- * @throws
- *  InvalidArgumentException
  */ 
 const _isImplements = (obj, intf) => {
-    if (['instance', 'class'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+    if (['instance', 'class', 'sinstance'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
     if (['string', 'interface'].indexOf(_typeOf(intf)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (intf)'); }
     return obj._.isImplements(intf);
 };

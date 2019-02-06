@@ -9,8 +9,6 @@
  *                   it can be following:
  *                    > expected native javascript data types like 'string', 'number', 'function', 'array', 'date', etc.
  *                    > inbuilt flair object types like 'class', 'struct', 'enum', etc.
- * @throws
- *  None
  */ 
 const _typeOf = (obj) => {
     let _type = '';

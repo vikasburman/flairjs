@@ -82,7 +82,7 @@
         args: (isServer ? process.argv : new window.URLSearchParams(window.location.search))
     });
 
-    // flair information
+    // flair
     flair.info = Object.freeze({
         name: '<title>',
         version: '<version>',
@@ -103,10 +103,13 @@
     <!-- inject: ./func/is.js -->
     <!-- inject: ./func/isDerivedFrom.js -->
     <!-- inject: ./func/isImplements.js -->
+    <!-- inject: ./func/isComplies.js -->
     <!-- inject: ./func/isMixed.js -->
     <!-- inject: ./func/as.js -->
     <!-- inject: ./func/using.js -->
     <!-- inject: ./func/attr.js -->
+    <!-- inject: ./extend/port.js -->
+    <!-- inject: ./extend/channel.js -->
     <!-- inject: ./misc/_builder.js -->
     <!-- inject: ./types/struct.js -->
     <!-- inject: ./assembly/assembly.js -->
@@ -130,7 +133,19 @@
     <!-- inject: ./aop/aspect.js -->
     <!-- inject: ./serialization/serializer.js -->
     <!-- inject: ./reflection/reflector.js -->    
-  
+
+    // setup ports
+    _Port.define('moduleLoader', 'function');                                       // to define an external server/client specific module loader of choice
+    _Port.define('fileLoader', 'function');                                         // to define an external server/client specific file loader of choice
+    _Port.define('sessionStorage', 'object', ['key', 'setItem', 'getItem']);        // to define an external server/client specific file loader of choice
+    _Port.define('localStorage', 'object', ['key', 'setItem', 'getItem']);          // to define an external server/client specific file loader of choice
+    _Port.define('pubsub', 'object', ['publish', 'subscribe']);                     // to define a pubsub library of choice having defined members
+
+    // setup telemetry channels
+    _Channel.define('raw', 'flair.system.raw');         // type and instances creation telemetry
+    _Channel.define('exec', 'flair.system.exec');       // member access execution telemetry
+    _Channel.define('info', 'flair.system.info');       // info, warning and exception telemetry
+
     // set global
     if (!options.env.suppressGlobals) {
         for(let name of flair.members) {
@@ -138,7 +153,7 @@
         }
     }
     flair.members = Object.freeze(flair.members);
-    _global.flair = Object.freeze(flair); // this is still exposed, so can be used globally
+    _global.flair = flair;
 
     // return
     return _global.flair;

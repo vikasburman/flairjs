@@ -17,8 +17,6 @@
  *                           >> for struct instances:
  *                              isInstance of given as struct type
  * @returns boolean - true/false
- * @throws
- *  InvalidArgumentException
  */ 
 const _is = (obj, type) => {
     // obj may be undefined or null or false, so don't check

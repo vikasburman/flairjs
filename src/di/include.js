@@ -59,14 +59,14 @@ flair.include = (deps, fn) => {
         _deps = (_depsError ? null : deps.slice());
 
     let loader = (isServer, isModule, file) => {
-        let loaders = flair.options.loaders,
-            loaderOverrides = flair.options.loaderOverrides,
+        let moduleLoader = _Port('moduleLoader'),
+            fileLoader = _Port('fileLoader');
             loader = null;
         return new Promise((resolve, reject) => {
             let ext = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
             if (isServer) {
                 if (isModule) {
-                    loader = loaders.module.server || loaderOverrides.moduleLoaderServer || null;
+                    loader = moduleLoader || null;
                     if (typeof loader === 'function') {
                         loader(file).then(resolve).catch(reject);
                     } else {
@@ -77,7 +77,7 @@ flair.include = (deps, fn) => {
                         }
                     }
                 } else { // file
-                    loader = loaders.file.server || loaderOverrides.fileLoaderServer || null;
+                    loader = fileLoader || null;
                     if (typeof loader === 'function') {
                         loader(file).then(resolve).catch(reject);
                     } else {
@@ -106,7 +106,7 @@ flair.include = (deps, fn) => {
                 }
             } else { // client
                 if (isModule) {
-                    loader = loaders.module.client || loaderOverrides.moduleLoaderClient || null;
+                    loader = moduleLoader || null;
                     if (typeof loader === 'function') {
                         loader(file).then(resolve).catch(reject);
                     } else { 
@@ -127,7 +127,7 @@ flair.include = (deps, fn) => {
                         }
                     }
                 } else { // file
-                    loader = loaders.file.client || loaderOverrides.fileLoaderClient || null;
+                    loader = fileLoader || null;
                     if (typeof loader === 'function') {
                         loader(file).then(resolve).catch(reject);
                     } else {
@@ -147,30 +147,17 @@ flair.include = (deps, fn) => {
             }
         });
     };
-
-    /**
-     * @description Dependency extractor function that helps in extracting dependencies by name
-     * @example
-     *  (name)
-     *  (name, isThrow)
-     * @params
-     *  name: string - name of the dependency to extract
-     *  isThrow: bool - if dependency could not be loaded, whether to re-throw the actual exception that made it failed to load
-     * @returns dependency object or null
-     */
     let _dep_extract = (name, isThrow) => {
         if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
         if (!resolvedItems[name]) { throw new _Exception('InvalidName', `Name is not valid. (${name})`); }
         if (resolvedItems[name].error && isThrow) { throw resolvedItems[name].error; }
         return resolvedItems[name].dep;
     };
-
     let processedAll = () => {
         if (typeof fn === 'function') {
             fn(_dep_extract, _depsError); 
         }
     };
-
     let resolveNext = () => {
         if (_depsError || _deps.length === 0) {
             processedAll(); return;

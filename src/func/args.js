@@ -19,8 +19,6 @@
  *                                     isInstance of given as struct type
  *                          name: argument name which will be used to store extracted value by parser
  * @returns function - validator function that is configured for specified patterns
- * @throws
- *  InvalidArgumentException 
  */ 
 const _Args = (...patterns) => {
     if (patterns.length === 0) { throw new _Exception('InvalidArgument', 'Argument must be defined. (patterns)'); }

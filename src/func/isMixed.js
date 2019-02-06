@@ -1,6 +1,6 @@
 /**
  * @name isMixed
- * @description Checks if given flair class instance or class has mixed with given mixin
+ * @description Checks if given flair class/struct instance or class has mixed with given mixin
  * @example
  *  isMixed(obj, mixin)
  * @params
@@ -9,11 +9,9 @@
  *                           > fully qualified mixin name
  *                           > mixin type reference
  * @returns boolean - true/false
- * @throws
- *  InvalidArgumentException
  */ 
 const _isMixed = (obj, mixin) => {
-    if (['instance', 'class'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+    if (['instance', 'class', 'sinstance'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
     if (['string', 'mixin'].indexOf(_typeOf(mixin)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (mixin)'); }
     return obj._.isMixed(mixin);
 };

@@ -45,7 +45,9 @@ const buildTypeInstance = (type, Type, typeName, mex, inherits, mixinsAndInterfa
         props = null,
         events = null,
         proxy = null,
-        isBuildingObj = false;
+        isBuildingObj = false,
+        _sessionStorage = _Port('sessionStorage'),
+        _localStorage = _Port('localStorage');
 
     const member = {
         isSpecial: (memberName) => {
@@ -958,29 +960,17 @@ const buildTypeInstance = (type, Type, typeName, mex, inherits, mixinsAndInterfa
                     uniqueName = typeName + '_' + name;
 
                     if (attrs.has('session', name, true)) {
-                        if (flair.options.env.isServer) {
-                            throw new _Exception('NotSupported', `Session storage is not supported on server. (${name})`); 
-                        } else {
-                            if (!window.sessionStorage) {
-                                throw new _Exception('NotSupported', `Session storage API is not supported by current browser. (${name})`); 
-                            }
-                        }
-                        propHost = window.sessionStorage; // here it comes only when running on client
+                        if (!_sessionStorage) { throw new _Exception('NotConfigured', 'Port is not configured. (sessionStorage)'); }
+                        propHost = _sessionStorage;
                         isStorageHost = true;
                     } 
                     if (attrs.has('state', name, true)) {
-                        if (flair.options.env.isServer) {
-                            throw new _Exception('NotSupported', `State storage is not supported on server. (${name})`); 
-                        } else {
-                            if (!window.localStorage) {
-                                throw new _Exception('NotSupported', `State storage API is not supported by current browser. (${name})`); 
-                            }
-                        }
-                        propHost = window.localStorage; // here it comes only when running on client
+                        if (!_localStorage) { throw new _Exception('NotConfigured', 'Port is not configured. (localStorage)'); }
+                        propHost = _localStorage;
                         isStorageHost = true;
                     }                
-                    if (typeof propHost[uniqueName] === 'undefined') { // define only when not already defined (may be by some other instance of same type)
-                        propHost[uniqueName] = JSON.stringify({value: valueOrGetterOrGetSetObject}); 
+                    if (!propHost.key(uniqueName)) { // define only when not already defined (may be by some other instance of same type)
+                        propHost.setKey(uniqueName, JSON.stringify({value: valueOrGetterOrGetSetObject})); 
                     }
                 }
 
@@ -992,7 +982,9 @@ const buildTypeInstance = (type, Type, typeName, mex, inherits, mixinsAndInterfa
 
                 // getter/setter
                 _getter = () => {
-                    if (isStorageHost) { return JSON.parse(propHost[uniqueName]).value; }
+                    if (isStorageHost) { 
+                        return JSON.parse(propHost.getKey(uniqueName)).value; 
+                    }
                     return propHost[uniqueName];
                 };
                 if (attrs.has('readonly', name, true)) {
@@ -1001,7 +993,7 @@ const buildTypeInstance = (type, Type, typeName, mex, inherits, mixinsAndInterfa
                         // OR if 'once' is applied, and value is not already set
                         if (obj._.constructing || (attrs.has('once', name, false) && !_getter())) { 
                             if (isStorageHost) {
-                                propHost[uniqueName] = JSON.stringify({value: value});
+                                propHost.setKey(uniqueName, JSON.stringify({value: value}));
                             } else {
                                 propHost[uniqueName] = value;
                             }
@@ -1012,7 +1004,7 @@ const buildTypeInstance = (type, Type, typeName, mex, inherits, mixinsAndInterfa
                 } else {
                     _setter = (value) => {
                         if (isStorageHost) { 
-                            propHost[uniqueName] = JSON.stringify({value: value});
+                            propHost.setKey(uniqueName, JSON.stringify({value: value}));
                         } else {
                             propHost[uniqueName] = value;
                         }

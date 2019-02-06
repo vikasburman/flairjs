@@ -9,8 +9,6 @@
  *                            > fully qualified class type name
  *                            > class type reference
  * @returns boolean - true/false
- * @throws
- *  InvalidArgumentException
  */ 
 const _isDerivedFrom = (type, parent) => {
     if (_typeOf(type) !== 'class') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }

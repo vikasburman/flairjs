@@ -11,8 +11,6 @@
  *                         > fully qualified type name
  *                         > type reference
  * @returns boolean - true/false
- * @throws
- *  InvalidArgumentException
  */ 
 const _isInstanceOf = (obj, type) => {
     let _objType = _typeOf(obj),

@@ -3,7 +3,7 @@
  * FlairJS
  * True Object Oriented JavaScript
  * Version 0.15.27
- * Tue, 05 Feb 2019 20:26:06 GMT
+ * Wed, 06 Feb 2019 01:28:03 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  * https://flairjs.com
@@ -39,6 +39,8 @@
     let isServer = (new Function("try {return this===global;}catch(e){return false;}"))(),
         _global = (isServer ? global : window),
         flair = {}, 
+        sym = [],
+        isTesting = false,
         noop = () => {},
         options = {};   
 
@@ -66,26 +68,28 @@
         opts = { symbols: opts.split(',').map(item => item.trim()) };
     }
     options.symbols = Object.freeze(opts.symbols || []);
+    sym = options.symbols,
+    isTesting = (sym.indexOf('TEST') !== -1);
     options.env = Object.freeze({
         type: (isServer ? 'server' : 'client'),
         global: _global,
-        isTesting: (options.symbols.indexOf('TEST') !== -1),
-        isServer: ((options.symbols.indexOf('TEST') === -1) ? isServer : (options.symbols.indexOf('SERVER') !== -1 ? true : isServer)),
-        isClient: ((options.symbols.indexOf('TEST') === -1) ? !isServer : (options.symbols.indexOf('CLIENT') !== -1 ? true : !isServer)),
-        isProd: (options.symbols.indexOf('DEBUG') === -1 && options.symbols.indexOf('PROD') !== -1),
-        isDebug: (options.symbols.indexOf('DEBUG') !== -1),
+        isTesting: isTesting,
+        isServer: (!isTesting ? isServer : (sym.indexOf('SERVER') !== -1 ? true : isServer)),
+        isClient: (!isTesting ? !isServer : (sym.indexOf('CLIENT') !== -1 ? true : !isServer)),
+        isProd: (sym.indexOf('DEBUG') === -1 && sym.indexOf('PROD') !== -1),
+        isDebug: (sym.indexOf('DEBUG') !== -1),
         suppressGlobals: (typeof suppressGlobals !== 'undefined' ? opts.suppressGlobals : options.symbols.indexOf('SUPPRESS') !== -1),
         args: (isServer ? process.argv : new window.URLSearchParams(window.location.search))
     });
 
-    // flair information
+    // flair
     flair.info = Object.freeze({
         name: 'FlairJS',
         version: '0.15.27',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
         link: 'https://flairjs.com',
-        lupdate: new Date('Tue, 05 Feb 2019 20:26:06 GMT')
+        lupdate: new Date('Wed, 06 Feb 2019 01:28:03 GMT')
     });
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -215,8 +219,6 @@
      *                                     isInstance of given as struct type
      *                          name: argument name which will be used to store extracted value by parser
      * @returns function - validator function that is configured for specified patterns
-     * @throws
-     *  InvalidArgumentException 
      */ 
     const _Args = (...patterns) => {
         if (patterns.length === 0) { throw new _Exception('InvalidArgument', 'Argument must be defined. (patterns)'); }
@@ -295,8 +297,6 @@
      *                   it can be following:
      *                    > expected native javascript data types like 'string', 'number', 'function', 'array', 'date', etc.
      *                    > inbuilt flair object types like 'class', 'struct', 'enum', etc.
-     * @throws
-     *  None
      */ 
     const _typeOf = (obj) => {
         let _type = '';
@@ -339,8 +339,6 @@
      *                         > fully qualified type name
      *                         > type reference
      * @returns boolean - true/false
-     * @throws
-     *  InvalidArgumentException
      */ 
     const _isInstanceOf = (obj, type) => {
         let _objType = _typeOf(obj),
@@ -401,8 +399,6 @@
      *                           >> for struct instances:
      *                              isInstance of given as struct type
      * @returns boolean - true/false
-     * @throws
-     *  InvalidArgumentException
      */ 
     const _is = (obj, type) => {
         // obj may be undefined or null or false, so don't check
@@ -453,8 +449,6 @@
      *                            > fully qualified class type name
      *                            > class type reference
      * @returns boolean - true/false
-     * @throws
-     *  InvalidArgumentException
      */ 
     const _isDerivedFrom = (type, parent) => {
         if (_typeOf(type) !== 'class') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
@@ -468,7 +462,7 @@
     
     /**
      * @name isImplements
-     * @description Checks if given flair class instance or class implements given interface
+     * @description Checks if given flair class/struct instance or class implements given interface
      * @example
      *  isImplements(obj, intf)
      * @params
@@ -477,11 +471,9 @@
      *                              > fully qualified interface name
      *                              > interface type reference
      * @returns boolean - true/false
-     * @throws
-     *  InvalidArgumentException
      */ 
     const _isImplements = (obj, intf) => {
-        if (['instance', 'class'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+        if (['instance', 'class', 'sinstance'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
         if (['string', 'interface'].indexOf(_typeOf(intf)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (intf)'); }
         return obj._.isImplements(intf);
     };
@@ -490,8 +482,37 @@
     flair.isImplements = _isImplements;
     flair.members.push('isImplements');
     /**
+     * @name isComplies
+     * @description Checks if given object complies to given flair interface
+     * @example
+     *  isComplies(obj, intf)
+     * @params
+     *  obj: object - any object that needs to be checked
+     *  intf: interface - flair interface type to be checked for
+     * @returns boolean - true/false
+     */ 
+    const _isComplies = (obj, intf) => {
+        if (!obj) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+        if (_typeOf(intf) !== 'interface') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (intf)'); }
+        
+        let complied = true;
+        for(let member in intf) {
+            if (intf.hasOwnProperty(member) && member !== '_') {
+                if (typeof obj[member] !== typeof intf[member]) {
+                    complied = false; break;
+                }
+            }
+        }
+    
+        return complied;
+    };
+    
+    // attach
+    flair.isComplies = _isComplies;
+    flair.members.push('isComplies');
+    /**
      * @name isMixed
-     * @description Checks if given flair class instance or class has mixed with given mixin
+     * @description Checks if given flair class/struct instance or class has mixed with given mixin
      * @example
      *  isMixed(obj, mixin)
      * @params
@@ -500,11 +521,9 @@
      *                           > fully qualified mixin name
      *                           > mixin type reference
      * @returns boolean - true/false
-     * @throws
-     *  InvalidArgumentException
      */ 
     const _isMixed = (obj, mixin) => {
-        if (['instance', 'class'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+        if (['instance', 'class', 'sinstance'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
         if (['string', 'mixin'].indexOf(_typeOf(mixin)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (mixin)'); }
         return obj._.isMixed(mixin);
     };
@@ -531,8 +550,6 @@
      *                           >> for struct instances:
      *                              isInstance of given as struct type
      * @returns object - if can be used as specified type, return same object, else null
-     * @throws
-     *  InvalidArgumentException
      */ 
     const _as = (obj, type) => {
         if (_is(obj, type)) { return obj; }
@@ -553,9 +570,6 @@
      *                If a disposer is not defined for the object, it will not do anything
      *  fn: function - processor function
      * @returns any - returns anything that is returned by processor function, it may also be a promise
-     * @throws
-     *  InvalidArgumentException
-     *  Any exception that is raised in given function, is passed as is
      */ 
     const _using = (obj, fn) => {
         if (_typeOf(obj) !== 'instance') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
@@ -599,8 +613,6 @@
      *  attrName: string - Name of the attribute, it can be an internal attribute or a DI container registered attribute name
      *  args: any - Any arguments that may be needed by attribute
      * @returns void
-     * @throws
-     *  InvalidArgumentException 
      */ 
     const _attr = (name, ...args) => {
         if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
@@ -634,6 +646,226 @@
     // attach
     flair.attr = _attr;
     flair.members.push('attr');
+    /**
+     * @name Port
+     * @description Customize configurable functionality of the core. This gives a way to configure a different component to
+     *              handle some specific functionalities of the core, e.g., fetching a file on server, or loading a module on
+     *              client, or handling sessionStorage or a pubsub system, to name a few.
+     *              Ports are defined by a component and handlers of required interface types can be supplied from outside
+     *              as per usage requirements
+     * @example
+     *  Port(name)                     // @returns handler/null - if connected returns handler else null
+     *  Port.define(name, type, intf)  // @returns void
+     *  Port.connect(name, handler)    // @returns void
+     *  Port.disconnect(name)          // @returns void
+     *  Port.disconnect.all()          // @returns void
+     *  Port.isDefined(name)           // @returns boolean - true/false
+     *  Port.isConnected(name)         // @returns boolean - true/false
+     * @params
+     *  name: string - name of the port
+     *  type: string - type of the handler - generally it will be 'function' or 'object' or 'instance' or 'sinstance'
+     *  intf: interface/array - flair interface type that the handler should have implemented / complies to OR it can
+     *                          be defined as an array of strings having member names that are checked for their presence
+     *  handler: object/function - the actual handler to provide named functionality
+     * @returns handler/boolean/void - as specified above
+     */ 
+    let ports = {};
+    const _Port = (name) => {
+        if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+        return (ports[name] ? ports[name].handler : null);
+    };
+    _Port.define = (name, type, intf) => {
+        if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+        if (typeof type !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
+        if (intf && ['interface', 'array'].indexOf(_typeOf(intf)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (intf)'); }
+        if (ports[name]) { throw new _Exception('Duplicate', `Port is already defined. (${name})`); }
+    
+        ports[name] = {
+            type: type,
+            interface: intf || null,
+            handler: null
+        };
+    };
+    _Port.connect = (name, handler) => {
+        if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }    
+        if (!handler) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (handler)'); } 
+        if (!ports[name]) { throw new _Exception('NotFound', `Port is not defined. (${name})`); } 
+        if (_typeOf(handler) !== ports[name].type) { throw new _Exception('InvalidType', `Handler type is invalid. (${name})`); } 
+        let intf = ports[name].intf;
+        if (intf) { 
+            if (Array.isArray(intf)) {
+                for(let member of intf) {
+                    if (typeof handler[member] === 'undefined') { throw new _Exception('InvalidType', `Handler interface is invalid. (${name})`); }
+                }
+            } else if (!_isImplements(handler, intf) || !_isComplies(handler, intf)) { 
+                throw new _Exception('InvalidType', `Handler interface is invalid. (${name})`);
+            }
+        }
+        
+        ports[name].handler = handler;
+    };
+    _Port.disconnect = (name) => {
+        if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }    
+        if (ports[name]) {
+            ports[name].handler = null;
+        }
+    };
+    _Port.disconnect.all = () => {
+        for(let port in ports) {
+            if (ports.hasOnwProperty(port)) {
+                ports[port].handler = null;
+            }
+        }
+    };
+    _Port.isDefined = (name) => {
+        if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }    
+        return (ports[name] ? true : false);
+    };
+    _Port.isConnected = (name) => {
+        return (ports[name] && ports[name].handler ? false : true);
+    };
+    _Port._ = { reset: () => { ports = {}; } };
+    
+    // attach
+    flair._Port = _Port;
+    flair.members.push('Port');
+    /**
+     * @name Channel
+     * @description Listens to various channels on which raw telemetry is sent to by the core
+     *              this helps in troubleshooting as well as optimization and building dev tools
+     *              around this
+     * @example
+     *  Channel(name, telemetry)                    // @returns void
+     *  Channel.define(name, path)                  // @returns void
+     *  Channel.publish()                           // @returns void
+     *  Channel.activate(freq)                      // @returns void
+     *  Channel.deactivate()                        // @returns void
+     *  Channel.isDefined(name)                     // @returns boolean - true/false
+     *  Channel.isActive()                          // @returns boolean - true/false
+     * @params
+     *  name: string - name of the channel - representing a telemetry type
+     *  path: string - any pubsub path mapped to this channel where to publish it
+     *  freq: number - number of seconds it should wait before pushing the buffered telemetry bunch out to the 'pubsub' port
+     *  telemetry: object - telemetry object looks like this:
+     *                      {
+     *                          id: '<a unique id>',
+     *                          type: '<telemetry type>,
+     *                          stamp: '<time stamp>,
+     *                          payload: {}
+     *                      }
+     *                      payload is defined as per telemetry type
+     * @returns boolean/void - as specified above
+     */ 
+    let channels = {},
+        timerId = null,
+        lastFreq = null,
+        lastChnls = null,
+        _Channel,
+        resetMember = (newChannel) => {
+            _Channel = newChannel;
+            flair.Channel = _Channel;
+            if (!options.env.suppressGlobals) {
+                _global['Channel'] = _Channel;
+            }
+        };
+    const _ChannelActive = (name, payload) => {
+        if (!timerId) { return; } // no telemetry process when not active
+        if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+        if (!channels[name]) { throw new _Exception('NotFound', `Channel is not defined. (${name})`); } 
+        if (!payload) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (payload)'); }
+    
+        let telemetry = {
+            id: guid(),
+            type: name,
+            stamp: Date.now(),
+            payload: payload
+        };
+        channels[name].buffer.push(telemetry);
+    };
+    _ChannelActive.define = (name, path) => {
+        if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+        if (typeof path !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (path)'); }
+        if (channels[name]) { throw new _Exception('Duplicate', `Channel is already defined. (${name})`); }
+    
+        channels[name] = {
+            path: path,
+            buffer: []
+        };
+    };
+    _ChannelActive.publish = () => {
+        let isActive = _Channel.isActive();
+        clearInterval(timerId); // so it does not call again while in the process
+    
+        // get pubsub port handler
+        let pubsub = _Port('pubsub');
+        if (!pubsub) { throw new _Exception('NotConfigured', 'Port is not configured. (pubsub)'); }
+    
+        // publish all buffered telemetry as one message for each channel
+        for(let channel in channels) {
+            if (channels.hasOwnProperty(channel)) {
+                if (channels[channel].buffer.length > 0) {
+                    if (!lastChnls || (lastChnls && lastChnls.indexOf(channel) !== -1)) {
+                        pubsub.publish(channels[channel].path, channels[channel].buffer.slice());
+                    }
+                    channels[channel].buffer.length = 0; // clear
+                }
+            }
+        }
+    
+        if (isActive) { // reactivate, if it was active last
+            timerId = setInterval(_Channel.publish, lastFreq);
+        }
+    };
+    _ChannelActive.activate = (freq, chnls) => {
+        if (!timerId) {
+            if (typeof freq !== 'number') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (freq)'); }
+            resetMember(_ChannelActive); // switch tp active version
+            lastFreq = freq;
+            lastChnls = chnls || []; // channels of interest
+            timerId = setInterval(_Channel.publish, freq);
+        }
+    };
+    _ChannelActive.deactivate = () => {
+        if (timerId) {
+            clearInterval(timerId);
+            timerId = null;
+            lastChnls = null;
+            resetMember(_ChannelInactive); // switch tp inactive (noop) version
+    
+            // clear buffer
+            for(let channel in channels) {
+                if (channels.hasOwnProperty(channel)) {
+                    channels[channel].buffer.length = 0; // clear
+                }
+            }        
+        }
+    };
+    _ChannelActive.isDefined = (name) => {
+        if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }    
+        return (channels[name] ? true : false);
+    };
+    _ChannelActive.isActive = () => { return timerId !== null; }
+    _ChannelActive._ = { 
+        reset: () => { 
+            _Channel.deactivate();
+            channels = {}; 
+        } 
+    };
+    
+    const _ChannelInactive = () => {};
+    _ChannelInactive.define = _ChannelActive.define;
+    _ChannelInactive.publish = _ChannelActive.publish;
+    _ChannelInactive.activate = _ChannelActive.activate;
+    _ChannelInactive.deactivate = _ChannelActive.deactivate;
+    _ChannelInactive.isDefined = _ChannelActive.isDefined;
+    _ChannelInactive.isActive = _ChannelActive.isActive;
+    _ChannelInactive._ = _ChannelActive._;
+    
+    _Channel = _ChannelInactive;
+    
+    // attach
+    flair.Channel = _Channel;
+    flair.members.push('Channel');
     const copyMembers = (sources, dest) => {
         for(let src of sources) {
             if (src) {
@@ -681,7 +913,9 @@
             props = null,
             events = null,
             proxy = null,
-            isBuildingObj = false;
+            isBuildingObj = false,
+            _sessionStorage = _Port('sessionStorage'),
+            _localStorage = _Port('localStorage');
     
         const member = {
             isSpecial: (memberName) => {
@@ -1594,29 +1828,17 @@
                         uniqueName = typeName + '_' + name;
     
                         if (attrs.has('session', name, true)) {
-                            if (flair.options.env.isServer) {
-                                throw new _Exception('NotSupported', `Session storage is not supported on server. (${name})`); 
-                            } else {
-                                if (!window.sessionStorage) {
-                                    throw new _Exception('NotSupported', `Session storage API is not supported by current browser. (${name})`); 
-                                }
-                            }
-                            propHost = window.sessionStorage; // here it comes only when running on client
+                            if (!_sessionStorage) { throw new _Exception('NotConfigured', 'Port is not configured. (sessionStorage)'); }
+                            propHost = _sessionStorage;
                             isStorageHost = true;
                         } 
                         if (attrs.has('state', name, true)) {
-                            if (flair.options.env.isServer) {
-                                throw new _Exception('NotSupported', `State storage is not supported on server. (${name})`); 
-                            } else {
-                                if (!window.localStorage) {
-                                    throw new _Exception('NotSupported', `State storage API is not supported by current browser. (${name})`); 
-                                }
-                            }
-                            propHost = window.localStorage; // here it comes only when running on client
+                            if (!_localStorage) { throw new _Exception('NotConfigured', 'Port is not configured. (localStorage)'); }
+                            propHost = _localStorage;
                             isStorageHost = true;
                         }                
-                        if (typeof propHost[uniqueName] === 'undefined') { // define only when not already defined (may be by some other instance of same type)
-                            propHost[uniqueName] = JSON.stringify({value: valueOrGetterOrGetSetObject}); 
+                        if (!propHost.key(uniqueName)) { // define only when not already defined (may be by some other instance of same type)
+                            propHost.setKey(uniqueName, JSON.stringify({value: valueOrGetterOrGetSetObject})); 
                         }
                     }
     
@@ -1628,7 +1850,9 @@
     
                     // getter/setter
                     _getter = () => {
-                        if (isStorageHost) { return JSON.parse(propHost[uniqueName]).value; }
+                        if (isStorageHost) { 
+                            return JSON.parse(propHost.getKey(uniqueName)).value; 
+                        }
                         return propHost[uniqueName];
                     };
                     if (attrs.has('readonly', name, true)) {
@@ -1637,7 +1861,7 @@
                             // OR if 'once' is applied, and value is not already set
                             if (obj._.constructing || (attrs.has('once', name, false) && !_getter())) { 
                                 if (isStorageHost) {
-                                    propHost[uniqueName] = JSON.stringify({value: value});
+                                    propHost.setKey(uniqueName, JSON.stringify({value: value}));
                                 } else {
                                     propHost[uniqueName] = value;
                                 }
@@ -1648,7 +1872,7 @@
                     } else {
                         _setter = (value) => {
                             if (isStorageHost) { 
-                                propHost[uniqueName] = JSON.stringify({value: value});
+                                propHost.setKey(uniqueName, JSON.stringify({value: value}));
                             } else {
                                 propHost[uniqueName] = value;
                             }
@@ -3381,14 +3605,14 @@
             _deps = (_depsError ? null : deps.slice());
     
         let loader = (isServer, isModule, file) => {
-            let loaders = flair.options.loaders,
-                loaderOverrides = flair.options.loaderOverrides,
+            let moduleLoader = _Port('moduleLoader'),
+                fileLoader = _Port('fileLoader');
                 loader = null;
             return new Promise((resolve, reject) => {
                 let ext = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
                 if (isServer) {
                     if (isModule) {
-                        loader = loaders.module.server || loaderOverrides.moduleLoaderServer || null;
+                        loader = moduleLoader || null;
                         if (typeof loader === 'function') {
                             loader(file).then(resolve).catch(reject);
                         } else {
@@ -3399,7 +3623,7 @@
                             }
                         }
                     } else { // file
-                        loader = loaders.file.server || loaderOverrides.fileLoaderServer || null;
+                        loader = fileLoader || null;
                         if (typeof loader === 'function') {
                             loader(file).then(resolve).catch(reject);
                         } else {
@@ -3428,7 +3652,7 @@
                     }
                 } else { // client
                     if (isModule) {
-                        loader = loaders.module.client || loaderOverrides.moduleLoaderClient || null;
+                        loader = moduleLoader || null;
                         if (typeof loader === 'function') {
                             loader(file).then(resolve).catch(reject);
                         } else { 
@@ -3449,7 +3673,7 @@
                             }
                         }
                     } else { // file
-                        loader = loaders.file.client || loaderOverrides.fileLoaderClient || null;
+                        loader = fileLoader || null;
                         if (typeof loader === 'function') {
                             loader(file).then(resolve).catch(reject);
                         } else {
@@ -3469,30 +3693,17 @@
                 }
             });
         };
-    
-        /**
-         * @description Dependency extractor function that helps in extracting dependencies by name
-         * @example
-         *  (name)
-         *  (name, isThrow)
-         * @params
-         *  name: string - name of the dependency to extract
-         *  isThrow: bool - if dependency could not be loaded, whether to re-throw the actual exception that made it failed to load
-         * @returns dependency object or null
-         */
         let _dep_extract = (name, isThrow) => {
             if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
             if (!resolvedItems[name]) { throw new _Exception('InvalidName', `Name is not valid. (${name})`); }
             if (resolvedItems[name].error && isThrow) { throw resolvedItems[name].error; }
             return resolvedItems[name].dep;
         };
-    
         let processedAll = () => {
             if (typeof fn === 'function') {
                 fn(_dep_extract, _depsError); 
             }
         };
-    
         let resolveNext = () => {
             if (_depsError || _deps.length === 0) {
                 processedAll(); return;
@@ -4418,7 +4629,19 @@
     
     // add to members list
     flair.members.push('Reflector');    
-  
+
+    // setup ports
+    _Port.define('moduleLoader', 'function');                                       // to define an external server/client specific module loader of choice
+    _Port.define('fileLoader', 'function');                                         // to define an external server/client specific file loader of choice
+    _Port.define('sessionStorage', 'object', ['key', 'setItem', 'getItem']);        // to define an external server/client specific file loader of choice
+    _Port.define('localStorage', 'object', ['key', 'setItem', 'getItem']);          // to define an external server/client specific file loader of choice
+    _Port.define('pubsub', 'object', ['publish', 'subscribe']);                     // to define a pubsub library of choice having defined members
+
+    // setup telemetry channels
+    _Channel.define('raw', 'flair.system.raw');         // type and instances creation telemetry
+    _Channel.define('exec', 'flair.system.exec');       // member access execution telemetry
+    _Channel.define('info', 'flair.system.info');       // info, warning and exception telemetry
+
     // set global
     if (!options.env.suppressGlobals) {
         for(let name of flair.members) {
@@ -4426,7 +4649,7 @@
         }
     }
     flair.members = Object.freeze(flair.members);
-    _global.flair = Object.freeze(flair); // this is still exposed, so can be used globally
+    _global.flair = flair;
 
     // return
     return _global.flair;
