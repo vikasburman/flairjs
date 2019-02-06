@@ -127,6 +127,10 @@ let Car = Class('Car', Vehicle, function() {
     };     
 });
 
+```
+
+```javascript
+
 // auto disposable block
 using(new Car('SUV', 3000), (suv) => {
     suv.start();
