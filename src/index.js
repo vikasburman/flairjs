@@ -142,9 +142,10 @@
     _Port.define('pubsub', 'object', ['publish', 'subscribe']);                     // to define a pubsub library of choice having defined members
 
     // setup telemetry channels
-    _Channel.define('raw', 'flair.system.raw');         // type and instances creation telemetry
-    _Channel.define('exec', 'flair.system.exec');       // member access execution telemetry
-    _Channel.define('info', 'flair.system.info');       // info, warning and exception telemetry
+    _Channel.define('raw', 'flair.system.raw');             // type and instances creation telemetry
+    _Channel.define('exec', 'flair.system.execute');        // member access execution telemetry
+    _Channel.define('info', 'flair.system.info');           // info, warning and exception telemetry
+    _Channel.define('incl', 'flair.system.include');        // file or module include telemetry
 
     // set global
     if (!options.env.suppressGlobals) {

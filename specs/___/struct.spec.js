@@ -119,17 +119,25 @@ describe('---- struct.js ----', () => {
             
             
             //console.log(ST);
-            let st = new ST(1000);
-            console.log(st.started);
+            //let st = new ST(1000);
+            //console.log(st.started);
             //st.started('outside', 40);
-            let st2 = new MyStruct(st);
+            //let st2 = new MyStruct(st);
             //st.cc2 = 20;
             //console.log(st.cc);
             //st2.hello2 = 20;
             //console.log(st2.hello2);
             //console.log(MyStruct.hello());
             //console.log(st2._._.type.isAbstract());
+            //Channel.activate(5);
 
+            //Channel.activate(5);
+            // Channel('raw', '1');
+            // Channel('raw', '2');
+            // Channel('raw', '3');
+            // Channel('raw', '4');
+            // Channel('raw', '5');
+            // Channel.publish();
         });
 
     }); 

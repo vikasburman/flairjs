@@ -27,7 +27,7 @@
  */ 
 let channels = {},
     timerId = null,
-    lastFreq = null,
+    lastFreq = null, 
     lastChnls = null,
     _Channel,
     resetMember = (newChannel) => {
@@ -38,7 +38,6 @@ let channels = {},
         }
     };
 const _ChannelActive = (name, payload) => {
-    if (!timerId) { return; } // no telemetry process when not active
     if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
     if (!channels[name]) { throw new _Exception('NotFound', `Channel is not defined. (${name})`); } 
     if (!payload) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (payload)'); }
@@ -62,13 +61,20 @@ _ChannelActive.define = (name, path) => {
     };
 };
 _ChannelActive.publish = () => {
-    let isActive = _Channel.isActive();
-    clearInterval(timerId); // so it does not call again while in the process
-
     // get pubsub port handler
     let pubsub = _Port('pubsub');
-    if (!pubsub) { throw new _Exception('NotConfigured', 'Port is not configured. (pubsub)'); }
-
+    if (!pubsub) { 
+        // create a temp pubsub here
+        pubsub = {
+            publish: (path, items) => {
+                console.log(path); // eslint-disable-line no-console
+                for(let item of items) {
+                    console.log(`  [${item.id}, ${item.stamp}] ${item.payload}`); // eslint-disable-line no-console
+                }
+            }
+        };
+     }
+     
     // publish all buffered telemetry as one message for each channel
     for(let channel in channels) {
         if (channels.hasOwnProperty(channel)) {
@@ -81,22 +87,22 @@ _ChannelActive.publish = () => {
         }
     }
 
-    if (isActive) { // reactivate, if it was active last
-        timerId = setInterval(_Channel.publish, lastFreq);
+    if (_Channel.isActive()) { // reactivate, if it was active last
+        timerId = setTimeout(_Channel.publish, lastFreq * 1000);
     }
 };
 _ChannelActive.activate = (freq, chnls) => {
     if (!timerId) {
         if (typeof freq !== 'number') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (freq)'); }
         resetMember(_ChannelActive); // switch tp active version
-        lastFreq = freq;
+        lastFreq = freq; 
         lastChnls = chnls || []; // channels of interest
-        timerId = setInterval(_Channel.publish, freq);
+        timerId = setTimeout(_Channel.publish, freq * 1000);
     }
 };
 _ChannelActive.deactivate = () => {
     if (timerId) {
-        clearInterval(timerId);
+        clearTimeout(timerId);
         timerId = null;
         lastChnls = null;
         resetMember(_ChannelInactive); // switch tp inactive (noop) version

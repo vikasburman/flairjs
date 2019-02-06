@@ -3,7 +3,7 @@
  * FlairJS
  * True Object Oriented JavaScript
  * Version 0.15.27
- * Wed, 06 Feb 2019 01:28:03 GMT
+ * Wed, 06 Feb 2019 02:06:09 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  * https://flairjs.com
@@ -89,7 +89,7 @@
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
         link: 'https://flairjs.com',
-        lupdate: new Date('Wed, 06 Feb 2019 01:28:03 GMT')
+        lupdate: new Date('Wed, 06 Feb 2019 02:06:09 GMT')
     });
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -758,7 +758,7 @@
      */ 
     let channels = {},
         timerId = null,
-        lastFreq = null,
+        lastFreq = null, 
         lastChnls = null,
         _Channel,
         resetMember = (newChannel) => {
@@ -769,7 +769,6 @@
             }
         };
     const _ChannelActive = (name, payload) => {
-        if (!timerId) { return; } // no telemetry process when not active
         if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
         if (!channels[name]) { throw new _Exception('NotFound', `Channel is not defined. (${name})`); } 
         if (!payload) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (payload)'); }
@@ -793,13 +792,20 @@
         };
     };
     _ChannelActive.publish = () => {
-        let isActive = _Channel.isActive();
-        clearInterval(timerId); // so it does not call again while in the process
-    
         // get pubsub port handler
         let pubsub = _Port('pubsub');
-        if (!pubsub) { throw new _Exception('NotConfigured', 'Port is not configured. (pubsub)'); }
-    
+        if (!pubsub) { 
+            // create a temp pubsub here
+            pubsub = {
+                publish: (path, items) => {
+                    console.log(path); // eslint-disable-line no-console
+                    for(let item of items) {
+                        console.log(`  [${item.id}, ${item.stamp}] ${item.payload}`); // eslint-disable-line no-console
+                    }
+                }
+            };
+         }
+         
         // publish all buffered telemetry as one message for each channel
         for(let channel in channels) {
             if (channels.hasOwnProperty(channel)) {
@@ -812,22 +818,22 @@
             }
         }
     
-        if (isActive) { // reactivate, if it was active last
-            timerId = setInterval(_Channel.publish, lastFreq);
+        if (_Channel.isActive()) { // reactivate, if it was active last
+            timerId = setTimeout(_Channel.publish, lastFreq * 1000);
         }
     };
     _ChannelActive.activate = (freq, chnls) => {
         if (!timerId) {
             if (typeof freq !== 'number') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (freq)'); }
             resetMember(_ChannelActive); // switch tp active version
-            lastFreq = freq;
+            lastFreq = freq; 
             lastChnls = chnls || []; // channels of interest
-            timerId = setInterval(_Channel.publish, freq);
+            timerId = setTimeout(_Channel.publish, freq * 1000);
         }
     };
     _ChannelActive.deactivate = () => {
         if (timerId) {
-            clearInterval(timerId);
+            clearTimeout(timerId);
             timerId = null;
             lastChnls = null;
             resetMember(_ChannelInactive); // switch tp inactive (noop) version
@@ -4638,9 +4644,10 @@
     _Port.define('pubsub', 'object', ['publish', 'subscribe']);                     // to define a pubsub library of choice having defined members
 
     // setup telemetry channels
-    _Channel.define('raw', 'flair.system.raw');         // type and instances creation telemetry
-    _Channel.define('exec', 'flair.system.exec');       // member access execution telemetry
-    _Channel.define('info', 'flair.system.info');       // info, warning and exception telemetry
+    _Channel.define('raw', 'flair.system.raw');             // type and instances creation telemetry
+    _Channel.define('exec', 'flair.system.execute');        // member access execution telemetry
+    _Channel.define('info', 'flair.system.info');           // info, warning and exception telemetry
+    _Channel.define('incl', 'flair.system.include');        // file or module include telemetry
 
     // set global
     if (!options.env.suppressGlobals) {
