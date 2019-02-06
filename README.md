@@ -95,7 +95,7 @@ let Vehicle = Class('Vehicle', function() {
     };
 
     // event
-    attr('event');
+    attr('event'); // mark this as event
     this.started = (time) => {
         return { when: time }; // event args
     };
