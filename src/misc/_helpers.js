@@ -29,3 +29,6 @@ const which = (def, isFile) => {
     }
     return def; // as is
 };
+const isArrow = (fn) => {
+    return (!(fn).hasOwnProperty('prototype'));
+};

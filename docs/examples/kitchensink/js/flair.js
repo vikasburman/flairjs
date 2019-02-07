@@ -3,7 +3,7 @@
  * FlairJS
  * True Object Oriented JavaScript
  * Version 0.15.27
- * Wed, 06 Feb 2019 02:39:07 GMT
+ * Wed, 06 Feb 2019 19:58:19 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  * https://flairjs.com
@@ -89,7 +89,7 @@
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
         link: 'https://flairjs.com',
-        lupdate: new Date('Wed, 06 Feb 2019 02:39:07 GMT')
+        lupdate: new Date('Wed, 06 Feb 2019 19:58:19 GMT')
     });
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -193,6 +193,10 @@
         // return
         return Object.freeze(_ex);
     };
+    
+    // all inbuilt exceptions
+    _Exception.InvalidArgument = (name) => { return new _Exception('InvalidArgument', `Argument type is invalid. (${name})`); }
+    
     
     // expose
     flair.Exception = _Exception;
@@ -473,7 +477,7 @@
      * @returns boolean - true/false
      */ 
     const _isImplements = (obj, intf) => {
-        if (['instance', 'class', 'sinstance'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+        if (['instance', 'class', 'sinstance', 'struct'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
         if (['string', 'interface'].indexOf(_typeOf(intf)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (intf)'); }
         return obj._.isImplements(intf);
     };
@@ -523,7 +527,7 @@
      * @returns boolean - true/false
      */ 
     const _isMixed = (obj, mixin) => {
-        if (['instance', 'class', 'sinstance'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+        if (['instance', 'class', 'sinstance', 'struct'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
         if (['string', 'mixin'].indexOf(_typeOf(mixin)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (mixin)'); }
         return obj._.isMixed(mixin);
     };
@@ -610,23 +614,31 @@
      *  attr(attrName)
      *  attr(attrName, ...args)
      * @params
-     *  attrName: string - Name of the attribute, it can be an internal attribute or a DI container registered attribute name
+     *  attrName: string/type - Name of the attribute, it can be an internal attribute or namespaced attribute name
+     *                          It can also be the Attribute flair type itself
      *  args: any - Any arguments that may be needed by attribute
      * @returns void
      */ 
     const _attr = (name, ...args) => {
-        if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+        if (!name || ['string', 'class'].indexOf(_typeOf(name) === -1)) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+        if (name && typeof name !== 'string' && !_isDerivedFrom(name, 'Attribute')) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
     
-        let Attr = null;
+        let Attr = null,
+            targets = [];
         if (typeof name === 'string') {
-            Attr = flair.Container(name); // gets the first one
+            if (typeof _attr.inbuilt[name] === 'undefined') { // not an inbuilt attr
+                Attr = _Namespace.getType(name);
+                if (!Attr) { throw new _Exception('NotFound', `Attribute is not found. (${name})`); }
+            } else { // inbuilt attribute
+                targets = _attr.inbuilt[name];
+            }
         } else {
             Attr = name;
             name = Attr._.name;
         }
     
-        // push in its own bucket
-        _attr._.bucket.push({name: name, Attr: Attr, args: args});
+        // push in its own bucket TODO: Check for duplicate - duplicate not allowed
+        _attr._.bucket.push({name: name, targets: targets, Attr: Attr, args: args});
     };
     _attr._ = Object.freeze({
         bucket: []
@@ -641,6 +653,121 @@
     };
     _attr.clear = () => {
         _attr._.bucket.length = 0; // remove all
+    };
+    
+    /**
+     * @name attr.Config
+     * @description Attribute definition configuration
+     * @example
+     *  attr(targets)
+     *  attr(targets, constraints)
+     * @params
+     *  targets: string - Comma delimited strings having possible target names:
+     *                  prop, func, construct, dispose, event -- if can be applied on these given member types
+     *                  class, struct, enum, interface, mixin, resource -- if can be applied on these given flair types
+     *                  when not found any of the above, it will be treated as name of the type - to help in scenarios
+     *                  where certain attributes are applicable only on certain types, like Assembly or Attribute, etc.
+     *  constraints: string - Comma delimited strings having same names as above with constraint prefixes as:
+     *                  <name> -- must be present together
+     *                  !<name> -- must not be present together
+     *                  @<name> -- must be active 
+     *                  !@<name> -- must not be active
+     * @constructs Constructs attribute configuration object
+     */ 
+    const _attrConfig = function(targets, constraints) {
+        if (typeof targets !== 'string') { throw new _Exception.InvalidArgument('targets'); }
+        if (constraints && typeof constraints !== 'string') { throw new _Exception.InvalidArgument('constraints'); }
+        targets = targets.split(',');
+        constraints = constraints.split(',');
+    
+        // configuration object
+        let _Set = function() {
+            this.types = [];
+            this.typeNames = [];
+            this.members = [];
+        };
+        let _this = new _Set();
+        _this.constraints = {
+            together: {
+                must: new _Set(),
+                mustNot: new _Set()
+            },
+            active: {
+                must: new _Set(),
+                mustNot: new _Set()
+            }
+        };
+    
+        const sortAndStore = (set, name) => {
+            let bucket = null;
+            if (['class', 'struct', 'enum', 'interface', 'mixin', 'resource'].indexOf(name) !== -1) { bucket = set.types;
+            } else if (['prop', 'func', 'event', 'construct', 'dispose'].indexOf(name) !== -1) { bucket = set.members;
+            } else { bucket = set.typeNames; }
+            if (bucket.indexOf(name) !== -1) { throw new _Exception('Duplicate', `Duplicate definitions are not allowed. (${name})`); }
+            bucket.push(name);
+        };
+    
+        // targets
+        for(let target of targets) {
+            if (typeof target !== 'string') { throw new _Exception.InvalidArgument('targets'); }
+            sortAndStore(_this, target.trim());
+        }
+    
+        // constraints
+        if (constraints) {
+            let prefix = '',
+                set = null;
+            for(let constraint of constraints) {
+                if (typeof constraint !== 'string') { throw new _Exception.InvalidArgument('constraints'); }
+                constraint = constraint.trim();
+                prefix = constraint.substr(0, 2);
+                if (prefix === '!@') { 
+                    set = _this.constraints.active.mustNot;
+                    constraint = constraint.substr(2);
+                } else {
+                    prefix = constraint.substr(0, 1);
+                    if (prefix === '!') {
+                        set = _this.constraints.together.mustNot; 
+                        constraint = constraint.substr(1);
+                    } else if (prefix === '@') {
+                        set = _this.constraints.active.must; 
+                        constraint = constraint.substr(1);
+                    } else { // any other character - which is part of the name itself
+                        set = _this.constraints.together.must; 
+                    }
+                }
+                sortAndStore(set, constraint);
+                set = null;
+            }    
+        }
+    
+        // return
+        return _this;
+    };
+    _attr.Config = _attrConfig;
+    _attr.inbuilt = { 
+        new: new _attrConfig('prop, func, event'),
+        static: new _attrConfig('class, struct, prop, func', '!virtual, !@virtual, !abstract, !@abstract'),
+        abstract: new _attrConfig('class, prop, func, event', '!sealed, !@sealed, !virtual, !@virtual, !override, !@override'),
+        virtual: new _attrConfig('prop, func, event', '!abstract, !@virtual, @abstract'),
+        override: new _attrConfig('prop, func, event', '!@sealed, @virtual'),
+        sealed: new _attrConfig('class, prop, func, event', '!new, @virtual'),
+        singleton: new _attrConfig('class', '!abstract, !@abstract, !static'),
+        mixed: new _attrConfig('prop, func, event'),
+        session: new _attrConfig('prop', '!state, !@state, !readonly, !@readonly, !abstract'),
+        state: new _attrConfig('prop', '!session, !@session, !readonly, !@readonly, !abstract'),
+        readonly: new _attrConfig('prop', '!abstract'),
+        once: new _attrConfig('prop', '!abstract'),
+        conditional: new _attrConfig('prop, func, event'),
+        serialize: new _attrConfig('class, struct, prop', '!abstract, !@abstract'),
+        noserialize: new _attrConfig('prop'),
+        private: new _attrConfig('prop, func ,event', '!protected, !@protected'),
+        protected: new _attrConfig('prop, func, event', '!private, !@private'),
+        publish: new _attrConfig('event', '!@publish'),
+        fetch: new _attrConfig('func', 'async, !abstract'),
+        deprecate: new _attrConfig('class, struct, enum, interface, mixin, resource, prop, func, event'),
+        enumerate: new _attrConfig('prop, func, event'),
+        async: new _attrConfig('func')
     };
     
     // attach
@@ -1061,6 +1188,7 @@
                 meta[_typeMetaMemberName] = _attr.collect(); // collect and clear for next bunch on next member
             },         
             applyAttrs: (memberName) => {
+                // TODO: Check Targets, 
                 let Attr = null,
                     targetType = meta[memberName].type,
                     attrArgs = null,
@@ -1582,7 +1710,7 @@
     
                 // destructor check
                 if (!cfg.dispose && name === _disposeName) {
-                    throw new _Exception('InvalidOperation', `A destructor function cannot be defined on this type. (${name})`);
+                    throw new _Exception('InvalidOperation', `A dispose function cannot be defined on this type. (${name})`);
                 }
     
                 // conditional check
@@ -2371,16 +2499,10 @@
      *                 >> qualified, e.g., 
      *                    com.myCompany.myProduct.myFeature.MyStruct
      *                 >> special, e.g.,
-     *                    ~MyStruct
-     *                 >> super special. e.g.,
-     *                    MyNewType<NewTypeName>
+     *                    .MyStruct
      *         NOTE: Qualified names are automatically registered with Namespace while simple names are not.
      *               to register simple name on root Namespace, use special naming technique, it will register
-     *               this with Namespace and will still keep the name without '~'
-     *              
-     *               'NewTypeName' will be tha type of the structure instance created from this structure instead of
-     *               'sinstance' This is generally used to create additional flair types or flair objects and should
-     *               be avoided when using for normal application development
+     *               this with Namespace at root, and will still keep the name without '.'
      *  applications: array - An array of mixin and/or interface types which needs to be applied to this struct type
      *                        mixins will be applied in order they are defined here
      *  factory: function - factory function to build struct definition
@@ -2389,7 +2511,7 @@
      *  InvalidArgumentException
      */
     const _Struct = (name, mixinsAndInterfaces, factory) => {
-        if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+        if (typeof name !== 'string') { throw _Exception.InvalidArgument('name'); }
         if (_typeOf(mixinsAndInterfaces) === 'array') {
             if (typeof factory !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (factory)'); }
         } else if (typeof mixinsAndInterfaces !== 'function') {
@@ -2397,14 +2519,6 @@
         } else {
             factory = mixinsAndInterfaces;
             mixinsAndInterfaces = [];
-        }
-    
-        // extract custom type instance name, if specified 
-        let instanceType = 'sinstance';
-        if (name.indexOf('<') !== -1 && name.indexOf('>') !== -1) {
-            instanceType = name.substr(name.indexOf('<') + 1)
-            instanceType = instanceType.substr(0, instanceType.indexOf('>')).trim();
-            name = name.substr(0, name.indexOf('<')).trim();
         }
     
         // builder config
@@ -2430,7 +2544,7 @@
             factory: factory
         };
         cfg.instance = {
-            type: instanceType
+            type: 'sinstance'
         };
         cfg.type = {
             type: 'struct'
@@ -2714,7 +2828,7 @@
     // Namespace(Type)
     flair.Namespace = (Type) => {
         // any type name can be in this format:
-        // ~name <-- means, no namespace is given but still register this with root namespace
+        // .name <-- means, no namespace is given but still register this with root namespace
         // name <-- means, no namespace is given but since it is not forced, do not register this with root namespace
         // namespace.name
         
@@ -2724,10 +2838,10 @@
         // only unattached types are allowed
         if (Type._.namespace) { throw `Type (${Type._.name}) is already contained in a namespace.`; }
     
-        // remove force register symbol (~) from name and also fix name
+        // remove force register symbol (.) from name and also fix name
         let isForced = false;
-        if (Type._.name.startsWith('~')) {
-            Type._.name = Type._.name.substr(1); // remove ~
+        if (Type._.name.startsWith('.')) {
+            Type._.name = Type._.name.substr(1); // remove .
             isForced = true;
         }
     
@@ -2831,6 +2945,8 @@
         return null;
     };
     
+    const _Namespace = flair.Namespace; // TODO: Fix
+    
     // reset api
     flair.Namespace._ = {
         reset: () => { 
@@ -2877,10 +2993,10 @@
      *                 >> qualified, e.g., 
      *                    com.myCompany.myProduct.myFeature.MyClass
      *                 >> special, e.g.,
-     *                    ~MyClass
+     *                    .MyClass
      *         NOTE: Qualified names are automatically registered with Namespace while simple names are not.
      *               to register simple name on root Namespace, use special naming technique, it will register
-     *               this with Namespace and will still keep the name without '~'
+     *               this with Namespace at root, and will still keep the name without '.'
      *  inherits: type - A flair class type from which to inherit this class
      *  applications: array - An array of mixin and/or interface types which needs to be applied to this class type
      *                        mixins will be applied in order they are defined here
@@ -3445,90 +3561,8 @@
         });
     });
     
-    // async
-    // async() 
-    flair.Container.register('async', flair.Class('async', flair.Attribute, function() {
-        this.decorator((obj, type, name, descriptor) => {
-            // validate
-            if (['func'].indexOf(type) === -1) { throw `async attribute cannot be applied on ${type} members.`; }
-            if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `async attribute cannot be applied on special function.`; }
     
-            // decorate
-            let fn = descriptor.value;
-            descriptor.value = function(...args) {
-                return new Promise((resolve, reject) => {
-                    let fnArgs = [resolve, reject].concat(args);
-                    fn(...fnArgs);
-                });
-            }.bind(obj);
-        });
-    }));
     
-    // deprecate
-    // deprecate([message])
-    //  - message: any custom message
-    flair.Container.register('deprecate', flair.Class('deprecate', flair.Attribute, function() {
-        this.decorator((obj, type, name, descriptor) => {
-            // validate
-            if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `deprecate attribute cannot be applied on special function.`; }
-    
-            // decorate
-            let msg = `${name} is deprecated.`;
-            let _get, _set, fn, ev = null;
-            if (typeof this.args[0] !== 'undefined') { msg += ' ' + this.args[0] }
-            switch(type) {
-                case 'prop':
-                    if (descriptor.get) {
-                        _get = descriptor.get;                                
-                        descriptor.get = function() {
-                            // eslint-disable-next-line no-console
-                            console.warn(msg);
-                            return _get();
-                        }.bind(obj);
-                    }
-                    if (descriptor.set) {
-                        _set = descriptor.set;
-                        descriptor.set = function(value) {
-                            // eslint-disable-next-line no-console
-                            console.warn(msg);
-                            return _set(value);
-                        }.bind(obj);
-                    }   
-                    break;
-                case 'func':
-                    fn = descriptor.value;
-                    descriptor.value = function(...args) {
-                        // eslint-disable-next-line no-console
-                        console.warn(msg);
-                        fn(...args);
-                    }.bind(obj);
-                    break;
-                case 'event':
-                    ev = descriptor.value;
-                    descriptor.value = function(...args) {
-                        // eslint-disable-next-line no-console
-                        console.warn(msg);
-                            ev(...args);
-                    }.bind(obj);
-                    this.resetEventInterface(fn, descriptor.value);
-                    break;
-            }
-        });
-    }));
-    
-    // enumerate
-    // enumerate(flag)
-    //  - flag: true/false
-    flair.Container.register('enumerate', flair.Class('enumerate', flair.Attribute, function() {
-        this.decorator((obj, type, name, descriptor) => {
-            // validate
-            if (['_constructor', '_dispose'].indexOf(type) !== -1) { throw `enumerate attribute cannot be applied on special function.`; }
-    
-            // decorate
-            let flag = this.args[0];
-            descriptor.enumerable = flag;
-        });
-    }));
     
     let incCycle = [];
     /**
@@ -4608,18 +4642,18 @@
     // add to members list
     flair.members.push('Reflector');    
 
-    // setup ports
+    // define ports
     _Port.define('moduleLoader', 'function');                                       // to define an external server/client specific module loader of choice
     _Port.define('fileLoader', 'function');                                         // to define an external server/client specific file loader of choice
     _Port.define('sessionStorage', 'object', ['key', 'setItem', 'getItem']);        // to define an external server/client specific file loader of choice
     _Port.define('localStorage', 'object', ['key', 'setItem', 'getItem']);          // to define an external server/client specific file loader of choice
     _Port.define('pubsub', 'object', ['publish', 'subscribe']);                     // to define a pubsub library of choice having defined members
 
-    // setup telemetry channels
-    _Channel.define('raw', 'flair.system.raw');             // type and instances creation telemetry
-    _Channel.define('exec', 'flair.system.execute');        // member access execution telemetry
-    _Channel.define('info', 'flair.system.info');           // info, warning and exception telemetry
-    _Channel.define('fetch', 'flair.system.fetch');         // file or module include telemetry
+    // define telemetry channels
+    _Channel.define('raw', 'flair.system.raw');                                     // type and instances creation telemetry
+    _Channel.define('exec', 'flair.system.execute');                                // member access execution telemetry
+    _Channel.define('info', 'flair.system.info');                                   // info, warning and exception telemetry
+    _Channel.define('fetch', 'flair.system.fetch');                                 // file or module include telemetry
 
     // set global
     if (!options.env.suppressGlobals) {
@@ -4628,7 +4662,7 @@
         }
     }
     flair.members = Object.freeze(flair.members);
-    _global.flair = flair;
+    _global.flair = flair; // need to be unfreezed (for Channel changes to happen)
 
     // return
     return _global.flair;

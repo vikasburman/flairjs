@@ -8,5 +8,7 @@ and also on such methods add a stop() function on the function, to let user stop
 
 
 
- 
+ In reflector, for Assembly, Namespace, etc. as sub of struct, check for these and then give specialized refleccor
+ thee reflector should inherit from struct reflector
 
+inheritcance check for cyclic conditions in constuctObject -- parent should not be in inheritance chain of the type being constructed

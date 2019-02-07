@@ -11,7 +11,7 @@
  * @returns boolean - true/false
  */ 
 const _isMixed = (obj, mixin) => {
-    if (['instance', 'class', 'sinstance'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+    if (['instance', 'class', 'sinstance', 'struct'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
     if (['string', 'mixin'].indexOf(_typeOf(mixin)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (mixin)'); }
     return obj._.isMixed(mixin);
 };

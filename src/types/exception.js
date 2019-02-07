@@ -65,6 +65,10 @@ const _Exception = function(arg1, arg2, arg3) {
     return Object.freeze(_ex);
 };
 
+// all inbuilt exceptions
+_Exception.InvalidArgument = (name) => { return new _Exception('InvalidArgument', `Argument type is invalid. (${name})`); }
+
+
 // expose
 flair.Exception = _Exception;
 flair.members.push('Exception');

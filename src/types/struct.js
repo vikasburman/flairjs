@@ -12,16 +12,10 @@
  *                 >> qualified, e.g., 
  *                    com.myCompany.myProduct.myFeature.MyStruct
  *                 >> special, e.g.,
- *                    ~MyStruct
- *                 >> super special. e.g.,
- *                    MyNewType<NewTypeName>
+ *                    .MyStruct
  *         NOTE: Qualified names are automatically registered with Namespace while simple names are not.
  *               to register simple name on root Namespace, use special naming technique, it will register
- *               this with Namespace and will still keep the name without '~'
- *              
- *               'NewTypeName' will be tha type of the structure instance created from this structure instead of
- *               'sinstance' This is generally used to create additional flair types or flair objects and should
- *               be avoided when using for normal application development
+ *               this with Namespace at root, and will still keep the name without '.'
  *  applications: array - An array of mixin and/or interface types which needs to be applied to this struct type
  *                        mixins will be applied in order they are defined here
  *  factory: function - factory function to build struct definition
@@ -30,7 +24,7 @@
  *  InvalidArgumentException
  */
 const _Struct = (name, mixinsAndInterfaces, factory) => {
-    if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+    if (typeof name !== 'string') { throw _Exception.InvalidArgument('name'); }
     if (_typeOf(mixinsAndInterfaces) === 'array') {
         if (typeof factory !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (factory)'); }
     } else if (typeof mixinsAndInterfaces !== 'function') {
@@ -40,14 +34,6 @@ const _Struct = (name, mixinsAndInterfaces, factory) => {
         mixinsAndInterfaces = [];
     }
 
-    // extract custom type instance name, if specified 
-    let instanceType = 'sinstance';
-    if (name.indexOf('<') !== -1 && name.indexOf('>') !== -1) {
-        instanceType = name.substr(name.indexOf('<') + 1)
-        instanceType = instanceType.substr(0, instanceType.indexOf('>')).trim();
-        name = name.substr(0, name.indexOf('<')).trim();
-    }
-
     // builder config
     let cfg = {};
     cfg.config = {
@@ -55,14 +41,10 @@ const _Struct = (name, mixinsAndInterfaces, factory) => {
         interfaces: true,
         static: true,
         func: true,
-            construct: true,
+        construct: true,
         prop: true,
-            readonly: true,
         event: true,
-        conditional: true,
-        duplicate: true,
-        customAttrs: true,
-        hide: true
+        customAttrs: true
     };
     cfg.params = {
         typeName: name,
@@ -71,7 +53,7 @@ const _Struct = (name, mixinsAndInterfaces, factory) => {
         factory: factory
     };
     cfg.instance = {
-        type: instanceType
+        type: 'sinstance'
     };
     cfg.type = {
         type: 'struct'

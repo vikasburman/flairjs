@@ -2,7 +2,7 @@
 // Namespace(Type)
 flair.Namespace = (Type) => {
     // any type name can be in this format:
-    // ~name <-- means, no namespace is given but still register this with root namespace
+    // .name <-- means, no namespace is given but still register this with root namespace
     // name <-- means, no namespace is given but since it is not forced, do not register this with root namespace
     // namespace.name
     
@@ -12,10 +12,10 @@ flair.Namespace = (Type) => {
     // only unattached types are allowed
     if (Type._.namespace) { throw `Type (${Type._.name}) is already contained in a namespace.`; }
 
-    // remove force register symbol (~) from name and also fix name
+    // remove force register symbol (.) from name and also fix name
     let isForced = false;
-    if (Type._.name.startsWith('~')) {
-        Type._.name = Type._.name.substr(1); // remove ~
+    if (Type._.name.startsWith('.')) {
+        Type._.name = Type._.name.substr(1); // remove .
         isForced = true;
     }
 
@@ -118,6 +118,8 @@ flair.Namespace.createInstance = (qualifiedName, ...args) => {
     }
     return null;
 };
+
+const _Namespace = flair.Namespace; // TODO: Fix
 
 // reset api
 flair.Namespace._ = {

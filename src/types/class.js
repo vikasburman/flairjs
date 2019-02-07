@@ -14,10 +14,10 @@
  *                 >> qualified, e.g., 
  *                    com.myCompany.myProduct.myFeature.MyClass
  *                 >> special, e.g.,
- *                    ~MyClass
+ *                    .MyClass
  *         NOTE: Qualified names are automatically registered with Namespace while simple names are not.
  *               to register simple name on root Namespace, use special naming technique, it will register
- *               this with Namespace and will still keep the name without '~'
+ *               this with Namespace at root, and will still keep the name without '.'
  *  inherits: type - A flair class type from which to inherit this class
  *  applications: array - An array of mixin and/or interface types which needs to be applied to this class type
  *                        mixins will be applied in order they are defined here
@@ -59,20 +59,16 @@ flair.Class = (name, inherits, mixinsAndInterfaces, factory) => {
         mixins: true,
         interfaces: true,
         inheritance: true,
-            singleton: true,
+        singleton: true,
         static: true,
         func: true,
-            construct: true,
-            dispose: true,
+        construct: true,
+        dispose: true,
         prop: true,
-            storage: true,
-            readonly: true,
         event: true,
+        storage: true,
         aop: true,
-        conditional: true,
-        duplicate: true,
-        customAttrs: true,
-        hide: true
+        customAttrs: true
     };
     cfg.params = {
         typeName: name,

@@ -133,18 +133,18 @@
     <!-- inject: ./serialization/serializer.js -->
     <!-- inject: ./reflection/reflector.js -->    
 
-    // setup ports
+    // define ports
     _Port.define('moduleLoader', 'function');                                       // to define an external server/client specific module loader of choice
     _Port.define('fileLoader', 'function');                                         // to define an external server/client specific file loader of choice
     _Port.define('sessionStorage', 'object', ['key', 'setItem', 'getItem']);        // to define an external server/client specific file loader of choice
     _Port.define('localStorage', 'object', ['key', 'setItem', 'getItem']);          // to define an external server/client specific file loader of choice
     _Port.define('pubsub', 'object', ['publish', 'subscribe']);                     // to define a pubsub library of choice having defined members
 
-    // setup telemetry channels
-    _Channel.define('raw', 'flair.system.raw');             // type and instances creation telemetry
-    _Channel.define('exec', 'flair.system.execute');        // member access execution telemetry
-    _Channel.define('info', 'flair.system.info');           // info, warning and exception telemetry
-    _Channel.define('fetch', 'flair.system.fetch');         // file or module include telemetry
+    // define telemetry channels
+    _Channel.define('raw', 'flair.system.raw');                                     // type and instances creation telemetry
+    _Channel.define('exec', 'flair.system.execute');                                // member access execution telemetry
+    _Channel.define('info', 'flair.system.info');                                   // info, warning and exception telemetry
+    _Channel.define('fetch', 'flair.system.fetch');                                 // file or module include telemetry
 
     // set global
     if (!options.env.suppressGlobals) {
@@ -153,7 +153,7 @@
         }
     }
     flair.members = Object.freeze(flair.members);
-    _global.flair = flair;
+    _global.flair = flair; // need to be unfreezed (for Channel changes to happen)
 
     // return
     return _global.flair;
