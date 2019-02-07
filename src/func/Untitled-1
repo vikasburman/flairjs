@@ -6,10 +6,17 @@
 
 if a particular attr not exists in previous level, it's previous level is considered to be immediate previous level
 
-Type mex where does it build isStatic
+
+// therefore constructor in an static class cannot take arguments - warn by checking constructor parameters - also don't
 
 
 
 
+in proxy detech for abstract and interface types - use only noop and null values
 
+
+create attribute for these
+    publish: new _attrConfig('event', '!@publish'),
+    fetch: new _attrConfig('func', 'async, !abstract'),
+        enumerate: new _attrConfig('prop, func, event'),
 

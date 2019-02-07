@@ -1,203 +1,310 @@
-let isSkipClear = false;
-const attributesAndModifiers = (def, memberName, memberType) => {
-    let appliedAttrs = _attr.collect(isSkipClear), // [{name, cfg, attr, args}]
-        attrBucket = null,
-        modifierBucket = null,
-        isTypeLevel = (typeof memberName === 'boolean');
-    if (isTypeLevel) {
-        attrBucket = def.attrs.type;
-        modifierBucket = def.modifiers.type;
-    } else {
-        attrBucket = def.attrs.members[memberName] = []; // create bucket
-        modifierBucket = def.modifiers.members[memberName] = []; // create bucket
-    }
-
-    // validator
-    const validator = (appliedAttr) => {
-        let result = false;
-        // target check
-        if (isTypeLevel) {
-            if (appliedAttr.cfg.targets.types.length === 0 && appliedAttr.cfg.targets.typeNames.length === 0) { result = true; } // no targets defined
-            if (!result && appliedAttr.cfg.targets.types.indexOf(def.types.type) !== -1) { result = true; }
-            if (!result && appliedAttr.cfg.targets.typeNames.indexOf(def.name) !== -1) { result = true; }
-        } else {
-            if (appliedAttr.cfg.targets.members.length === 0 ) { result = true; } // no targets defined
-            if (!result && appliedAttr.cfg.targets.members.indexOf(memberType) !== -1) { result = true; }
-        }
-
-        // constraints check
-        if (result) {
-            // TODO:
-        }
-
-        // return
-        return result;
-    };
-
-    // validate and collect
-    for (let appliedAttr of appliedAttrs) {
-        if (validator(appliedAttr)) {
-            if (appliedAttr.attr) { // custom attribute
-                attrBucket.push(appliedAttr);
-            } else { // inbuilt attribute or modifier
-                if(appliedAttr.cfg.isModifier) { 
-                    modifierBucket.push(appliedAttr);
-                } else {
-                    attrBucket.push(appliedAttr);
-                }
+const copyMembers = (sources, dest) => {
+    for(let src of sources) {
+        if (src) {
+            for(let item in src) {
+                if (src.hasOwnProperty(item)) { dest[item] = src[item]; }
             }
         }
     }
+    return dest;
 };
-const modifiersRefl = (def) => {
-    const probe = (modifierName, memberName) => {
-        let fn = () => {
-            return modifiers.get(modifierName, memberName) || modifiers.get(modifierName, memberName, true); 
-        };
-        fn.current = () => {
-            return modifiers.get(modifierName, memberName); 
-        };
-        fn.inherited = () => {
-            return modifiers.get(modifierName, memberName, true); 
-        };
-        return fn;
+const extractMixinsAndInterfaces = (mixinsAndInterfaces) => {
+    let result = {
+        mixins: [],
+        interfaces: []
     };
-    let modifiers = {
-        get: (modifierName, memberName, isCheckInheritance) => {
-            let isTypeLevel = typeof (memberName === 'boolean'),
-                result = null;
-            if (isTypeLevel) {
-                if (!isCheckInheritance) {
-                    result = findItemByProp(def.modifiers.type, 'name', modifierName);
-                } else {
-                    // TODO
-                }
-            } else {
-                if (!isCheckInheritance) {
-                    result = findItemByProp(def.modifiers.members[memberName], 'name', modifierName);
-                } else {
-                    // TODO
-                }
-            }
-            return result;
-        },
-        has: (modifierName, memberName, isCheckInheritance) => {
-            return modifiers.get(modifierName, memberName, isCheckInheritance) !== null;
-        },
-        type: {
-            get: (modifierName, isCheckInheritance) => {
-                return modifiers.get(modifierName, true, isCheckInheritance);
-            },
-            has: (modifierName, isCheckInheritance) => {
-                return modifiers.has(modifierName, true, isCheckInheritance);
-            },
-            isStatic: () => { return modifiers.type.get('static'); },
-            isAbstract: () => { return modifiers.type.get('abstract'); },
-            isSealed: () => { return modifiers.type.get('sealed'); }
-        },
-        member: {
-            get: modifiers.get,
-            has: modifiers.has,
-            isStatic: probe('static', memberName),
-            isAbstract: probe('abstract', memberName),
-            isSealed: probe('sealed', memberName),
-            isOverride: probe('override', memberName),
-            isPrivate: probe('private', memberName),
-            isProtected: probe('protected', memberName),
-            isReadonly: probe('readonly', memberName),
-            isAsync: probe('async', memberName)
+    for(let item of mixinsAndInterfaces) {
+        switch (item._.type) {
+            case 'mixin': result.mixins.push(item); break;
+            case 'interface': result.interfaces.push(item); break;
         }
-    };
-    return _modifiers;
+    }
+    return result;
 };
-const attrsRefl = (def, obj) => {
-    const probe = (attrName, memberName) => {
-        let fn = () => {
-            return attrs.get(attrName, memberName) || attrs.get(attrName, memberName, true); 
-        };
-        fn.current = () => {
-            return attrs.get(attrName, memberName); 
-        };
-        fn.inherited = () => {
-            return attrs.get(attrName, memberName, true); 
-        };
-        return fn;
-    };    
-    let attrs = {
-        get: (attrName, memberName, isCheckInheritance) => {
-            let isTypeLevel = typeof (memberName === 'boolean'),
-                result = null;
-            if (isTypeLevel) {
-                if (!isCheckInheritance) {
-                    result = findItemByProp(def.attrs.type, 'name', attrName);
-                } else {
-                    // TODO
-                }
-            } else {
-                if (!isCheckInheritance) {
-                    result = findItemByProp(def.attrs.members[memberName], 'name', attrName);
-                } else {
-                    // TODO
-                }
-            }
-            return result;
-        },
-        has: (attrName, memberName, isCheckInheritance) => {
-            return attrs.get(attrName, memberName, isCheckInheritance) !== null;
-        },
-        type: {
-            get: (attrName, isCheckInheritance) => {
-                return attrs.get(attrName, true, isCheckInheritance);
-            },
-            has: (attrName, isCheckInheritance) => {
-                return attrs.has(attrName, true, isCheckInheritance);
-            },
-            isSingleton: () => { return attrs.type.has('singleton'); },
-            isDeprecated: () => {return attrs.type.has('deprecate'); }
-        },
-        member: {
-            get: attrs.get,
-            has: attrs.has,
-            isDeprecated: probe('deprecate', memberName),
-            isMixed: probe('mixed', memberName),
-            isSession: probe('session', memberName),
-            isState: probe('state', memberName),
-            isConditional: probe('conditional', memberName),
-        }
-    };
-    return _attrs;
-};
-const buildTypeInstance = (cfg, Type, params, obj) => {
-    if (cfg.singleton && params.isTopLevelInstance && Type._.singleInstance()) { return Type._.singleInstance(); }
+const buildTypeInstance = (type, Type, typeName, mex, inherits, mixinsAndInterfaces, cfg, obj, factory, params) => {
+    if (cfg.singleton && Type._.singleInstance()) { return Type._.singleInstance(); }
 
     // define vars
     let _noop = noop,
         exposed_obj = {},
         mixin_being_applied = null,
+        the_attr = null,
+        typeArgs = [],
+        staticInterface = Type, // Type itself is the static interface to begin
+        isNeedProtected = false,
+        theFlag = '__flag__',
+        _typeMetaMemberName = '____type',
         _constructName = '_construct',
         _disposeName = '_dispose',
-        _props = {}, // plain property values storage inside this closure
         def = { 
-            name: cfg.params.typeName,
-            Type: Type,
-            types: {
-                type: cfg.types.type, // the type of the type itself: class, struct, etc.
-                members: {} // each named item here defines the type of member: func, prop, event, construct, etc.
-            },
-            attrs: { 
-                type: [], // will have: {name, cfg, attr, args}
-                members: {} // each named item array in here will have: {name, cfg, attr, args}
-            },
-            modifiers: {
-                type: [], // will have: {name, cfg, attr, args}
-                members: {} // each named item array in here will have: {name, cfg, attr, args}
-            }
+            name: typeName,
+            type: Type,
+            meta: {},
+            mixins: mixins,
+            interfaces: interfaces,
+            props: {}
         },
         proxy = null,
         isBuildingObj = false,
         _sessionStorage = _Port('sessionStorage'),
         _localStorage = _Port('localStorage');
 
+    const member = {
+        isSpecial: (memberName) => {
+            return [_constructName, _disposeName, _typeMetaMemberName, '_'].indexOf(memberName) !== -1;
+        },
+        isDefined: (memberName, ignoreCurrent) => {
+            let hierarchy = obj._.instanceOf.slice().reverse(); // look from last added items first
+                if (ignoreCurrent) { hierarchy.shift(); } // leave current one
+            return (hierarchy.findIndex((item) => {
+                return (item.meta[memberName] ? true : false);
+            }) !== -1);
+        },
+        isOwn: (memberName) => {
+            return typeof def.meta[memberName] !== 'undefined';
+        },
+        isDerived: (memberName) => {
+            if (member.isOwn(memberName)) { return false; }
+            return (obj._.instanceOf.findIndex((item) => {
+                return (item.meta[memberName] ? true : false);
+            }) !== -1);
+        }, 
+        type: (memberName) => {
+            let idx = (obj._.instanceOf.findIndex((item) => {
+                return (item.meta[memberName] ? true : false);
+            }));
+            return (idx !== -1 ? obj._.instanceOf[idx].meta[memberName].type : '');
+        },
+        isProperty: (memberName) => {
+            return member.type(memberName) === 'prop';
+        },
+        isEvent: (memberName) => {
+            return member.type(memberName) === 'event';
+        },
+        isFunction: (memberName) => {
+            return member.type(memberName) === 'func';
+        },
+        attrs: (memberName) => {
+            let result_meta = member.meta(memberName);
+            let result = {
+                current: result_meta.current.slice(),
+                chained: [] // up in inheritance chain (in reverse order)
+            };
+            for(let result_attrs of chained) { // pick last applied attribute only of each type available
+                for(let result_attr of result_attrs) {
+                    if (chained.indexOf(result_attr) !== -1) {
+                        chained.push(result_attr);
+                    }
+                }
+            }
+            return result;
+        },
+        meta: (memberName) => {
+            let result = {
+                current: def.meta[memberName] || [],
+                chained: [] // up in inheritance chain
+            };
+            let hierarchy = obj._.instanceOf.slice().reverse(); // look from last added items first
+                hierarchy.shift(); // leave current one
+            for(let item of hierarchy) {
+                if (typeof item.meta[memberName] !== 'undefined') {
+                    result.chained.push(item.meta[memberName]);
+                }
+            }
+            return result;
+        },
+        isStatic: (memberName) => {
+            return attrs.has('static', memberName, true); 
+        },
+        isPrivate: (memberName) => {
+            return attrs.has('private', memberName, true);
+        },
+        isProtected: (memberName) => {
+            return attrs.has('protected', memberName, true);
+        },
+        isNew: (memberName) => {
+            return attrs.has('new', memberName); // TODO: New should break the sequence of check
+        },
+        isAbstract: (memberName) => {
+            return attrs.has('abstract', memberName);
+        },
+        isOverridden: (memberName) => {
+            return attrs.has('override', memberName);
+        },
+        isVirtual: (memberName) => {
+            return attrs.has('virtual', memberName) || attrs.has('abstract', memberName) || attrs.has('override', memberName);
+        },
+        isSealed: (memberName) => {
+            return attrs.has('sealed', memberName);
+        },
+        isMixed: (memberName) => {
+            return attrs.has('mixed', memberName);
+        },
+        isSessionProperty: (memberName) => {
+            return attrs.has('session', memberName);
+        },        
+        isStateProperty: (memberName) => {
+            return attrs.has('state', memberName);
+        },
+        isReadOnly: (memberName) => {
+            return attrs.has('readonly', memberName) || (attrs.has('once', memberName) && obj[memberName]); // either readonly, or once with value defined already
+        },  
+        isSerializable: (memberName) => {
+            return (attrs.has('serialize', memberName) || attrs.has('serialize', _typeMetaMemberName)) && attrs.has('noserialize', memberName);
+        }, 
+        isPublishing: (memberName) => {
+            return attrs.has('publish', memberName);
+        }, 
+        isFetcher: (memberName) => {
+            return attrs.has('fetch', memberName);
+        },   
+        isDeprecated: (memberName) => {
+            return attrs.has('deprecate', memberName);
+        },
+        isEnumerable: (memberName) => {
+            return Object.getOwnPropertyDescriptor(obj, memberName).enumerable;
+        },   
+        isAsync: (memberName) => {
+            return attrs.has('async', memberName);
+        }             
+    };
+    const attrs = {
+        get: (attrName, memberName, isDeepCheck, isIgnoreCurrent) => {
+            let foundAttr = null,
+                hierarchy = obj._.instanceOf.slice().reverse(); // start looking from last item first
+            if (isDeepCheck) {
+                if (isIgnoreCurrent) { hierarchy.shift(); } // remove top (current) one
+            } else {
+                hierarchy = [hierarchy[0]]; // current meta
+            }
+            for(let item of hierarchy) {
+                if (item.meta[memberName]) {
+                    for(let attrItem of item.meta[memberName]) {
+                        if (attrItem.name === attrName) {
+                            foundAttr = attrItem;
+                            break;
+                        }
+                    }
+                    if (foundAttr) { break; }
+                }
+            }
+            return foundAttr; 
+        },
+        has: (attrName, memberName, isDeepCheck, isIgnoreCurrent) => {
+            return (attrs.get(attrName, memberName, isDeepCheck, isIgnoreCurrent) ? true : false);
+        }
+    };
+    const types = {
+        isSingleton: () => { return attrs.has('singleton', _typeMetaMemberName); },
+        isAbstract: () => { return attrs.has('abstract', _typeMetaMemberName); },
+        isSealed: () => { return attrs.has('sealed', _typeMetaMemberName); },
+        isStatic: () => { return attrs.has('sealed', _typeMetaMemberName); },
+        isSerializable: () => { return attrs.has('serialize', _typeMetaMemberName); }
+    };
+
+    const addInstanceMeta = () => {
+        // general meta information   
+        obj._ = copyMembers([obj._, mex], {}); 
+        obj._.type = type;
+        obj._.Type = () => { return obj._.instanceOf[obj._.instanceOf.length - 1].type; };
+        obj._.namespace = null;
+        obj._.assembly = () => { return flair.Assembly.get(typeName) || null; };
+        obj._.id = guid();
+
+        // hierarchy information (even if inheritance is not configured)
+        // when inheritance is not supported, it will have only two entries - one for Object and second for the type itself
+        obj._.instanceOf = obj._.instanceOf || [];
+        if (obj._.instanceOf.length === 0) { // nothing is defined as yet
+            obj._.instanceOf.push({ 
+                name: 'Object',
+                type: Object,
+                meta: {},
+                mixins: mixins,
+                interfaces: interfaces,
+                props: {}
+            }); // everything inherits from Object
+        }
+        obj._.instanceOf.push(def); // whatever is defined
+        obj._.isInstanceOf = (name) => {
+            if (!name) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+            if (name._ && name._.name) { name = name._.name; } 
+            return (obj._.instanceOf.findIndex((item) => { return item.name === name; }) !== -1);
+        };
+        
+        // serialization support
+        if (cfg.serialize) {
+            obj._.serialize = () => { return processJson(exposed_obj, {}); };
+            obj._.deserialize = (json) => { return processJson(json, exposed_obj, true); };
+        }
+
+        // mixins support
+        if (cfg.mixins) {
+            obj._.isMixed = (name) => {
+                if (!name) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+                if (name._ && name._.name) { name = name._.name; } 
+                let result = false;
+                for (let item of obj._.instanceOf) {
+                    for(let _mixin of item.mixins) {
+                        if (_mixin._.name === name) {
+                            result = true; break;
+                        }
+                        if (result) { break; }
+                    }
+                }
+                return result;                    
+            };        
+        }
+
+        // interface support
+        if (cfg.interfaces) {
+            obj._.isImplements = (name) => {
+                if (!name) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+                if (name._ && name._.name) { name = name._.name; } 
+                let result = false;
+                for (let item of obj._.instanceOf) {
+                    for(let _interface of item.interfaces) {
+                        if (_interface._.name === name) {
+                            result = true; break;
+                        }
+                        if (result) { break; }
+                    }
+                }
+                return result;                    
+            };        
+        }
+
+        // for internal member's and attrs reflector support
+        obj._._ = {};
+        obj._._.raw = (name) => {
+            if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+            if (def.meta[name] && def.meta[name].ref) { return def.meta[name].ref; }
+            return null;
+        };  
+        obj._._.member = member;
+        obj._._.attrs = attrs;
+        obj._._.type = types;
+    };
+    const processJson = (source, target, isDeserialize) => {
+        let mappedName = '';
+        for(let memberName in exposed_obj) {
+            if (exposed_obj.hasOwnProperty(memberName) && memberName !== '_') {
+                if ((member.isProperty(memberName) &&
+                     member.isSerializable(memberName) &&
+                     !member.isReadOnly(memberName) && 
+                     !member.isStatic(memberName) && 
+                     !member.isPrivate(memberName) && 
+                     !member.isProtected(memberName))) {
+                        the_attr = attrs.get('serialize', memberName);
+                        mappedName = (the_attr ? (the_attr.args[0] || memberName) : memberName);
+                        if (isDeserialize) {
+                            target[memberName] = source[memberName] || target[memberName];
+                        } else {
+                            target[memberName] = source[memberName];
+                        }
+                }
+            }
+        }
+    };    
     const buildProp = (memberName, memberDef) => {
         let _member = {
             get: null,
@@ -452,7 +559,6 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
             }
         }
 
-        // TODO: store type of member at: def.types.members[name] = type
         // collect attributes
         def.meta[memberName] = _attr.collect(); // collect and clear for next bunch on next member
         def.meta[memberName].type = memberType;
@@ -555,19 +661,38 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
         // finally hold the references for reflector
         def.meta[memberName].ref = memberValue;
     };
-    const modifiers = modifiersRefl(def);
-    const attrs = attrsRefl(def, obj);
  
-    // process type level attributes
-    attributesAndModifiers(true, def.types.type);
+    // separate mixins and interfaces
+    if (cfg.mixins || cfg.interfaces) {
+        let result = extractMixinsAndInterfaces(mixinsAndInterfaces);
+        def.mixins = result.mixins;
+        def.interfaces = result.interfaces;
+    }
 
-    // construct base object from parent, if applicable
+    // collect type level attributes
+    def.meta[_typeMetaMemberName] = _attr.collect(); // collect and clear for next bunch on next member
+
+    // construct base object
+    typeArgs = params.args;
     if (cfg.inheritance) {
-        if (params.isTopLevelInstance) {
-            if (modifiers.type.isAbstract()) { throw new _Exception('InvalidOperation', `Cannot create instance of an abstract type. (${def.name})`); }
+        // if coming from a parent construction call
+        // keep protected interface
+        if (params._flag && params._flag === theFlag) {
+            isNeedProtected = true;
+
+            // redefine static to be same as top level type which was passed at the beginning 
+            // of construction chain
+            if (cfg.static) {
+                staticInterface = params._static; 
+            }
+        } else { // this is the top level
+            if (types.isAbstract()) {
+                throw new _Exception('InvalidOperation', `Cannot create instance of an abstract type. (${typeName})`); 
+            } 
         }
 
-        // create parent instance, if required, else use passed object as base object
+        // create parent instance, if available
+        // else use passed object as base object
         let Parent = Type._.inherits;
         if (Parent) {
             if (Parent._.isSealed() || Parent._.isSingleton() || Parent._.isStatic()) {
@@ -576,67 +701,16 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
             if (Parent._.type !== Type._.type) {
                 throw new _Exception('InvalidOperation', `Cannot inherit from another type family. (${Parent._.type})`); 
             }
-            obj = new Parent(params._flagName, params.staticInterface, params.args); // obj reference is now parent of object
+            obj = new Parent(theFlag, staticInterface, ...typeArgs); // obj reference is now parent of object
+        } else {
+            if (params._flag !== theFlag && types.isAbstract()) {
+                throw new _Exception('InvalidOperation', `Cannot create instance of an abstract type. (${typeName})`); 
+            }               
         }
     }
 
      // set object meta
-     if (typeof obj._ === 'undefined') {
-        obj._ = {}; 
-        obj._.id = guid();
-        obj._.hierarchy = []; // will have: 'def' of each hierarchy level in order type is constructed
-        obj._.isInstanceOf = (name) => {
-            if (!name) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
-            if (name._ && name._.name) { name = name._.name; } // could be the 'Type' itself
-            return findIndexByProp(obj._.hierarchy, 'name', name) !== -1; // if this given type name found anywhere in hierarchy, so yes it is an instance of that type
-        };
-        obj._.def = () => { return obj._.hierarchy[obj._.hierarchy.length - 1]; }
-        obj._.Type = () => { obj._.def().Type; }; // always gives top level, because that's what this is an instance of which comes to outside world
-        if (cfg.serialize) {
-            obj._.serialize = () => { return _Serializer.process(exposed_obj, exposed_obj, {}); };
-            obj._.deserialize = (json) => { return _Serializer.process(exposed_obj, json, exposed_obj, true); };
-        }
-        if (cfg.mixins) {
-            def.mixins = {
-                types: cfg.params.mixins, // mixin types that were applied to this type
-                names: namesOf(cfg.params.mixins)
-            };
-            obj._.isMixed = (name) => {
-                if (!name) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
-                if (name._ && name._.name) { name = name._.name; } // could be mixin type itself
-                let result = false;
-                for (let defItem of obj._.hierarchy) {
-                    if (defItem.mixins.type.names.indexOf(name) !== -1) {
-                        result = true; break;
-                    }
-                }
-                return result;                    
-            };        
-        }
-        if (cfg.interfaces) {
-            def.interfaces = {
-                types: cfg.params.interfaces, // interface types that were applied to this type
-                names: namesOf(cfg.params.interfaces)
-            };           
-            obj._.isImplements = (name) => {
-                if (!name) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
-                if (name._ && name._.name) { name = name._.name; } // could be interface type itself
-                let result = false;
-                for (let defItem of obj._.hierarchy) {
-                    if (defItem.interfaces.type.names.indexOf(name) !== -1) {
-                        result = true; break;
-                    }
-                }
-                return result;                   
-            };        
-        }
-     }
-     obj._.type = cfg.types.instance; // as defined for this instance by builder, this will always be same for all levels -- class 'instance' at all levels will be 'instance' only
-     obj._.hierarchy.push(def); // this level
-    if (params.isTopLevelInstance) {
-        obj._.modifiers = modifiers;
-        obj._.attrs = attrs;
-    }
+     addInstanceMeta();
 
     // building started
     isBuildingObj = true; 
@@ -678,16 +752,16 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
     });
 
     // construct using factory having 'this' being proxy object
-    params.factory.apply(proxy);
+    factory.apply(proxy);
 
     // apply mixins
-    if (cfg.mixins) { 
-        for(let mixin of def.mixins.types) {
+    if (cfg.mixins) { for(let mixin of def.mixins) {
+        if (mixin._.type === 'mixin') {
             mixin_being_applied = mixin;
             mixin.apply(proxy); // run mixin's factory too having 'this' being proxy object
             mixin_being_applied = null;
         }
-    }    
+    }}    
 
     // clear any (by user's error left out) attributes, so that are not added by mistake elsewhere
     _attr.clear();
@@ -697,15 +771,14 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
 
     // weave advices from aspects
     if (cfg.aop) {
-        // TODO: as per new type
         // when not on base types of this functionality itself
-        if (['Attribute', 'Aspect'].indexOf(cfg.params.typeName) === -1 && 
+        if (['Attribute', 'Aspect'].indexOf(typeName) === -1 && 
             !obj._.isInstanceOf('Attribute') && !obj._.isInstanceOf('Aspect')) { 
             let weavedFn = null;
-            for(let member in meta) {
+            for(let memb in meta) {
                 if (meta.hasOwnProperty(memb) && meta[memb].type === 'func' && !member.isSpecial(memb)) {
                     // get weaved function
-                    weavedFn = _Aspects(obj, cfg.params.typeName, memb, meta[memb]);
+                    weavedFn = _Aspects(obj, typeName, memb, meta[memb]);
 
                     // store aspects applied
                     meta[memb].aspects = weavedFn.aspects;
@@ -735,193 +808,96 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
         doCopy = (memberName) => { Object.defineProperty(exposed_obj, memberName, Object.getOwnPropertyDescriptor(obj, memberName)); };
     doCopy('_'); // copy meta member
     for(let memberName in obj) { // copy other members
-        // TODO: fix as per new type
         isCopy = false;
         if (obj.hasOwnProperty(memberName)) { 
             isCopy = true;
             if (member.isOwn(memberName)) {
                 if (member.isPrivate(memberName)) { isCopy = false; }   // private members don't get out
-                if (isCopy && (member.isProtected(memberName) && !params.isNeedProtected)) { isCopy = false; } // protected don't go out of top level instance
+                if (isCopy && (member.isProtected(memberName) && !isNeedProtected)) { isCopy = false; } // protected don't go out of top level instance
             } else { // some derived member (protected or public)
-                if (member.isProtected(memberName) && !params.isNeedProtected) { isCopy = false; } // protected don't go out of top level instance
+                if (member.isProtected(memberName) && !isNeedProtected) { isCopy = false; } // protected don't go out of top level instance
                 if (isCopy && !member.isDerived(memberName)) { isCopy = false; } // some directly added member
             }
             if (isCopy) { doCopy(memberName); }
             // rewire event definition when at the top level object creation step
-            if (isCopy && !params.isNeedProtected && member.isEvent(memberName)) {
+            if (isCopy && !isNeedProtected && member.isEvent(memberName)) {
                 exposed_obj[memberName].rewire(exposed_obj);
             }
         }
     }
 
-    // validate interfaces of type
+    // validate interfaces
     if (cfg.interfaces) {
-        for(let _interfaceType of def.interfaces.types) { 
-            // an interface define members just like a type
-            // with but its function and event will be noop and
-            // property values will be null
-            let _interface = new _interfaceType(), // so we get to read members of interface
-                _interfaceInternalDef = _interface._.hierarchy.Current();
-            for(let _memberName in _interface) {
-                if (_interface.hasOwnProperty(_memberName) && _memberName !== '_') {
-                    if (exposed_obj[_memberName]) {
-                        let _interfaceMemberType = _interfaceInternalDef.types.members[_memberName],
-                            _memberTypeHere = def.types.members[_memberName];
-                        if (_interfaceMemberType !== _memberTypeHere) { throw new _Exception('NotDefined', `Interface (${_interface._.name}) member is not defined as ${_interfaceMemberType}. (${_memberName})`); }
-                    }
+        for(let _interface of def.interfaces) { for(let _memberName in _interface) {
+            if (_interface.hasOwnProperty(_memberName) && _memberName !== '_') {
+                let _member = _interface[_memberName],
+                    _type = typeof exposed_obj[_memberName],
+                    _asType = '';
+                switch(_member.type) {
+                    case 'func': if (_type !== 'function') { _asType = 'function'; } break;
+                    case 'prop': if (_type === 'function') { _asType = 'property'; } break;
+                    case 'event': if (_type !== 'undefined' && typeof exposed_obj[_memberName].subscribe !== 'function') { _asType = 'event'; } break;
                 }
+                if (_asType) { throw new _Exception('NotDefined', `Interface (${_interface._.name}) member is not defined as ${_asType} (${_memberName})`); }
+                
+                // store interface in implements list
+                if (meta[_memberName].interfaces.indexOf(_interface) === -1) { meta[_memberName].interfaces.push(_interface); }
             }
-        }
+        }}
     }
 
     // call constructor
-    if (cfg.construct && params.isTopLevelInstance && typeof exposed_obj._[_constructName] === 'function') {
+    if (cfg.construct && !isNeedProtected && typeof exposed_obj._[_constructName] === 'function') { // when on top level instance
         exposed_obj._.constructing = true;
-        exposed_obj._[_constructName](...params.args);
+        exposed_obj._[_constructName](...typeArgs);
         delete exposed_obj._.constructing;
     }
 
-    // add/update meta on top level instance
-    if (params.isTopLevelInstance) {
-        if (cfg.singleton && attrs.type.has('singleton')) {
+    // add type meta on top level type
+    if (!isNeedProtected) {
+        if (cfg.inheritance && types.isSealed()) { 
+            Type._.isSealed = () => { return true; };
+        }
+        if (cfg.singleton && types.isSingleton()) {
+            Type._.isSingleton = () => { return true; };
             Type._.singleInstance = () => { return exposed_obj; }; 
             Type._.singleInstance.clear = () => { 
                 Type._.singleInstance = () => { return null; };
+                Type._.isSingleton = () => { return false; };
             };
         }
+        
     }
 
     // seal object, so nothing can be added/deleted from outside
     // also, keep protected version intact for 
-    if (params.isTopLevelInstance) {
+    if (!isNeedProtected) {
         exposed_obj = Object.seal(exposed_obj);
     }
 
     // return
     return exposed_obj;
 };
-const builder = (cfg) => {
-    // fix cfg
-    cfg.mixins = cfg.mixins || false;
-    cfg.interfaces = cfg.interfaces || false;
-    cfg.inheritance = cfg.inheritance || false;
-    cfg.singleton = cfg.singleton || false;
-    cfg.static = cfg.static || false;
-    cfg.func = cfg.func || false;
-    cfg.construct = cfg.construct || false;
-    cfg.dispose = cfg.dispose || false;
-    cfg.prop = cfg.prop || false;
-    cfg.storage = cfg.storage || false;
-    cfg.event = cfg.event || false;
-    cfg.aop = cfg.aop || false;
-    cfg.customAttrs = cfg.customAttrs || false;
-    cfg.serialize = cfg.serialize || false;
-    cfg.types.instance = cfg.types.instance || 'unknown';
-    cfg.types.type = cfg.types.type || 'unknown';
-    cfg.params.typeName = cfg.params.typeName || 'unknown';
-    cfg.params.inherits = cfg.params.inherits || null;
-    cfg.params.mixins = [];
-    cfg.params.interfaces = [];
-    cfg.params.factory = cfg.params.factory || null;
-    if (!cfg.func) {
-        cfg.construct = false;
-        cfg.dispose = false;
-    }
-    if (!cfg.prop) {
-        cfg.storage = false;
-    }
-    if (!cfg.inheritance) {
-        cfg.singleton = false;
-    }
-    if (!cfg.func && !cfg.prop && !cfg.event) {
-        cfg.aop = false;
-        cfg.customAttrs = false;
-    }
+const buildType = (type, Type, typeName, mex, inherits, mixinsAndInterfaces, cfg) => {
+    let result = extractMixinsAndInterfaces(mixinsAndInterfaces);
 
-    // extract mixins and interfaces
-    for(let item of cfg.params.mixinsAndInterfaces) {
-       if (item._ && item._.type) {
-            switch (item._.type) {
-                case 'mixin': cfg.params.mixins.push(item); break;
-                case 'interface': cfg.params.interfaces.push(item); break;
-            }
-       }
-    }
-    delete cfg.params.mixinsAndInterfaces;
-
-    // top level definitions
-    let _flagName = '___flag___';
-
-    // base type definition
-    let _Object = function(_flag, _static, ...args) {
-        // define parameters and context
-        let params = {
-            _flagName: _flagName
-        };
-        if (typeof _flag !== 'undefined' && _flag === _flagName) { // inheritance in play
-            params.isNeedProtected = true;
-            params.isTopLevelInstance = false;
-            params.staticInterface = _static;
-            params.args = args;
-        } else {
-            params.isNeedProtected = false;
-            params.isTopLevelInstance = true;
-            params.staticInterface = _Object;
-            if (typeof _flag !== 'undefined') {
-                if (typeof _static !== 'undefined') {
-                    params.args = [_flag, _static].concat(args); // one set
-                } else {
-                    params.args = [_flag]; // no other args given
-                }
-            } else {
-                params.args = []; // no args
-            }
-        }
-
-        // base object
-        let _this = {};
-
-        // build instance
-        return buildTypeInstance(cfg, _Object, params, _this);
-    };
-
-    // type def
-    let typeDef = { 
-        name: cfg.params.typeName,
-        Type: _Object,
-        types: {
-            type: cfg.types.type, // the type of the type itself: class, struct, etc.
-        },
-        attrs: { 
-            type: [], // will have: {name, cfg, attr, args}
-        },
-        modifiers: {
-            type: [], // will have: {name, cfg, attr, args}
-        }
-    };
-    const modifiers = modifiersRefl(typeDef);
-    const attrs = attrsRefl(typeDef, null);
-
-    // type level attributes pick here (as well)
-    isSkipClear = true;
-    attributesAndModifiers(typeDef, true);
-    isSkipClear = false;
-
-    // set type meta
-    _Object._.name = cfg.params.typeName;
-    _Object._.type = cfg.types.type;
-    _Object._.id = guid();
-    _Object._.namespace = null;
-    _Object._.assembly = () => { return _Assembly.get(_Object._.name) || null; };
-    _Object._.inherits = cfg.params.inherits || null;
+    Type._ = copyMembers([Type._, mex], {});
     if (cfg.inheritance) {
-        _Object._.isAbstract = modifiers.type.isAbstract;
-        _Object._.isSealed = modifiers.type.isSealed;
-        _Object._.isDerivedFrom = (name) => { // TODO: fix as per new
+        Type._.inherits = inherits || null;
+    }
+    Type._.name = typeName;
+    Type._.type = type;
+    Type._.namespace = null;
+    Type._.assembly = () => { return flair.Assembly.get(typeName) || null; };
+    Type._.id = guid();
+
+    // hierarchy check
+    if (cfg.inheritance) {
+        Type._.isDerivedFrom = (name) => {
             if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
             if (name._ && name._.name) { name = name._.name; }
             let result = (name === 'Object'),
-                prv = params.inherits;
+                prv = inherits;
             if (!result) {
                 // eslint-disable-next-line no-constant-condition
                 while(true) {
@@ -932,21 +908,17 @@ const builder = (cfg) => {
             }
             return result;
         };
+        Type._.isSealed = () => { return false; }
     }
-    if (cfg.static) {
-        _Object._.isStatic = modifiers.type.isStatic;
-    }
+
     if (cfg.singleton) {
-        _Object._.isSingleton = attrs.type.isSingleton;
-        _Object._.singleInstance = () => { return null; }
-        _Object._.singleInstance.clear = noop;
+        Type._.singleInstance = () => { return null; }
+        Type._.isSingleton = () => { return false; }
+        Type._.singleInstance.clear = () => {};
     }
+     
     if (cfg.mixins) {
-        typeDef.mixins = {
-            types: cfg.params.mixins, // mixin types that were applied to this type
-            names: namesOf(cfg.params.mixins)
-        };        
-        _Object._.isMixed = (name) => { // TODO: fix as per new
+        Type._.isMixed = (name) => {
             if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
             if (name._ && name._.name) { name = name._.name; }
 
@@ -971,12 +943,9 @@ const builder = (cfg) => {
             return result;
         };
     }
+
     if (cfg.interfaces) {
-        typeDef.interfaces = {
-            types: cfg.params.interfaces, // interface types that were applied to this type
-            names: namesOf(cfg.params.interfaces)
-        };          
-        _Object._.isImplements = (name) => { // TODO: fix as per new
+        Type._.isImplements = (name) => {
             if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
             if (name._ && name._.name) { name = name._.name; }
 
@@ -1001,18 +970,115 @@ const builder = (cfg) => {
             return result;
         };                
     }
-    _Object._.isDeprecated = attrs.type.isDeprecated;
-    _Object._.def = () => { return typeDef; }
-    _Object._.modifiers = modifiers;
-    _Object._.attrs = attrs;
+
+    if (cfg.static) {
+        Type._.static = {};
+    }
+
+    // reflector only items
+    Type._._ = Type._._ || {};
+    if (cfg.mixins) {
+        Type._._.mixins = result.mixins || [];
+    }
+    if (cfg.interfaces) {
+        Type._._.interfaces = result.interfaces || [];        
+    }
 
     // register type with namespace
-    _Namespace(_Object); 
+    flair.Namespace(Type);
 
-    // return 
-    if (_Object._.isStatic()) {
-        return new _Object();
-    } else { // return type
-        return _Object;
+    // return
+    return Type;
+};
+const builder = (cfg) => {
+    let _cfg = {};
+    _cfg.config = cfg.config || {};
+    _cfg.config.mixins = cfg.config.mixins || false;
+    _cfg.config.interfaces = cfg.config.interfaces || false;
+    _cfg.config.inheritance = cfg.config.inheritance || false;
+    _cfg.config.singleton = cfg.config.singleton || false;
+    _cfg.config.static = cfg.config.static || false;
+    _cfg.config.func = cfg.config.func || false;
+    _cfg.config.construct = cfg.config.construct || false;
+    _cfg.config.dispose = cfg.config.dispose || false;
+    _cfg.config.prop = cfg.config.prop || false;
+    _cfg.config.storage = cfg.config.storage || false;
+    _cfg.config.event = cfg.config.event || false;
+    _cfg.config.aop = cfg.config.aop || false;
+    _cfg.config.customAttrs = cfg.config.customAttrs || false;
+
+    _cfg.params = cfg.params || {};
+    _cfg.params.typeName = cfg.params.typeName || '';
+    _cfg.params.inherits = cfg.params.inherits || null;
+    _cfg.params.mixinsAndInterfaces = cfg.params.mixinsAndInterfaces || null;
+    _cfg.params.factory = cfg.params.factory || null;
+
+    _cfg.instance = cfg.instance || {};
+    _cfg.instance.type = cfg.instance.type || '';
+    _cfg.instance.mex = cfg.instance.mex || {};
+    
+    _cfg.type = cfg.type || {};
+    _cfg.type.type = cfg.type.type || '';
+    _cfg.type.mex = cfg.type.mex || {};
+
+    // resolve conflicting configurations
+    if (!_cfg.config.func) {
+        _cfg.config.construct = false;
+        _cfg.config.dispose = false;
     }
+    if (!_cfg.config.prop) {
+        _cfg.config.storage = false;
+    }
+    if (!_cfg.config.inheritance) {
+        _cfg.config.singleton = false;
+    }
+    if (!_cfg.config.func && !_cfg.config.prop && !_cfg.config.event) {
+        _cfg.config.aop = false;
+        _cfg.config.customAttrs = false;
+    }
+
+    // base type
+    let _Object = function(_flag, _static, ...args) {
+        // parameters
+        let params = {};
+        if (_cfg.config.inheritance) {
+            if (_cfg.config.static) {
+                params._flag = _flag;
+                params._static = _static;
+                params.args = args;
+            } else {
+                params._flag = _flag;
+                params.args = [_static].concat(args); // treat static as args
+            }
+        } else {
+            params.args = [_flag, _static].concat(args); // treat all as args
+        }
+        // base object
+        let _this = {};
+
+        // build instance
+        return buildTypeInstance(
+            _cfg.instance.type,
+            _Object, 
+            _cfg.params.typeName, 
+            _cfg.instance.mex, 
+            _cfg.params.inherits, 
+            _cfg.params.mixinsAndInterfaces, 
+            _cfg.config, 
+            _this, 
+            _cfg.params.factory, 
+            params
+        );
+    };
+
+    // build type
+    return buildType(
+        _cfg.type.type, 
+        _Object, 
+        _cfg.params.typeName, 
+        _cfg.type.mex, 
+        _cfg.params.inherits, 
+        _cfg.params.mixinsAndInterfaces, 
+        _cfg.config
+    );
 };

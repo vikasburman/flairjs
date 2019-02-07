@@ -37,14 +37,18 @@ flair.Attribute = flair.Class('Attribute', function(attr) {
         }
     });
     
+    this.func('config', {}); // hot to ensure that config
     this.prop('args', []);
-    this.func('decorator', (fn) => {
+    this.func('decorate', (fn) => {
         if (typeof fn === 'function') {
             decoratorFn = fn;
         }
         return decoratorFn;
     });
+
+    // TODO: how to decorate prop, func, evebt seperately
     this.func('resetEventInterface', (source, target) => {
+        // TODO: this should be outside somewhere when applying attribute to the member
         target.subscribe = source.subscribe;
         target.unsubscribe = source.unsubscribe;
         delete source.subscribe;

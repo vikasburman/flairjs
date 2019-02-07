@@ -32,3 +32,26 @@ const which = (def, isFile) => {
 const isArrow = (fn) => {
     return (!(fn).hasOwnProperty('prototype'));
 };
+const findIndexByProp = (arr, propName, propValue) => {
+    return arr.findIndex((item) => {
+        return (item[propName] === propValue ? true : false);
+    });
+};
+const findItemByProp = (arr, propName, propValue) => {
+    let idx = arr.findIndex((item) => {
+        return (item[propName] === propValue ? true : false);
+    });
+    if (idx !== -1) { return arr[idx]; }
+    return null;
+};
+const namesOf = (types) => {
+    let names = [];
+    for(let type of types) {
+        if (type._ && type._.name) { 
+            names.push(type._.name); 
+        } else {
+            throw new _Exception('InvalidArgument', `Argument type is not valid. (${types})`);
+        }
+    }
+    return names;
+};

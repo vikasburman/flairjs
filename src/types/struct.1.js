@@ -35,7 +35,8 @@ const _Struct = (name, mixinsAndInterfaces, factory) => {
     }
 
     // builder config
-    let cfg = {
+    let cfg = {};
+    cfg.config = {
         mixins: true,
         interfaces: true,
         static: true,
@@ -43,19 +44,24 @@ const _Struct = (name, mixinsAndInterfaces, factory) => {
         construct: true,
         prop: true,
         event: true,
-        customAttrs: true,
-        serialize: true,
-        types: {
-            instance: 'sinstance',
-            type: 'struct'
-        },
-        params: {
-            typeName: name,
-            inherits: null,
-            mixinsAndInterfaces: mixinsAndInterfaces,
-            factory: factory
-        }
+        customAttrs: true
     };
+    cfg.params = {
+        typeName: name,
+        inherits: null,
+        mixinsAndInterfaces: mixinsAndInterfaces,
+        factory: factory
+    };
+    cfg.instance = {
+        type: 'sinstance'
+    };
+    cfg.type = {
+        type: 'struct'
+    };
+    cfg.instance.mex = {
+    };
+    cfg.type.mex = {
+    }; 
 
     // return built type
     return builder(cfg);

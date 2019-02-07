@@ -68,7 +68,8 @@ flair.Class = (name, inherits, mixinsAndInterfaces, factory) => {
         event: true,
         storage: true,
         aop: true,
-        customAttrs: true
+        customAttrs: true,
+        serialize: true
     };
     cfg.params = {
         typeName: name,
