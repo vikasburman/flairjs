@@ -55,3 +55,12 @@ const namesOf = (types) => {
     }
     return names;
 };
+const splitAndTrim = (str) => {
+    return str.split(',').map((item) => { return item.trim(); });
+};
+const escapeRegExp = (string) => {
+    return string.replace(/([.*+?\^=!:${}()|\[\]\/\\])/g, '\\$1'); // eslint-disable-line no-useless-escape
+};
+const replaceAll = (string, find, replace) => {
+    return string.replace(new RegExp(escapeRegExp(find), 'g'), replace);
+};   

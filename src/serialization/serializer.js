@@ -17,23 +17,27 @@ flair.Serializer.deserialize = (Type, json) => {
 
 
 flair.Serializer.process = (ctx, source, target, isDeserialize) => {
-    let mappedName = '';
+    // TODO: Fix as per new things
+    // let mappedName = '',
+    //     the_attr = null;
     for(let memberName in ctx) {
-        if (ctx.hasOwnProperty(memberName) && memberName !== '_') {
-            if ((member.isProperty(memberName) &&
-                 member.isSerializable(memberName) &&
-                 !member.isReadOnly(memberName) && 
-                 !member.isStatic(memberName) && 
-                 !member.isPrivate(memberName) && 
-                 !member.isProtected(memberName))) {
-                    the_attr = attrs.get('serialize', memberName);
-                    mappedName = (the_attr ? (the_attr.args[0] || memberName) : memberName);
+    //     if (ctx.hasOwnProperty(memberName) && memberName !== '_') {
+    //         if ((member.isProperty(memberName) &&
+    //              member.isSerializable(memberName) &&
+    //              !member.isReadOnly(memberName) && 
+    //              !member.isStatic(memberName) && 
+    //              !member.isPrivate(memberName) && 
+    //              !member.isProtected(memberName))) {
+    //                 the_attr = attrs.get('serialize', memberName);
+    //                 mappedName = (the_attr ? (the_attr.args[0] || memberName) : memberName);
                     if (isDeserialize) {
                         target[memberName] = source[memberName] || target[memberName];
                     } else {
                         target[memberName] = source[memberName];
                     }
-            }
+    //         }
         }
-    }
+    // }
 };    
+
+const _Serializer = flair.Serializer; // TODO: To fix

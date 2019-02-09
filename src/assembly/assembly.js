@@ -260,3 +260,5 @@ flair.Assembly._ = {
 
 // add to members list
 flair.members.push('Assembly');
+
+const _Assembly = flair.Assembly; // TODO: To fix

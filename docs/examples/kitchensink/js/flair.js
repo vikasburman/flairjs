@@ -3,7 +3,7 @@
  * FlairJS
  * True Object Oriented JavaScript
  * Version 0.15.27
- * Wed, 06 Feb 2019 19:58:19 GMT
+ * Sat, 09 Feb 2019 04:09:02 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  * https://flairjs.com
@@ -41,6 +41,9 @@
         flair = {}, 
         sym = [],
         isTesting = false,
+        isClient = false,
+        isProd = false,
+        isDebug = false,
         noop = () => {},
         options = {};   
 
@@ -81,6 +84,10 @@
         suppressGlobals: (typeof suppressGlobals !== 'undefined' ? opts.suppressGlobals : options.symbols.indexOf('SUPPRESS') !== -1),
         args: (isServer ? process.argv : new window.URLSearchParams(window.location.search))
     });
+    isServer = options.env.isServer;
+    isClient = options.env.isClient;
+    isProd = options.env.isProd;
+    isDebug = options.env.isDebug;
 
     // flair
     flair.info = Object.freeze({
@@ -89,7 +96,7 @@
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
         link: 'https://flairjs.com',
-        lupdate: new Date('Wed, 06 Feb 2019 19:58:19 GMT')
+        lupdate: new Date('Sat, 09 Feb 2019 04:09:02 GMT')
     });
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -126,7 +133,41 @@
         }
         return def; // as is
     };
-    
+    const isArrow = (fn) => {
+        return (!(fn).hasOwnProperty('prototype'));
+    };
+    const findIndexByProp = (arr, propName, propValue) => {
+        return arr.findIndex((item) => {
+            return (item[propName] === propValue ? true : false);
+        });
+    };
+    const findItemByProp = (arr, propName, propValue) => {
+        let idx = arr.findIndex((item) => {
+            return (item[propName] === propValue ? true : false);
+        });
+        if (idx !== -1) { return arr[idx]; }
+        return null;
+    };
+    const namesOf = (types) => {
+        let names = [];
+        for(let type of types) {
+            if (type._ && type._.name) { 
+                names.push(type._.name); 
+            } else {
+                throw new _Exception('InvalidArgument', `Argument type is not valid. (${types})`);
+            }
+        }
+        return names;
+    };
+    const splitAndTrim = (str) => {
+        return str.split(',').map((item) => { return item.trim(); });
+    };
+    const escapeRegExp = (string) => {
+        return string.replace(/([.*+?\^=!:${}()|\[\]\/\\])/g, '\\$1'); // eslint-disable-line no-useless-escape
+    };
+    const replaceAll = (string, find, replace) => {
+        return string.replace(new RegExp(escapeRegExp(find), 'g'), replace);
+    };   
     
     /**
      * @name Exception
@@ -624,21 +665,31 @@
         if (name && typeof name !== 'string' && !_isDerivedFrom(name, 'Attribute')) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
     
         let Attr = null,
-            targets = [];
+            attrInstance = null,
+            cfg = null;
         if (typeof name === 'string') {
-            if (typeof _attr.inbuilt[name] === 'undefined') { // not an inbuilt attr
+            cfg = _attr.inbuilt[name] || null;
+            if (!cfg) { // not an inbuilt attr
                 Attr = _Namespace.getType(name);
                 if (!Attr) { throw new _Exception('NotFound', `Attribute is not found. (${name})`); }
-            } else { // inbuilt attribute
-                targets = _attr.inbuilt[name];
+                name = Attr._.name;
             }
         } else {
-            Attr = name;
+            Attr = name; // the actual Attribute type
             name = Attr._.name;
         }
     
-        // push in its own bucket TODO: Check for duplicate - duplicate not allowed
-        _attr._.bucket.push({name: name, targets: targets, Attr: Attr, args: args});
+        // duplicate check
+        if (findIndexByProp(_attr._.bucket, 'name', name) !== -1) { throw new _Exception('Duplicate', `Duplicate attributes are not allowed. (${name})`); }
+    
+        // custom attribute instance
+        if (Attr) {
+            attrInstance = new Attr(...args);
+            cfg = new _attrConfig(attrInstance.constraints);
+        }
+    
+        // store
+        _attr._.bucket.push({name: name, cfg: cfg, isCustom: (attrInstance !== null), attr: attrInstance, args: args});
     };
     _attr._ = Object.freeze({
         bucket: []
@@ -659,115 +710,88 @@
      * @name attr.Config
      * @description Attribute definition configuration
      * @example
-     *  attr(targets)
-     *  attr(targets, constraints)
+     *  attr(constraints)
+     *  attr(isModifier, constraints)
      * @params
-     *  targets: string - Comma delimited strings having possible target names:
-     *                  prop, func, construct, dispose, event -- if can be applied on these given member types
-     *                  class, struct, enum, interface, mixin, resource -- if can be applied on these given flair types
-     *                  when not found any of the above, it will be treated as name of the type - to help in scenarios
-     *                  where certain attributes are applicable only on certain types, like Assembly or Attribute, etc.
-     *  constraints: string - Comma delimited strings having same names as above with constraint prefixes as:
-     *                  <name> -- must be present together
-     *                  !<name> -- must not be present together
-     *                  @<name> -- must be active 
-     *                  !@<name> -- must not be active
+     *  isModifier: boolean - if this is actually a modifier
+     *  constraints: string - An expression that defined the constraints of applying this attribute 
+     *                        using NAMES, PREFIXES, SUFFIXES and logical Javascript operator
+     * 
+     *                  NAMES can be: 
+     *                      type names: class, struct, enum, interface, mixin, resource
+     *                      type member names: prop, func, construct, dispose, event
+     *                      inbuilt modifier names: static, abstract, sealed, virtual, override, private, protected, readonly, async
+     *                      inbuilt attribute names: promise, singleton, serialize, deprecate, session, state, conditional, noserialize
+     *                      custom attribute names: any registered custom attribute name
+     *                      type names itself: e.g., Assembly, Attribute, etc. (any registered type name is fine)
+     *                          SUFFIX: A typename must have a suffix (^) e.g., Assembly^, Attribute^, etc. Otherwise this name will be treated as custom attribute name
+     *                  
+     *                  PREFIXES can be:
+     *                      No Prefix: means it must match or be present at the level where it is being defined
+     *                      @: means it must be inherited from or present at up in hierarchy chain
+     *                      $: means it either must ne present at the level where it is being defined or must be present up in hierarchy chain
+     *                  <name> 
+     *                  @<name>
+     *                  $<name>
+     * 
+     *                  BOOLEAN Not (!) can also be used to negate:
+     *                  !<name>
+     *                  !@<name>
+     *                  !$<name>
+     *                  
+     *                  NOTE: Constraints are processed as logical boolean expressions and 
+     *                        can be grouped, ANDed or ORed as:
+     * 
+     *                        AND: <name1> && <name2> && ...
+     *                        OR: <name1> || <name2>
+     *                        GROUPING: ((<name1> || <name2>) && (<name1> || <name2>))
+     *                                  (((<name1> || <name2>) && (<name1> || <name2>)) || <name3>)
+     * 
+     * 
      * @constructs Constructs attribute configuration object
      */ 
-    const _attrConfig = function(targets, constraints) {
-        if (typeof targets !== 'string') { throw new _Exception.InvalidArgument('targets'); }
-        if (constraints && typeof constraints !== 'string') { throw new _Exception.InvalidArgument('constraints'); }
-        targets = targets.split(',');
-        constraints = constraints.split(',');
-    
-        // configuration object
-        let _Set = function() {
-            this.types = [];
-            this.typeNames = [];
-            this.members = [];
-        };
-        let _this = new _Set();
-        _this.constraints = {
-            together: {
-                must: new _Set(),
-                mustNot: new _Set()
-            },
-            active: {
-                must: new _Set(),
-                mustNot: new _Set()
-            }
-        };
-    
-        const sortAndStore = (set, name) => {
-            let bucket = null;
-            if (['class', 'struct', 'enum', 'interface', 'mixin', 'resource'].indexOf(name) !== -1) { bucket = set.types;
-            } else if (['prop', 'func', 'event', 'construct', 'dispose'].indexOf(name) !== -1) { bucket = set.members;
-            } else { bucket = set.typeNames; }
-            if (bucket.indexOf(name) !== -1) { throw new _Exception('Duplicate', `Duplicate definitions are not allowed. (${name})`); }
-            bucket.push(name);
-        };
-    
-        // targets
-        for(let target of targets) {
-            if (typeof target !== 'string') { throw new _Exception.InvalidArgument('targets'); }
-            sortAndStore(_this, target.trim());
+    const _attrConfig = function(isModifier, constraints) {
+        if (typeof isModifier === 'string') {
+            constraints = isModifier;
+            isModifier = false;
         }
+        if (typeof constraints !== 'string') { throw new _Exception.InvalidArgument('constraints'); }
     
-        // constraints
-        if (constraints) {
-            let prefix = '',
-                set = null;
-            for(let constraint of constraints) {
-                if (typeof constraint !== 'string') { throw new _Exception.InvalidArgument('constraints'); }
-                constraint = constraint.trim();
-                prefix = constraint.substr(0, 2);
-                if (prefix === '!@') { 
-                    set = _this.constraints.active.mustNot;
-                    constraint = constraint.substr(2);
-                } else {
-                    prefix = constraint.substr(0, 1);
-                    if (prefix === '!') {
-                        set = _this.constraints.together.mustNot; 
-                        constraint = constraint.substr(1);
-                    } else if (prefix === '@') {
-                        set = _this.constraints.active.must; 
-                        constraint = constraint.substr(1);
-                    } else { // any other character - which is part of the name itself
-                        set = _this.constraints.together.must; 
-                    }
-                }
-                sortAndStore(set, constraint);
-                set = null;
-            }    
-        }
+    
+        // config object
+        let _this = {
+            isModifier: isModifier,
+            constraints: constraints
+        };
     
         // return
         return _this;
     };
     _attr.Config = _attrConfig;
     _attr.inbuilt = { 
-        new: new _attrConfig('prop, func, event'),
-        static: new _attrConfig('class, struct, prop, func', '!virtual, !@virtual, !abstract, !@abstract'),
-        abstract: new _attrConfig('class, prop, func, event', '!sealed, !@sealed, !virtual, !@virtual, !override, !@override'),
-        virtual: new _attrConfig('prop, func, event', '!abstract, !@virtual, @abstract'),
-        override: new _attrConfig('prop, func, event', '!@sealed, @virtual'),
-        sealed: new _attrConfig('class, prop, func, event', '!new, @virtual'),
-        singleton: new _attrConfig('class', '!abstract, !@abstract, !static'),
-        mixed: new _attrConfig('prop, func, event'),
-        session: new _attrConfig('prop', '!state, !@state, !readonly, !@readonly, !abstract'),
-        state: new _attrConfig('prop', '!session, !@session, !readonly, !@readonly, !abstract'),
-        readonly: new _attrConfig('prop', '!abstract'),
-        once: new _attrConfig('prop', '!abstract'),
-        conditional: new _attrConfig('prop, func, event'),
-        serialize: new _attrConfig('class, struct, prop', '!abstract, !@abstract'),
+        static: new _attrConfig(true, '((class || struct || prop || func) && !$abstract && !$virtual && !$override)'),
+    
+        abstract: new _attrConfig(true, '((class || struct || prop || func || event) && !$virtual && !$override && !$sealed && !$static)'),
+        virtual: new _attrConfig(true, '(prop || func || event) && !$abstract && !$override && !$sealed && !$static'),
+        override: new _attrConfig(true, '((prop || func || event) && ((@virtual || @abstract) && !virtual && !abstract) && !$sealed, !$static)'),
+        sealed: new _attrConfig(true, '(class || prop || func || event) && override)'), 
+    
+        private: new _attrConfig(true, '(prop || func || event) && !$protected && !@private'),
+        protected: new _attrConfig(true, '(prop || func || event) && !$private'),
+        readonly: new _attrConfig(true, '(prop && !abstract'),
+        async: new _attrConfig(true, 'func'),
+    
+        enumerate: new _attrConfig('prop || func || event'),
+        singleton: new _attrConfig('(class && !$abstract && !$static)'),
+        serialize: new _attrConfig('(class || struct || prop) && !$abstract, !$static'),
+        deprecate: new _attrConfig('(class || struct || enum || interface || mixin || resource || prop || func || event)'),
+        session: new _attrConfig('prop && !$static && !$state && !$readonly && !$abstract && !$virtual'),
+        state: new _attrConfig('prop && !$static && !$session && !$readonly && !$abstract && !$virtual'),
+        conditional: new _attrConfig('prop || func || event'),
         noserialize: new _attrConfig('prop'),
-        private: new _attrConfig('prop, func ,event', '!protected, !@protected'),
-        protected: new _attrConfig('prop, func, event', '!private, !@private'),
-        publish: new _attrConfig('event', '!@publish'),
-        fetch: new _attrConfig('func', 'async, !abstract'),
-        deprecate: new _attrConfig('class, struct, enum, interface, mixin, resource, prop, func, event'),
-        enumerate: new _attrConfig('prop, func, event'),
-        async: new _attrConfig('func')
+    
+        mixed: new _attrConfig('prop || func || event'),
+        event: new _attrConfig('func')
     };
     
     // attach
@@ -999,1163 +1023,766 @@
     // attach
     flair.Channel = _Channel;
     flair.members.push('Channel');
-    const copyMembers = (sources, dest) => {
-        for(let src of sources) {
-            if (src) {
-                for(let item in src) {
-                    if (src.hasOwnProperty(item)) { dest[item] = src[item]; }
+    const attributesAndModifiers = (def, memberName) => {
+        let appliedAttrs = _attr.collect(), // [{name, cfg, attr, args}]
+            attrBucket = null,
+            modifierBucket = null,
+            isTypeLevel = (def.level === 'type'),
+            attrs = attrsRefl(def),
+            modifiers = modifiersRefl(def);
+        if (isTypeLevel) {
+            attrBucket = def.typeDef().attrs.type;
+            modifierBucket = def.typeDef().modifiers.type;
+        } else {
+            attrBucket = def.attrs.members[memberName] = []; // create bucket
+            modifierBucket = def.modifiers.members[memberName] = []; // create bucket
+        }
+    
+        // validator
+        const validator = (appliedAttr) => {
+            let result = false,
+                _supportedTypes = ['class', 'struct', 'enum', 'interface', 'mixin', 'resource'],
+                _supportedMembers = ['prop', 'func', 'construct', 'dispose', 'event'],
+                _supportedModifiers = ['static', 'abstract', 'sealed', 'virtual', 'override', 'private', 'protected', 'readonly', 'async'],
+                _list = [], // { withWhat, matchType, original, name, value }
+                dump = [],
+                constraintsLex = appliedAttr.constraints; // logical version with filled booleans
+    
+            // extract names
+            const sortAndStore = (match) => {
+                let item = {
+                    withWhat: '',
+                    matchType: '',
+                    original: match,
+                    name: '',
+                    value: false
+                };
+    
+                // which type of match
+                switch(match.substr(0, 1)) { 
+                    case '$': 
+                        item.matchType = 'anywhere';
+                        item.name = match.substr(1);
+                        break;
+                    case '@':
+                        item.matchType = 'inherited';
+                        item.name = match.substr(1);
+                        break;
+                    default:
+                        item.matchType = 'current';
+                        item.name = match;
+                        break;
+                }
+    
+                // match with what
+                if (match.endsWith('^')) { // type name
+                    item.withWhat = 'typeName';
+                    item.name = item.name.replace('^', ''); // remove ^
+                } else { // members, types, modifiers or attributes
+                    if (_supportedTypes.indexOf(item.name) !== -1) {
+                        item.withWhat = 'typeType';
+                        item.matchType = 'current'; // match type in this case is always taken as current
+                    } else if (_supportedMembers.indexOf(item.name) !== -1) {
+                        item.withWhat = 'memberType';
+                        item.matchType = 'current'; // match type in this case is always taken as current
+                    } else if (_supportedModifiers.indexOf(item.name) !== 0-1) {
+                        item.withWhat = 'modifier';
+                    } else { // inbuilt or custom attribute name
+                        item.withWhat = 'attribute';
+                    }
+                }
+    
+                // store
+                _list.push(item);
+            }; 
+            const extractConstraints = () => {
+                // select everything except these !, &, |, (, and )
+                let rex = new RegExp('/[^!\&!|()]/g'), // eslint-disable-line no-useless-escape
+                match = '';
+                while(true) { // eslint-disable-line no-constant-condition
+                    match = rex.exec(constraintsLex);
+                    if (match !== null) { dump.push(match); continue; }
+                    break; 
+                }
+                match = '';
+                for(let char of dump) {
+                    if (char[0] !== ' ') { 
+                        match+= char[0]; 
+                    } else {
+                        if (match !== '') { sortAndStore(match); }
+                        match = '';
+                    }
+                }
+            };    
+            extractConstraints(); // this will populate _list
+    
+            // get true/false value of each item in expression
+            for(let item of _list) {
+                switch(item.withWhat) {
+                    case 'typeName':
+                        switch(item.matchType) {
+                            case 'anywhere':
+                                item.value = ((item.name === memberName) || def.Type._.isDerivedFrom(item.name)); break;
+                            case 'inherited':
+                                item.value = def.Type._.isDerivedFrom(item.name); break;
+                            case 'current':
+                                item.value = (item.name === memberName); break;
+                        }
+                        break;
+                    case 'typeType':
+                        // matchType is always 'current' in this case 
+                        item.value = (def.types.type === item.name); 
+                        break;
+                    case 'memberType':
+                        // matchType is always 'current' in this case 
+                        item.value = (def.members[memberName] === item.name);
+                        break;
+                    case 'modifier':
+                        // call to configured probe's anywhere, inherited or current function
+                        item.value = (modifiers.members.probe(item.name, memberName)[item.matchType]() ? true : false);
+                        break;
+                    case 'attribute':
+                        // call to configured probe's anywhere, inherited or current function
+                        item.value = (attrs.members.probe(item.name, memberName)[item.matchType]() ? true : false);
+                        break;
+                }
+                constraintsLex = replaceAll(constraintsLex, item.original, item.value.toString());
+            }
+            
+            // validate expression
+            result = (new Function("try {return constraintsLex;}catch(e){return false;}"))();
+            if (!result) {
+                // TODO: send telemetry of _list, so it can be debugged
+                throw new _Exception('InvalidOperation', `${appliedAttr.cfg.isModifier ? 'Modifier' : 'Attribute'} ${appliedAttr.name} could not be applied. (${memberName})`);
+            }
+    
+            // return
+            return result;
+        };
+    
+        // validate and collect
+        for (let appliedAttr of appliedAttrs) {
+            if (validator(appliedAttr)) {
+                if (appliedAttr.isCustom) { // custom attribute instance
+                    attrBucket.push(appliedAttr);
+                } else { // inbuilt attribute or modifier
+                    if(appliedAttr.cfg.isModifier) { 
+                        modifierBucket.push(appliedAttr);
+                    } else {
+                        attrBucket.push(appliedAttr);
+                    }
                 }
             }
         }
-        return dest;
     };
-    const extractMixinsAndInterfaces = (mixinsAndInterfaces) => {
-        let result = {
-            mixins: [],
-            interfaces: []
+    const modifiersRefl = (def) => {
+        const probe = (modifierName, memberName) => {
+            let _probe = {
+                anywhere: () => {
+                    return modifiers.get(modifierName, memberName) || modifiers.get(modifierName, memberName, true); 
+                },
+                current: () => {
+                    return modifiers.get(modifierName, memberName); 
+                },
+                inherited: () => {
+                    return modifiers.get(modifierName, memberName, true); 
+                },
+                only: {
+                    current: () => {
+                        return modifiers.get(modifierName, memberName) && !modifiers.get(modifierName, memberName, true); 
+                    },
+                    inherited: () => {
+                        return !modifiers.get(modifierName, memberName) && modifiers.get(modifierName, memberName, true); 
+                    }
+                }
+            };
+            return _probe;
         };
-        for(let item of mixinsAndInterfaces) {
-            switch (item._.type) {
-                case 'mixin': result.mixins.push(item); break;
-                case 'interface': result.interfaces.push(item); break;
+        let modifiers = {
+            get: (modifierName, memberName, isCheckInheritance) => {
+                let isTypeLevel = (def.level === 'type'),
+                    result = null;
+                if (isTypeLevel) {
+                    if (!isCheckInheritance) {
+                        result = findItemByProp(def.typeDef().modifiers.type, 'name', modifierName);
+                    } else {
+                        // check from parent onwards, keep going up till find it or hierarchy ends
+                        let previousDef = def.previous();
+                        while(true) { // eslint-disable-line no-constant-condition
+                            if (previousDef === null) { break; }
+                            result = findItemByProp(previousDef.modifiers.type, 'name', modifierName);
+                            if (!result) { 
+                                previousDef = previousDef.previous();
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    if (!isCheckInheritance) {
+                        result = findItemByProp(def.modifiers.members[memberName], 'name', modifierName);
+                    } else {
+                        // check from parent onwards, keep going up till find it or hierarchy ends
+                        let previousDef = def.previous();
+                        while(true) { // eslint-disable-line no-constant-condition
+                            if (previousDef === null) { break; }
+                            result = findItemByProp(previousDef.modifiers.members[memberName], 'name', modifierName);
+                            if (!result) { 
+                                previousDef = previousDef.previous();
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                }
+                return result; // {name, cfg, attr, args}
+            },
+            has: (modifierName, memberName, isCheckInheritance) => {
+                return modifiers.get(modifierName, memberName, isCheckInheritance) !== null;
+            },
+            type: {
+                get: (modifierName, isCheckInheritance) => {
+                    return modifiers.get(modifierName, true, isCheckInheritance);
+                },
+                has: (modifierName, isCheckInheritance) => {
+                    return modifiers.has(modifierName, true, isCheckInheritance);
+                },
+                all: (isJustName) => {
+                    if (isJustName) {
+                        return def.modifiers.type.map(item => item.name);
+                    } else {
+                        return def.modifiers.type.slice();
+                    }
+                }            
+            },
+            members: {
+                get: modifiers.get,
+                has: modifiers.has,
+                all: (memberName, isJustName) => {
+                    if (isJustName) {
+                        return def.modifiers.members[memberName].map(item => item.name);
+                    } else {
+                        return def.modifiers.members[memberName].slice();
+                    }
+                },            
+                probe: probe,
+                is: (modifierName, memberName) => {
+                    // it applied modifiers' relative logic to identify 
+                    // if specified member is of that type depending upon
+                    // modifier definitions on current and previous levels
+                    let _probe = probe(modifierName, memberName); // local
+                    switch(modifierName) {
+                        case 'static': 
+                            return _probe.anywhere(); 
+                        case 'abstract':
+                            return _probe.anywhere() && !(probe.anywhere('virtual', memberName) || probe.anywhere('override', memberName)); 
+                        case 'virtual':
+                            return _probe.anywhere() && !probe.anywhere('override', memberName); 
+                        case 'override':
+                            return _probe.anywhere() && !probe.anywhere('sealed', memberName); 
+                        case 'sealed':
+                            return _probe.anywhere(); 
+                        case 'private':
+                            return _probe.anywhere(); 
+                        case 'protected':
+                            return _probe.anywhere(); 
+                        case 'readonly':
+                            return _probe.anywhere(); 
+                        case 'async':
+                            return _probe.anywhere(); 
+                    }
+                }
             }
-        }
-        return result;
+        };
+        return modifiers;
     };
-    const buildTypeInstance = (type, Type, typeName, mex, inherits, mixinsAndInterfaces, cfg, obj, factory, params) => {
-        // singleton instance, if already created
-        if (cfg.singleton && Type._.singleInstance()) {
-            return Type._.singleInstance();
-        }
+    const attrsRefl = (def) => {
+        const probe = (attrName, memberName) => {
+            let _probe = {
+                anywhere: () => {
+                    return attrs.get(attrName, memberName) || attrs.get(attrName, memberName, true); 
+                },
+                current: () => {
+                    return attrs.get(attrName, memberName); 
+                },
+                inherited: () => {
+                    return attrs.get(attrName, memberName, true); 
+                },
+                only: {
+                    current: () => {
+                        return attrs.get(attrName, memberName) && !attrs.get(attrName, memberName, true); 
+                    },
+                    inherited: () => {
+                        return !attrs.get(attrName, memberName) && attrs.get(attrName, memberName, true); 
+                    }
+                }
+            };  
+            return _probe;      
+        };    
+        let attrs = {
+            get: (attrName, memberName, isCheckInheritance) => {
+                let isTypeLevel = (def.level === 'type'),
+                    result = null; 
+                if (isTypeLevel) {
+                    if (!isCheckInheritance) {
+                        result = findItemByProp(def.typeDef().attrs.type, 'name', attrName);
+                    } else {
+                        // check from parent onwards, keep going up till find it or hierarchy ends
+                        let previousDef = def.previous();
+                        while(true) { // eslint-disable-line no-constant-condition
+                            if (previousDef === null) { break; }
+                            result = findItemByProp(previousDef.attrs.type, 'name', attrName);
+                            if (!result) { 
+                                previousDef = previousDef.previous();
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    if (!isCheckInheritance) {
+                        result = findItemByProp(def.attrs.members[memberName], 'name', attrName);
+                    } else {
+                        let previousDef = def.previous();
+                        while(true) { // eslint-disable-line no-constant-condition
+                            if (previousDef === null) { break; }
+                            result = findItemByProp(previousDef.attrs.members[memberName], 'name', attrName);
+                            if (!result) { 
+                                previousDef = previousDef.previous();
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                }
+                return result; // {name, cfg, attr, args}
+            },
+            has: (attrName, memberName, isCheckInheritance) => {
+                return attrs.get(attrName, memberName, isCheckInheritance) !== null;
+            },
+            type: {
+                get: (attrName, isCheckInheritance) => {
+                    return attrs.get(attrName, true, isCheckInheritance);
+                },
+                has: (attrName, isCheckInheritance) => {
+                    return attrs.has(attrName, true, isCheckInheritance);
+                },
+                all: (isJustName) => {
+                    if (isJustName) {
+                        return def.attrs.type.map(item => item.name);
+                    } else {
+                        return def.attrs.type.slice();
+                    }
+                }
+            },
+            members: {
+                get: attrs.get,
+                has: attrs.has,
+                all: (memberName, isJustName) => {
+                    if (isJustName) {
+                        return def.attrs.members[memberName].map(item => item.name);
+                    } else {
+                        return def.attrs.members[memberName].slice();
+                    }
+                },
+                probe: probe
+            }
+        };
+        return attrs;
+    };
+    const buildTypeInstance = (cfg, Type, params, obj) => {
+        if (cfg.singleton && params.isTopLevelInstance && Type._.singleInstance()) { return Type._.singleInstance(); }
     
         // define vars
         let _noop = noop,
             exposed_obj = {},
             mixin_being_applied = null,
-            mixins = [],
-            interfaces = [],
-            typeArgs = [],
-            staticInterface = Type, // Type itself is the static interface
-            isNeedProtected = false,
-            theFlag = '__flag__',
-            _typeMetaMemberName = '____type',
             _constructName = '_construct',
             _disposeName = '_dispose',
-            def = {},
-            meta = null,
-            props = null,
-            events = null,
+            _props = {}, // plain property values storage inside this closure
+            def = { 
+                name: cfg.params.typeName,
+                type: cfg.types.type, // the type of the type itself: class, struct, etc.
+                Type: Type,
+                level: 'object',
+                position: 0, // gets set based on its position added in hierarchy
+                types: {
+                    members: {} // each named item here defines the type of member: func, prop, event, construct, etc.
+                },
+                attrs: { 
+                    members: {} // each named item array in here will have: {name, cfg, attr, args}
+                },
+                modifiers: {
+                    members: {} // each named item array in here will have: {name, cfg, attr, args}
+                },
+                typeDef: () => { return Type._.def(); },
+                previous: () => {
+                    return def.position !== 0 ? obj._.hierarchy[def.position - 1] : null;
+                }
+            },
             proxy = null,
             isBuildingObj = false,
             _sessionStorage = _Port('sessionStorage'),
             _localStorage = _Port('localStorage');
     
-        const member = {
-            isSpecial: (memberName) => {
-                return [_constructName, _disposeName, _typeMetaMemberName, '_'].indexOf(memberName) !== -1;
-            },
-            isConditional: (memberName) => {
-                return attrs.has('conditional', memberName);
-            },
-            isDefined: (memberName) => {
-                let result = false,
-                    i = 0,
-                    hierarchy = obj._.instanceOf.slice().reverse(); // start looking from last item first
-                for(let item of hierarchy) {
-                    if (i !== 0) { // skip first item, which is current level
-                        if (item.meta[memberName]) { result = true; break; }
-                    }
-                    i++;
-                }
-                return result;
-                // NOTE: Consideration pending - what if a private/protected member defined with same name in some parent type?
-            },
-            isOwn: (memberName) => {
-                return typeof meta[memberName] !== 'undefined';
-            },
-            type: (memberName) => {
-                let result = '';
-                if (typeof meta[memberName] !== 'undefined') {
-                    result = meta[memberName].type;
-                } else {
-                    for(let instance of obj._.instanceOf) {
-                        if (instance.meta[memberName]) {
-                            result = instance.meta[memberName].type;
-                            break;
-                        }
-                    }
-                }
-                return result;                        
-            },
-            isProperty: (memberName) => {
-                return member.type(memberName) === 'prop';
-            },
-            isEvent: (memberName) => {
-                return member.type(memberName) === 'event';
-            },
-            isFunction: (memberName) => {
-                return member.type(memberName) === 'func';
-            },
-            attrs: (memberName) => {
-                if (meta[memberName]) {
-                    return meta[memberName].slice();
-                }
-                return [];
-            },
-            meta: (memberName) => {
-                return meta[memberName] || [];
-            },
-            isSerializable: (memberName) => {
-                return attrs.has('serialize', memberName);
-            },
-            isReadOnly: (memberName) => {
-                return attrs.has('readonly', memberName);
-            },
-            isStatic: (memberName) => {
-                return attrs.has('static', memberName);
-            },
-            isSealed: (memberName) => {
-                return attrs.has('sealed', memberName);
-            },
-            isPrivate: (memberName) => {
-                return attrs.has('private', memberName);
-            },
-            isProtected: (memberName) => {
-                return attrs.has('protected', memberName);
-            },
-            isDerived: (memberName) => {
-                if (member.isOwn(memberName)) { return false; }
-                return (obj._.instanceOf.findIndex((item) => {
-                    return (item.meta[memberName] ? true : false);
-                }) !== -1);
-            },
-            isHidden: (memberName) => {
-                return attrs.has('hide', memberName);
-            }
-        };
-        const attrs = {
-            get: (attrName, memberName, isDeepCheck, isIgnoreCurrent) => {
-                let foundAttr = null,
-                    hierarchy = obj._.instanceOf.slice().reverse(); // start looking from last item first
-                if (isDeepCheck) {
-                    if (isIgnoreCurrent) { hierarchy.shift(); } // remove top (current) one
-                } else {
-                    hierarchy = [hierarchy[0]]; // current meta
-                }
-                for(let item of hierarchy) {
-                    if (item.meta[memberName]) {
-                        for(let attrItem of item.meta[memberName]) {
-                            if (attrItem.name === attrName) {
-                                foundAttr = attrItem;
-                                break;
-                            }
-                        }
-                        if (foundAttr) { break; }
-                    }
-                }
-                return foundAttr; 
-            },
-            has: (attrName, memberName, isDeepCheck, isIgnoreCurrent) => {
-                return (attrs.get(attrName, memberName, isDeepCheck, isIgnoreCurrent) ? true : false);
-            },
-            getArgs: (attrName, memberName, isDeepCheck, isIgnoreCurrent) => {
-                let foundAttr = attrs.get(attrName, memberName, isDeepCheck, isIgnoreCurrent);
-                return (foundAttr ? foundAttr.args : []);
-            }
-        };
-        const funcs = {
-            getParentMeta: (memberName) => {
-                let item = obj._.instanceOf[obj._.instanceOf.length - 1]; // immediate parent
-                return item.meta[memberName] || null;
-            },
-            isConditionalOK: (memberName) => {
-                let isOK = true,
-                    attrArgs = attrs.getArgs('conditional', memberName, false),
-                    condition = (attrArgs.length > 0 ? attrArgs[0] : '');
-                if (condition) {
-                    switch(condition) {
-                        case 'server':
-                            isOK = (options.env.isServer === true); break;
-                        case 'client':
-                            isOK = (options.env.isServer === false); break;
-                        default:
-                            isOK = options.symbols.indexOf(condition) !== -1; break;
-                    }
-                } 
-                return isOK;
-            },    
-            collectTypeAttributes: () => {
-                meta[_typeMetaMemberName] = _attr.collect(); // collect and clear for next bunch on next member
-            },         
-            applyAttrs: (memberName) => {
-                // TODO: Check Targets, 
-                let Attr = null,
-                    targetType = meta[memberName].type,
-                    attrArgs = null,
-                    attrInstance = null,
-                    decorator = null;
-                for(let info of meta[memberName]) {
-                    Attr = info.Attr;
-                    if (Attr) {
-                        attrArgs = info.args || [];
-                        attrInstance = new Attr(...attrArgs);
-                        decorator = attrInstance.decorator(); // get decorator function
-                        if (typeof decorator === 'function') {
-                            let desc = Object.getOwnPropertyDescriptor(obj, memberName);
-                            decorator(obj, targetType, memberName, desc);
-                            Object.defineProperty(obj, memberName, desc);
-                        } else {
-                            throw new _Exception('NotDefined', `Decorator is not defined for applied attribute. (${info.name})`);
-                        }
-                    } else {
-                        // this could be an inbuilt attribute which are handled differently
-                    }
-                }
-            },
-            isArrow: (fn) => {
-                return (!(fn).hasOwnProperty('prototype'));
-            },
-            guid: guid,
-            addInstanceMeta: () => {
-                // general meta information   
-                obj._ = funcs.copyMembers([obj._, mex], {}); 
-                obj._.type = type;
-                obj._.Type = () => { return obj._.instanceOf[obj._.instanceOf.length - 1].type; };
-                obj._.namespace = null;
-                obj._.assembly = () => { return flair.Assembly.get(typeName) || null; };
-                obj._.id = funcs.guid();
-    
-                // hierarchy information (even if inheritance is not configured)
-                // when inheritance is not supported, it will have only two entries - one for Object and second for the type itself
-                obj._.instanceOf = obj._.instanceOf || [];
-                if (obj._.instanceOf.length === 0) { // nothing is defined as yet
-                    obj._.instanceOf.push(funcs.topLevelObjectDef()); // everything inherits from Object
-                }
-                obj._.instanceOf.push(def); // whatever is defined
-                obj._.isInstanceOf = (name) => {
-                    if (!name) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
-                    if (name._ && name._.name) { name = name._.name; } 
-                    return (obj._.instanceOf.findIndex((item) => { return item.name === name; }) !== -1);
-                };
-                
-                // serialization support
-                if (cfg.serialize) {
-                    obj._.serialize = () => {
-                        return funcs.processJson(obj, {});
-                    };
-                    obj._.deserialize = (json) => {
-                        funcs.processJson(json, obj, true);
-                    };    
-                }
-    
-                // mixins support
-                if (cfg.mixins) {
-                    obj._.isMixed = (name) => {
-                        if (!name) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
-                        if (name._ && name._.name) { name = name._.name; } 
-                        let result = false;
-                        for (let item of obj._.instanceOf) {
-                            for(let _mixin of item.mixins) {
-                                if (_mixin._.name === name) {
-                                    result = true; break;
-                                }
-                                if (result) { break; }
-                            }
-                        }
-                        return result;                    
-                    };        
-                }
-    
-                // interface support
-                if (cfg.interfaces) {
-                    obj._.isImplements = (name) => {
-                        if (!name) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
-                        if (name._ && name._.name) { name = name._.name; } 
-                        let result = false;
-                        for (let item of obj._.instanceOf) {
-                            for(let _interface of item.interfaces) {
-                                if (_interface._.name === name) {
-                                    result = true; break;
-                                }
-                                if (result) { break; }
-                            }
-                        }
-                        return result;                    
-                    };        
-                }
-    
-                // for internal member's and attrs reflector support
-                obj._._ = {};
-                obj._._.raw = (name) => {
-                    if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
-                    if (meta[name] && meta[name].raw) { return meta[name].raw; }
-                    return null;
-                };  
-                obj._._.member = member;
-                obj._._.attrs = attrs;
-                obj._._.type = types;
-    
-            },
-            buildDef: () => {
-                def = { 
-                    name: typeName,
-                    type: Type,
-                    meta: {},
-                    mixins: mixins,
-                    interfaces: interfaces,
-                    props: {},
-                    events: []
-                };
-                
-                // handy shortcuts for current definition
-                meta = def.meta;
-                props = def.props;
-                events = def.events;
-            },
-            topLevelObjectDef: () => {
-                return { 
-                    name: 'Object',
-                    type: Object,
-                    meta: {},
-                    mixins: mixins,
-                    interfaces: interfaces,
-                    props: {},
-                    events: []
-                };
-            },
-            extractMixinsAndInterfaces: () => {
-                let result = extractMixinsAndInterfaces(mixinsAndInterfaces);
-                mixins = result.mixins;
-                interfaces = result.interfaces;
-            },
-            copyMembers: copyMembers,
-            processJson: (source, target, isDeserialize) => {
-                let mappedName = '';
-                for(let memb in obj) {
-                    if (obj.hasOwnProperty(memb)) {
-                        if ((member.type(memb) === 'prop') &&
-                            member.isSerializable(memb) &&
-                            !member.isReadOnly(memb) && 
-                            !member.isStatic(memb) && 
-                            !member.isPrivate(memb) && 
-                            !member.isProtected(memb) && 
-                            !member.isSpecial(memb)) {
-                                mappedName = attrs.getArgs('serialize', memb, true)[0] || memb;
-                                if (isDeserialize) {
-                                    target[memb] = source[mappedName] || target[memb];
-                                } else {
-                                    target[mappedName] = source[memb];
-                                }
-                        }
-                    }
-                }
-            },
-            applyAspects: (funcName, funcAspects) => {
-                let fn = obj[funcName],
-                    before = [],
-                    after = [],
-                    around = [],
-                    instance = null,
-                    _fn = null;
-    
-                // collect all advices
-                for(let funcAspect of funcAspects) {
-                    instance = new funcAspect();
-                    _fn = instance.before(); if (typeof _fn === 'function') { before.push(_fn); }
-                    _fn = instance.around(); if (typeof _fn === 'function') { around.push(_fn); }
-                    _fn = instance.after(); if (typeof _fn === 'function') { after.push(_fn); }
-                }
-    
-                // around weaving
-                if (around.length > 0) { around.reverse(); }
-    
-                // weaved function
-                let weavedFn = function(...args) {
-                    let error = null,
-                        result = null,
-                        ctx = {
-                            obj: () => { return obj; },
-                            typeName: () => { return typeName; },
-                            funcName: () => { return funcName; },
-                            error: (err) => { if (err) { error = err; } return error;  },
-                            result: (value) => { if (typeof value !== 'undefined') { result = value; } return result; },
-                            args: () => { return args; },
-                            data: {}
-                        };
-                    
-                    // run before functions
-                    for(let beforeFn of before) {
-                        try {
-                            beforeFn(ctx);
-                        } catch (err) {
-                            error = err;
-                        }
-                    }
-    
-                    // after functions executor
-                    const runAfterFn = (_ctx) =>{
-                        for(let afterFn of after) {
-                            try {
-                                afterFn(_ctx);
-                            } catch (err) {
-                                ctx.error(err);
-                            }
-                        }
-                    };
-    
-                    // run around func
-                    let newFn = fn,
-                        isASync = false, // eslint-disable-line no-unused-vars
-                        _result = null;
-                    for(let aroundFn of around) { // build a nested function call having each wrapper calling an inner function wrapped inside advices' functionality
-                        newFn = aroundFn(ctx, newFn);
-                    }                    
-                    try {
-                        _result = newFn(...args);
-                        if (_result && typeof _result.then === 'function') {
-                            isASync = true,
-                            ctx.result(new Promise((__resolve, __reject) => {
-                                _result.then((value) => {
-                                    ctx.result(value);
-                                    runAfterFn(ctx);
-                                    __resolve(ctx.result());
-                                }).catch((err) => {
-                                    ctx.error(err);
-                                    runAfterFn(ctx);
-                                    __reject(ctx.error());
-                                });
-                            }));
-                        } else {
-                            ctx.result(_result);
-                            runAfterFn(ctx);
-                        }
-                    } catch (err) {
-                        ctx.error(err);
-                    }
-    
-                    // return
-                    return ctx.result();
-                }.bind(obj);
-    
-                // done
-                return weavedFn;
-            },       
-            weave: () => {
-                // validate
-                if (['Attribute', 'Aspect'].indexOf(typeName) !== -1) { return; } // these are base types related to this functionality
-                if (obj._.isInstanceOf('Attribute') || obj._.isInstanceOf('Aspect')) { return; }
-    
-                let funcAspects = [];
-                for(let memb in meta) {
-                    if (meta.hasOwnProperty(memb) && meta[memb].type === 'func' && !member.isSpecial(memb)) {
-                        funcAspects = flair.Aspects(typeName, memb, meta[memb]);
-                        if (funcAspects.length > 0) {
-                            meta[memb].aspects = funcAspects.slice();
-                            Object.defineProperty(obj, memb, {
-                                configurable: true,
-                                enumerable: true,
-                                writable: true,
-                                value: funcs.applyAspects(memb, funcAspects)
+        const applyCustomAttributes = (memberName, memberType) => {
+            for(let appliedAttr of attrs.members.all(memberName)) {
+                if (appliedAttr.isCustom) { // custom attribute instance
+                    if (memberType === 'prop') {
+                        let desc = Object.getOwnPropertyDescriptor(obj, memberName);
+                        let newSet = appliedAttr.attr.decorate(memberName, memberType, desc.get, desc.set); // set must return a object with get and set members
+                        if (newSet.get && newSet.set) {
+                            Object.defineProperty(obj, memberName, {
+                                configurable: true, enumerable: true,
+                                get: newSet.get.bind(obj),
+                                set: newSet.set.base(obj)
                             });
-                        }
-                    }
-                }
-            },
-            constructObj: () => {
-                // construction logic
-                typeArgs = params.args;
-                if (cfg.inheritance) {
-                    if (params._flag && params._flag === theFlag) {
-                        isNeedProtected = true;
-                        if (cfg.static) {
-                            staticInterface = params._static; // redefine to being the same type of parent class
-                        }                    
-                    }
-                    // create parent instance
-                    let Parent = Type._.inherits;
-                    if (Parent) {
-                        if (Parent._.isSealed() || Parent._.isSingleton()) {
-                            throw new _Exception('InvalidOperation', `Cannot inherit from a sealed/singleton type. (${Parent._.name})`); 
-                        }
-                        if (Parent._.type !== Type._.type) {
-                            throw new _Exception('InvalidOperation', `Cannot inherit from another type. (${Parent._.name})`); 
-                        }
-                        obj = new Parent(theFlag, staticInterface, ...typeArgs); // obj reference is now parent object
-                    }
-                }
-            },
-            buildObj: () => {
-                // building started
-                isBuildingObj = true;
-    
-                // clean syntax definition approach using proxy
-                // trapping all set definitions and routing them to relevant
-                // handlers
-                proxy = new Proxy({}, {
-                    get: (_obj, prop) => {
-                        return obj[prop];
-                    },
-                    set: (_obj, prop, value) => {
-                        if (isBuildingObj) {
-                            if (prop === 'construct') {
-                                if (cfg.construct) {
-                                    helpers._construct(value);
-                                } else {
-                                    throw new _Exception('InvalidOperation', `Constructor cannot be defined on this type. (${typeName})`);
-                                }
-                            } else if (prop === 'dispose') {
-                                if (cfg.dispose) {
-                                    helpers._dispose(value);
-                                } else {
-                                    throw new _Exception('InvalidOperation', `Dispose cannot be defined on this type. (${typeName})`);
-                                }
-                            } else if (['func', 'prop', 'event'].indexOf(prop) !== -1) {
-                                throw new _Exception('InvalidOperation', `Inbuilt helper functions cannot be reassigned. (${prop})`);
-                            } else {
-                                if (typeof value === 'function') { // function or event
-                                    if (_attr.has('event')) {
-                                        if (cfg.event) {
-                                            helpers._event(prop, value);
-                                        } else {
-                                            throw new _Exception('InvalidOperation', `Event cannot be defined on this type. (${typeName})`);
-                                        }
-                                    } else { // function
-                                        if (cfg.func) {
-                                            helpers._func(prop, value);
-                                        } else {
-                                            throw new _Exception('InvalidOperation', `Function cannot be defined on this type. (${typeName})`);
-                                        }
-                                    }
-                                } else { // property
-                                    if (cfg.prop) {
-                                        helpers._prop(prop, value);
-                                    } else {
-                                        throw new _Exception('InvalidOperation', `Property cannot be defined on this type. (${typeName})`);
-                                    }
-                                }
-                            }
                         } else {
-                            if (typeof obj[prop] === 'function' && typeof value === 'function') { // a function or event is being redefined
-                                throw new _Exception('InvalidOperation', `Redefinition of members at runtime is not allowed. (${prop})`);
+                            throw new _Exception('Unexpected', `${appliedAttr.name} decoration result is unexpected. (${memberName})`);
+                        }
+                    } else { // func or event
+                        let newFn = appliedAttr.attr.decorate(memberName, memberType, obj[memberName]);
+                        if (newFn) {
+                            Object.defineProperty(obj, memberName, {
+                                configurable: true, enumerable: true,
+                                value: newFn.bind(obj)
+                            });                        
+                        } else {
+                            throw new _Exception('Unexpected', `${appliedAttr.name} decoration result is unexpected. (${memberName})`);
+                        }
+                    }
+    
+                    // now since attribute is applied, this attribute instance is of no use,
+                    appliedAttr.attr = null;
+                }
+            }           
+        };
+        const applyAspects = () => {
+            // when not on base types of this functionality itself
+            if (['Aspect'].indexOf(cfg.params.typeName) === -1 && !obj._.isInstanceOf('Aspect')) { 
+                let weavedFn = null,
+                    funcAspects = [];
+                for(let memberName in def.types.members) {
+                    if (def.types.members.hasOwnProperty(memberName) && def.types.members[memberName] === 'func' && !memberName.startsWith('_')) {
+                        // get aspects that are applicable for this function
+                        funcAspects = _Aspects.get(cfg.params.typeName, memberName, attrs.members.all(memberName, true));
+                        def.aspects.members[memberName] = funcAspects; // store for reference
+                        
+                        // apply these aspects
+                        if (funcAspects.length > 0) {
+                            weavedFn = _Aspects.attach(obj[memberName], def.name, memberName, funcAspects); 
+                            if (weavedFn) {
+                                Object.defineProperty(obj, memberName, {
+                                    configurable: true, enumerable: true,
+                                    value: weavedFn.bind(obj)
+                                });
                             }
-    
-                            // allow setting property values
-                            obj[prop] = value;
-                        }
-                        return true;
-                    }
-                });
-    
-                // construct using factory
-                factory.apply(proxy);
-    
-                // abstract consideration
-                if (cfg.inheritance) {
-                    if (params._flag !== theFlag && types.isAbstract()) {
-                        throw new _Exception('InvalidOperation', `Cannot create instance of an abstract type. (${typeName})`); 
-                    }            
-                }
-    
-                // apply mixins
-                if (cfg.mixins) {
-                    for(let mixin of mixins) {
-                        if (mixin._.type === 'mixin') {
-                            mixin_being_applied = mixin;
-                            mixin.apply(proxy);
-                            mixin_being_applied = null;
-                        }
-                    }            
-                }    
-     
-                // building ends
-                isBuildingObj = false;
-            },
-            processConstructor: () => {
-                if (typeof obj[_constructName] === 'function') {
-                    obj._.constructing = true;
-                    obj[_constructName](...typeArgs);
-                    obj._.construct = obj[_constructName];
-                    delete obj[_constructName];
-                    delete obj._.constructing;
-                }
-            },
-            processDestructor: () => {
-                if (typeof obj[_disposeName] === 'function') {
-                    obj._.dispose = obj[_disposeName];
-                    delete obj[_disposeName];
-                }
-            },
-            buildExposedObj: () => {
-                // build
-                let isCopy = false,
-                    doCopy = (memberName) => {
-                        Object.defineProperty(exposed_obj, memberName, Object.getOwnPropertyDescriptor(obj, memberName));
-                    };
-    
-                // copy system member
-                doCopy('_');
-                
-                // copy other members
-                for(let memberName in obj) {
-                    isCopy = false;
-                    if (obj.hasOwnProperty(memberName)) {
-                        isCopy = true;
-                        if (member.isOwn(memberName)) {
-                            if (member.isPrivate(memberName)) { isCopy = false; }
-                            if (isCopy && (member.isProtected(memberName) && !isNeedProtected)) { isCopy = false; }
-                        } else {  // some derived member (protected or public) OR some directly added member
-                            if (member.isProtected(memberName) && !isNeedProtected) { isCopy = false; }
-                            if (isCopy && !member.isDerived(memberName)) { isCopy = false; } // some directly added member
                         }
                     }
-                    if (cfg.hide) { if (isCopy && member.isHidden(memberName)) { isCopy = false; } }
+                }
+            }   
+        };
+        const buildExposedObj = () => {
+            let isCopy = false,
+            doCopy = (memberName) => { Object.defineProperty(exposed_obj, memberName, Object.getOwnPropertyDescriptor(obj, memberName)); };
+            
+            // copy meta member
+            doCopy('_'); 
+            
+            // copy other members
+            for(let memberName in obj) { 
+                isCopy = false;
+                if (obj.hasOwnProperty(memberName)) { 
+                    isCopy = true;
+                    if (def.members[memberName]) { // member is defined here
+                        if (modifiers.members.probe('private', memberName).current()) { isCopy = false; }   // private members don't get out
+                        if (isCopy && (modifiers.members.probe('protected', memberName).current() && !params.isNeedProtected)) { isCopy = false; } // protected don't go out of top level instance
+                    } else { // some derived member (protected or public)
+                        if (modifiers.members.probe('protected', memberName).anywhere() && !params.isNeedProtected) { isCopy = false; } // protected don't go out of top level instance
+                    }
                     if (isCopy) { doCopy(memberName); }
     
+                    // any abstract member should not left unimplemented now
+                    if (isCopy && modifiers.members.is('abstract', memberName)) {
+                        throw new _Exception('InvalidDefinition', `Abstract member is not implemented. (${memberName})`);
+                    }
+    
+                    // apply enumerate attribute now
+                    if (isCopy) {
+                        let the_attr = attrs.members.probe('enumerate', memberName).current();
+                        if (the_attr && the_attr.args[0] === false) { // if attr('enumerate', false) is defined
+                            let desc = Object.getOwnPropertyDescriptor(exposed_obj, memberName);
+                            desc.enumerable = false;
+                            Object.defineProperty(exposed_obj, memberName, desc);
+                        } // else by default it is true anyways
+                    }
+    
                     // rewire event definition when at the top level object creation step
-                    if (isCopy && !isNeedProtected && member.isEvent(memberName)) {
+                    if (isCopy && !params.isNeedProtected && obj[memberName].type === 'event') { // this .type is a temp flag, till the time rewiring is not done
                         exposed_obj[memberName].rewire(exposed_obj);
                     }
                 }
-    
-                // sealed attribute for members are handled at the end
-                for(let memberName in exposed_obj) {
-                    if (!member.isSpecial(memberName) && member.isOwn(memberName) && member.isSealed(memberName)) {
-                        Object.defineProperty(exposed_obj, memberName, {
-                            configurable: false
-                        });
-                    }
-                }            
-            },
-            validateInterfaces: () => {
-                for(let _interface of interfaces) {
-                    for(let _memberName in _interface) {
-                        if (_interface.hasOwnProperty(_memberName) && _memberName !== '_') {
-                            let _member = _interface[_memberName],
-                                _type = typeof exposed_obj[_memberName];
-                            if (_type === 'undefined') { throw new _Exception('NotDefined', `Interface (${_interface._.name}) member is not defined. (${_memberName})`); }
-                            switch(_member.type) {
-                                case 'func':
-                                    if (_type !== 'function') { throw new _Exception('NotDefined', `Interface (${_interface._.name}) member is not defined as a function. (${_memberName})`); } 
-                                    if (meta[_memberName].interfaces.indexOf(_interface) === -1) { meta[_memberName].interfaces.push(_interface); }
-                                    break;
-                                case 'prop':
-                                    if (_type === 'function') { throw new _Exception('NotDefined', `Interface (${_interface._.name}) member is not defined as a property. (${_memberName})`); }
-                                    if (meta[_memberName].interfaces.indexOf(_interface) === -1) { meta[_memberName].interfaces.push(_interface); }
-                                    break;
-                                case 'event':
-                                    if (_type !== 'function' || typeof exposed_obj[_memberName].subscribe !== 'function') { throw new _Exception('NotDefined', `Interface (${_interface._.name}) member is not defined as an event. (${_memberName})`); }
-                                    if (meta[_memberName].interfaces.indexOf(_interface) === -1) { meta[_memberName].interfaces.push(_interface); }
-                                    break;
-                            }
-                        }
-                    }
-                }
-            },
-            storeObjects: () => {
-                obj._.pu = (isNeedProtected ? null : exposed_obj);
-                obj._.pr = (isNeedProtected ? null : obj);
-            },
-            storeInstance: () => {
-                Type._.isSingleton = () => { return true; };
-                Type._.singleInstance = () => { return Object.freeze(exposed_obj); }; // assume it sealed as well
-                Type._.singleInstance.clear = () => { 
-                    Type._.singleInstance = () => { return null; };
-                    Type._.isSingleton = () => { return false; };
-                };
-            },
-            setTypeSealed: () => {
-                Type._.isSealed = () => { return true; };
             }
         };
-        const types = {
-            isSingleton: () => {
-                return attrs.has('singleton', _typeMetaMemberName);
-            },
-            isAbstract: () => {
-                return attrs.has('abstract', _typeMetaMemberName);
-            },
-            isSealed: () => {
-                return attrs.has('sealed', _typeMetaMemberName);
-            }
-        };
-        const helpers = {
-            _func: (name, fn) => {
-                if (!name) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
-                if (typeof name === 'function') { fn = name; name = _constructName; } // constructor shorthand definition
-                if (name === '_') { new _Exception('InvalidName', `Name is not valid. (${name})`); }
-    
-                if (!fn) { fn = _noop; } // just a placeholder function
-    
-                // pick mixin being applied at this time
-                if (cfg.mixins) {        
-                    if (mixin_being_applied !== null) {
-                        _attr('mixed', mixin_being_applied);
+        const validateInterfaces = () => {
+            for(let _interfaceType of def.interfaces.types) { 
+                // an interface define members just like a type
+                // with but its function and event will be noop and
+                // property values will be null
+                let _interface = new _interfaceType(), // so we get to read members of interface
+                    _interfaceInternalDef = _interface._.hierarchy.Current();
+                for(let _memberName in _interface) {
+                    if (_interface.hasOwnProperty(_memberName) && _memberName !== '_') {
+                        if (exposed_obj[_memberName]) {
+                            let _interfaceMemberType = _interfaceInternalDef.types.members[_memberName],
+                                _memberTypeHere = def.types.members[_memberName];
+                            if (_interfaceMemberType !== _memberTypeHere) { throw new _Exception('NotDefined', `Interface (${_interface._.name}) member is not defined as ${_interfaceMemberType}. (${_memberName})`); }
+                        }
                     }
                 }
-    
-                // collect attributes
-                meta[name] = _attr.collect(); // collect and clear for next bunch on next member
-                meta[name].type = 'func';
-                if (cfg.aop) {
-                    meta[name].aspects = []; // which all aspects are applied to this func
+            }
+        };
+        const validateMemberDefinitionFeasibility = (memberName, memberType, memberDef) => {
+            let result = false;
+            // conditional check
+            let the_attr = attrs.members.get('conditional', memberName);
+            if (the_attr) {
+                let conditions = splitAndTrim(the_attr.args[0] || []);
+                for (let condition of conditions) {
+                    if (condition === 'test' && isTesting) { result = true; break; }
+                    if (condition === 'server' && isServer) { result = true; break; }
+                    if (condition === 'client' && isClient) { result = true; break; }
+                    if (condition === 'debug' && isDebug) { result = true; break; }
+                    if (condition === 'prod' && isProd) { result = true; break; }
+                    if (options.symbols.indexOf(condition) !== -1) { result = true; break; }
                 }
-                if (cfg.interfaces) {
-                    meta[name].interfaces = []; // to which all interfaces this func complies to
-                }        
-    
-                // constructor check
-                if (!cfg.construct && name === _constructName) {
-                    throw new _Exception('InvalidOperation', `A constructor function cannot be defined on this type. (${name})`);
-                }
-    
-                // destructor check
-                if (!cfg.dispose && name === _disposeName) {
-                    throw new _Exception('InvalidOperation', `A dispose function cannot be defined on this type. (${name})`);
-                }
-    
-                // conditional check
-                if (cfg.conditional) {
-                    if (!funcs.isConditionalOK(name)) { delete meta[name]; return; }
-                }
-    
-                // override check
-                let isDefinedHere = false,
-                    _theFn = null;
-                if (cfg.inheritance) {
-                    if (attrs.has('override', name)) {
-                        // check to find what to override
-                        let desc = Object.getOwnPropertyDescriptor(obj, name);
-                        if (!desc || typeof desc.value !== 'function') { 
-                            throw new _Exception('InvalidOperation', `Function is not found to override. (${name})`); 
-                        }
-    
-                        // double check that it is actually defined in hierarchy
-                        if (!member.isDefined(name)) {
-                            throw new _Exception('InvalidOperation', `Function is not found to override. (${name})`); 
-                        }
-    
-                        // check if in parent it is not sealed
-                        if (attrs.has('sealed', name, true, true)) {
-                            throw new _Exception('InvalidOperation', `Cannot override a sealed function. (${name})`); 
-                        }
+                if (!result) { return result; } // don't go to define, yet leave meta as is, so at a later stage we know that this was conditional and yet not available, means condition failed
+            }
             
-                        // check for static
-                        if (cfg.static) {
-                            if (attrs.has('static', name, true, true)) {
-                                throw new _Exception('InvalidOperation', `Cannot override a static function. (${name})`); 
-                            }
-                        }
+            // abstract check
+            if (cfg.inheritance && attrs.members.probe('abstract', memberName).current() && memberDef !== _noop && (memberDef.get && memberDef.get !== _noop)) {
+                throw new _Exception('InvalidDefinition', `Abstract member must point to noop function. (${memberName})`);
+            }
     
-                        // redefine
-                        let base = obj[name].bind(obj);
-                        _theFn = function(...args) {
-                            let fnArgs = [base].concat(args); // run fn with base as first parameter
-                            if (funcs.isArrow(fn)) { // arrow function
-                                return fn(...fnArgs);
-                            } else { // normal func
-                                return fn.apply(obj, fnArgs);
-                            }
-                        }.bind(obj);
-                        isDefinedHere = true;
-                    } 
-                } else {
-                    // duplicate check
-                    if (cfg.duplicate) {
-                        if (member.isDefined(name)) { 
-                            throw new _Exception('InvalidOperation', `A member with this name is already defined. (${name})`); 
-                        }
+            // overriding member must be present
+            if (cfg.inheritance && attrs.members.probe('override', memberName).current() && typeof obj[memberName] === 'undefined') {
+                throw new _Exception('InvalidOperation', `Member not found to override. (${memberName})`); 
+            }
+            
+            // duplicate check, if not overriding
+            if ((!cfg.inheritance || (cfg.inheritance && !attrs.members.probe('override', memberName).current())) && typeof obj[memberName] !== 'undefined') {
+                throw new _Exception('InvalidOperation', `Member with this name is already defined. (${memberName})`); 
+            }
+    
+            // static members cannot be arrow functions and properties cannot have custom getter/setter
+            if (cfg.static && attrs.members.probe('static', memberName).current()) {
+                if (memberType === 'func') {
+                    if (isArrow(memberDef)) { 
+                        throw new _Exception('InvalidOperation', `Static functions cannot be defined as an arrow function. (${memberName})`); 
+                    }
+                } else if (memberType === 'prop') {
+                    if (memberDef.get && typeof memberDef.get === 'function') {
+                        throw new _Exception('InvalidOperation', `Static properties cannot be defined with a custom getter/setter. (${memberName})`); 
                     }
                 }
-                
-                // define fresh if not already defined
-                if (!isDefinedHere) {
-                    if (cfg.static) {
-                        if (attrs.has('static', name)) {
-                            // shared (static) copy bound to staticInterface
-                            // so with 'this' it will be able to access only static properties
-                            if (funcs.isArrow(fn)) {
-                                throw new _Exception('InvalidOperation', `Static functions must not be defined as arrow function. (${name})`);
-                            }
-                            _theFn = function(...args) {
-                                return fn.apply(staticInterface, args);
-                            }.bind(staticInterface);
-                            
-                            // define
-                            if (!staticInterface[name]) {
-                                staticInterface[name] = _theFn;
-                            }
-                            isDefinedHere = true;
-                        }
-                    }
-                }
-                if (!isDefinedHere) { // normal func
-                    _theFn = function(...args) {
-                        if (funcs.isArrow(fn)) {
-                            return fn(...args);
-                        } else { // function
-                            return fn.apply(obj, args);
-                        }
-                    }.bind(obj);
-                }
+            }
     
-                // define on object, even if this is static func, this will
-                // ensure consistency, the only diff is that static function runs in context of
-                // static interface as 'this' as opposed to obj being 'this' for instance func
-                Object.defineProperty(obj, name, {
-                    configurable: true,
-                    enumerable: true,
-                    value: _theFn
-                });
-    
-                // apply custom attributes
-                if (cfg.customAttrs) {
-                    funcs.applyAttrs(name);
+            // session/state properties cannot have custom getter/setter and also relevant port must be configured
+            if (cfg.storage && attrs.members.probe('session', memberName).current()) {
+                if (memberDef.get && typeof memberDef.get === 'function') {
+                    throw new _Exception('InvalidOperation', `Session properties cannot be defined with a custom getter/setter. (${memberName})`); 
                 }
-                
-                // finally hold the references for reflector
-                meta[name].ref = obj[name];
-                meta[name].raw = fn;
+                if (!_sessionStorage) { throw new _Exception('NotConfigured', 'Port is not configured. (sessionStorage)'); }
+            }
+            if (cfg.storage && attrs.members.probe('state', memberName).current()) {
+                if (memberDef.get && typeof memberDef.get === 'function') {
+                    throw new _Exception('InvalidOperation', `State properties cannot be defined with a custom getter/setter. (${memberName})`); 
+                }
+                if (!_localStorage) { throw new _Exception('NotConfigured', 'Port is not configured. (localStorage)'); }
+            }
+    
+            // return (when all was a success)
+            return result;
+        };
+        const buildProp = (memberName, memberDef) => {
+            let _member = {
+                get: null,
+                set: null
             },
-            _construct: (fn) => {
-                helpers._func(_constructName, fn);
-            },
-            _dispose: (fn) => {
-                helpers._func(_disposeName, fn);
-            },
-            _prop: (name, valueOrGetterOrGetSetObject, setter) => {
-                if (!name || typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
-                if (member.isSpecial(name)) { throw new _Exception('NotAllowed', `Special names are now allowed as property name. (${name})`); }
-                if (typeof valueOrGetterOrGetSetObject === 'undefined' && typeof setter === 'undefined') { valueOrGetterOrGetSetObject = null; } // default value is null
+            _getter = _noop,
+            _setter = _noop,
+            _isReadOnly = attrs.members.probe.anywhere('readonly', memberName),
+            propHost = null,
+            uniqueName = def.name + '_' + memberName,
+            isStorageHost = false;        
     
-                // pick mixin being applied at this time
-                if (cfg.mixins) {        
-                    if (mixin_being_applied !== null) {
-                        _attr('mixed', mixin_being_applied);
-                    }
+            // define or redefine
+            if (memberDef.get || memberDef.set) {
+                if (memberDef.get && typeof memberDef.get === 'function') {
+                    _getter = memberDef.get;
                 }
-    
-                // collect attributes
-                meta[name] = _attr.collect(); // collect and clear for next bunch on next member
-                meta[name].type = 'prop';
-                if (cfg.aop) {
-                    meta[name].aspects = []; // which all aspects are applied to this prop
+                if (memberDef.set && typeof memberDef.set === 'function') {
+                    _setter = memberDef.set;
                 }
-                if (cfg.interfaces) {
-                    meta[name].interfaces = []; // to which all interfaces this prop complies to
-                }        
-    
-                // conditional check
-                if (cfg.conditional) {
-                    if (!funcs.isConditionalOK(name)) { delete meta[name]; return; }
+                _member.get = function() {
+                    if (isArrow(_getter)) { return _getter(); } else { return _getter.apply(obj); }
+                }.bind(obj);
+                _member.set = function(value) {
+                    if (_isReadOnly) { // readonly props can be set only when object is being constructed 
+                        if (!obj._.constructing) { throw new _Exception('InvalidOperation', `Property is readonly. (${memberName})`); }
+                    }
+                    if (isArrow(_setter)) { return _setter(value); } else { return _setter.apply(obj, [value]); }
+                }.bind(obj);            
+            } else { // direct value
+                if (cfg.static && attrs.members.probe.anywhere('static', memberName)) {
+                    propHost = params.staticInterface;
                 }
-    
-                // check for abstract
-                if (cfg.inheritance) {
-                    if (attrs.has('abstract', name)) {
-                        throw new _Exception('InvalidOperation', `A property cannot be defined as abstract. (${name})`); 
-                    }
+                if (!propHost && cfg.storage && attrs.probe.anywhere('session', memberName)) {
+                    propHost = _sessionStorage;
+                    isStorageHost = true;
                 }
-    
-                // override check
-                // when overriding a property, it can only be redefined completely
-                if (cfg.inheritance) {
-                    if (attrs.has('override', name)) {
-                        // check to find what to override
-                        let desc = Object.getOwnPropertyDescriptor(obj, name);
-                        if (!desc || typeof desc.value !== 'function') { 
-                            throw new _Exception('InvalidOperation', `Property is not found to override. (${name})`); 
-                        }
-    
-                        // double check that it is actually defined in hierarchy
-                        if (!member.isDefined(name)) {
-                            throw new _Exception('InvalidOperation', `Property is not found to override. (${name})`); 
-                        }
-    
-                        // check if in parent it is not sealed
-                        if (attrs.has('sealed', name, true, true)) {
-                            throw new _Exception('InvalidOperation', `Cannot override a sealed property. (${name})`); 
-                        }
-                        
-                        // check for static
-                        if (cfg.static) {
-                            if (attrs.has('static', name, true, true)) {
-                                throw new _Exception('InvalidOperation', `Cannot override a static property. (${name})`); 
-                            }
-                        }
-                    }
-                } else {
-                    // duplicate check
-                    if (cfg.duplicate) {
-                        if (member.isDefined(name)) { 
-                            throw new _Exception('InvalidOperation', `A member with this name is already defined. (${name})`); 
-                        }
-                    }
+                if (!propHost && cfg.storage && attrs.probe.anywhere('state', memberName)) {
+                    propHost = _localStorage;
+                    isStorageHost = true;
                 }
-                
-                // define or redefine
-                if (valueOrGetterOrGetSetObject && (typeof valueOrGetterOrGetSetObject === 'function' || typeof valueOrGetterOrGetSetObject.get === 'function')) { // getter function
-                    if (cfg.static) {
-                        if (attrs.has('static', name)) { throw new _Exception('InvalidOperation', `Static properties cannot be defined with a custom getter/setter. (${name})`); }
-                    }
-                    if (cfg.storage) {
-                        if (attrs.has('session', name) || attrs.has('state', name)) { throw new _Exception('InvalidOperation', `Session/State properties cannot be defined with a custom getter/setter. (${name})`); }
-                    }
-                    
-                    // getter/setters
-                    let _getter = null,
-                        __setter = null,
-                        _setter = null;
-                    if (typeof valueOrGetterOrGetSetObject === 'function') { 
-                        _getter = valueOrGetterOrGetSetObject; 
-                    } else {
-                        _getter = valueOrGetterOrGetSetObject.get; 
-                    }
-                    if (typeof setter === 'function') { 
-                        __setter = setter; 
-                    } else if (valueOrGetterOrGetSetObject.set && typeof valueOrGetterOrGetSetObject.set === 'function') {
-                        __setter = valueOrGetterOrGetSetObject.set; 
-                    } else {
-                        __setter = _noop;
-                    }
-                    if (cfg.readonly) {            
-                        if (attrs.has('readonly', name)) {
-                            _setter = (value) => {
-                                // readonly props can be set only - either when object is being constructed 
-                                // OR if 'once' is applied, and value is not already set
-                                if (obj._.constructing || (attrs.has('once', name) && !_getter())) { return __setter(value); }
-                                throw new _Exception('InvalidOperation', `Property is readonly. (${name})`); 
-                            };
-                        } else {
-                            _setter = __setter;
+                if (!propHost) { // regular property
+                    uniqueName = memberName;
+                    propHost = _props;
+                }
+                if(propHost) {
+                    if (isStorageHost) {
+                        if (!propHost.key(uniqueName)) { 
+                            propHost.setKey(uniqueName, JSON.stringify({value: memberDef})); 
                         }
                     } else {
-                        _setter = __setter;
-                    }
-                    
-                    // define
-                    Object.defineProperty(obj, name, { 
-                        configurable: true,
-                        enumerable: true,
-                        get: _getter,
-                        set: _setter
-                    });
-                } else { // some direct value
-                    let propHost = null,
-                        uniqueName = '',
-                        isStorageHost = false,
-                        _getter = null,
-                        _setter = null;
-                    
-                    if (cfg.static) {
-                        if (attrs.has('static', name)) { 
-                            uniqueName = name;
-                            if (cfg.storage) {
-                                if (attrs.has('session', name, true) || attrs.has('state', name, true)) {
-                                    throw new _Exception('InvalidOperation', `A static property cannot be stored in session/state. (${name})`); 
-                                }
-                            }
-                            propHost = staticInterface;
-                            if (!propHost[uniqueName]) { 
-                                propHost[uniqueName] = valueOrGetterOrGetSetObject; // shared (static) copy
-                            }
-                        }
-                    } 
-    
-                    if (cfg.storage) {
-                        if (attrs.has('session', name, true) && attrs.has('state', name, true)) {
-                            throw new _Exception('InvalidOperation', `Both session and state attributes cannot be applied together. (${name})`); 
-                        }
-                        uniqueName = typeName + '_' + name;
-    
-                        if (attrs.has('session', name, true)) {
-                            if (!_sessionStorage) { throw new _Exception('NotConfigured', 'Port is not configured. (sessionStorage)'); }
-                            propHost = _sessionStorage;
-                            isStorageHost = true;
-                        } 
-                        if (attrs.has('state', name, true)) {
-                            if (!_localStorage) { throw new _Exception('NotConfigured', 'Port is not configured. (localStorage)'); }
-                            propHost = _localStorage;
-                            isStorageHost = true;
-                        }                
-                        if (!propHost.key(uniqueName)) { // define only when not already defined (may be by some other instance of same type)
-                            propHost.setKey(uniqueName, JSON.stringify({value: valueOrGetterOrGetSetObject})); 
+                        if (typeof propHost[uniqueName] === 'undefined') {
+                            propHost[uniqueName] = memberDef; 
                         }
                     }
-    
-                    if (!propHost) { // regular property
-                        uniqueName = name;
-                        propHost = props;
-                        propHost[uniqueName] = valueOrGetterOrGetSetObject; // private copy
-                    }
-    
-                    // getter/setter
-                    _getter = () => {
+                    _member.get = function() {
                         if (isStorageHost) { 
                             return JSON.parse(propHost.getKey(uniqueName)).value; 
                         }
-                        return propHost[uniqueName];
-                    };
-                    if (attrs.has('readonly', name, true)) {
-                        _setter = (value) => {
-                            // readonly props can be set only - either when object is being constructed 
-                            // OR if 'once' is applied, and value is not already set
-                            if (obj._.constructing || (attrs.has('once', name, false) && !_getter())) { 
-                                if (isStorageHost) {
-                                    propHost.setKey(uniqueName, JSON.stringify({value: value}));
-                                } else {
-                                    propHost[uniqueName] = value;
-                                }
-                            } else {
-                                throw new _Exception('InvalidOperation', `Property is readonly. (${name})`); 
-                            }
-                        };                
-                    } else {
-                        _setter = (value) => {
-                            if (isStorageHost) { 
-                                propHost.setKey(uniqueName, JSON.stringify({value: value}));
-                            } else {
-                                propHost[uniqueName] = value;
-                            }
-                        };
-                    }
-                    
-                    // define
-                    Object.defineProperty(obj, name, {
-                        configurable: true,
-                        enumerable: true,
-                        get: _getter,
-                        set: _setter
-                    });
-                }
-    
-                // apply custom attributes
-                if (cfg.customAttrs) {
-                    funcs.applyAttrs(name);
-                }
-    
-                // finally hold the references for reflector
-                meta[name].ref = {
-                    get: () => { return obj[name]; },
-                    set: (value) => { obj[name] = value; }
-                };
-            },
-            _event: (name, argsProcessor) => {
-                if (!name || typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
-                if (argsProcessor && typeof argsProcessor !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (argsProcessor)'); }
-                if (member.isSpecial(name)) { throw new _Exception('NotAllowed', `Special names are now allowed as event name. (${name})`); }
-    
-                // pick mixin being applied at this time
-                if (cfg.mixins) {        
-                    if (mixin_being_applied !== null) {
-                        funcs.attr('mixed', mixin_being_applied);
-                    }
-                }
-    
-                // collect attributes
-                meta[name] = _attr.collect(); // collect and clear for next bunch on next member
-                meta[name].type = 'event';
-                if (cfg.aop) {
-                    meta[name].aspects = []; // which all aspects are applied to this event
-                }
-                if (cfg.interfaces) {
-                    meta[name].interfaces = []; // to which all interfaces this event complies to
-                }
-    
-                // conditional check
-                if (cfg.conditional) {
-                    if (!funcs.isConditionalOK(name)) { delete meta[name]; return; }
-                }
-    
-                // check for static
-                if (cfg.static) {
-                    if (attrs.has('static', name)) {
-                        throw new _Exception('InvalidOperation', `An event cannot be defined as static. (${name})`); 
-                    }
-                }
-    
-                // check for abstract
-                if (cfg.inheritance) {
-                    if (attrs.has('abstract', name)) {
-                        throw new _Exception('InvalidOperation', `An event cannot be defined as abstract. (${name})`); 
-                    }
-                }
-    
-                // args processor
-                meta[name].argsProcessor = argsProcessor || null; // store as is
-    
-                // override check
-                if (cfg.inheritance) {
-                    if (attrs.has('override', name)) {
-                        // check to find what to override
-                        let desc = Object.getOwnPropertyDescriptor(obj, name);
-                        if (!desc || typeof desc.value !== 'function') { 
-                            throw new _Exception('InvalidOperation', `Event is not found to override. (${name})`); 
+                        return propHost[uniqueName];                
+                    }.bind(obj);
+                    _member.set = function(value) {
+                        if (_isReadOnly) { // readonly props can be set only when object is being constructed 
+                            if (!obj._.constructing) { throw new _Exception('InvalidOperation', `Property is readonly. (${memberName})`); }
                         }
-    
-                        // double check that it is actually defined in hierarchy
-                        if (!member.isDefined(name)) {
-                            throw new _Exception('InvalidOperation', `Event is not found to override. (${name})`); 
+                        if (isStorageHost) {
+                            propHost.setKey(uniqueName, JSON.stringify({value: value}));
+                        } else {
+                            propHost[uniqueName] = value;
                         }
+                    }.bind(obj);
+                }
+            }
     
-                        // check if in parent it is not sealed
-                        if (attrs.has('sealed', name, true, true)) {
-                            throw new _Exception('InvalidOperation', `Cannot override a sealed event. (${name})`); 
-                        }
+            // return
+            return _member;
+        };
+        const buildFunc = (memberName, memberDef) => {
+            let _member = null,
+                bindedHost = null,
+                base = null,
+                fnArgs = null,
+                isStaticMember = false;
     
-                        // override args processor of immediate parent, if available
-                        let parentMeta = funcs.getParentMeta(name),
-                            base = parentMeta ? parentMeta.argsProcessor : null;
+            // override, if required
+            if (cfg.inheritance && attrs.has('override', memberName)) {
+                bindedHost = obj;
+                base = obj[memberName].bind(obj);
+            }
+    
+            // shared (static) copy bound to staticInterface
+            // so with 'this' it will be able to access only static properties
+            if (!bindedHost && cfg.static && attrs.has('static', memberName)) {
+                bindedHost = params.staticInterface;
+                isStaticMember = true;
+            }
+    
+            // normal
+            if (!bindedHost) { 
+                bindedHost = obj;
+            }
+            
+            // define call wrapper
+            if (modifiers.has('async', memberName)) {
+                _member = function(...args) {
+                    return new Promise(function(resolve, reject) {
                         if (base) {
-                            if (argsProcessor) {
-                                meta[name].argsProcessor = function(...args) { // redefine as wrapped
-                                    let fnArgs = [base].concat(args); // run fn with base as first parameter
-                                    if (funcs.isArrow(argsProcessor)) { // arrow function
-                                        return argsProcessor(...fnArgs);
-                                    } else { // normal func
-                                        return argsProcessor.apply(obj, fnArgs);
-                                    }
-                                };
-                            } else {
-                                meta[name].argsProcessor = base; // use base args processor itself
-                            }
+                            fnArgs = [base, resolve, reject].concat(args); 
+                        } else {
+                            fnArgs = [resolve, reject].concat(args); 
                         }
-                }
-                } else {
-                    // duplicate check
-                    if (cfg.duplicate) {
-                        if (member.isDefined(name)) { 
-                            throw new _Exception('InvalidOperation', `A member with this name is already defined. (${name})`); 
-                        }
+                        if (isArrow(memberDef)) { return memberDef(...fnArgs); } else { return memberDef.apply(bindedHost, fnArgs); }
+                    }.bind(bindedHost));
+                }.bind(bindedHost);                 
+            } else {
+                _member = function(...args) {
+                    if (base) {
+                        fnArgs = [base].concat(args); 
+                    } else {
+                        fnArgs = args; 
                     }
-                }
+                    if (isArrow(memberDef)) { return memberDef(...fnArgs); } else { return memberDef.apply(bindedHost, fnArgs); }
+                }.bind(bindedHost);                  
+            }
     
-                // current argsProcessor (overridden, base or normal)
-                argsProcessor = meta[name].argsProcessor;
+            // define on static interface
+            if (cfg.static && isStaticMember && !bindedHost[memberName]) {
+                bindedHost[memberName] = _member;
+            }
     
-                // define or redefine
-                let _event = {};
-                _event._ = Object.freeze({
+            // return
+            return _member;
+        };
+        const buildEvent = (memberName, memberDef) => {
+            let _member = null,
+                argsProcessorFn = null;
+    
+            // override, if required
+            if (cfg.inheritance && attrs.has('override', memberName)) {
+                // wrap for base call
+                let base = obj[memberName].bind(obj);
+                _member = function(...args) {
+                    let fnArgs = [base].concat(args); // run fn with base as first parameter
+                    if (isArrow(memberDef)) { return memberDef(...fnArgs); } else { return memberDef.apply(obj, fnArgs); }
+                }.bind(obj);
+            }
+       
+            // normal
+            if (!_member) { 
+                _member = function(...args) {
+                    if (isArrow(memberDef)) { return memberDef(...args); } else { return memberDef.apply(obj, args); }
+                }.bind(obj);
+            }
+    
+            if (params.isTopLevelInstance) { // add event interface only on top level instance
+                argsProcessorFn = _member; 
+                _member = {};
+                _member._ = Object.freeze({
                     subscribers: []
                 });
-                _event.subscribe = (fn) => {
+                _member.subscribe = (fn) => {
                     if (typeof fn !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (fn)'); }
-                    _event._.subscribers.push(fn);
+                    _member._.subscribers.push(fn);
                 };
-                _event.subscribe.all = () => {
-                    return _event._.subscribers.slice();
+                _member.subscribe.all = () => {
+                    return _member._.subscribers.slice();
                 };
-                _event.unsubscribe = (fn) => {
+                _member.unsubscribe = (fn) => {
                     if (typeof fn !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (fn)'); }
-                    let index = _event._.subscribers.indexOf(fn);
-                    if (index !== -1) { _event._.subscribers.splice(index, 1); }
+                    let index = _member._.subscribers.indexOf(fn);
+                    if (index !== -1) { _member._.subscribers.splice(index, 1); }
                 };
-                _event.unsubscribe.all = () => {
-                    _event._.subscribers.length = 0; // remove all
+                _member.unsubscribe.all = () => {
+                    _member._.subscribers.length = 0; // remove all
                 };
-                _event.raise = (...args) => {
+                _member.raise = function(...args) {
                     // preprocess args
                     let processedArgs = {};
-                    if (typeof argsProcessor === 'function') { processedArgs = argsProcessor(...args); }
+                    if (typeof argsProcessorFn === 'function') { processedArgs = argsProcessorFn(...args); }
             
                     // define event arg
                     let e = {
@@ -2165,12 +1792,12 @@
                     };
             
                     // raise event
-                    for(let handler of _event._.subscribers) {
+                    for(let handler of _member._.subscribers) {
                         handler(e);
                         if (e.stop) { break; }
                     }
-                };
-                _event.rewire = (targetObj) => {
+                }.bind(obj);
+                _member.rewire = (targetObj) => {
                     // internal method that does not make outside, this is called
                     // during exposed object building process to rewire event either as an object
                     // or as a function - for external world it is an object without the ability of being
@@ -2188,113 +1815,411 @@
                     delete targetObj[name].raise;
                     delete targetObj[name].rewire;
                 }
-                events.push(_event);
-    
-                // define
-                Object.defineProperty(obj, name, {
-                    configurable: true,
-                    enumerable: true,
-                    writable: true,
-                    value: _event
-                });
-    
-                // apply custom attributes
-                if (cfg.customAttrs) {
-                    funcs.applyAttrs(name);
-                }            
-    
-                // finally hold the reference for reflector
-                meta[name].ref = obj[name];
+            } else {
+                // put a temp flag, so at the time of exposing the object, it can be identified
+                _member.type = 'event';
             }
+    
+            // return
+            return _member;
         };
+        const addMember = (memberName, memberType, memberDef) => {
+            if (['func', 'prop', 'event'].indexOf(memberType) !== -1 && memberName.startsWith('_')) { new _Exception('InvalidName', `Name is not valid. (${memberName})`); }
+            switch(memberType) {
+                case 'func':
+                    if (!cfg.func) { throw new _Exception('InvalidOperation', `Function cannot be defined on this type. (${def.name})`); }
+                    break;
+                case 'prop':
+                    if (!cfg.prop) { throw new _Exception('InvalidOperation', `Property cannot be defined on this type. (${def.name})`); }
+                    break;
+                case 'event':
+                    if (!cfg.event) { throw new _Exception('InvalidOperation', `Event cannot be defined on this type. (${def.name})`); }
+                    break;
+                case 'construct':
+                    if (!cfg.construct) { throw new _Exception('InvalidOperation', `Constructor cannot be defined on this type. (${def.name})`); }
+                    memberType = 'func'; 
+                    break;
+                case 'dispose':
+                    if (!cfg.dispose) { throw new _Exception('InvalidOperation', `Dispose cannot be defined on this type. (${def.name})`); }
+                    memberType = 'func'; 
+                    break;
+            }
     
-        // build def object
-        funcs.buildDef();
+            // set/update member meta
+            def.types.members[memberName] = memberType;
+            def.attrs.members[memberName] = [];
+            def.modifiers.members[memberName] = [];
+            if (cfg.aop) {
+                def.aspects = {
+                    members: {} // each named item array in here will have: [aspect type]
+                };
+            }
     
-        // separate mixins and interfaces
-        if (cfg.mixins || cfg.interfaces) {
-            funcs.extractMixinsAndInterfaces();
+            // pick mixin being applied at this time
+            if (cfg.mixins) {        
+                if (mixin_being_applied !== null) {
+                    _attr('mixed', mixin_being_applied);
+                }
+            }
+    
+            // collect attributes and modifiers - validate applied attributes as per attribute configuration - throw when failed
+            attributesAndModifiers(def, memberName);
+    
+            // validate feasibility of member definition - throw when failed
+            if (!validateMemberDefinitionFeasibility(memberName, memberType, memberDef)) { return; } // skip defining this member
+    
+            // member type specific logic
+            let memberValue = null;
+            switch(memberType) {
+                case 'func':
+                    memberValue = buildFunc(memberName, memberDef);
+                    if (!((cfg.static && attrs.has('static', memberName)))) { // if static  don't define on this interface, its defined on static interface already
+                        Object.defineProperty(obj, memberName, {
+                            configurable: true, enumerable: true,
+                            value: memberValue
+                        });
+                    }
+                    break;
+                case 'prop':
+                    memberValue = buildProp(memberName, memberDef);
+                    if (!(cfg.static && attrs.has('static', memberName))) { // if static  don't define on this interface, its defined on static interface already
+                        Object.defineProperty(obj, memberName, {
+                            configurable: true, enumerable: true,
+                            get: memberValue.get, set: memberValue.set
+                        });
+                    }
+                    break;
+                case 'event':
+                    memberValue = buildEvent(memberName, memberDef);
+                    Object.defineProperty(obj, memberName, {
+                        configurable: true, enumerable: true,
+                        value: memberValue
+                    });
+                    break;
+            }
+    
+            // apply custom attributes
+            if (cfg.customAttrs) {
+                applyCustomAttributes(memberName);
+            }
+            
+            // finally hold the references for reflector
+            def.members[memberName] = memberValue;
+        };
+        const modifiers = modifiersRefl(def);
+        const attrs = attrsRefl(def);
+        
+        // construct base object from parent, if applicable
+        if (cfg.inheritance) {
+            if (params.isTopLevelInstance) {
+                if (modifiers.type.has('abstract')) { throw new _Exception('InvalidOperation', `Cannot create instance of an abstract type. (${def.name})`); }
+            }
+    
+            // create parent instance, if required, else use passed object as base object
+            let Parent = Type._.inherits;
+            if (Parent) {
+                if (Parent._.isSealed() || Parent._.isSingleton() || Parent._.isStatic()) {
+                    throw new _Exception('InvalidOperation', `Cannot inherit from a sealed, static or singleton type. (${Parent._.name})`); 
+                }
+                if (Parent._.type !== Type._.type) {
+                    throw new _Exception('InvalidOperation', `Cannot inherit from another type family. (${Parent._.type})`); 
+                }
+                obj = new Parent(params._flagName, params.staticInterface, params.args); // obj reference is now parent of object
+            }
         }
     
-        // collect type level attributes
-        funcs.collectTypeAttributes();
+         // set object meta
+         if (typeof obj._ === 'undefined') {
+            obj._ = {}; 
+            obj._.id = guid();
+            obj._.hierarchy = []; // will have: 'def' of each hierarchy level in order type is constructed
+            obj._.isInstanceOf = (name) => {
+                if (!name) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+                if (name._ && name._.name) { name = name._.name; } // could be the 'Type' itself
+                return findIndexByProp(obj._.hierarchy, 'name', name) !== -1; // if this given type name found anywhere in hierarchy, so yes it is an instance of that type
+            };
+            obj._.def = () => { return obj._.hierarchy[obj._.hierarchy.length - 1]; }; // always gives def which is on top
+            obj._.Type = () => { obj._.def().Type; }; // always gives top level, because that's what this is an instance of which comes to outside world
+            if (cfg.serialize) {
+                obj._.serialize = () => { return _Serializer.process(exposed_obj, exposed_obj, {}); };
+                obj._.deserialize = (json) => { return _Serializer.process(exposed_obj, json, exposed_obj, true); };
+            }
+            if (cfg.mixins) {
+                def.mixins = {
+                    types: cfg.params.mixins, // mixin types that were applied to this type
+                    names: namesOf(cfg.params.mixins)
+                };
+                obj._.isMixed = (name) => {
+                    if (!name) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+                    if (name._ && name._.name) { name = name._.name; } // could be mixin type itself
+                    let result = false;
+                    for (let defItem of obj._.hierarchy) {
+                        if (defItem.mixins.type.names.indexOf(name) !== -1) {
+                            result = true; break;
+                        }
+                    }
+                    return result;                    
+                };        
+            }
+            if (cfg.interfaces) {
+                def.interfaces = {
+                    types: cfg.params.interfaces, // interface types that were applied to this type
+                    names: namesOf(cfg.params.interfaces)
+                };           
+                obj._.isImplements = (name) => {
+                    if (!name) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+                    if (name._ && name._.name) { name = name._.name; } // could be interface type itself
+                    let result = false;
+                    for (let defItem of obj._.hierarchy) {
+                        if (defItem.interfaces.type.names.indexOf(name) !== -1) {
+                            result = true; break;
+                        }
+                    }
+                    return result;                   
+                };        
+            }
+         }
+         obj._.type = cfg.types.instance; // as defined for this instance by builder, this will always be same for all levels -- class 'instance' at all levels will be 'instance' only
+         obj._.hierarchy.push(def); // this level
+         def.position = obj._.hierarchy.length - 1; // store this as position index of this level
+        if (params.isTopLevelInstance) {
+            obj._.modifiers = modifiers;
+            obj._.attrs = attrs;
+        }
     
-        // add instance meta
-        funcs.addInstanceMeta();
-        
-        // construct base object
-        funcs.constructObj();
+        // building started
+        isBuildingObj = true; 
     
-        // build object
-        funcs.buildObj();
+        // define proxy for clean syntax inside factory
+        proxy = new Proxy({}, {
+            get: (_obj, prop) => { return obj[prop]; },
+            set: (_obj, prop, value) => {
+                if (isBuildingObj) {
+                    // get member type
+                    let memberType = '';
+                    if (prop === 'construct') { 
+                        memberType = 'construct'; 
+                    } else if (prop === 'dispose') { 
+                        memberType = 'dispose'; 
+                    } else {
+                        if (typeof value === 'function') {
+                            if (_attr.has('event')) { 
+                                memberType = 'event'; 
+                            } else { 
+                                memberType = 'func'; 
+                            }
+                        } else { 
+                            memberType = 'prop'; 
+                        }
+                    }
+                    
+                    // add member
+                    addMember(prop, memberType, value);
+                } else {
+                    // a function or event is being redefined
+                    if (typeof value === 'function') { throw new _Exception('InvalidOperation', `Redefinition of members at runtime is not allowed. (${prop})`); }
+    
+                    // allow setting property values
+                    obj[prop] = value;
+                }
+                return true;
+            }
+        });
+    
+        // construct using factory having 'this' being proxy object
+        params.factory.apply(proxy);
+    
+        // apply mixins
+        if (cfg.mixins) { 
+            for(let mixin of def.mixins.types) {
+                mixin_being_applied = mixin;
+                mixin.apply(proxy); // run mixin's factory too having 'this' being proxy object
+                mixin_being_applied = null;
+            }
+        }    
+    
+        // clear any (by user's error left out) attributes, so that are not added by mistake elsewhere
+        _attr.clear();
+    
+        // building ends
+        isBuildingObj = false; 
     
         // weave advices from aspects
         if (cfg.aop) {
-            funcs.weave();
+            applyAspects();
         }
     
-        // prepare object to expose
-        funcs.buildExposedObj();
+        // move constructor and dispose out of main object
+        if (cfg.construct && typeof obj[_constructName] === 'function') {
+            obj._.construct = obj[_constructName]; delete obj[_constructName];
+        }
+        if (cfg.dispose && typeof obj[_disposeName] === 'function') {
+            obj._.dispose = obj[_disposeName]; delete obj[_disposeName];
+        }  
     
-        // validate interfaces
+        // prepare protected and public interfaces of object
+        buildExposedObj();
+    
+        // validate interfaces of type
         if (cfg.interfaces) {
-            funcs.validateInterfaces();                
+            validateInterfaces();
         }
     
-        // when on top level instance
-        if (!isNeedProtected) {
-            if (cfg.construct) {
-                funcs.processConstructor();
+        // call constructor
+        if (cfg.construct && params.isTopLevelInstance && typeof exposed_obj._[_constructName] === 'function') {
+            exposed_obj._.constructing = true;
+            exposed_obj._[_constructName](...params.args);
+            delete exposed_obj._.constructing;
+        }
+    
+        // add/update meta on top level instance
+        if (params.isTopLevelInstance) {
+            if (cfg.singleton && attrs.type.has('singleton')) {
+                Type._.singleInstance = () => { return exposed_obj; }; 
+                Type._.singleInstance.clear = () => { 
+                    Type._.singleInstance = () => { return null; };
+                };
             }
-            if (cfg.dispose) {
-                funcs.processDestructor();
-            }
         }
     
-        // public and (protected+private) instance interface
-        if (cfg.inheritance) {
-            funcs.storeObjects();
+        // seal object, so nothing can be added/deleted from outside
+        // also, keep protected version intact for 
+        if (params.isTopLevelInstance) {
+            exposed_obj = Object.seal(exposed_obj);
         }
-    
-        // set sealed type
-        if (cfg.inheritance && types.isSealed()) { 
-            funcs.setTypeSealed();
-        }
-    
-        // clear any (by error left out) attributes, so that are not added by mistake elsewhere
-        _attr.clear();
     
         // return
-        if (cfg.singleton && types.isSingleton()) { 
-            funcs.storeInstance(); // store for next use
-            return Type._.singleInstance();
-        } else {
-            return exposed_obj;
-        }
+        return exposed_obj;
     };
-    const buildType = (type, Type, typeName, mex, inherits, mixinsAndInterfaces, cfg) => {
-        let result = extractMixinsAndInterfaces(mixinsAndInterfaces);
-    
-        Type._ = copyMembers([Type._, mex], {});
-        if (cfg.inheritance) {
-            Type._.inherits = inherits || null;
+    const builder = (cfg) => {
+        // fix cfg
+        cfg.mixins = cfg.mixins || false;
+        cfg.interfaces = cfg.interfaces || false;
+        cfg.inheritance = cfg.inheritance || false;
+        cfg.singleton = cfg.singleton || false;
+        cfg.static = cfg.static || false;
+        cfg.func = cfg.func || false;
+        cfg.construct = cfg.construct || false;
+        cfg.dispose = cfg.dispose || false;
+        cfg.prop = cfg.prop || false;
+        cfg.storage = cfg.storage || false;
+        cfg.event = cfg.event || false;
+        cfg.aop = cfg.aop || false;
+        cfg.customAttrs = cfg.customAttrs || false;
+        cfg.serialize = cfg.serialize || false;
+        cfg.types.instance = cfg.types.instance || 'unknown';
+        cfg.types.type = cfg.types.type || 'unknown';
+        cfg.params.typeName = cfg.params.typeName || 'unknown';
+        cfg.params.inherits = cfg.params.inherits || null;
+        cfg.params.mixins = [];
+        cfg.params.interfaces = [];
+        cfg.params.factory = cfg.params.factory || null;
+        if (!cfg.func) {
+            cfg.construct = false;
+            cfg.dispose = false;
         }
-        Type._.name = typeName;
-        Type._.type = type;
-        Type._.namespace = null;
-        Type._.assembly = () => { return flair.Assembly.get(typeName) || null; };
-        Type._.id = guid();
+        if (!cfg.prop) {
+            cfg.storage = false;
+        }
+        if (!cfg.inheritance) {
+            cfg.singleton = false;
+        }
+        if (!cfg.func && !cfg.prop && !cfg.event) {
+            cfg.aop = false;
+            cfg.customAttrs = false;
+        }
     
-        // hierarchy check
+        // extract mixins and interfaces
+        for(let item of cfg.params.mixinsAndInterfaces) {
+           if (item._ && item._.type) {
+                switch (item._.type) {
+                    case 'mixin': cfg.params.mixins.push(item); break;
+                    case 'interface': cfg.params.interfaces.push(item); break;
+                }
+           }
+        }
+        delete cfg.params.mixinsAndInterfaces;
+    
+        // top level definitions
+        let _flagName = '___flag___';
+    
+        // base type definition
+        let _Object = function(_flag, _static, ...args) {
+            // define parameters and context
+            let params = {
+                _flagName: _flagName
+            };
+            if (typeof _flag !== 'undefined' && _flag === _flagName) { // inheritance in play
+                params.isNeedProtected = true;
+                params.isTopLevelInstance = false;
+                params.staticInterface = _static;
+                params.args = args;
+            } else {
+                params.isNeedProtected = false;
+                params.isTopLevelInstance = true;
+                params.staticInterface = _Object;
+                if (typeof _flag !== 'undefined') {
+                    if (typeof _static !== 'undefined') {
+                        params.args = [_flag, _static].concat(args); // one set
+                    } else {
+                        params.args = [_flag]; // no other args given
+                    }
+                } else {
+                    params.args = []; // no args
+                }
+            }
+    
+            // base object
+            let _this = {};
+    
+            // build instance
+            return buildTypeInstance(cfg, _Object, params, _this);
+        };
+    
+        // type def
+        let typeDef = { 
+            name: cfg.params.typeName,
+            type: cfg.types.type, // the type of the type itself: class, struct, etc.
+            Type: _Object,
+            level: 'type',
+            position: 0, // for consistency sake w object def. this will always be zero 
+            types: {
+                type: cfg.types.type, // repeated here just for consistency
+            },
+            attrs: { 
+                type: [], // will have: {name, cfg, attr, args}
+            },
+            modifiers: {
+                type: [], // will have: {name, cfg, attr, args}
+            },
+            typeDef: () => { return typeDef; }, // so modifiers and attrs reflector don't need to worry
+            previous: () => {
+                return _Object._.inherits ? _Object._.inherits._.def() : null;
+            }
+        };
+        const modifiers = modifiersRefl(typeDef);
+        const attrs = attrsRefl(typeDef);
+    
+        // type level attributes pick here
+        attributesAndModifiers(typeDef, cfg.params.typeName);
+    
+        // set type meta
+        _Object._.name = cfg.params.typeName;
+        _Object._.type = cfg.types.type;
+        _Object._.id = guid();
+        _Object._.namespace = null;
+        _Object._.assembly = () => { return _Assembly.get(_Object._.name) || null; };
+        _Object._.inherits = cfg.params.inherits || null;
         if (cfg.inheritance) {
-            Type._.isDerivedFrom = (name) => {
+            _Object._.isAbstract = () => { return modifiers.type.has('abstract'); };
+            _Object._.isSealed = () => { return modifiers.type.has('sealed'); };
+            _Object._.isDerivedFrom = (name) => { 
                 if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
                 if (name._ && name._.name) { name = name._.name; }
-                let result = (name === 'Object'),
-                    prv = inherits;
+                let result = false,
+                    prv = cfg.params.inherits; // look from parent onwards
                 if (!result) {
-                    // eslint-disable-next-line no-constant-condition
-                    while(true) {
+                    while(true) { // eslint-disable-line no-constant-condition
                         if (prv === null) { break; }
                         if (prv._.name === name) { result = true; break; }
                         prv = prv._.inherits;
@@ -2302,187 +2227,69 @@
                 }
                 return result;
             };
-            Type._.isSealed = () => { return false; }
         }
-    
+        if (cfg.static) {
+            _Object._.isStatic = () => { return modifiers.type.has('static'); };
+        }
         if (cfg.singleton) {
-            Type._.singleInstance = () => { return null; }
-            Type._.isSingleton = () => { return false; }
-            Type._.singleInstance.clear = () => {};
+            _Object._.isSingleton = () => { return attrs.type.has('singleton'); };
+            _Object._.singleInstance = () => { return null; };
+            _Object._.singleInstance.clear = noop;
         }
-         
         if (cfg.mixins) {
-            Type._.isMixed = (name) => {
+            typeDef.mixins = {
+                types: cfg.params.mixins, // mixin types that were applied to this type
+                names: namesOf(cfg.params.mixins)
+            };        
+            _Object._.isMixed = (name) => {
                 if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
                 if (name._ && name._.name) { name = name._.name; }
     
                 let result = false,
-                    prv = Type,
-                    _mixins = [];
-                // eslint-disable-next-line no-constant-condition
-                while(true) {
+                    prv = _Object._.def(); // look from this itself
+                while(true) { // eslint-disable-line no-constant-condition
                     if (prv === null) { break; }
-                    _mixins = prv._._.mixins;
-                    for(let mixin of _mixins) {
-                        if (mixin._.name === name) {
-                            result = true; break;
-                        }
-                    }
-                    if (result) { 
-                        break;
-                    } else {
-                        prv = prv._.inherits; 
-                    }
+                    result = (prv.mixins.names.indexOf(name) !== -1);
+                    if (result) { break; }
+                    prv = prv.previous();
                 }
                 return result;
             };
         }
-    
         if (cfg.interfaces) {
-            Type._.isImplements = (name) => {
+            typeDef.interfaces = {
+                types: cfg.params.interfaces, // interface types that were applied to this type
+                names: namesOf(cfg.params.interfaces)
+            };          
+            _Object._.isImplements = (name) => {
                 if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
                 if (name._ && name._.name) { name = name._.name; }
     
                 let result = false,
-                    prv = Type,
-                    _interfaces = [];
-                // eslint-disable-next-line no-constant-condition
-                while(true) {
+                    prv = _Object._.def(); // look from this itself
+                while(true) { // eslint-disable-line no-constant-condition
                     if (prv === null) { break; }
-                    _interfaces = prv._._.interfaces;
-                    for(let intf of _interfaces) {
-                        if (intf._.name === name) {
-                            result = true; break;
-                        }
-                    }
-                    if (result) { 
-                        break;
-                    } else {
-                        prv = prv._.inherits; 
-                    }
+                    result = (prv.interfaces.names.indexOf(name) !== -1);
+                    if (result) { break; }
+                    prv = prv.previous();
                 }
                 return result;
             };                
         }
-    
-        if (cfg.static) {
-            Type._.static = {};
-        }
-    
-        // reflector only items
-        Type._._ = Type._._ || {};
-        if (cfg.mixins) {
-            Type._._.mixins = result.mixins || [];
-        }
-        if (cfg.interfaces) {
-            Type._._.interfaces = result.interfaces || [];        
-        }
+        _Object._.isDeprecated = () => { return attrs.type.has('deprecate'); };
+        _Object._.def = () => { return typeDef; };
+        _Object._.modifiers = modifiers;
+        _Object._.attrs = attrs;
     
         // register type with namespace
-        flair.Namespace(Type);
+        _Namespace(_Object); 
     
-        // return
-        return Type;
-    };
-    const builder = (cfg) => {
-        let _cfg = {};
-        _cfg.config = cfg.config || {};
-        _cfg.config.mixins = cfg.config.mixins || false;
-        _cfg.config.interfaces = cfg.config.interfaces || false;
-        _cfg.config.inheritance = cfg.config.inheritance || false;
-            _cfg.config.singleton = cfg.config.singleton || false;
-            _cfg.config.static = cfg.config.static || false;
-        _cfg.config.func = cfg.config.func || false;
-            _cfg.config.construct = cfg.config.construct || false;
-            _cfg.config.dispose = cfg.config.dispose || false;
-        _cfg.config.prop = cfg.config.prop || false;
-            _cfg.config.storage = cfg.config.storage || false;
-            _cfg.config.readonly = cfg.config.readonly || false;
-        _cfg.config.event = cfg.config.event || false;
-        _cfg.config.aop = cfg.config.aop || false;
-        _cfg.config.conditional = cfg.config.conditional || false;
-        _cfg.config.duplicate = cfg.config.duplicate || false;
-        _cfg.config.customAttrs = cfg.config.customAttrs || false;
-        _cfg.config.hide = cfg.config.hide || false;
-    
-        _cfg.params = cfg.params || {};
-        _cfg.params.typeName = cfg.params.typeName || '';
-        _cfg.params.inherits = cfg.params.inherits || null;
-        _cfg.params.mixinsAndInterfaces = cfg.params.mixinsAndInterfaces || null;
-        _cfg.params.factory = cfg.params.factory || null;
-    
-        _cfg.instance = cfg.instance || {};
-        _cfg.instance.type = cfg.instance.type || '';
-        _cfg.instance.mex = cfg.instance.mex || {};
-        
-        _cfg.type = cfg.type || {};
-        _cfg.type.type = cfg.type.type || '';
-        _cfg.type.mex = cfg.type.mex || {};
-    
-        // resolve conflicting configurations
-        if (!_cfg.config.func) {
-            _cfg.config.construct = false;
-            _cfg.config.dispose = false;
+        // return 
+        if (_Object._.isStatic()) {
+            return new _Object();
+        } else { // return type
+            return _Object;
         }
-        if (!_cfg.config.prop) {
-            _cfg.config.storage = false;
-            _cfg.config.readonly = false;
-        }
-        if (!_cfg.config.inheritance) {
-            _cfg.config.singleton = false;
-        }
-        if (!_cfg.config.func && !_cfg.config.prop && !_cfg.config.event) {
-            _cfg.config.aop = false;
-            _cfg.config.conditional = false;
-            _cfg.config.duplicate = false;
-            _cfg.config.customAttrs = false;
-            _cfg.config.hide = false;
-        }
-    
-        // base type
-        let _Object = function(_flag, _static, ...args) {
-            // parameters
-            let params = {};
-            if (_cfg.config.inheritance) {
-                if (_cfg.config.static) {
-                    params._flag = _flag;
-                    params._static = _static;
-                    params.args = args;
-                } else {
-                    params._flag = _flag;
-                    params.args = [_static].concat(args); // treat static as args
-                }
-            } else {
-                params.args = [_flag, _static].concat(args); // treat all as args
-            }
-            // base object
-            let _this = {};
-    
-            // build instance
-            return buildTypeInstance(
-                _cfg.instance.type,
-                _Object, 
-                _cfg.params.typeName, 
-                _cfg.instance.mex, 
-                _cfg.params.inherits, 
-                _cfg.params.mixinsAndInterfaces, 
-                _cfg.config, 
-                _this, 
-                _cfg.params.factory, 
-                params
-            );
-        };
-    
-        // build type
-        return buildType(
-            _cfg.type.type, 
-            _Object, 
-            _cfg.params.typeName, 
-            _cfg.type.mex, 
-            _cfg.params.inherits, 
-            _cfg.params.mixinsAndInterfaces, 
-            _cfg.config
-        );
     };
     
     /**
@@ -2522,37 +2329,27 @@
         }
     
         // builder config
-        let cfg = {};
-        cfg.config = {
+        let cfg = {
             mixins: true,
             interfaces: true,
             static: true,
             func: true,
-                construct: true,
+            construct: true,
             prop: true,
-                readonly: true,
             event: true,
-            conditional: true,
-            duplicate: true,
             customAttrs: true,
-            hide: true
+            serialize: true,
+            types: {
+                instance: 'sinstance',
+                type: 'struct'
+            },
+            params: {
+                typeName: name,
+                inherits: null,
+                mixinsAndInterfaces: mixinsAndInterfaces,
+                factory: factory
+            }
         };
-        cfg.params = {
-            typeName: name,
-            inherits: null,
-            mixinsAndInterfaces: mixinsAndInterfaces,
-            factory: factory
-        };
-        cfg.instance = {
-            type: 'sinstance'
-        };
-        cfg.type = {
-            type: 'struct'
-        };
-        cfg.instance.mex = {
-        };
-        cfg.type.mex = {
-        }; 
     
         // return built type
         return builder(cfg);
@@ -2824,6 +2621,8 @@
     // add to members list
     flair.members.push('Assembly');
     
+    const _Assembly = flair.Assembly; // TODO: To fix
+    
     // Namespace
     // Namespace(Type)
     flair.Namespace = (Type) => {
@@ -3038,20 +2837,17 @@
             mixins: true,
             interfaces: true,
             inheritance: true,
-                singleton: true,
+            singleton: true,
             static: true,
             func: true,
-                construct: true,
-                dispose: true,
+            construct: true,
+            dispose: true,
             prop: true,
-                storage: true,
-                readonly: true,
             event: true,
+            storage: true,
             aop: true,
-            conditional: true,
-            duplicate: true,
             customAttrs: true,
-            hide: true
+            serialize: true
         };
         cfg.params = {
             typeName: name,
@@ -3511,7 +3307,7 @@
     flair.Attribute = flair.Class('Attribute', function(attr) {
         let decoratorFn = null;
         
-        attr('abstract');
+        attr('abstract'); // for Attribute type
         this.construct((...args) => {
             // args can be static or dynamic or settings
             // static ones are defined just as is, e.g.,
@@ -3546,14 +3342,59 @@
             }
         });
         
+       /** 
+        *  constraints: string - An expression that defined the constraints of applying this attribute 
+        *                        using NAMES, PREFIXES, SUFFIXES and logical Javascript operator
+        * 
+        *                  NAMES can be: 
+        *                      type names: class, struct, enum, interface, mixin, resource
+        *                      type member names: prop, func, construct, dispose, event
+        *                      inbuilt modifier names: static, abstract, sealed, virtual, override, private, protected, readonly, async
+        *                      inbuilt attribute names: promise, singleton, serialize, deprecate, session, state, conditional, noserialize
+        *                      custom attribute names: any registered custom attribute name
+        *                      type names itself: e.g., Assembly, Attribute, etc. (any registered type name is fine)
+        *                          SUFFIX: A typename must have a suffix (^) e.g., Assembly^, Attribute^, etc. Otherwise this name will be treated as custom attribute name
+        *                  
+        *                  PREFIXES can be:
+        *                      No Prefix: means it must match or be present at the level where it is being defined
+        *                      @: means it must be inherited from or present at up in hierarchy chain
+        *                      $: means it either must ne present at the level where it is being defined or must be present up in hierarchy chain
+        *                  <name> 
+        *                  @<name>
+        *                  $<name>
+        * 
+        *                  BOOLEAN Not (!) can also be used to negate:
+        *                  !<name>
+        *                  !@<name>
+        *                  !$<name>
+        *                  
+        *                  NOTE: Constraints are processed as logical boolean expressions and 
+        *                        can be grouped, ANDed or ORed as:
+        * 
+        *                        AND: <name1> && <name2> && ...
+        *                        OR: <name1> || <name2>
+        *                        GROUPING: ((<name1> || <name2>) && (<name1> || <name2>))
+        *                                  (((<name1> || <name2>) && (<name1> || <name2>)) || <name3>)
+        * 
+        **/
+        this.func('constraints', ''); 
         this.prop('args', []);
-        this.func('decorator', (fn) => {
+        this.func('decorate', (fn) => {
             if (typeof fn === 'function') {
                 decoratorFn = fn;
             }
             return decoratorFn;
         });
+    
+        // TODO: following cannot be name of any custom attributes
+        // _supportedMembers = ['prop', 'func', 'construct', 'dispose', 'event'],
+        // _supportedTypes = ['class', 'struct', 'enum', 'interface', 'mixin', 'resource'],
+        // _supportedModifiers = ['static', 'abstract', 'sealed', 'virtual', 'override', 'private', 'protected', 'readonly', 'async'],
+    
+    
+        // TODO: how to decorate prop, func, evebt seperately
         this.func('resetEventInterface', (source, target) => {
+            // TODO: this should be outside somewhere when applying attribute to the member
             target.subscribe = source.subscribe;
             target.unsubscribe = source.unsubscribe;
             delete source.subscribe;
@@ -4040,19 +3881,19 @@
         allAspects[bucket] = allAspects[bucket] || [];
         allAspects[bucket].push(Aspect);
     };
-    flair.Aspects.get = (className, funcName, attrs) => {
+    flair.Aspects.get = (typeName, funcName, attrs) => {
         // get parts
         let funcAspects = [],
             ns = '',
             cls = '',
             fnc = funcName.trim();
     
-        if (className.indexOf('.') !== -1) {
-            ns = className.substr(0, className.lastIndexOf('.')).trim();
-            cls = className.substr(className.lastIndexOf('.') + 1).trim(); 
+        if (typeName.indexOf('.') !== -1) {
+            ns = typeName.substr(0, typeName.lastIndexOf('.')).trim();
+            cls = typeName.substr(typeName.lastIndexOf('.') + 1).trim(); 
         } else {
             ns = '^';
-            cls = className.trim();
+            cls = typeName.trim();
         }
     
         for(let bucket in allAspects) {
@@ -4091,8 +3932,94 @@
         // return
         return funcAspects;
     };
+    flair.Aspects.attach = (fn, typeName, funcName, funcAspects) => {
+        let before = [],
+            after = [],
+            around = [],
+            instance = null,
+            _fn = null;
     
-    // TODO: MOVE get method as Aspects() itself - this is how it is used in weave function
+        // collect all advices
+        for(let funcAspect of funcAspects) {
+            instance = new funcAspect();
+            _fn = instance.before(); if (typeof _fn === 'function') { before.push(_fn); }
+            _fn = instance.around(); if (typeof _fn === 'function') { around.push(_fn); }
+            _fn = instance.after(); if (typeof _fn === 'function') { after.push(_fn); }
+        }
+    
+        // around weaving
+        if (around.length > 0) { around.reverse(); }
+    
+        // weaved function
+        let weavedFn = function(...args) {
+            let error = null,
+                result = null,
+                ctx = {
+                    typeName: () => { return typeName; },
+                    funcName: () => { return funcName; },
+                    error: (err) => { if (err) { error = err; } return error;  },
+                    result: (value) => { if (typeof value !== 'undefined') { result = value; } return result; },
+                    args: () => { return args; },
+                    data: {}
+                };
+            
+            // run before functions
+            for(let beforeFn of before) {
+                try {
+                    beforeFn(ctx);
+                } catch (err) {
+                    error = err;
+                }
+            }
+    
+            // after functions executor
+            const runAfterFn = (_ctx) =>{
+                for(let afterFn of after) {
+                    try {
+                        afterFn(_ctx);
+                    } catch (err) {
+                        ctx.error(err);
+                    }
+                }
+            };
+    
+            // run around func
+            let newFn = fn,
+                _result = null;
+            for(let aroundFn of around) { // build a nested function call having each wrapper calling an inner function wrapped inside advices' functionality
+                newFn = aroundFn(ctx, newFn);
+            }                    
+            try {
+                _result = newFn(...args);
+                if (_result && typeof _result.then === 'function') { // async function
+                    ctx.result(new Promise((__resolve, __reject) => {
+                        _result.then((value) => {
+                            ctx.result(value);
+                            runAfterFn(ctx);
+                            __resolve(ctx.result());
+                        }).catch((err) => {
+                            ctx.error(err);
+                            runAfterFn(ctx);
+                            __reject(ctx.error());
+                        });
+                    }));
+                } else {
+                    ctx.result(_result);
+                    runAfterFn(ctx);
+                }
+            } catch (err) {
+                ctx.error(err);
+            }
+    
+            // return
+            return ctx.result();
+        };
+    
+        // done
+        return weavedFn;
+    };
+    
+    const _Aspects = flair.Aspects;
     // Aspect
     flair.Aspect = flair.Class('Aspect', function(attr) {
         let beforeFn = null,
@@ -4141,6 +4068,32 @@
         return null;
     };
     
+    
+    flair.Serializer.process = (ctx, source, target, isDeserialize) => {
+        // TODO: Fix as per new things
+        // let mappedName = '',
+        //     the_attr = null;
+        for(let memberName in ctx) {
+        //     if (ctx.hasOwnProperty(memberName) && memberName !== '_') {
+        //         if ((member.isProperty(memberName) &&
+        //              member.isSerializable(memberName) &&
+        //              !member.isReadOnly(memberName) && 
+        //              !member.isStatic(memberName) && 
+        //              !member.isPrivate(memberName) && 
+        //              !member.isProtected(memberName))) {
+        //                 the_attr = attrs.get('serialize', memberName);
+        //                 mappedName = (the_attr ? (the_attr.args[0] || memberName) : memberName);
+                        if (isDeserialize) {
+                            target[memberName] = source[memberName] || target[memberName];
+                        } else {
+                            target[memberName] = source[memberName];
+                        }
+        //         }
+            }
+        // }
+    };    
+    
+    const _Serializer = flair.Serializer; // TODO: To fix
     // Reflector
     flair.Reflector = function (forTarget) {
         // define

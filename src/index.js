@@ -41,6 +41,9 @@
         flair = {}, 
         sym = [],
         isTesting = false,
+        isClient = false,
+        isProd = false,
+        isDebug = false,
         noop = () => {},
         options = {};   
 
@@ -81,6 +84,10 @@
         suppressGlobals: (typeof suppressGlobals !== 'undefined' ? opts.suppressGlobals : options.symbols.indexOf('SUPPRESS') !== -1),
         args: (isServer ? process.argv : new window.URLSearchParams(window.location.search))
     });
+    isServer = options.env.isServer;
+    isClient = options.env.isClient;
+    isProd = options.env.isProd;
+    isDebug = options.env.isDebug;
 
     // flair
     flair.info = Object.freeze({
