@@ -83,7 +83,7 @@ flair.Attribute = flair.Class('Attribute', function(attr) {
 
     // TODO: following cannot be name of any custom attributes
     // _supportedMembers = ['prop', 'func', 'construct', 'dispose', 'event'],
-    // _supportedTypes = ['class', 'struct', 'enum', 'interface', 'mixin', 'resource'],
+    // _supportedTypes = ['class', 'struct', 'enum', 'interface', 'mixin'],
     // _supportedModifiers = ['static', 'abstract', 'sealed', 'virtual', 'override', 'private', 'protected', 'readonly', 'async'],
 
 

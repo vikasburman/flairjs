@@ -38,6 +38,17 @@ flair.Serializer.process = (ctx, source, target, isDeserialize) => {
     //         }
         }
     // }
+
+
+
+    // Build flair.Serializer.serialize using lair.Serializer.process locally, as following are removed from object
+    // if (cfg.serialize) {
+    //     obj._.serialize = () => { return _Serializer.process(exposed_obj, exposed_obj, {}); };
+    //     obj._.deserialize = (json) => { return _Serializer.process(exposed_obj, json, exposed_obj, true); };
+    // }  
+ 
+
 };    
 
-const _Serializer = flair.Serializer; // TODO: To fix
+//TODO: To fix 
+const _Serializer = flair.Serializer; // eslint-disable-line no-unused-vars

@@ -1,22 +1,44 @@
+double check all members under _. both at object and type level, to see if we really need it 
+Lean meta data a lot - e.g., exposing def - why this is required, can we get rid of def of all levels - and still make modifiers and attrs keep working, as they have their closure copy anyways and can go previous and next --
+what if at the time of initialization, of these reflectors, I give them previous copy as well - so, no need to keep previous in list
 
 
-constructor is always overridden 
-
-
-check for inheritance members check, some may still need to be available like isInher...
-
-
-
-// therefore constructor in an static class cannot take arguments - warn by checking constructor parameters - also don't
-
-
-
+at all membernames in exception, make type name as prefix
 replace all exceptions with const values
-
-in proxy detech for abstract and interface types - use only noop and null values
-
 
 create attribute for these
     publish: new _attrConfig('event', '!@publish'),
     fetch: new _attrConfig('func', 'async, !abstract'),
     
+alslo test if Type1 has a staticProp1 and Type2 derives from Type1 and has staticProp1 as well and Type3 derives from Type1 and has staticProp1 
+what will be values --- ideally they all should be different because these are at individual static level
+
+
+
+also think - Enum definiton creator can itself create a factory to handle object literal and
+then pass this factory with static members etc. defined and code to add properties like
+
+first add: _attr('static');
+
+Then create factory:
+
+let _factory = function() {
+    for(let prop of objectLiteral) {
+        if (prop is own property) {
+            this[prop] = value
+        }
+    }
+}
+
+consider having inbuilt 'flag' attribute as well, which will allow enum values to behave as flags
+and then pass this factory function to def
+
+Some extensions to Types like
+GetAttributes
+
+and some for Objects too like
+toString
+etc.
+
+Like every sInstance have these methods etc.
+

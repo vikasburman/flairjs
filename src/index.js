@@ -102,8 +102,8 @@
     flair.options = Object.freeze(options);
 
     // members
-    <!-- inject: ./misc/_helpers.js -->
-    <!-- inject: ./types/exception.js -->
+    <!-- inject: ./helpers/general.js -->
+    <!-- inject: ./classes/exception.js -->
     <!-- inject: ./func/args.js -->
     <!-- inject: ./func/typeOf.js -->
     <!-- inject: ./func/isInstanceOf.js -->
@@ -117,7 +117,7 @@
     <!-- inject: ./func/attr.js -->
     <!-- inject: ./extend/port.js -->
     <!-- inject: ./extend/channel.js -->
-    <!-- inject: ./misc/_builder.js -->
+    <!-- inject: ./helpers/builder.js -->
     <!-- inject: ./types/struct.js -->
     <!-- inject: ./assembly/assembly.js -->
     <!-- inject: ./assembly/namespace.js -->
@@ -126,7 +126,7 @@
     <!-- inject: ./types/mixin.js -->
     <!-- inject: ./types/interface.js -->
     <!-- inject: ./types/enum.js -->
-    <!-- inject: ./types/resource.js -->
+    <!-- inject: ./classes/resource.js -->
     <!-- inject: ./di/container.js -->
     <!-- inject: ./attributes/attribute.js -->
     <!-- inject: ./di/include.js -->

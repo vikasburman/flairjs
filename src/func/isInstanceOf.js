@@ -19,29 +19,18 @@ const _isInstanceOf = (obj, type) => {
     if (['instance', 'sinstance'].indexOf(_objType) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
     if (['string', 'class', 'interface', 'struct', 'mixin'].indexOf(_typeType) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
 
-    switch(_objType) {
-        case 'instance':
-            switch(_typeType) {
-                case 'class':
-                    isMatched = obj._.isInstanceOf(type); break;
-                case 'interface':
-                    isMatched = obj._.isImplements(type); break;
-                case 'mixin':
-                    isMatched = obj._.isMixed(type); break;
-                case 'string':
-                    isMatched = obj._.isInstanceOf(type);
-                    if (!isMatched) { isMatched = obj._.isImplements(type); }
-                    if (!isMatched) { isMatched = obj._.isMixed(type); }
-                    break;
-            }
-            break;
-        case 'sinstance':
-            switch(_typeType) {
-                case 'string':
-                case 'struct':
-                    isMatched = obj._.isInstanceOf(type); 
-                    break;
-            }
+    switch(_typeType) {
+        case 'class':
+        case 'struct':
+            isMatched = obj._.isInstanceOf(type); break;
+        case 'interface':
+            isMatched = obj._.isImplements(type); break;
+        case 'mixin':
+            isMatched = obj._.isMixed(type); break;
+        case 'string':
+            isMatched = obj._.isInstanceOf(type);
+            if (!isMatched && typeof obj._.isImplements === 'function') { isMatched = obj._.isImplements(type); }
+            if (!isMatched && typeof obj._.isMixed === 'function') { isMatched = obj._.isMixed(type); }
             break;
     }
 

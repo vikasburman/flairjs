@@ -68,7 +68,6 @@ flair.Class = (name, inherits, mixinsAndInterfaces, factory) => {
         storage: true,
         aop: true,
         customAttrs: true,
-        serialize: true,
         types: {
             instance: 'instance',
             type: 'class'
@@ -78,6 +77,14 @@ flair.Class = (name, inherits, mixinsAndInterfaces, factory) => {
             inherits: inherits,
             mixinsAndInterfaces: mixinsAndInterfaces,
             factory: factory
+        },
+        mex: {  // meta extensions (under <>._ property)
+            instance: {},
+            type: {}
+        },
+        ex: {   // extensions (on <> itself)
+            instance: {},
+            type: {}
         }
     };
     

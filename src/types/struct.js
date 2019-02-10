@@ -20,8 +20,6 @@
  *                        mixins will be applied in order they are defined here
  *  factory: function - factory function to build struct definition
  * @returns type - constructed flair struct type
- * @throws
- *  InvalidArgumentException
  */
 const _Struct = (name, implementations, factory) => {
     if (typeof name !== 'string') { throw _Exception.InvalidArgument('name'); }
@@ -44,7 +42,6 @@ const _Struct = (name, implementations, factory) => {
         prop: true,
         event: true,
         customAttrs: true,
-        serialize: true,
         types: {
             instance: 'sinstance',
             type: 'struct'

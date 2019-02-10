@@ -44,17 +44,6 @@ const findItemByProp = (arr, propName, propValue) => {
     if (idx !== -1) { return arr[idx]; }
     return null;
 };
-const namesOf = (types) => {
-    let names = [];
-    for(let type of types) {
-        if (type._ && type._.name) { 
-            names.push(type._.name); 
-        } else {
-            throw new _Exception('InvalidArgument', `Argument type is not valid. (${types})`);
-        }
-    }
-    return names;
-};
 const splitAndTrim = (str) => {
     return str.split(',').map((item) => { return item.trim(); });
 };
@@ -63,4 +52,14 @@ const escapeRegExp = (string) => {
 };
 const replaceAll = (string, find, replace) => {
     return string.replace(new RegExp(escapeRegExp(find), 'g'), replace);
-};   
+};
+const extend = (target, source, overwrite, except) => {
+    if (!except) { except = []; }
+    for(let item in source) {
+        if (source.hasOwnProperty(item) && except.indexOf(item) === -1) { 
+            if (!overwrite) { if (item in target) { continue; }}
+            target[item] = source[item];
+        }
+    }
+    return target;
+};
