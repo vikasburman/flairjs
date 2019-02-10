@@ -1,14 +1,27 @@
-both in aspoects and attributes application move function/event members to newly wrapped item
-check at central place what attributes can be applied on what members
-applyAttrs and weaving should also consider obj vs staticInterface
-doubel check all has(attrName, name) calls to see where deepCheck is to be done and where current is to be ignored or only current needs to be checked
+
+
+In GearsJS
 publish attr should publish event outside to pub/sub
 handle attr should subscribe to an external channel on pub/sub -- and when handle is used, it should mandate using IDisposable, and at the time of dispose, should automatically clear pub/sub handlers
 and also on such methods add a stop() function on the function, to let user stop handling any further and a start() function to start handling again
-
+fetch attribute should make a service call
 
 
  In reflector, for Assembly, Namespace, etc. as sub of struct, check for these and then give specialized refleccor
  thee reflector should inherit from struct reflector
 
-inheritcance check for cyclic conditions in constuctObject -- parent should not be in inheritance chain of the type being constructed
+revisit all ._ to see what all needs to be freezed
+
+Reflector should be revisited for all changes and types
+
+const Class = flair.Class;
+const Model = await flair('name.one.two');
+const $$ = flair.attr;
+
+const MyClass = Class('myNamespace.MyClass', Model, function() {
+
+    $$('event');
+    this.abc = (def1, def2) => {}
+    
+    
+});

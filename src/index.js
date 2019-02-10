@@ -32,7 +32,7 @@
         window.Flair = _factory; // expose factory as global
     }
 
-}).call((new Function("try {return global;}catch(e){return window;}"))(), (opts) => {
+}).call(this, (opts) => {
     'use strict';
 
     // locals
@@ -44,7 +44,7 @@
         isClient = false,
         isProd = false,
         isDebug = false,
-        noop = () => {},
+        _noop = () => {},
         options = {};   
 
     // reset, if already initialized
@@ -81,7 +81,7 @@
         isClient: (!isTesting ? !isServer : (sym.indexOf('CLIENT') !== -1 ? true : !isServer)),
         isProd: (sym.indexOf('DEBUG') === -1 && sym.indexOf('PROD') !== -1),
         isDebug: (sym.indexOf('DEBUG') !== -1),
-        suppressGlobals: (typeof suppressGlobals !== 'undefined' ? opts.suppressGlobals : options.symbols.indexOf('SUPPRESS') !== -1),
+        globals: (typeof globals !== 'undefined' ? opts.globals : options.symbols.indexOf('GLOBALS') !== -1),
         args: (isServer ? process.argv : new window.URLSearchParams(window.location.search))
     });
     isServer = options.env.isServer;
@@ -129,9 +129,6 @@
     <!-- inject: ./types/resource.js -->
     <!-- inject: ./di/container.js -->
     <!-- inject: ./attributes/attribute.js -->
-    <!-- inject: ./attributes/async.js -->
-    <!-- inject: ./attributes/deprecate.js -->
-    <!-- inject: ./attributes/enumerate.js -->
     <!-- inject: ./di/include.js -->
     <!-- inject: ./di/inject.js -->
     <!-- inject: ./di/multiinject.js -->
@@ -153,15 +150,19 @@
     _Channel.define('info', 'flair.system.info');                                   // info, warning and exception telemetry
     _Channel.define('fetch', 'flair.system.fetch');                                 // file or module include telemetry
 
-    // set global
-    if (!options.env.suppressGlobals) {
-        for(let name of flair.members) {
+    // set globals, if need be
+    for(let name of flair.members) {
+        if (options.env.globals) {
             _global[name] = Object.freeze(flair[name]);
         }
     }
     flair.members = Object.freeze(flair.members);
-    _global.flair = flair; // need to be unfreezed (for Channel changes to happen)
+
+    // even if suppress globals, still define flair and $$ (flair.attr) as globals
+    _global.flair = Object.freeze(flair);
+    _global.$$ = flair.attr;
 
     // return
     return _global.flair;
-});
+});    
+

@@ -1,9 +1,9 @@
 /**
  * @name Struct
- * @description Constructs a Struct type.
+ * @description Constructs a Struct type
  * @example
  *  Struct(name, factory)
- *  Struct(name, applications, factory)
+ *  Struct(name, implementations, factory)
  * @params
  *  name: string - name of the struct
  *                 it can take following forms:
@@ -16,22 +16,22 @@
  *         NOTE: Qualified names are automatically registered with Namespace while simple names are not.
  *               to register simple name on root Namespace, use special naming technique, it will register
  *               this with Namespace at root, and will still keep the name without '.'
- *  applications: array - An array of mixin and/or interface types which needs to be applied to this struct type
+ *  implementations: array - An array of mixin and/or interface types which needs to be applied to this struct type
  *                        mixins will be applied in order they are defined here
  *  factory: function - factory function to build struct definition
  * @returns type - constructed flair struct type
  * @throws
  *  InvalidArgumentException
  */
-const _Struct = (name, mixinsAndInterfaces, factory) => {
+const _Struct = (name, implementations, factory) => {
     if (typeof name !== 'string') { throw _Exception.InvalidArgument('name'); }
-    if (_typeOf(mixinsAndInterfaces) === 'array') {
-        if (typeof factory !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (factory)'); }
-    } else if (typeof mixinsAndInterfaces !== 'function') {
-        throw new _Exception('InvalidArgument', 'Argument type is invalid. (factory)');
+    if (_typeOf(implementations) === 'array') {
+        if (typeof factory !== 'function') { throw _Exception.InvalidArgument('factory'); }
+    } else if (typeof implementations !== 'function') {
+        throw _Exception.InvalidArgument('factory');
     } else {
-        factory = mixinsAndInterfaces;
-        mixinsAndInterfaces = [];
+        factory = implementations;
+        implementations = [];
     }
 
     // builder config
@@ -52,7 +52,7 @@ const _Struct = (name, mixinsAndInterfaces, factory) => {
         params: {
             typeName: name,
             inherits: null,
-            mixinsAndInterfaces: mixinsAndInterfaces,
+            mixinsAndInterfaces: implementations,
             factory: factory
         }
     };
@@ -62,5 +62,5 @@ const _Struct = (name, mixinsAndInterfaces, factory) => {
 };
 
 // attach
-flair.Struct = _Struct;
+flair.Struct = Object.freeze(_Struct);
 flair.members.push('Struct');

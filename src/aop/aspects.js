@@ -138,6 +138,8 @@ flair.Aspects.get = (typeName, funcName, attrs) => {
     return funcAspects;
 };
 flair.Aspects.attach = (fn, typeName, funcName, funcAspects) => {
+// TODO: consider now functions and events are also supported as join points
+
     let before = [],
         after = [],
         around = [],

@@ -141,3 +141,5 @@ _Channel = _ChannelInactive;
 // attach
 flair.Channel = _Channel;
 flair.members.push('Channel');
+
+// TODO: make channel calls to Channel.push or Channel.send, so flair can be freezed for security

@@ -22,16 +22,16 @@ let asmFiles = {},
  *  InvalidArgumentException
  */ 
 flair.Assembly = (ado) => {
-    if (typeof ado !== 'object') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (ado)'); }
+    if (typeof ado !== 'object') { throw _Exception.InvalidArgument('ado'); }
     if (_typeOf(ado.types) !== 'array' || 
         _typeOf(ado.assets) !== 'array' ||
         typeof ado.name !== 'string' ||
         typeof ado.file !== 'string') {
-        throw new _Exception('InvalidArgument', 'Argument type is invalid. (ado)');
+        throw _Exception.InvalidArgument('ado');
     }
   
     // define assembly structure
-    let _Assembly = flair.Struct('Assembly<assembly>', function() {
+    let _Assembly = flair.Struct('Assembly', function() {
         this.construct((ado) => {
             this.ado = ado;
             this.name = ado.name;

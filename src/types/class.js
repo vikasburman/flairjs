@@ -54,8 +54,7 @@ flair.Class = (name, inherits, mixinsAndInterfaces, factory) => {
     }
 
     // builder config
-    let cfg = {};
-    cfg.config = {
+    let cfg = {
         mixins: true,
         interfaces: true,
         inheritance: true,
@@ -69,25 +68,19 @@ flair.Class = (name, inherits, mixinsAndInterfaces, factory) => {
         storage: true,
         aop: true,
         customAttrs: true,
-        serialize: true
+        serialize: true,
+        types: {
+            instance: 'instance',
+            type: 'class'
+        },
+        params: {
+            typeName: name,
+            inherits: inherits,
+            mixinsAndInterfaces: mixinsAndInterfaces,
+            factory: factory
+        }
     };
-    cfg.params = {
-        typeName: name,
-        inherits: inherits,
-        mixinsAndInterfaces: mixinsAndInterfaces,
-        factory: factory
-    };
-    cfg.instance = {
-        type: 'instance'
-    };
-    cfg.type = {
-        type: 'class'
-    };
-    cfg.instance.mex = {
-    };
-    cfg.type.mex = {
-    }; 
-
+    
     // return built type
     return builder(cfg);
 };

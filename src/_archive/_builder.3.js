@@ -3,8 +3,8 @@ const attributesAndModifiers = (def, memberName) => {
         attrBucket = null,
         modifierBucket = null,
         isTypeLevel = (def.level === 'type'),
-        modifiers = modifierOrAttrRefl(true, def),
-        attrs = modifierOrAttrRefl(false, def);
+        attrs = attrsRefl(def),
+        modifiers = modifiersRefl(def);
     if (isTypeLevel) {
         attrBucket = def.typeDef().attrs.type;
         modifierBucket = def.typeDef().modifiers.type;
@@ -150,42 +150,171 @@ const attributesAndModifiers = (def, memberName) => {
         }
     }
 };
-const modifierOrAttrRefl = (isModifier, def) => {
-    let defItemName = (isModifier ? 'modifiers' : 'attrs');
-    const probe = (name, memberName) => {
+const modifierOrAttrRefl = (isModifier) => {
+   return (def) => {
+        let defItemName = (isModifier ? 'modifiers' : 'attrs'),
+            rootItem = (isModifier ? modifiers : attrs);
+        const probe = (name, memberName) => {
+            let _probe = {
+                anywhere: () => {
+                    return root.get(name, memberName) || root.get(name, memberName, true); 
+                },
+                current: () => {
+                    return root.get(name, memberName); 
+                },
+                inherited: () => {
+                    return root.get(name, memberName, true); 
+                },
+                only: {
+                    current: () => {
+                        return root.get(name, memberName) && !root.get(name, memberName, true); 
+                    },
+                    inherited: () => {
+                        return !root.get(name, memberName) && root.get(name, memberName, true); 
+                    }
+                }
+            };  
+            return _probe;      
+        };    
+        let root_has = (attrName, memberName, isCheckInheritance) => {
+            let isTypeLevel = (def.level === 'type'),
+                result = null; 
+            if (isTypeLevel) {
+                if (!isCheckInheritance) {
+                    result = findItemByProp(def.typeDef().attrs.type, 'name', attrName);
+                } else {
+                    // check from parent onwards, keep going up till find it or hierarchy ends
+                    let previousDef = def.previous();
+                    while(true) { // eslint-disable-line no-constant-condition
+                        if (previousDef === null) { break; }
+                        result = findItemByProp(previousDef.attrs.type, 'name', attrName);
+                        if (!result) { 
+                            previousDef = previousDef.previous();
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            } else {
+                if (!isCheckInheritance) {
+                    result = findItemByProp(def.attrs.members[memberName], 'name', attrName);
+                } else {
+                    let previousDef = def.previous();
+                    while(true) { // eslint-disable-line no-constant-condition
+                        if (previousDef === null) { break; }
+                        result = findItemByProp(previousDef.attrs.members[memberName], 'name', attrName);
+                        if (!result) { 
+                            previousDef = previousDef.previous();
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+            return result; // {name, cfg, attr, args}
+        };     
+        let root_has = (name, memberName, isCheckInheritance) => {
+            return rootItem.get(name, memberName, isCheckInheritance) !== null;
+        };        
+        let root = {
+            get: root_get,
+            has: root_has,
+            type: {
+                get: (name, isCheckInheritance) => {
+                    return root.get(name, true, isCheckInheritance);
+                },
+                has: (attrName, isCheckInheritance) => {
+                    return root.has(name, true, isCheckInheritance);
+                },
+                all: (isJustName) => {
+                    if (isJustName) {
+                        return def[defItemName].type.map(item => item.name);
+                    } else {
+                        return def[defItemName].type.slice();
+                    }
+                }
+            },
+            members: {
+                get: root_get,
+                has: root_has,
+                all: (memberName, isJustName) => {
+                    if (isJustName) {
+                        return def[defItemName].members[memberName].map(item => item.name);
+                    } else {
+                        return def[defItemName].members[memberName].slice();
+                    }
+                },
+                probe: probe
+            }
+        };
+        if (isModifier) {
+            root.members.is = (modifierName, memberName) => {
+                // it applied modifiers' relative logic to identify 
+                // if specified member is of that type depending upon
+                // modifier definitions on current and previous levels
+                let _probe = probe(modifierName, memberName); // local
+                switch(modifierName) {
+                    case 'static': 
+                        return _probe.anywhere(); 
+                    case 'abstract':
+                        return _probe.anywhere() && !(probe.anywhere('virtual', memberName) || probe.anywhere('override', memberName)); 
+                    case 'virtual':
+                        return _probe.anywhere() && !probe.anywhere('override', memberName); 
+                    case 'override':
+                        return _probe.anywhere() && !probe.anywhere('sealed', memberName); 
+                    case 'sealed':
+                        return _probe.anywhere(); 
+                    case 'private':
+                        return _probe.anywhere(); 
+                    case 'protected':
+                        return _probe.anywhere(); 
+                    case 'readonly':
+                        return _probe.anywhere(); 
+                    case 'async':
+                        return _probe.anywhere(); 
+                }
+            };
+        }
+        
+        // return
+        return root;
+   }
+}
+const modifiersRefl = (def) => {
+    const probe = (modifierName, memberName) => {
         let _probe = {
             anywhere: () => {
-                return root.get(name, memberName) || root.get(name, memberName, true); 
+                return modifiers.get(modifierName, memberName) || modifiers.get(modifierName, memberName, true); 
             },
             current: () => {
-                return root.get(name, memberName); 
+                return modifiers.get(modifierName, memberName); 
             },
             inherited: () => {
-                return root.get(name, memberName, true); 
+                return modifiers.get(modifierName, memberName, true); 
             },
             only: {
                 current: () => {
-                    return root.get(name, memberName) && !root.get(name, memberName, true); 
+                    return modifiers.get(modifierName, memberName) && !modifiers.get(modifierName, memberName, true); 
                 },
                 inherited: () => {
-                    return !root.get(name, memberName) && root.get(name, memberName, true); 
+                    return !modifiers.get(modifierName, memberName) && modifiers.get(modifierName, memberName, true); 
                 }
             }
-        };  
-        return _probe;      
-    };    
-    let root_get = (name, memberName, isCheckInheritance) => {
+        };
+        return _probe;
+    };
+    let modifiers_get = (modifierName, memberName, isCheckInheritance) => {
         let isTypeLevel = (def.level === 'type'),
-            result = null; 
+            result = null;
         if (isTypeLevel) {
             if (!isCheckInheritance) {
-                result = findItemByProp(def.typeDef()[defItemName].type, 'name', name);
+                result = findItemByProp(def.typeDef().modifiers.type, 'name', modifierName);
             } else {
                 // check from parent onwards, keep going up till find it or hierarchy ends
                 let previousDef = def.previous();
                 while(true) { // eslint-disable-line no-constant-condition
                     if (previousDef === null) { break; }
-                    result = findItemByProp(previousDef[defItemName].type, 'name', name);
+                    result = findItemByProp(previousDef.modifiers.type, 'name', modifierName);
                     if (!result) { 
                         previousDef = previousDef.previous();
                     } else {
@@ -195,12 +324,13 @@ const modifierOrAttrRefl = (isModifier, def) => {
             }
         } else {
             if (!isCheckInheritance) {
-                result = findItemByProp(def[defItemName].members[memberName], 'name', name);
+                result = findItemByProp(def.modifiers.members[memberName], 'name', modifierName);
             } else {
+                // check from parent onwards, keep going up till find it or hierarchy ends
                 let previousDef = def.previous();
                 while(true) { // eslint-disable-line no-constant-condition
                     if (previousDef === null) { break; }
-                    result = findItemByProp(previousDef[defItemName].members[memberName], 'name', name);
+                    result = findItemByProp(previousDef.modifiers.members[memberName], 'name', modifierName);
                     if (!result) { 
                         previousDef = previousDef.previous();
                     } else {
@@ -210,76 +340,107 @@ const modifierOrAttrRefl = (isModifier, def) => {
             }
         }
         return result; // {name, cfg, attr, args}
-    };     
-    let root_has = (name, memberName, isCheckInheritance) => {
-        return root.get(name, memberName, isCheckInheritance) !== null;
-    };        
-    let root = {
-        get: root_get,
-        has: root_has,
+    };
+    let modifiers_has = (modifierName, memberName, isCheckInheritance) => {
+        return modifiers.get(modifierName, memberName, isCheckInheritance) !== null;
+    };
+    let modifiers = {
+        get: modifiers_get,
+        has: modifiers_has,
         type: {
-            get: (name, isCheckInheritance) => {
-                return root.get(name, true, isCheckInheritance);
+            get: (modifierName, isCheckInheritance) => {
+                return modifiers.get(modifierName, true, isCheckInheritance);
             },
-            has: (attrName, isCheckInheritance) => {
-                return root.has(name, true, isCheckInheritance);
+            has: (modifierName, isCheckInheritance) => {
+                return modifiers.has(modifierName, true, isCheckInheritance);
             },
             all: (isJustName) => {
                 if (isJustName) {
-                    return def[defItemName].type.map(item => item.name);
+                    return def.modifiers.type.map(item => item.name);
                 } else {
-                    return def[defItemName].type.slice();
+                    return def.modifiers.type.slice();
+                }
+            }            
+        },
+        members: {
+            get: modifiers_get,
+            has: modifiers_has,
+            all: (memberName, isJustName) => {
+                if (isJustName) {
+                    return def.modifiers.members[memberName].map(item => item.name);
+                } else {
+                    return def.modifiers.members[memberName].slice();
+                }
+            },            
+            probe: probe,
+            is: 
+        }
+    };
+    return modifiers;
+};
+const attrsRefl = (def) => {
+    const probe = (attrName, memberName) => {
+        let _probe = {
+            anywhere: () => {
+                return attrs.get(attrName, memberName) || attrs.get(attrName, memberName, true); 
+            },
+            current: () => {
+                return attrs.get(attrName, memberName); 
+            },
+            inherited: () => {
+                return attrs.get(attrName, memberName, true); 
+            },
+            only: {
+                current: () => {
+                    return attrs.get(attrName, memberName) && !attrs.get(attrName, memberName, true); 
+                },
+                inherited: () => {
+                    return !attrs.get(attrName, memberName) && attrs.get(attrName, memberName, true); 
+                }
+            }
+        };  
+        return _probe;      
+    };   
+
+    let attrs = {
+        get: attrs_get,
+        has: attrs_has,
+        type: {
+            get: (attrName, isCheckInheritance) => {
+                return attrs.get(attrName, true, isCheckInheritance);
+            },
+            has: (attrName, isCheckInheritance) => {
+                return attrs.has(attrName, true, isCheckInheritance);
+            },
+            all: (isJustName) => {
+                if (isJustName) {
+                    return def.attrs.type.map(item => item.name);
+                } else {
+                    return def.attrs.type.slice();
                 }
             }
         },
         members: {
-            get: root_get,
-            has: root_has,
+            get: attrs_get,
+            has: attrs_has,
             all: (memberName, isJustName) => {
                 if (isJustName) {
-                    return def[defItemName].members[memberName].map(item => item.name);
+                    return def.attrs.members[memberName].map(item => item.name);
                 } else {
-                    return def[defItemName].members[memberName].slice();
+                    return def.attrs.members[memberName].slice();
                 }
             },
             probe: probe
         }
     };
-    if (isModifier) {
-        root.members.is = (modifierName, memberName) => {
-            // it applied modifiers' relative logic to identify 
-            // if specified member is of that type depending upon
-            // modifier definitions on current and previous levels
-            let _probe = probe(modifierName, memberName); // local
-            switch(modifierName) {
-                case 'static': 
-                    return _probe.anywhere(); 
-                case 'abstract':
-                    return _probe.anywhere() && !(probe.anywhere('virtual', memberName) || probe.anywhere('override', memberName)); 
-                case 'virtual':
-                    return _probe.anywhere() && !probe.anywhere('override', memberName); 
-                case 'override':
-                    return _probe.anywhere() && !probe.anywhere('sealed', memberName); 
-                case 'sealed':
-                    return _probe.anywhere(); 
-                case 'private':
-                    return _probe.anywhere(); 
-                case 'protected':
-                    return _probe.anywhere(); 
-                case 'readonly':
-                    return _probe.anywhere(); 
-                case 'async':
-                    return _probe.anywhere(); 
-            }
-        };
-    }
-    return root;
+    return attrs;
 };
 const buildTypeInstance = (cfg, Type, params, obj) => {
     if (cfg.singleton && params.isTopLevelInstance && Type._.singleInstance()) { return Type._.singleInstance(); }
 
     // define vars
-    let exposed_obj = {},
+    let _noop = noop,
+        exposed_obj = {},
         mixin_being_applied = null,
         _constructName = '_construct',
         _disposeName = '_dispose',
@@ -435,8 +596,8 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
         }
         
         // abstract check
-        if (cfg.inheritance && attrs.members.probe('abstract', memberName).current() && (memberDef !== _noop || memberDef !== null) && (memberDef.get && memberDef.get !== _noop)) {
-            throw new _Exception('InvalidDefinition', `Abstract member must point to noop function or a null value. (${memberName})`);
+        if (cfg.inheritance && attrs.members.probe('abstract', memberName).current() && memberDef !== _noop && (memberDef.get && memberDef.get !== _noop)) {
+            throw new _Exception('InvalidDefinition', `Abstract member must point to noop function. (${memberName})`);
         }
 
         // overriding member must be present
@@ -806,8 +967,8 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
         // finally hold the references for reflector
         def.members[memberName] = memberValue;
     };
-    const modifiers = modifierOrAttrRefl(true, def);
-    const attrs = modifierOrAttrRefl(false, def);
+    const modifiers = modifiersRefl(def);
+    const attrs = attrsRefl(def);
     
     // construct base object from parent, if applicable
     if (cfg.inheritance) {
@@ -894,35 +1055,35 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
 
     // define proxy for clean syntax inside factory
     proxy = new Proxy({}, {
-        get: (_obj, name) => { return obj[name]; },
-        set: (_obj, name, value) => {
+        get: (_obj, prop) => { return obj[prop]; },
+        set: (_obj, prop, value) => {
             if (isBuildingObj) {
                 // get member type
                 let memberType = '';
-                if (name === 'construct') {
+                if (prop === 'construct') { 
                     memberType = 'construct'; 
-                } else if (name === 'dispose') {
+                } else if (prop === 'dispose') { 
                     memberType = 'dispose'; 
                 } else {
                     if (typeof value === 'function') {
-                        if (_attr.has('event')) {
+                        if (_attr.has('event')) { 
                             memberType = 'event'; 
-                        } else {
+                        } else { 
                             memberType = 'func'; 
                         }
-                    } else {
-                        memberType = 'prop';
+                    } else { 
+                        memberType = 'prop'; 
                     }
                 }
                 
                 // add member
-                addMember(name, memberType, value);
+                addMember(prop, memberType, value);
             } else {
                 // a function or event is being redefined
-                if (typeof value === 'function') { throw new _Exception('InvalidOperation', `Redefinition of members is not allowed. (${name})`); }
+                if (typeof value === 'function') { throw new _Exception('InvalidOperation', `Redefinition of members at runtime is not allowed. (${prop})`); }
 
                 // allow setting property values
-                obj[name] = value;
+                obj[prop] = value;
             }
             return true;
         }
@@ -1095,8 +1256,8 @@ const builder = (cfg) => {
             return _Object._.inherits ? _Object._.inherits._.def() : null;
         }
     };
-    const modifiers = modifierOrAttrRefl(true, typeDef);
-    const attrs = modifierOrAttrRefl(false, typeDef);
+    const modifiers = modifiersRefl(typeDef);
+    const attrs = attrsRefl(typeDef);
 
     // type level attributes pick here
     attributesAndModifiers(typeDef, cfg.params.typeName);
@@ -1143,7 +1304,7 @@ const builder = (cfg) => {
     if (cfg.singleton) {
         _Object._.isSingleton = () => { return attrs.type.has('singleton'); };
         _Object._.singleInstance = () => { return null; };
-        _Object._.singleInstance.clear = _noop;
+        _Object._.singleInstance.clear = noop;
     }
     if (cfg.mixins) {
         typeDef.mixins = {

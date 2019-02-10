@@ -17,7 +17,7 @@ flair.Serializer.deserialize = (Type, json) => {
 
 
 flair.Serializer.process = (ctx, source, target, isDeserialize) => {
-    // TODO: Fix as per new things
+    // TODO: Fix as per new things -- consider using noserialize attr on props when serialiaze is put on type itself
     // let mappedName = '',
     //     the_attr = null;
     for(let memberName in ctx) {
