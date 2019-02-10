@@ -130,3 +130,8 @@ flair.Resource.get = (resName) => {
     }
     return null;
 };
+
+
+// TODO: Update build engine, as per new definitions defined here - once done
+// let dump = `;flair.Resource("${resName}", "${resFile}", "${content}");`;
+// appendToFile(asm_min, dump);

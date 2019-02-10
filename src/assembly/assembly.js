@@ -45,6 +45,20 @@ flair.Assembly = (ado) => {
             this.assets = ado.assets.slice() || [];
             this.hasAssets = (ado.assets.length > 0);
         });
+
+
+        // TODO: check, this should be same as in build engine
+        // const appendADO = (ados, asm, asm_min, asmName, dest) => {
+        //     // each ADO object has:
+        //     //      "name": "", 
+        //     //      "file": "",
+        //     //      "desc": "",
+        //     //      "version": "",
+        //     //      "copyright": "",
+        //     //      "license": "",
+        //     //      "types": ["", "", ...],
+        //     //      "assets": ["", "", ...],
+        //     //      "settings: {}"
         
         /// TODO: props is no longer supported
         this.props(['readonly'], ['ado', 'name', 'file', 'desc', 'version', 'copyright', 'license', 'types', 'hasAssets']);

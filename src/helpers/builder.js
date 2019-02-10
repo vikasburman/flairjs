@@ -221,7 +221,7 @@ const modifierOrAttrRefl = (isModifier, def) => {
             get: (name, isCheckInheritance) => {
                 return root.get(name, true, isCheckInheritance);
             },
-            has: (attrName, isCheckInheritance) => {
+            has: (name, isCheckInheritance) => {
                 return root.has(name, true, isCheckInheritance);
             },
             all: (isJustName) => {

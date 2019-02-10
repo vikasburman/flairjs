@@ -1,7 +1,3 @@
-double check all members under _. both at object and type level, to see if we really need it 
-Lean meta data a lot - e.g., exposing def - why this is required, can we get rid of def of all levels - and still make modifiers and attrs keep working, as they have their closure copy anyways and can go previous and next --
-what if at the time of initialization, of these reflectors, I give them previous copy as well - so, no need to keep previous in list
-
 
 at all membernames in exception, make type name as prefix
 replace all exceptions with const values
@@ -10,10 +6,10 @@ create attribute for these
     publish: new _attrConfig('event', '!@publish'),
     fetch: new _attrConfig('func', 'async, !abstract'),
     
-alslo test if Type1 has a staticProp1 and Type2 derives from Type1 and has staticProp1 as well and Type3 derives from Type1 and has staticProp1 
+test if Type1 has a staticProp1 and Type2 derives from Type1 and has staticProp1 as well and Type3 derives from Type1 and has staticProp1 
 what will be values --- ideally they all should be different because these are at individual static level
 
-
+NO NEED fOR RESET API ANYWHERE
 
 also think - Enum definiton creator can itself create a factory to handle object literal and
 then pass this factory with static members etc. defined and code to add properties like

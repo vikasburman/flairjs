@@ -67,7 +67,7 @@ let delAll = (root) => {
 const copyDeps = (deps, done) => {
     const processNext = (items) => {
         if (items.length !== 0) {
-            let item = items.shift();
+            let item = items.shift(); // {src, dest}
             if (item.src.startsWith('http')) {
                 let httpOrhttps = null,
                     body = '';
@@ -104,7 +104,7 @@ const copyDeps = (deps, done) => {
 };
 
 // do
-const doTask = (srcList, srcRoot, destRoot, done) => {
+const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
     // srcList is an array of source paths that need to be processed for assembly building
     // injections data
     let injections = [];
@@ -119,7 +119,7 @@ const doTask = (srcList, srcRoot, destRoot, done) => {
 
     // find injection
     const findNextInjection = (content, root) => {
-        let prefix = '//// gears.inject:',
+        let prefix = '//// flair.inject:',
             suffix = '////'
             injection = {
                 found: false,
@@ -260,14 +260,14 @@ const doTask = (srcList, srcRoot, destRoot, done) => {
         if (lintReport.errorCount > 0 || lintReport.warningCount > 0) {
             console.log(eslintFormatter(lintReport.results));
             if (lintReport.errorCount > 0) {
-                throw `${lintReport.errorCount} Linting warnerrors found.`;
+                throw `${lintReport.errorCount} Linting errors found.`;
             }
         }
     };
 
     // minify code
     const minifyFile = (jsFile) => {
-        let result = uglifyjs.minify([jsFile], uglifyConfig.js);
+        let result = uglifyjs.minify([jsFile], uglifyConfig);
         if (result.error) {
             throw `Error minifying ${jsFile}. \n\n ${result.error}`;
         }
@@ -293,9 +293,9 @@ const doTask = (srcList, srcRoot, destRoot, done) => {
 
    // append resource
     const appendResource = (ado, asm, asm_min, resFile) => {
-        // each resource name is the qualfied name of the resource following by .res.<ext>
-        // so for example, a resource gears.abc.res.json can be placed anywhere
-        // and it will be accessible as Resource.get('gears.abc').JSON
+        // each resource name is the qualified name of the resource following by .res.<ext>
+        // so for example, a resource flair.abc.res.json can be placed anywhere
+        // and it will be accessible as a normal type via namespaced get calls
         let resData = '',
             ext = path.extname(resFile).toLowerCase(),
             resName = '',
@@ -304,7 +304,7 @@ const doTask = (srcList, srcRoot, destRoot, done) => {
         resName = resName.substr(0, resName.indexOf('.res'));
 
         // read file
-        if (['txt', 'xml', 'js', 'md', 'json', 'css', 'html', 'svg'].indexOf(ext) === -1) { // utf8 encoding
+        if (utf8EncResFileTypes.indexOf(ext) === -1) { // utf8 encoding resFileTypes must contain extension names with a .
             content = fsx.readFileSync(resFile, 'utf8');
         } else { // no encoding
             content = fsx.readFileSync(resFile);
@@ -346,9 +346,9 @@ const doTask = (srcList, srcRoot, destRoot, done) => {
 
     // append type
     const appendType = (ado, asm, asm_min, typeFile) => {
-        // each type name is the qualfied name of the type following by .js
-        // so for example, a type gears.App.js can be placed anywhere
-        // and it will be accessible as gears.App type via bring or other means
+        // each type name is the qualified name of the type following by .js
+        // so for example, a type flair.App.js can be placed anywhere
+        // and it will be accessible as flair.App type via bring or other means
         let ext = path.extname(typeFile).toLowerCase(),
             typeName = path.basename(typeFile, '.js');
 
@@ -386,22 +386,12 @@ const doTask = (srcList, srcRoot, destRoot, done) => {
                     appendType(ado, asm, asm_min, theFile);
                 }
             } else {
-                if (['.html', '.css', '.xml', '.txt', '.md', '.json', '.png', '.jpg', '.jpeg', '.gif'].indexOf(ext) !== -1) {
-                    if (file.endsWith('.ast' + ext)) { // known asset type
-                        copyAsset(ado, asm, asm_min, theFile, src, dest);
-                    } else if (file.endsWith('.res' + ext)) { // known resource type
-                        appendResource(ado, asm, asm_min, theFile);
-                    } else { // unknown scheme of things
-                        throw `Unknown file scheme ${theFile}.`;
-                    }
-                } else { // unknown file type
-                    if (file.endsWith('.ast' + ext)) { // some unknown asset type
-                        copyAsset(ado, asm, asm_min, theFile, src, dest);
-                    } else if (file.endsWith('.res' + ext)) { // some unknown resource type
-                        appendResource(ado, asm, asm_min, theFile);
-                    } else { // unknown scheme of things
-                        throw `Unknown file scheme ${theFile}.`;
-                    }
+                if (file.endsWith('.ast' + ext)) { // known asset type
+                    copyAsset(ado, asm, asm_min, theFile, src, dest);
+                } else if (file.endsWith('.res' + ext)) { // known resource type
+                    appendResource(ado, asm, asm_min, theFile);
+                } else { // unknown scheme of things
+                    throw `Unknown file scheme ${theFile}.`;
                 }
             }
         }
@@ -529,11 +519,11 @@ const doTask = (srcList, srcRoot, destRoot, done) => {
             // all folders/files that starts with '_' are skipped processing
             // all *.spec.js files are skipped
             // all *.res.html|css|js|xml|txt|md|json|png|jpg|jpeg|gif files are added as resource in assembly
-            //  note: resource name is the file name minus ".res.<ext>". e.g., gears.mainCSS.res.css will be available as gears.mainCSS resource
+            //  note: resource name is the file name minus ".res.<ext>". e.g., flair.mainCSS.res.css will be available as flair.mainCSS resource
             // all *.ast.* files are treated as assets and copied in same folder structure to assembly name folder at dest
             //  note: while copying, the ".ast" is removed, so file name becomes natural file name
             // all *.js are treated as types and bundled
-            // all *.js files are looked for "//// gears.inject: <relative file name> ////" patters and defined file is injected in-place
+            // all *.js files are looked for "//// flair.inject: <relative file name> ////" patters and defined file is injected in-place
             // the index.js file at root folder is treated as assembly initializer and processed first
             // the settings.json file at root folder is treated as assembly settings and added to ADO as default settings for assembly
             // all files other than above scheme of file names, are ignored and remain untouched and a warning is shown
@@ -567,10 +557,10 @@ const doTask = (srcList, srcRoot, destRoot, done) => {
         process(_src, _dest);
     }
 
-   // done
-   if (typeof done === 'function') {
-    done();
-   }
+    // done
+    if (typeof done === 'function') {
+        done();
+    }
 };
 module.exports = function(options, cb) {
     // single param
@@ -588,6 +578,7 @@ module.exports = function(options, cb) {
     options.eslintConfig = options.eslintConfig || './build/config/.eslint.json';
     options.depsConfig = options.depsConfig || './build/config/.deps.json';
     options.packageJSON = options.packageJSON || './package.json';
+    options.utf8EncResFileTypes = options.utf8EncResFileTypes || ['.txt', '.xml', '.js', '.md', '.json', '.css', '.html', '.svg'];
     options.cb = options.cb || cb;
 
     // get files

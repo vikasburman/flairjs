@@ -1,71 +1,79 @@
 
 describe('---- struct.js ----', () => {
+    let flair = null;
     beforeAll(() => { // setup
-        let Flair = require('../../dist/flair.js');
-        Flair();
+
+        //Flair();
     });
     afterAll(() => { // cleanup
-        Flair('END');
+        //Flair('END');
     });
 
     describe('When defining', () => {
         it('it should define properly', () => {
             // let CL = Class('MyClass', function() {
 
+            try {
+                let flair = require('../../dist/flair.js');
+                console.log(flair);            
+            } catch (e) {
+                console.log(e);            
+            }
+
             // });
             // console.log(CL);
             // let cl = new CL();
             // console.log(cl);
 
-            let ST = Struct('MyStruct', function() {
-                let run = () => {
-                    console.log('Hello!!!!!!');
+            // let ST = Struct('MyStruct', function() {
+            //     let run = () => {
+            //         console.log('Hello!!!!!!');
                     
-                    return 10;
-                };
+            //         return 10;
+            //     };
 
-                this.construct = (a1) => {
-                    this.cc = a1;
-                    this.started.subscribe(this.onStart);
-                    //console.log('created! ' + this.cc);
-                    this.started('inside', 20);
-                    console.log(this.started);
-                };
+            //     this.construct = (a1) => {
+            //         this.cc = a1;
+            //         this.started.subscribe(this.onStart);
+            //         //console.log('created! ' + this.cc);
+            //         this.started('inside', 20);
+            //         console.log(this.started);
+            //     };
 
-                //this.dispose = () => {};
+            //     //this.dispose = () => {};
         
-                this.xyz = () => {
-                    this.cc = 20000;
-                    //this.abc = () => {};
-                    console.log('ME TOO - ' + this.cc);
-                    return run();
-                };
-                this.abc = () => {
-                    this.xyz();
-                };
+            //     this.xyz = () => {
+            //         this.cc = 20000;
+            //         //this.abc = () => {};
+            //         console.log('ME TOO - ' + this.cc);
+            //         return run();
+            //     };
+            //     this.abc = () => {
+            //         this.xyz();
+            //     };
       
-                attr('event');
-                this.started = (args1, args2) => {
-                    return { values: [args1, args2, this.cc] };
-                };
+            //     attr('event');
+            //     this.started = (args1, args2) => {
+            //         return { values: [args1, args2, this.cc] };
+            //     };
 
-                this.onStart = (e) => {
-                    console.log(e.name + ' - ' + e.args.values);
-                };
+            //     this.onStart = (e) => {
+            //         console.log(e.name + ' - ' + e.args.values);
+            //     };
 
-                attr('private');
-                this.cc = 200;
+            //     attr('private');
+            //     this.cc = 200;
 
-                let _cc2 = 10;
-                this.cc2 = {
-                    get: () => { return _cc2; },
-                    set: (value) => {
-                        _cc2 = value;
-                    }
-                }
+            //     let _cc2 = 10;
+            //     this.cc2 = {
+            //         get: () => { return _cc2; },
+            //         set: (value) => {
+            //             _cc2 = value;
+            //         }
+            //     }
 
                 
-            });
+            // });
 
       
             // let MyStruct = Struct('MyStruct', function() {
@@ -118,8 +126,8 @@ describe('---- struct.js ----', () => {
             // });
             
             
-            console.log(ST);
-            let st = new ST(1000);
+            // console.log(ST);
+            // let st = new ST(1000);
             //console.log(st.started);
             //st.started('outside', 40);
             //let st2 = new MyStruct(st);

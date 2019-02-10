@@ -3,75 +3,53 @@
  * FlairJS
  * True Object Oriented JavaScript
  * Version 0.15.27
- * Sun, 10 Feb 2019 18:59:12 GMT
+ * Sun, 10 Feb 2019 22:29:48 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  * https://flairjs.com
  */
 
 // eslint-disable-next-line for-direction
-(function(factory) { // eslint-disable-line getter-return
+(function(root, factory) { // eslint-disable-line getter-return
     'use strict';
 
-    // add factory extensions for server-side CLI processing
-    let isServer = (typeof global !== 'undefined');
-    if (isServer) { factory.build = require('./flair.build.js'); }
-    
-    // freeze factory
-    let _factory = Object.freeze(factory);
-    
-    // expose as module and globally
     if (typeof define === 'function' && define.amd) { // AMD support
-        define(function() { return _factory; });
+        define(factory);
     } else if (typeof exports === 'object') { // CommonJS and Node.js module support
         if (module !== undefined && module.exports) {
-            exports = module.exports = _factory; // Node.js specific `module.exports`
+            exports = module.exports = factory(); // Node.js specific `module.exports`
         }
-        module.exports = exports = _factory; // CommonJS
-    } else if (!isServer) {
-        window.Flair = _factory; // expose factory as global
+        module.exports = exports = factory(); // CommonJS        
+    } else { // expose as global on window
+        root.flair = factory();
     }
-
-}).call(this, (opts) => {
+})(this, function() {
     'use strict';
 
     // locals
-    let isServer = (new Function("try {return this===global;}catch(e){return false;}"))(),
+    let isServer = (typeof global !== 'undefined'),
         _global = (isServer ? global : window),
         flair = {}, 
         sym = [],
-        isTesting = false,
-        isClient = false,
+        isClient = !isServer,
         isProd = false,
         isDebug = false,
+        isTesting = false,
         _noop = () => {},
-        options = {};   
+        options = {},
+        argsString = '';
 
-    // reset, if already initialized
-    if(_global.flair) {
-        // reset all globals
-        let fn = null;
-        for(let name of _global.flair.members) {
-            fn = _global.flair[name]._ ? _global.flair[name]._.reset : null;
-            if (typeof fn === 'function') { fn(); }
-            delete _global[name];
-        }
 
-        // delete main global
-        delete _global.flair;
-
-        // continue to load or end
-        if (typeof opts === 'string' && opts === 'END') { return; }
+    // read symbols from environment
+    if (isServer) {
+        let idx = process.argv.findIndex((item) => { return (item.startsWith('--flairSymbols') ? true : false); });
+        if (idx !== -1) { argsString = process.argv[idx].substr(2).split('=')[1]; }
+    } else {
+        argsString = (typeof window.flairSymbols !== 'undefined') ? window.flairSymbols : [];
     }
+    if (argsString) { sym = argsString.split(',').map(item => item.trim()); }
 
-    // process options
-    if (!opts) { 
-        opts = {};
-    } else if (typeof opts === 'string') { // only symbols can be given as comma delimited string
-        opts = { symbols: opts.split(',').map(item => item.trim()) };
-    }
-    options.symbols = Object.freeze(opts.symbols || []);
-    sym = options.symbols,
+    options.symbols = Object.freeze(sym);
     isTesting = (sym.indexOf('TEST') !== -1);
     options.env = Object.freeze({
         type: (isServer ? 'server' : 'client'),
@@ -80,9 +58,7 @@
         isServer: (!isTesting ? isServer : (sym.indexOf('SERVER') !== -1 ? true : isServer)),
         isClient: (!isTesting ? !isServer : (sym.indexOf('CLIENT') !== -1 ? true : !isServer)),
         isProd: (sym.indexOf('DEBUG') === -1 && sym.indexOf('PROD') !== -1),
-        isDebug: (sym.indexOf('DEBUG') !== -1),
-        globals: (typeof globals !== 'undefined' ? opts.globals : options.symbols.indexOf('GLOBALS') !== -1),
-        args: (isServer ? process.argv : new window.URLSearchParams(window.location.search))
+        isDebug: (sym.indexOf('DEBUG') !== -1)
     });
     isServer = options.env.isServer;
     isClient = options.env.isClient;
@@ -96,7 +72,7 @@
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
         link: 'https://flairjs.com',
-        lupdate: new Date('Sun, 10 Feb 2019 18:59:12 GMT')
+        lupdate: new Date('Sun, 10 Feb 2019 22:29:48 GMT')
     });
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -167,6 +143,7 @@
         }
         return target;
     };
+    
     
     /**
      * @name Exception
@@ -785,6 +762,9 @@
     // attach
     flair.attr = _attr;
     flair.members.push('attr');
+    
+    // TODO: define $$ which is just attr without any attr.collect etc.
+    
     /**
      * @name Port
      * @description Customize configurable functionality of the core. This gives a way to configure a different component to
@@ -1237,7 +1217,7 @@
                 get: (name, isCheckInheritance) => {
                     return root.get(name, true, isCheckInheritance);
                 },
-                has: (attrName, isCheckInheritance) => {
+                has: (name, isCheckInheritance) => {
                     return root.has(name, true, isCheckInheritance);
                 },
                 all: (isJustName) => {
@@ -2360,6 +2340,20 @@
                 this.assets = ado.assets.slice() || [];
                 this.hasAssets = (ado.assets.length > 0);
             });
+    
+    
+            // TODO: check, this should be same as in build engine
+            // const appendADO = (ados, asm, asm_min, asmName, dest) => {
+            //     // each ADO object has:
+            //     //      "name": "", 
+            //     //      "file": "",
+            //     //      "desc": "",
+            //     //      "version": "",
+            //     //      "copyright": "",
+            //     //      "license": "",
+            //     //      "types": ["", "", ...],
+            //     //      "assets": ["", "", ...],
+            //     //      "settings: {}"
             
             /// TODO: props is no longer supported
             this.props(['readonly'], ['ado', 'name', 'file', 'desc', 'version', 'copyright', 'license', 'types', 'hasAssets']);
@@ -3151,6 +3145,10 @@
         return null;
     };
     
+    
+    // TODO: Update build engine, as per new definitions defined here - once done
+    // let dump = `;flair.Resource("${resName}", "${resFile}", "${content}");`;
+    // appendToFile(asm_min, dump);
     let container = {};
     
     /**
@@ -4611,33 +4609,82 @@
     
     // add to members list
     flair.members.push('Reflector');    
+    /**
+     * @name build
+     * @description Builds flair assemblies as per given configuration
+     * @example
+     *  build(options, cb)
+     * @params
+     *  options: object - build configuration object having following options:
+     *              src: source folder root path
+     *              dest: destination folder root path - where to copy built assemblies
+     *              processAsGroups: how to interpret src folder
+     *                  true - all root level folders under 'src' will be treated as one individual assembly
+     *                  false - all root level folders under 'src' will be treated as individual groups and next level folders under each of these groups will be treated as one individual assembly
+     *                  NOTE: each assembly level folder can have any structure underneath, following rules apply when building assemblies
+     *                      > append all files, folders having types, resources and assets
+     *                      > each assembly can have any structure underneath its main folder
+     *                      > all folders/files that starts with '_' are skipped processing
+     *                      > all *.spec.js files are skipped
+     *                      > all *.res.html|css|js|xml|txt|md|json|png|jpg|jpeg|gif files are added as resource in assembly
+     *                        NOTE: resource name is the file name minus ".res.<ext>". e.g., a.b.c.mainCSS.res.css will be available as a.b.c.mainCSS resource
+     *                        This means, each resource name is the qualified name of the resource following by .res.<ext>
+     *                      > all *.ast.* files are treated as assets and copied in same folder structure to assembly name folder at dest
+     *                        NOTE: while copying, the ".ast" is removed, so file name becomes natural file name
+     *                      > all *.js are treated as types and bundled
+     *                        each type name is the qualified name of the type following by .js, e.g. a.b.c.MyClass.js -- and it should also have same type defined in there with 'a.b.c.MyClass'
+     *                        CAUTION: If these are different, type will be registered by the name defined inside, but will not be resolved via load/bring or other means
+     *                        As of now, assembly builder does not warn or change about this. TODO: this is to be implemented
+     *                        NOTE: all *.js files are looked for "//// flair.inject: <relative file name> ////" patters and defined file is injected in-place
+     *                      > the index.js file at root folder is treated as assembly initializer and added first
+     *                      > the settings.json file at root folder is treated as assembly settings and added to ADO as default settings for assembly
+     *                      >  all files other than above scheme of file names, are ignored and remain untouched and a warning is shown
+     *              uglifyConfig: path of uglify config JSON file as in: https://github.com/mishoo/UglifyJS2#minify-options
+     *              eslintConfig: path of eslint config JSON file, having structure as in: https://eslint.org/docs/user-guide/configuring
+     *              depsConfig: path of dependencies update config JSON file, having structure as:
+     *                  {
+     *                      update: true/false - if run dependency update
+     *                      deps: [] - each item in here should have structure as: { src, dest }
+     *                                  NOTE:
+     *                                      src: can be a web url or a local file path
+     *                                      dest: local file path
+     *                  }
+     *              packageJSON: path of packageJSON file
+     *              utf8EncResFileTypes: an array of file extensions with a "."  to define for which extensions urf8 encoding needs to be done when bundling them inside assembly
+     *                  NOTE: define this only when you want to change, inbuilt defaults are: ['.txt', '.xml', '.js', '.md', '.json', '.css', '.html', '.svg'];
+     *                  no encoding is done for other resource types
+     *              cb: callback function, if not being passed separately
+     * 
+     *              NOTE: All local paths must be related to root of the project
+     *  cb: function - callback function
+     * @returns type - flair type for the given object
+     */ 
+     const _cli = Object.freeze({
+        build: (isServer ? require('./flair.build.js') : null)
+    });
+    
+    // expose
+    flair.cli = _cli;
+    flair.members.push('cli');
+        
 
-    // define ports
+    // define ports where external implementations can be attached
     _Port.define('moduleLoader', 'function');                                       // to define an external server/client specific module loader of choice
     _Port.define('fileLoader', 'function');                                         // to define an external server/client specific file loader of choice
     _Port.define('sessionStorage', 'object', ['key', 'setItem', 'getItem']);        // to define an external server/client specific file loader of choice
     _Port.define('localStorage', 'object', ['key', 'setItem', 'getItem']);          // to define an external server/client specific file loader of choice
     _Port.define('pubsub', 'object', ['publish', 'subscribe']);                     // to define a pubsub library of choice having defined members
 
-    // define telemetry channels
+    // define telemetry channels where channel feed is pushed
     _Channel.define('raw', 'flair.system.raw');                                     // type and instances creation telemetry
     _Channel.define('exec', 'flair.system.execute');                                // member access execution telemetry
     _Channel.define('info', 'flair.system.info');                                   // info, warning and exception telemetry
     _Channel.define('fetch', 'flair.system.fetch');                                 // file or module include telemetry
 
-    // set globals, if need be
-    for(let name of flair.members) {
-        if (options.env.globals) {
-            _global[name] = Object.freeze(flair[name]);
-        }
-    }
+    // freeze members
     flair.members = Object.freeze(flair.members);
 
-    // even if suppress globals, still define flair and $$ (flair.attr) as globals
-    _global.flair = Object.freeze(flair);
-    _global.$$ = flair.attr;
-
     // return
-    return _global.flair;
+    return Object.freeze(flair);
 });    
 

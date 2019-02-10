@@ -147,3 +147,5 @@ _attr.clear = () => {
 // attach
 flair.attr = _attr;
 flair.members.push('attr');
+
+// TODO: define $$ which is just attr without any attr.collect etc.
