@@ -2,7 +2,7 @@ const gulp = require('gulp');
 const jasmineNode = require('gulp-jasmine');
 const jasminConfig = require('../config/.jasmine.json');
 const tests = [
-    "./specs/___/*.spec.js"
+    "./test/specs/**/*.spec.js"
 ];
 
 // error handler
