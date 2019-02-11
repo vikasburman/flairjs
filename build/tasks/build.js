@@ -53,7 +53,7 @@ const doTask = (done) => {
     .pipe(eslint.failAfterError())
     
     // minify
-    .pipe(minifier(uglifyConfig.js, uglifyjs))
+    .pipe(minifier(uglifyConfig, uglifyjs))
     .on('error', errorHandler('minifier'))
     
     // write minified
@@ -64,11 +64,9 @@ const doTask = (done) => {
     .pipe(replace(destName + '.js', destName + '.min.js', replaceOptions))
     .pipe(gulp.dest('./dist'))
     .on('end', () => {
-        // copy build engine
-        fsx.copyFileSync('./build/build-asm/engine.js', './dist/' + destName + '.build.js');
-
-        // update examples copy as well
-        fsx.copyFileSync('./dist/' + destName + '.js', './docs/examples/kitchensink/js/' + destName + '.js');
+        // update docs copy as well
+        fsx.copyFileSync('./dist/' + destName + '.js', './docs/js/' + destName + '.js');
+        fsx.copyFileSync('./dist/' + destName + '.min.js', './docs/js/' + destName + '.min.js');
 
         // done, print stats
         let stat = fsx.statSync('./dist/' + destName + '.js'),
@@ -78,6 +76,42 @@ const doTask = (done) => {
     })
     .on('error', errorHandler('write-minified'));
 };
+const doCLITask = (done) => {
+    gulp.src('./src/cli/build-asm.js', {base: './src/cli/'})
+
+    // assemble pieces
+    .pipe(inject())
+    .on('error', errorHandler('assemble-cli'))
+
+    // write assembled
+    .pipe(rename((path) => {
+        path.basename = destName + '.build';
+    }))
+    .on('error', errorHandler('rename'))     
+    .pipe(replace('<basename>', packageJSON.name, replaceOptions))
+    .pipe(replace('<title>', packageJSON.title, replaceOptions))
+    .pipe(replace('<desc>', packageJSON.description, replaceOptions))
+    .pipe(replace('<version>', packageJSON.version, replaceOptions))
+    .pipe(replace('<copyright>', packageJSON.copyright, replaceOptions))
+    .pipe(replace('<license>', packageJSON.license, replaceOptions))
+    .pipe(replace('<link>', packageJSON.link, replaceOptions))
+    .pipe(replace('<datetime>', new Date().toUTCString(), replaceOptions))
+    .pipe(gulp.dest('./dist'))
+    .on('error', errorHandler('write-assembled-cli'))
+
+    // check for issues
+    .pipe(eslint('./build/config/.eslint.json'))
+    // format errors, if any
+    .pipe(eslint.format())
+    // stop if errors
+    .pipe(eslint.failAfterError())
+
+    // write
+    .pipe(gulp.dest('./dist'))
+    .on('end', done);
+};
 exports.build = function(cb) {
-    doTask(cb);
+    doTask(() => {
+        doCLITask(cb);
+    });
 };

@@ -1,10 +1,16 @@
 /**
- * FlairJS - Build Engine
+ * @preserve
+ * FlairJS - Assembly Builder
+ * True Object Oriented JavaScript
+ * Version 0.15.28
+ * Mon, 11 Feb 2019 20:53:30 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
+ * https://flairjs.com
  */
 
-const rrd = require('recursive-readdir-sync');
+ // eslint-disable-next-line for-direction
+const rrd = require('recursive-readdir-sync');  // eslint-disable-line getter-return
 const copyDir = require('copy-dir');
 const path = require('path');
 const fsx = require('fs-extra');
@@ -19,35 +25,6 @@ let uglifyConfig,
     eslint, 
     eslintFormatter = null;
 
-// arguments reader
-let readArgs = function() {
-    let argList = process.argv,
-        arg = {}, a, opt, thisOpt, curOpt;
-    for (a = 0; a < argList.length; a++) {
-      thisOpt = argList[a].trim();
-      opt = thisOpt.replace(/^\-+/, '');
-
-      if (opt === thisOpt) {
-        // argument value
-        if (curOpt) arg[curOpt] = opt;
-        curOpt = null;
-      }
-      else {
-        // argument name
-        curOpt = opt;
-        arg[curOpt] = true;
-      }
-    }
-    return arg;
-};
-// error handler
-let errorHandler = (name) => {
-  return function (err) {
-      console.error('Error in task: ' + name);
-      console.error('Error: ' + err.toString());
-  };
-};
-// get folders under given root
 let getFolders = (root, excludeRoot) => {
   const _getFolders = () => {
       return fsx.readdirSync(root)
@@ -63,7 +40,6 @@ let getFolders = (root, excludeRoot) => {
 let delAll = (root) => {
   del.sync([root + '/**', '!' + root]);
 };
-
 const copyDeps = (deps, done) => {
     const processNext = (items) => {
         if (items.length !== 0) {
@@ -76,7 +52,7 @@ const copyDeps = (deps, done) => {
                 } else {
                     httpOrhttps = require('http'); // for urls where it is not defined
                 }
-                httpOrhttps.get(file, (resp) => {
+                httpOrhttps.get(item.src, (resp) => {
                     resp.on('data', (chunk) => { body += chunk; });
                     resp.on('end', () => { 
                         fsx.ensureFileSync(item.dest);
@@ -120,7 +96,7 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
     // find injection
     const findNextInjection = (content, root) => {
         let prefix = '//// flair.inject:',
-            suffix = '////'
+            suffix = '////',
             injection = {
                 found: false,
                 file: '',
@@ -171,7 +147,7 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
                     }
 
                     // log
-                    console.log('    >> inject: ' + injection.file + ' (min: ' + (injection.file === minifiedFile ? 'missing, used same' : minifiedFile) + ')');
+                    console.log('    >> inject: ' + injection.file + ' (min: ' + (injection.file === minifiedFile ? 'missing, used same' : minifiedFile) + ')'); // eslint-disable-line no-console
 
                     // get file content
                     fileContent = fsx.readFileSync(injection.file, 'utf8');
@@ -258,7 +234,7 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
     const runLint = (jsFile) => {
         let lintReport = eslint.executeOnFiles([jsFile]);
         if (lintReport.errorCount > 0 || lintReport.warningCount > 0) {
-            console.log(eslintFormatter(lintReport.results));
+            console.log(eslintFormatter(lintReport.results)); // eslint-disable-line no-console
             if (lintReport.errorCount > 0) {
                 throw `${lintReport.errorCount} Linting errors found.`;
             }
@@ -296,8 +272,7 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
         // each resource name is the qualified name of the resource following by .res.<ext>
         // so for example, a resource flair.abc.res.json can be placed anywhere
         // and it will be accessible as a normal type via namespaced get calls
-        let resData = '',
-            ext = path.extname(resFile).toLowerCase(),
+        let ext = path.extname(resFile).toLowerCase(),
             resName = '',
             content = '';
         resName = path.basename(resFile);
@@ -320,7 +295,7 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
         appendToFile(asm, dump);
 
         // log
-        console.log('    res: ' + resName + ' (' +  resFile + ')');
+        console.log('    res: ' + resName + ' (' +  resFile + ')'); // eslint-disable-line no-console
 
         // register with ado
         appendTypeToADO(ado, resName);
@@ -341,7 +316,7 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
         appendAssetToADO(ado, destFile.replace(dest, '.'));
 
         // log
-        console.log('  asset: ' + path.basename(astFile) + ' -> ' + path.basename(destFile) + ' (' + path.dirname(astFile) + ' -> ' + path.dirname(destFile) + ')');
+        console.log('  asset: ' + path.basename(astFile) + ' -> ' + path.basename(destFile) + ' (' + path.dirname(astFile) + ' -> ' + path.dirname(destFile) + ')'); // eslint-disable-line no-console
     };
 
     // append type
@@ -349,11 +324,10 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
         // each type name is the qualified name of the type following by .js
         // so for example, a type flair.App.js can be placed anywhere
         // and it will be accessible as flair.App type via bring or other means
-        let ext = path.extname(typeFile).toLowerCase(),
-            typeName = path.basename(typeFile, '.js');
+        let typeName = path.basename(typeFile, '.js');
 
         // log
-        console.log('   type: ' + typeName + ' (' + typeFile + ')');
+        console.log('   type: ' + typeName + ' (' + typeFile + ')'); // eslint-disable-line no-console
 
         // process injections
         let content = processInjections(typeFile);
@@ -368,6 +342,7 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
     // append files
     const appendFiles = (ado, asm, asm_min, fld, mainFile, steFile, src, dest) => {
         let files = rrd(fld),
+            ext = '',
             theFile = '';
         for(let file of files) { 
             ext = path.extname(file).toLowerCase();
@@ -377,7 +352,7 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
             if (theFile === steFile) { continue; }
             if (ext === '.js') {
                 if (file.endsWith('.spec.js')) { // spec
-                    console.log('   spec: Skipped! (' + theFile + ')');
+                    console.log('   spec: Skipped! (' + theFile + ')'); // eslint-disable-line no-console
                 } else if (file.endsWith('.res.js')) { // resource
                     appendResource(ado, asm, asm_min, theFile);
                 } else if (file.endsWith('.ast.js')) { // asset
@@ -398,11 +373,11 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
     };
 
     // append main file
-    const appendMain = (asm, asm_min, fle, src) => {
+    const appendMain = (asm, asm_min, fle, src) => { // eslint-disable-line no-unused-vars
         // pick fle, if exists
         if (fsx.existsSync(fle)) {
             // log
-            console.log('   main: ' + path.basename(fle) + ' (' + fle + ')'); 
+            console.log('   main: ' + path.basename(fle) + ' (' + fle + ')'); // eslint-disable-line no-console
 
             // process injections
             let content = processInjections(fle);
@@ -411,25 +386,25 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
             lintMinifyAppend(asm, asm_min, fle, content);
         } else {
             // log
-            console.log('   main: (not found)'); 
+            console.log('   main: (not found)'); // eslint-disable-line no-console
         }
     };
 
     const appendSettings = (ado, asm, asm_min, steFile) => {
         if (fsx.existsSync(steFile)) {
             // log
-            console.log(' config: ' + steFile);
+            console.log(' config: ' + steFile); // eslint-disable-line no-console
 
             // register with ado
             appendSettingsToADO(ado, JSON.parse(fsx.readFileSync(steFile)));
         } else {
             // log
-            console.log(' config: (not found)');
+            console.log(' config: (not found)'); // eslint-disable-line no-console
         }
     };
 
     // append ADO
-    const appendADO = (ados, asm, asm_min, asmName, dest) => {
+    const appendADO = (ados, asm, asm_min, asmName, dest) => { // eslint-disable-line no-unused-vars
         // each ADO object has:
         //      "name": "", 
         //      "file": "",
@@ -492,7 +467,7 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
         // process each assembly
         for(let asmName of folders) {
             // log
-            console.log('\nasm: ' + asmName);
+            console.log('\nasm: ' + asmName); // eslint-disable-line no-console
 
             // assembly file at dest
             // NOTE: name of the folder is the name of the assembly itself
@@ -539,7 +514,7 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
             // done, print stats
             let stat = fsx.statSync(asm),
                 stat_min = fsx.statSync(asm_min)
-            console.log('==> ' + path.basename(asm) + ' (' + Math.round(stat.size / 1024) + 'kb, ' + Math.round(stat_min.size / 1024) + 'kb minified)\n');
+            console.log('==> ' + path.basename(asm) + ' (' + Math.round(stat.size / 1024) + 'kb, ' + Math.round(stat_min.size / 1024) + 'kb minified)\n'); // eslint-disable-line no-console
         }
 
         // write ados.json for this root
@@ -562,6 +537,58 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
         done();
     }
 };
+
+
+/**
+ * @name build
+ * @description Builds flair assemblies as per given configuration
+ * @example
+ *  build(options, cb)
+ * @params
+ *  options: object - build configuration object having following options:
+ *              src: source folder root path
+ *              dest: destination folder root path - where to copy built assemblies
+ *              processAsGroups: how to interpret src folder
+ *                  true - all root level folders under 'src' will be treated as one individual assembly
+ *                  false - all root level folders under 'src' will be treated as individual groups and next level folders under each of these groups will be treated as one individual assembly
+ *                  NOTE: each assembly level folder can have any structure underneath, following rules apply when building assemblies
+ *                      > append all files, folders having types, resources and assets
+ *                      > each assembly can have any structure underneath its main folder
+ *                      > all folders/files that starts with '_' are skipped processing
+ *                      > all *.spec.js files are skipped
+ *                      > all *.res.html|css|js|xml|txt|md|json|png|jpg|jpeg|gif files are added as resource in assembly
+ *                        NOTE: resource name is the file name minus ".res.<ext>". e.g., a.b.c.mainCSS.res.css will be available as a.b.c.mainCSS resource
+ *                        This means, each resource name is the qualified name of the resource following by .res.<ext>
+ *                      > all *.ast.* files are treated as assets and copied in same folder structure to assembly name folder at dest
+ *                        NOTE: while copying, the ".ast" is removed, so file name becomes natural file name
+ *                      > all *.js are treated as types and bundled
+ *                        each type name is the qualified name of the type following by .js, e.g. a.b.c.MyClass.js -- and it should also have same type defined in there with 'a.b.c.MyClass'
+ *                        CAUTION: If these are different, type will be registered by the name defined inside, but will not be resolved via load/bring or other means
+ *                        As of now, assembly builder does not warn or change about this. TODO: this is to be implemented
+ *                        NOTE: all *.js files are looked for "//// flair.inject: <relative file name> ////" patters and defined file is injected in-place
+ *                      > the index.js file at root folder is treated as assembly initializer and added first
+ *                      > the settings.json file at root folder is treated as assembly settings and added to ADO as default settings for assembly
+ *                      >  all files other than above scheme of file names, are ignored and remain untouched and a warning is shown
+ *              uglifyConfig: path of uglify config JSON file as in: https://github.com/mishoo/UglifyJS2#minify-options
+ *              eslintConfig: path of eslint config JSON file, having structure as in: https://eslint.org/docs/user-guide/configuring
+ *              depsConfig: path of dependencies update config JSON file, having structure as:
+ *                  {
+ *                      update: true/false - if run dependency update
+ *                      deps: [] - each item in here should have structure as: { src, dest }
+ *                                  NOTE:
+ *                                      src: can be a web url or a local file path
+ *                                      dest: local file path
+ *                  }
+ *              packageJSON: path of packageJSON file
+ *              utf8EncResFileTypes: an array of file extensions with a "."  to define for which extensions urf8 encoding needs to be done when bundling them inside assembly
+ *                  NOTE: define this only when you want to change, inbuilt defaults are: ['.txt', '.xml', '.js', '.md', '.json', '.css', '.html', '.svg'];
+ *                  no encoding is done for other resource types
+ *              cb: callback function, if not being passed separately
+ * 
+ *              NOTE: All local paths must be related to root of the project
+ *  cb: function - callback function
+ * @returns type - flair type for the given object
+ */ 
 module.exports = function(options, cb) {
     // single param
     if (typeof options === 'function') {

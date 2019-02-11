@@ -6,19 +6,11 @@
         "comments": "some"
     },
     "compress": {
-        "sequences": true,
-        "properties": true,
-        "conditionals": true,
-        "comparisons": true,
-        "booleans": true,
-        "loops": true,
-        "unused": false,
-        "if_return": true,
-        "join_vars": true,
         "dead_code": false,
+        "evaluate": false,
+        "unused": false,
         "warnings": true,
-        "negate_iife": true,
-        "drop_debugger": true,
+        "passes": 1,
         "global_defs": {
             "global": true,
             "window": true        

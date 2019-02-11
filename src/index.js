@@ -27,43 +27,35 @@
     'use strict';
 
     // locals
-    let isServer = (typeof global !== 'undefined'),
+    let isServer = new Function("try {return this===global;}catch(e){return false;}")(),
         _global = (isServer ? global : window),
+        _noop = () => {},
         flair = {}, 
         sym = [],
-        isClient = !isServer,
-        isProd = false,
-        isDebug = false,
-        isTesting = false,
-        _noop = () => {},
         options = {},
         argsString = '';
-
 
     // read symbols from environment
     if (isServer) {
         let idx = process.argv.findIndex((item) => { return (item.startsWith('--flairSymbols') ? true : false); });
         if (idx !== -1) { argsString = process.argv[idx].substr(2).split('=')[1]; }
     } else {
-        argsString = (typeof window.flairSymbols !== 'undefined') ? window.flairSymbols : [];
+        argsString = (typeof window.flairSymbols !== 'undefined') ? window.flairSymbols : '';
     }
     if (argsString) { sym = argsString.split(',').map(item => item.trim()); }
 
     options.symbols = Object.freeze(sym);
-    isTesting = (sym.indexOf('TEST') !== -1);
     options.env = Object.freeze({
         type: (isServer ? 'server' : 'client'),
         global: _global,
-        isTesting: isTesting,
-        isServer: (!isTesting ? isServer : (sym.indexOf('SERVER') !== -1 ? true : isServer)),
-        isClient: (!isTesting ? !isServer : (sym.indexOf('CLIENT') !== -1 ? true : !isServer)),
+        isTesting: (sym.indexOf('TEST') !== -1),
+        isServer: isServer,
+        isClient: !isServer,
+        isCordova: (!isServer && !!window.cordova),
+        isNodeWebkit: (isServer && process.versions['node-webkit']),
         isProd: (sym.indexOf('DEBUG') === -1 && sym.indexOf('PROD') !== -1),
         isDebug: (sym.indexOf('DEBUG') !== -1)
     });
-    isServer = options.env.isServer;
-    isClient = options.env.isClient;
-    isProd = options.env.isProd;
-    isDebug = options.env.isDebug;
 
     // flair
     flair.info = Object.freeze({

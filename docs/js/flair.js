@@ -2,8 +2,8 @@
  * @preserve
  * FlairJS
  * True Object Oriented JavaScript
- * Version 0.15.27
- * Sun, 10 Feb 2019 22:29:48 GMT
+ * Version 0.15.28
+ * Mon, 11 Feb 2019 20:53:28 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  * https://flairjs.com
@@ -27,52 +27,44 @@
     'use strict';
 
     // locals
-    let isServer = (typeof global !== 'undefined'),
+    let isServer = new Function("try {return this===global;}catch(e){return false;}")(),
         _global = (isServer ? global : window),
+        _noop = () => {},
         flair = {}, 
         sym = [],
-        isClient = !isServer,
-        isProd = false,
-        isDebug = false,
-        isTesting = false,
-        _noop = () => {},
         options = {},
         argsString = '';
-
 
     // read symbols from environment
     if (isServer) {
         let idx = process.argv.findIndex((item) => { return (item.startsWith('--flairSymbols') ? true : false); });
         if (idx !== -1) { argsString = process.argv[idx].substr(2).split('=')[1]; }
     } else {
-        argsString = (typeof window.flairSymbols !== 'undefined') ? window.flairSymbols : [];
+        argsString = (typeof window.flairSymbols !== 'undefined') ? window.flairSymbols : '';
     }
     if (argsString) { sym = argsString.split(',').map(item => item.trim()); }
 
     options.symbols = Object.freeze(sym);
-    isTesting = (sym.indexOf('TEST') !== -1);
     options.env = Object.freeze({
         type: (isServer ? 'server' : 'client'),
         global: _global,
-        isTesting: isTesting,
-        isServer: (!isTesting ? isServer : (sym.indexOf('SERVER') !== -1 ? true : isServer)),
-        isClient: (!isTesting ? !isServer : (sym.indexOf('CLIENT') !== -1 ? true : !isServer)),
+        isTesting: (sym.indexOf('TEST') !== -1),
+        isServer: isServer,
+        isClient: !isServer,
+        isCordova: (!isServer && !!window.cordova),
+        isNodeWebkit: (isServer && process.versions['node-webkit']),
         isProd: (sym.indexOf('DEBUG') === -1 && sym.indexOf('PROD') !== -1),
         isDebug: (sym.indexOf('DEBUG') !== -1)
     });
-    isServer = options.env.isServer;
-    isClient = options.env.isClient;
-    isProd = options.env.isProd;
-    isDebug = options.env.isDebug;
 
     // flair
     flair.info = Object.freeze({
         name: 'FlairJS',
-        version: '0.15.27',
+        version: '0.15.28',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
         link: 'https://flairjs.com',
-        lupdate: new Date('Sun, 10 Feb 2019 22:29:48 GMT')
+        lupdate: new Date('Mon, 11 Feb 2019 20:53:28 GMT')
     });
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -1470,11 +1462,14 @@
             if (the_attr) {
                 let conditions = splitAndTrim(the_attr.args[0] || []);
                 for (let condition of conditions) {
-                    if (condition === 'test' && isTesting) { result = true; break; }
-                    if (condition === 'server' && isServer) { result = true; break; }
-                    if (condition === 'client' && isClient) { result = true; break; }
-                    if (condition === 'debug' && isDebug) { result = true; break; }
-                    if (condition === 'prod' && isProd) { result = true; break; }
+                    condition = condition.toLowerCase();
+                    if (condition === 'test' && options.env.isTesting) { result = true; break; }
+                    if (condition === 'server' && options.env.isServer) { result = true; break; }
+                    if (condition === 'client' && options.env.isClient) { result = true; break; }
+                    if (condition === 'debug' && options.env.isDebug) { result = true; break; }
+                    if (condition === 'prod' && options.env.isProd) { result = true; break; }
+                    if (condition === 'cordova' && options.env.isCordova) { result = true; break; }
+                    if (condition === 'nodewebkit' && options.env.isNodeWebkit) { result = true; break; }
                     if (options.symbols.indexOf(condition) !== -1) { result = true; break; }
                 }
                 if (!result) { return result; } // don't go to define, yet leave meta as is, so at a later stage we know that this was conditional and yet not available, means condition failed
@@ -4609,63 +4604,6 @@
     
     // add to members list
     flair.members.push('Reflector');    
-    /**
-     * @name build
-     * @description Builds flair assemblies as per given configuration
-     * @example
-     *  build(options, cb)
-     * @params
-     *  options: object - build configuration object having following options:
-     *              src: source folder root path
-     *              dest: destination folder root path - where to copy built assemblies
-     *              processAsGroups: how to interpret src folder
-     *                  true - all root level folders under 'src' will be treated as one individual assembly
-     *                  false - all root level folders under 'src' will be treated as individual groups and next level folders under each of these groups will be treated as one individual assembly
-     *                  NOTE: each assembly level folder can have any structure underneath, following rules apply when building assemblies
-     *                      > append all files, folders having types, resources and assets
-     *                      > each assembly can have any structure underneath its main folder
-     *                      > all folders/files that starts with '_' are skipped processing
-     *                      > all *.spec.js files are skipped
-     *                      > all *.res.html|css|js|xml|txt|md|json|png|jpg|jpeg|gif files are added as resource in assembly
-     *                        NOTE: resource name is the file name minus ".res.<ext>". e.g., a.b.c.mainCSS.res.css will be available as a.b.c.mainCSS resource
-     *                        This means, each resource name is the qualified name of the resource following by .res.<ext>
-     *                      > all *.ast.* files are treated as assets and copied in same folder structure to assembly name folder at dest
-     *                        NOTE: while copying, the ".ast" is removed, so file name becomes natural file name
-     *                      > all *.js are treated as types and bundled
-     *                        each type name is the qualified name of the type following by .js, e.g. a.b.c.MyClass.js -- and it should also have same type defined in there with 'a.b.c.MyClass'
-     *                        CAUTION: If these are different, type will be registered by the name defined inside, but will not be resolved via load/bring or other means
-     *                        As of now, assembly builder does not warn or change about this. TODO: this is to be implemented
-     *                        NOTE: all *.js files are looked for "//// flair.inject: <relative file name> ////" patters and defined file is injected in-place
-     *                      > the index.js file at root folder is treated as assembly initializer and added first
-     *                      > the settings.json file at root folder is treated as assembly settings and added to ADO as default settings for assembly
-     *                      >  all files other than above scheme of file names, are ignored and remain untouched and a warning is shown
-     *              uglifyConfig: path of uglify config JSON file as in: https://github.com/mishoo/UglifyJS2#minify-options
-     *              eslintConfig: path of eslint config JSON file, having structure as in: https://eslint.org/docs/user-guide/configuring
-     *              depsConfig: path of dependencies update config JSON file, having structure as:
-     *                  {
-     *                      update: true/false - if run dependency update
-     *                      deps: [] - each item in here should have structure as: { src, dest }
-     *                                  NOTE:
-     *                                      src: can be a web url or a local file path
-     *                                      dest: local file path
-     *                  }
-     *              packageJSON: path of packageJSON file
-     *              utf8EncResFileTypes: an array of file extensions with a "."  to define for which extensions urf8 encoding needs to be done when bundling them inside assembly
-     *                  NOTE: define this only when you want to change, inbuilt defaults are: ['.txt', '.xml', '.js', '.md', '.json', '.css', '.html', '.svg'];
-     *                  no encoding is done for other resource types
-     *              cb: callback function, if not being passed separately
-     * 
-     *              NOTE: All local paths must be related to root of the project
-     *  cb: function - callback function
-     * @returns type - flair type for the given object
-     */ 
-     const _cli = Object.freeze({
-        build: (isServer ? require('./flair.build.js') : null)
-    });
-    
-    // expose
-    flair.cli = _cli;
-    flair.members.push('cli');
         
 
     // define ports where external implementations can be attached

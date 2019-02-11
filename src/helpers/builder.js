@@ -474,11 +474,14 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
         if (the_attr) {
             let conditions = splitAndTrim(the_attr.args[0] || []);
             for (let condition of conditions) {
-                if (condition === 'test' && isTesting) { result = true; break; }
-                if (condition === 'server' && isServer) { result = true; break; }
-                if (condition === 'client' && isClient) { result = true; break; }
-                if (condition === 'debug' && isDebug) { result = true; break; }
-                if (condition === 'prod' && isProd) { result = true; break; }
+                condition = condition.toLowerCase();
+                if (condition === 'test' && options.env.isTesting) { result = true; break; }
+                if (condition === 'server' && options.env.isServer) { result = true; break; }
+                if (condition === 'client' && options.env.isClient) { result = true; break; }
+                if (condition === 'debug' && options.env.isDebug) { result = true; break; }
+                if (condition === 'prod' && options.env.isProd) { result = true; break; }
+                if (condition === 'cordova' && options.env.isCordova) { result = true; break; }
+                if (condition === 'nodewebkit' && options.env.isNodeWebkit) { result = true; break; }
                 if (options.symbols.indexOf(condition) !== -1) { result = true; break; }
             }
             if (!result) { return result; } // don't go to define, yet leave meta as is, so at a later stage we know that this was conditional and yet not available, means condition failed
