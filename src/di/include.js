@@ -23,11 +23,9 @@ let incCycle = [];
  *          >> <name>
  *              >> e.g., 'fs'
  *              >> this can be a NodeJS module name (on server side) or a JavaScript module name (on client side)
- *              >> it will be loaded using configured moduleLoaderFn
- *              >> if no moduleLoaderFn is configured, it will throw an error if could not be resolved using default module loaders
  *          >> <path>/<file>.js|.mjs
  *              >> e.g., '/my/path/somefile.js'
- *              >> this can be a bare file to load to, it will be resolved using configured fileLoaderFn
+ *              >> this can be a bare file to load to
  *              >> path is always treated in context of the root path - full, relative paths from current place are not supported
  *              >> to handle PRODUCTION and DEBUG scenarios automatically, use <path>/<file>{.min}.js|.mjs format. 
  *              >> it PROD symbol is available, it will use it as <path>/<file>.min.js otherwise it will use <path>/<file>.js

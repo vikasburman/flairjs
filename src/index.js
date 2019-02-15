@@ -30,7 +30,7 @@
     let isServer = new Function("try {return this===global;}catch(e){return false;}")(),
         _global = (isServer ? global : window),
         _noop = () => {},
-        flair = {}, 
+        flair = {},
         sym = [],
         options = {},
         argsString = '';
@@ -71,6 +71,9 @@
 
     // members
     <!-- inject: ./helpers/general.js -->
+    <!-- inject: ./helpers/dispatcher.js -->
+    <!-- inject: ./func/on.js -->
+    <!-- inject: ./telemetry/telemetry.js -->
     <!-- inject: ./classes/exception.js -->
     <!-- inject: ./func/args.js -->
     <!-- inject: ./func/typeOf.js -->
@@ -83,8 +86,7 @@
     <!-- inject: ./func/as.js -->
     <!-- inject: ./func/using.js -->
     <!-- inject: ./func/attr.js -->
-    <!-- inject: ./extend/port.js -->
-    <!-- inject: ./extend/channel.js -->
+    <!-- inject: ./func/events.js -->
     <!-- inject: ./helpers/builder.js -->
     <!-- inject: ./types/struct.js -->
     <!-- inject: ./assembly/assembly.js -->
@@ -104,20 +106,7 @@
     <!-- inject: ./aop/aspect.js -->
     <!-- inject: ./serialization/serializer.js -->
     <!-- inject: ./reflection/reflector.js -->    
-    <!-- inject: ./cli/build.js -->    
-
-    // define ports where external implementations can be attached
-    _Port.define('moduleLoader', 'function');                                       // to define an external server/client specific module loader of choice
-    _Port.define('fileLoader', 'function');                                         // to define an external server/client specific file loader of choice
-    _Port.define('sessionStorage', 'object', ['key', 'setItem', 'getItem']);        // to define an external server/client specific file loader of choice
-    _Port.define('localStorage', 'object', ['key', 'setItem', 'getItem']);          // to define an external server/client specific file loader of choice
-    _Port.define('pubsub', 'object', ['publish', 'subscribe']);                     // to define a pubsub library of choice having defined members
-
-    // define telemetry channels where channel feed is pushed
-    _Channel.define('raw', 'flair.system.raw');                                     // type and instances creation telemetry
-    _Channel.define('exec', 'flair.system.execute');                                // member access execution telemetry
-    _Channel.define('info', 'flair.system.info');                                   // info, warning and exception telemetry
-    _Channel.define('fetch', 'flair.system.fetch');                                 // file or module include telemetry
+    <!-- inject: ./cli/build.js -->  
 
     // freeze members
     flair.members = Object.freeze(flair.members);
@@ -125,4 +114,3 @@
     // return
     return Object.freeze(flair);
 });    
-

@@ -322,6 +322,7 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
         isBuildingObj = false,
         _sessionStorage = _Port('sessionStorage'),
         _localStorage = _Port('localStorage');
+        _member_dispatcher = null;
 
     const applyCustomAttributes = (bindingHost, memberName, memberType, member) => {
         for(let appliedAttr of attrs.members.all(memberName)) {
@@ -706,6 +707,7 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
     const buildEvent = (memberName, memberType, memberDef) => {
         let _member = null,
             argsProcessorFn = null,
+            _member_dispatcher = _member_dispatcher || new Dispatcher();
             base = null,
             fnArgs = null,     
             _isOverriding = (cfg.inheritance && attrs.members.probe('override', memberName).current()), 
@@ -747,41 +749,17 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
         argsProcessorFn = _member; 
         _member = function(...args) {
             // preprocess args
-            let processedArgs = {};
+            let processedArgs = args;
             if (typeof argsProcessorFn === 'function') { processedArgs = argsProcessorFn(...args); }
-    
-            // define event arg
-            let e = {
-                name: name,
-                args: Object.freeze(processedArgs),
-                stop: false
-            };
-    
-            // raise event
-            for(let handler of _member._.subscribers) {
-                handler(e);
-                if (e.stop) { break; }
-            }
+
+            // dispatch
+            _member_dispatcher.dispatch(name, processedArgs);
         }.bind(bindingHost);
         _member._ = Object.freeze({
-            subscribers: [],
             processor: argsProcessorFn
         });
-        _member.subscribe = (fn) => {
-            if (typeof fn !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (fn)'); }
-            _member._.subscribers.push(fn);
-        };
-        _member.subscribe.list = () => {
-            return _member._.subscribers.slice();
-        };
-        _member.unsubscribe = (fn) => {
-            if (typeof fn !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (fn)'); }
-            let index = _member._.subscribers.indexOf(fn);
-            if (index !== -1) { _member._.subscribers.splice(index, 1); }
-        };
-        _member.unsubscribe.all = () => {
-            _member._.subscribers.length = 0; // remove all
-        };
+        _member.add = (handler) => { _member_dispatcher.add(name, handler); };
+        _member.remove = (handler) => { _member_dispatcher.remove(name, handler); };
         _member.strip = (_exposed_obj) => {
             // returns the stripped version of the event without event raising ability
             let strippedEvent = Object.freeze(extend({}, _member, true, ['strip']));

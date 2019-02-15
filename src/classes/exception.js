@@ -14,8 +14,6 @@
  *  message: string - error message
  *  error: object - inner error or exception object
  * @constructs Exception object
- * @throws
- *  None
  */  
 const _Exception = function(arg1, arg2, arg3) {
     let typ = '', msg = '', err = null;

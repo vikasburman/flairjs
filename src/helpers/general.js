@@ -63,3 +63,9 @@ const extend = (target, source, overwrite, except) => {
     }
     return target;
 };
+const loadFile = (file) => {
+    // TODO
+};
+const loadModule = (module) => {
+    // TODO
+};
