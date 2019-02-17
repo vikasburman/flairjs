@@ -4,10 +4,10 @@
  * @example
  *  cli.build(options, cb)
  */
-const _cli = Object.freeze({
+const _cli = {
     build: (isServer ? require('./flair.build.js') : null)
-});
+};
 
 // expose
-flair.cli = _cli;
+flair.cli = Object.freeze(_cli);
 flair.members.push('cli');

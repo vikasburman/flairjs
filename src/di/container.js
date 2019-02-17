@@ -157,3 +157,5 @@ flair.Container._ = {
 
 // add to members list
 flair.members.push('Container');
+
+const _Container = flair.Container;

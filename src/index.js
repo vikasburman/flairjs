@@ -70,43 +70,58 @@
     flair.options = Object.freeze(options);
 
     // members
-    <!-- inject: ./helpers/general.js -->
-    <!-- inject: ./helpers/dispatcher.js -->
-    <!-- inject: ./func/on.js -->
-    <!-- inject: ./telemetry/telemetry.js -->
-    <!-- inject: ./classes/exception.js -->
-    <!-- inject: ./func/args.js -->
-    <!-- inject: ./func/typeOf.js -->
-    <!-- inject: ./func/isInstanceOf.js -->
-    <!-- inject: ./func/is.js -->
-    <!-- inject: ./func/isDerivedFrom.js -->
-    <!-- inject: ./func/isImplements.js -->
-    <!-- inject: ./func/isComplies.js -->
-    <!-- inject: ./func/isMixed.js -->
-    <!-- inject: ./func/as.js -->
-    <!-- inject: ./func/using.js -->
-    <!-- inject: ./func/attr.js -->
-    <!-- inject: ./func/events.js -->
-    <!-- inject: ./helpers/builder.js -->
-    <!-- inject: ./types/struct.js -->
-    <!-- inject: ./assembly/assembly.js -->
-    <!-- inject: ./assembly/namespace.js -->
-    <!-- inject: ./assembly/types.js -->
-    <!-- inject: ./types/class.js -->
-    <!-- inject: ./types/mixin.js -->
-    <!-- inject: ./types/interface.js -->
-    <!-- inject: ./types/enum.js -->
-    <!-- inject: ./classes/resource.js -->
-    <!-- inject: ./di/container.js -->
-    <!-- inject: ./attributes/attribute.js -->
-    <!-- inject: ./di/include.js -->
-    <!-- inject: ./di/inject.js -->
-    <!-- inject: ./di/multiinject.js -->
-    <!-- inject: ./aop/aspects.js -->
     <!-- inject: ./aop/aspect.js -->
-    <!-- inject: ./serialization/serializer.js -->
+    <!-- inject: ./aop/aspects.js -->
+
+    <!-- inject: ./attributes/attr.js -->
+    <!-- inject: ./attributes/attribute.js -->
+    <!-- inject: ./attributes/getAttr.js -->
+    <!-- inject: ./attributes/getTypeAttr.js -->
+
+    <!-- inject: ./bundle/cli.js -->
+    <!-- inject: ./bundle/assembly.js -->
+    <!-- inject: ./bundle/namespace.js -->
+    <!-- inject: ./bundle/resource.js -->
+
+    <!-- inject: ./di/container.js -->
+    <!-- inject: ./di/include.js -->
+
+    <!-- inject: ./dispose/dispose.js -->
+    <!-- inject: ./dispose/using.js -->
+
+    <!-- inject: ./error/args.js -->
+    <!-- inject: ./error/exception.js -->
+
+    <!-- inject: ./events/dispatcher.js -->
+    <!-- inject: ./events/on.js -->
+
+    <!-- inject: ./helpers/builder.js -->
+    <!-- inject: ./helpers/general.js -->
+
+    <!-- inject: ./inheritance/class.js -->
+    <!-- inject: ./inheritance/getTypeOf.js -->
+    <!-- inject: ./inheritance/isDerivedFrom.js -->
+    <!-- inject: ./inheritance/isInstanceOf.js -->
+    <!-- inject: ./inheritance/struct.js -->
+    <!-- inject: ./inheritance/typeOf.js -->
+    <!-- inject: ./inheritance/types.js -->
+
+    <!-- inject: ./interface/as.js -->
+    <!-- inject: ./interface/interface.js -->
+    <!-- inject: ./interface/is.js -->
+    <!-- inject: ./interface/isComplies.js -->
+    <!-- inject: ./interface/isImplements.js -->
+
+    <!-- inject: ./misc/enum.js -->
+    <!-- inject: ./misc/noop.js -->
+    <!-- inject: ./misc/telemetry.js -->
+
+    <!-- inject: ./mixin/isMixed.js -->
+    <!-- inject: ./mixin/mixin.js -->
+
     <!-- inject: ./reflection/reflector.js -->    
-    <!-- inject: ./cli/build.js -->  
+
+    <!-- inject: ./serialization/serializer.js -->
 
     // freeze members
     flair.members = Object.freeze(flair.members);

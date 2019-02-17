@@ -64,8 +64,97 @@ const extend = (target, source, overwrite, except) => {
     return target;
 };
 const loadFile = (file) => {
-    // TODO
+    return new Promise((resolve, reject) => {
+        let ext = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
+        if (isServer) {
+            try {
+                let httpOrhttps = null,
+                    body = '';
+                if (file.startsWith('https')) {
+                    httpOrhttps = require('https');
+                } else {
+                    httpOrhttps = require('http'); // for urls where it is not defined
+                }
+                httpOrhttps.get(file, (resp) => {
+                    resp.on('data', (chunk) => { body += chunk; });
+                    resp.on('end', () => { 
+                        if (ext === 'json') { 
+                            resolve(JSON.parse(body));
+                        } else {
+                            resolve(body);
+                        }
+                    });
+                }).on('error', reject);
+            } catch(e) {
+                reject(e);
+            }
+        } else { // client
+            fetch(file).then((response) => {
+                if (response.status !== 200) {
+                    reject(response.status);
+                } else {
+                    if (ext === 'json') { // special case of JSON
+                        response.json().then(resolve).catch(reject);
+                    } else {
+                        resolve(response.text());
+                    }
+                }
+            }).catch(reject);
+        }
+    });
 };
 const loadModule = (module) => {
-    // TODO
+    return new Promise((resolve, reject) => {
+        if (isServer) {
+            try {
+                resolve(require(module));
+            } catch(e) {
+                reject(e);
+            }
+        } else { // client
+            let ext = module.substr(module.lastIndexOf('.') + 1).toLowerCase();
+            try {
+                if (typeof require !== 'undefined') { // if requirejs type library having require() is available to load modules / files on client
+                    require([module], resolve, reject);
+                } else { // load it as file on browser
+                    let js = flair.options.env.global.document.createElement('script');
+                    if (ext === 'mjs') {
+                        js.type = 'module';
+                    } else {
+                        js.type = 'text/javascript';
+                    }
+                    js.name = module;
+                    js.src = module;
+                    js.onload = resolve;    // TODO: Check how we can pass the loaded 'exported' object of module to this resolve.
+                    js.onerror = reject;
+                    flair.options.env.global.document.head.appendChild(js);
+                }
+            } catch(e) {
+                reject(e);
+            }
+        }
+    });
+};
+const sieve = (obj, props, isFreeze, add) => {
+    let _props = splitAndTrim(props);
+    const extract = (_obj) => {
+        let result = {};
+        if (_props.length > 0) { // copy defined
+            for(let prop of _props) { result[prop] = _obj[prop]; } 
+        } else { // copy all
+            for(let prop in obj) { 
+                if (obj.hasOwnProperty(prop)) { result[prop] = obj[prop]; }
+            }            
+        }
+        if (add) { for(let prop in add) { result[prop] = add[prop]; } }
+        if (isFreeze) { result = Object.freeze(result); }
+        return result;
+    };
+    if (Array.isArray(obj)) {
+        let result = [];
+        for(let item of obj) { result.push(extract(item)); }
+        return result;
+    } else {
+        return extract(obj);
+    }
 };

@@ -1,28 +1,50 @@
+
+/**
+ * @name Dispatcher
+ * @description Lightweight Exception class that extends Error object and serves as base of all exceptions
+ * @example
+ *  Dispatcher()
+ * @params
+ * @constructs Dispatcher object
+ */ 
 const Dispatcher = function() {
     let events = {};
+
+    // add event listener
     this.add = (event, handler) => {
         if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (event)'); }
         if (typeof handler !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (handler)'); }
-        if(!this.events[event]) { this.events[name] = []; }
-        this.events[name].push(fn);
+        if(!events[event]) { events[name] = []; }
+        events[name].push(handler);
     };
+
+    // remove event listener
     this.remove = (event, handler) => {
         if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (event)'); }
         if (typeof handler !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (handler)'); }
-        if(this.events[event]) {
-            let idx = this.events[event].indexOf(handler);
-            if (idx !== -1) { this.events[event].splice(idx, 1); }
+        if(events[event]) {
+            let idx = events[event].indexOf(handler);
+            if (idx !== -1) { events[event].splice(idx, 1); }
         }
     };
+
+    // dispatch event
     this.dispatch = (event, args) => {
-        if (this.events[event]) {
-            this.events[event].forEach(handler => {
+        if (events[event]) {
+            events[event].forEach(handler => {
                 setTimeout(() => { handler({ name: event, args: args }); }, 0);
             });
         }
     };
+
+    // get number of attached listeners
     this.count = (event) => {
-        return (this.events[event] ? this.events[event].length : 0);
+        return (events[event] ? events[event].length : 0);
+    };
+
+    // clear all handlers for all events associated with this dispatcher
+    this.clear = () => {
+        events = {};
     };
 };
 

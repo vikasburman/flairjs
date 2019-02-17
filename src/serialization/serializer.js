@@ -1,54 +1,101 @@
-// Serializer
-flair.Serializer = {};
-flair.Serializer.serialize = (instance) => { 
-    if (instance._.type === 'instance') {
-        return instance._.serialize(); 
-    }
-    return null;
-};
-flair.Serializer.deserialize = (Type, json) => {
-    let instance = new Type();
-    if (instance._.type === 'instance') {
-        instance._.deserialize(json);
-        return instance;
-    }
-    return null;
-};
-
-
-flair.Serializer.process = (ctx, source, target, isDeserialize) => {
-    // TODO: Fix as per new things -- consider using noserialize attr on props when serialiaze is put on type itself
-    // let mappedName = '',
-    //     the_attr = null;
-    for(let memberName in ctx) {
-    //     if (ctx.hasOwnProperty(memberName) && memberName !== '_') {
-    //         if ((member.isProperty(memberName) &&
-    //              member.isSerializable(memberName) &&
-    //              !member.isReadOnly(memberName) && 
-    //              !member.isStatic(memberName) && 
-    //              !member.isPrivate(memberName) && 
-    //              !member.isProtected(memberName))) {
-    //                 the_attr = attrs.get('serialize', memberName);
-    //                 mappedName = (the_attr ? (the_attr.args[0] || memberName) : memberName);
-                    if (isDeserialize) {
-                        target[memberName] = source[memberName] || target[memberName];
+/**
+ * @name Serializer
+ * @description Serializer/Deserialize object instances
+ * @example
+ *  .serialiaze(instance)
+ *  .deserialize(json)
+ * @params
+ *  instance: object - supported flair type's object instance to serialize
+ *  json: object - previously serialized object by the same process
+ * @returns
+ *  string: json string when serialized
+ *  object: flair object instance, when deserialized
+ */ 
+const serilzer_process = (source, isDeserialize) => {
+    let result = null,
+        memberNames = null,
+        src = (isDeserialize ? JSON.parse(source) : source),
+        Type = (isDeserialize ? null : source._.Type);
+    const getMemberNames = (obj, isSelectAll) => {
+        let attrRefl = obj._.attrs,
+            modiRefl = obj._.modifiers,
+            props = [],
+            isOK = false;
+        for(let memberName in obj) {
+            if (obj.hasOwnProperty(memberName) && memberName !== '_') {
+                isOK = modiRefl.members.isProperty(memberName);
+                if (isOK) {
+                    if (isSelectAll) {
+                        isOK = !attrRefl.members.probe('noserialize', memberName).anywhere(); // not marked as noserialize when type itself is marked as serialize
                     } else {
-                        target[memberName] = source[memberName];
+                        isOK = attrRefl.members.probe('serialize', memberName).anywhere(); // marked as serialize when type is not marked as serialize
                     }
-    //         }
+                    if (isOK) {
+                        isOK = (!modiRefl.members.is('private', memberName) &&
+                                !modiRefl.members.is('protected', memberName) &&
+                                !modiRefl.members.is('static', memberName) &&
+                                !modiRefl.members.is('readonly', memberName) &&
+                                !attrRefl.members.probe('inject', memberName).anywhere());
+                    }
+                }
+                if (isOK) { props.push(memberName); }
+            }
         }
-    // }
+        return props;
+    }; 
 
+    if (isDeserialize) {
+        // validate 
+        if (!src.type && !src.data) { throw _Exception.InvalidArgument('json'); }
 
+        // get base instance to load property values
+        Type = _Namespace.getType(src.type);
+        if (!Type) { throw new _Exception('NotRegistered', `Type is not registered. (${src.type})`); }
+        result = new Type(); // that's why serializable objects must be able to create themselves without arguments 
+        
+        // get members to deserialize
+        if (Type._.attrs.type.has('serialize', true)) {
+            memberNames = getMemberNames(result, true);
+        } else {
+            memberNames = getMemberNames(result, false);
+        }
+        
+        // deserialize
+        for(let memberName of memberNames) { result[memberName] = src.data[memberName]; }
+    } else {
+        // get members to serialize
+        if (Type._.attrs.type.has('serialize', true)) {
+            memberNames = getMemberNames(src, true);
+        } else {
+            memberNames = getMemberNames(src, false);
+        }
 
-    // Build flair.Serializer.serialize using lair.Serializer.process locally, as following are removed from object
-    // if (cfg.serialize) {
-    //     obj._.serialize = () => { return _Serializer.process(exposed_obj, exposed_obj, {}); };
-    //     obj._.deserialize = (json) => { return _Serializer.process(exposed_obj, json, exposed_obj, true); };
-    // }  
- 
+        // serialize
+        result = {
+            type: src._.Type._.name,
+            data: {}
+        };
+        for(let memberName of memberNames) { result.data[memberName] = src[memberName]; }
+        result = JSON.stringify(result);
+    }
 
-};    
+    // return
+    return result;
+};
+const _Serializer = {
+    // serialize given supported flair type's instance
+    serialize: (instance) => { 
+        if (!(instance && instance._ && instance._.type) || ['instance', 'sinstance'].indexOf(instance._.type) === -1) { throw _Exception.InvalidArgument('instance'); }
+        return serilzer_process(instance);
+    },
 
-//TODO: To fix 
-const _Serializer = flair.Serializer; // eslint-disable-line no-unused-vars
+    // deserialize last serialized instance
+    deserialize: (json) => {
+        if (!json || typeof json !== 'string') { throw _Exception.InvalidArgument('json'); }
+        return serilzer_process(json, true);
+    }
+};
+
+// attach
+flair.Serializer = Object.freeze(_Serializer);
+flair.members.push('Serializer');

@@ -1,6 +1,6 @@
 /**
  * @name Args
- * @description Lightweight args pattern processor proc that returns a validator function to validate arguments against given arg patterns
+ * @description Lightweight args pattern processing that returns a validator function to validate arguments against given arg patterns
  * @example
  *  Args(...patterns)
  * @params
@@ -33,7 +33,7 @@ const _Args = (...patterns) => {
      *  raw: (array) - original arguments as passed
      *  index: (number) - index of pattern-set that matches for given arguments, -1 if no match found
      *                    if more than one patterns may match, it will stop at first match
-     *  isInvalid: (function) - function to check if any match could not be achieved
+     *  isInvalid: (boolean) - to check if any match could not be achieved
      *  <name(s)>: <value(s)> - argument name as given in pattern having corresponding argument value
      *                          if a name was not given in pattern, a default unique name will be created
      *                          special names like 'raw', 'index' and 'isInvalid' cannot be used.
@@ -50,7 +50,9 @@ const _Args = (...patterns) => {
             result = {
                 raw: args || [],
                 index: -1,
-                isInvalid: () => { return result.index === -1; }
+                isInvalid: false,
+                error: null,
+                values: {}
             };
         if (patterns) {
             for(let pattern of patterns) {
@@ -66,14 +68,17 @@ const _Args = (...patterns) => {
                         name = items[0].trim() || '',
                         type = items[1].trim() || '';
                     }
-                    if (['raw', 'index', 'isInvalid'].indexOf(name) !== -1) { throw new _Exception('InvalidArgument', `Argument name cannot be a reserved name. (${name})`); }
                     if (aIndex > result.raw.length) { matched = false; break; }
                     if (!_is(result.raw[aIndex], type)) { matched = false; break; }
-                    result[name] = result.raw[aIndex]; matched = true; mCount++;
+                    result.values[name] = result.raw[aIndex]; matched = true; mCount++;
                 }
                 if (matched && mCount === result.raw.length) {result.index = pIndex; break; }
             }
         }
+
+        // set state
+        result.isInvalid = (result.index === -1 ? true : false);
+        result.error = (result.isInvalid ? new _Exception('InvalidArguments', 'One or more argument types are invalid.') : null );
 
         // return
         return result;

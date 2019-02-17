@@ -1,6 +1,6 @@
 /**
  * @name telemetry
- * @description Telemetry enable/disable/filter
+ * @description Telemetry enable/disable/filter/collect
  * @example
  *  .on()
  *  .on(...types)
@@ -14,12 +14,12 @@
  *  types: string - as many types, as needed, when given, telemetry for given types only will be released
  *  handler: function - an event handler for telemetry event
  *                      Note: This can also be done using flair.on('telemetry', handler) call.
- * @returns void
  */ 
 let telemetry = _noop,
     telemetry_buffer = [],
     telemetry_max_items = 500;
 const _telemetry = {
+    // turn-on telemetry recording
     on: (handler, ...types) => {
         if (telemetry === _noop) {
             if (typeof handler === 'string') { types.unshift(handler); }
@@ -43,6 +43,8 @@ const _telemetry = {
             };
         }
     },
+
+    // collect buffered telemetry and clear buffer
     collect: () => {
         if (telemetry !== _noop) {
             let buffer = telemetry_buffer.slice();
@@ -51,6 +53,8 @@ const _telemetry = {
         }
         return [];
     },
+
+    // turn-off telemetry recording
     off: (handler) => {
         if (telemetry !== _noop) {
             if (typeof handler === 'function') { _on('telemetry', handler, true); }
@@ -63,7 +67,11 @@ const _telemetry = {
         }
         return [];
     },
+
+    // telemetry recording status check
     isOn: () => { return telemetry !== _noop; },
+
+    // telemetry types list
     types: Object.freeze({
         RAW: 'raw',         // type and instances creation telemetry
         EXEC: 'exec',       // member access execution telemetry
@@ -72,5 +80,6 @@ const _telemetry = {
     })
 };
 
+// attach
 flair.telemetry = Object.freeze(_telemetry);
 flair.members.push('telemetry');

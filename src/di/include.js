@@ -56,95 +56,6 @@ flair.include = (deps, fn) => {
     let resolvedItems = {},
         _deps = (_depsError ? null : deps.slice());
 
-    let loader = (isServer, isModule, file) => {
-        let moduleLoader = _Port('moduleLoader'),
-            fileLoader = _Port('fileLoader');
-            loader = null;
-        return new Promise((resolve, reject) => {
-            let ext = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
-            if (isServer) {
-                if (isModule) {
-                    loader = moduleLoader || null;
-                    if (typeof loader === 'function') {
-                        loader(file).then(resolve).catch(reject);
-                    } else {
-                        try {
-                            resolve(require(file));
-                        } catch(e) {
-                            reject(e);
-                        }
-                    }
-                } else { // file
-                    loader = fileLoader || null;
-                    if (typeof loader === 'function') {
-                        loader(file).then(resolve).catch(reject);
-                    } else {
-                        try {
-                            let httpOrhttps = null,
-                                body = '';
-                            if (file.startsWith('https')) {
-                                httpOrhttps = require('https');
-                            } else {
-                                httpOrhttps = require('http'); // for urls where it is not defined
-                            }
-                            httpOrhttps.get(file, (resp) => {
-                                resp.on('data', (chunk) => { body += chunk; });
-                                resp.on('end', () => { 
-                                    if (ext === 'json') { 
-                                        resolve(JSON.parse(body));
-                                    } else {
-                                        resolve(body);
-                                    }
-                                });
-                            }).on('error', reject);
-                        } catch(e) {
-                            reject(e);
-                        }
-                    }
-                }
-            } else { // client
-                if (isModule) {
-                    loader = moduleLoader || null;
-                    if (typeof loader === 'function') {
-                        loader(file).then(resolve).catch(reject);
-                    } else { 
-                        try {
-                            if (typeof require !== 'undefined') { // if requirejs type library having require() is available to load modules / files on client
-                                require([file], resolve, reject);
-                            } else { // load it as file on browser, this could be a problem for module types // TODO: this needs to be changed, when there is a case
-                                let js = flair.options.env.global.document.createElement('script');
-                                js.type = 'text/javascript';
-                                js.name = file;
-                                js.src = file;
-                                js.onload = resolve;
-                                js.onerror = reject;
-                                flair.options.env.global.document.head.appendChild(js);
-                            }
-                        } catch(e) {
-                            reject(e);
-                        }
-                    }
-                } else { // file
-                    loader = fileLoader || null;
-                    if (typeof loader === 'function') {
-                        loader(file).then(resolve).catch(reject);
-                    } else {
-                        fetch(file).then((response) => {
-                            if (response.status !== 200) {
-                                reject(response.status);
-                            } else {
-                                if (ext === 'json') { // special case of JSON
-                                    response.json().then(resolve).catch(reject);
-                                } else {
-                                    resolve(response.text());
-                                }
-                            }
-                        }).catch(reject);
-                    }                    
-                }
-            }
-        });
-    };
     let _dep_extract = (name, isThrow) => {
         if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
         if (!resolvedItems[name]) { throw new _Exception('InvalidName', `Name is not valid. (${name})`); }
@@ -229,7 +140,7 @@ flair.include = (deps, fn) => {
                         // this will be loaded as module in next option as a module
                         done();
                     } else { // some other file (could be json, css, html, etc.)
-                        loader(flair.options.env.isServer, false, _dep).then((content) => {
+                        loadFile(_dep).then((content) => {
                             _resolved = content; done();
                         }).catch((e) => {
                             _error = new _Exception('FileLoad', `File load failed. (${_dep})`, e); done();
@@ -242,7 +153,7 @@ flair.include = (deps, fn) => {
 
             // check if this is a module
             let option5 = (done) => {
-                loader(flair.options.env.isServer, true, _dep).then((content) => { // as last option, try to load it as module
+                loadModule(_dep).then((content) => { // as last option, try to load it as module
                     _resolved = content; done();
                 }).catch((e) => {
                     _error = new _Exception('ModuleLoad', `Module load operation failed with error: ${e}. (${_dep})`); done();

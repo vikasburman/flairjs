@@ -100,7 +100,7 @@ flair.Namespace = (Type) => {
     nextLevel.createInstance = nextLevel.createInstance || createInstance;
 };
 flair.Namespace.root = {};
-flair.Namespace.getType = (qualifiedName) => { 
+flair.Namespace.getType = (qualifiedName) => { // TOOD: used in serialize and elsewhere -- throw exception when not found
     if (flair.Namespace.root.getType) {
         return flair.Namespace.root.getType(qualifiedName);
     }
@@ -112,7 +112,7 @@ flair.Namespace.getTypes = () => {
     }
     return [];
 };
-flair.Namespace.createInstance = (qualifiedName, ...args) => {
+flair.Namespace.createInstance = (qualifiedName, ...args) => { 
     if (flair.Namespace.root.createInstance) {
         return flair.Namespace.root.createInstance(qualifiedName, ...args);
     }

@@ -87,6 +87,8 @@ flair.Aspects.register = (pointcut, Aspect) => {
     allAspects[bucket].push(Aspect);
 };
 flair.Aspects.get = (typeName, funcName, attrs) => {
+
+    //TODO: attrs is an array of attrs - check name by .name property
     // get parts
     let funcAspects = [],
         ns = '',
@@ -139,6 +141,7 @@ flair.Aspects.get = (typeName, funcName, attrs) => {
 };
 flair.Aspects.attach = (fn, typeName, funcName, funcAspects) => {
 // TODO: consider now functions and events are also supported as join points
+
 
     let before = [],
         after = [],

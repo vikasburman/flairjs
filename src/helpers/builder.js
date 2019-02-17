@@ -138,6 +138,7 @@ const attributesAndModifiers = (def, memberName) => {
     // validate and collect
     for (let appliedAttr of appliedAttrs) {
         if (validator(appliedAttr)) {
+            appliedAttr = sieve(appliedAttr, null, false, { type: def.name });
             if (appliedAttr.isCustom) { // custom attribute instance
                 attrBucket.push(appliedAttr);
             } else { // inbuilt attribute or modifier
@@ -152,28 +153,6 @@ const attributesAndModifiers = (def, memberName) => {
 };
 const modifierOrAttrRefl = (isModifier, def) => {
     let defItemName = (isModifier ? 'modifiers' : 'attrs');
-    const probe = (name, memberName) => {
-        let _probe = {
-            anywhere: () => {
-                return root.get(name, memberName) || root.get(name, memberName, true); 
-            },
-            current: () => {
-                return root.get(name, memberName); 
-            },
-            inherited: () => {
-                return root.get(name, memberName, true); 
-            },
-            only: {
-                current: () => {
-                    return root.get(name, memberName) && !root.get(name, memberName, true); 
-                },
-                inherited: () => {
-                    return !root.get(name, memberName) && root.get(name, memberName, true); 
-                }
-            }
-        };  
-        return _probe;      
-    };    
     let root_get = (name, memberName, isCheckInheritance) => {
         let isTypeLevel = (def.level === 'type'),
             result = null; 
@@ -186,7 +165,7 @@ const modifierOrAttrRefl = (isModifier, def) => {
                 while(true) { // eslint-disable-line no-constant-condition
                     if (prv === null) { break; }
                     result = findItemByProp(prv[defItemName].type, 'name', name);
-                    if (!result) { 
+                    if (!result) {
                         prv = prv.previous();
                     } else {
                         break;
@@ -213,8 +192,100 @@ const modifierOrAttrRefl = (isModifier, def) => {
     };     
     let root_has = (name, memberName, isCheckInheritance) => {
         return root.get(name, memberName, isCheckInheritance) !== null;
-    };        
-    let root = {
+    }; 
+    const members_probe = (name, memberName) => {
+        let _probe = {
+            anywhere: () => {
+                return root.get(name, memberName) || root.get(name, memberName, true); 
+            },
+            current: () => {
+                return root.get(name, memberName); 
+            },
+            inherited: () => {
+                return root.get(name, memberName, true); 
+            },
+            only: {
+                current: () => {
+                    return root.get(name, memberName) && !root.get(name, memberName, true); 
+                },
+                inherited: () => {
+                    return !root.get(name, memberName) && root.get(name, memberName, true); 
+                }
+            }
+        };
+        return _probe;      
+    };    
+    const type_probe = (name) => {
+        let _probe = {
+            anywhere: () => {
+                return root.get(name, '') || root.get(name, '', true); 
+            },
+            current: () => {
+                return root.get(name, ''); 
+            },
+            inherited: () => {
+                return root.get(name, '', true); 
+            },
+            only: {
+                current: () => {
+                    return root.get(name, '') && !root.get(name, '', true); 
+                },
+                inherited: () => {
+                    return !root.get(name, '') && root.get(name, '', true); 
+                }
+            }
+        };
+        return _probe;
+    };
+    const members_all = (memberName) => {
+        let _all = {
+            current: () => {
+                return def[defItemName].members[memberName].slice();
+            },
+            inherited: () => {
+                let all_inherited_attrs = [],
+                    prv_attrs = null;
+                // check from parent onwards, keep going up till hierarchy ends
+                let prv = def.previous();
+                while(true) { // eslint-disable-line no-constant-condition
+                    if (prv === null) { break; }
+                    prv_attrs = findItemByProp(prv[defItemName].members, 'name', memberName);
+                    if (prv_attrs) { all_inherited_attrs.push(...prv_attrs); }
+                    prv = prv.previous(); // go one level back now
+                }
+                return all_inherited_attrs;
+            },
+            anywhere: () => {
+                return [..._all.current(), ..._all.inherited()];
+            }
+        };
+        return _all;
+    };
+    const type_all = () => {
+        let _all = {
+            current: () => {
+                return def[defItemName].type.slice();
+            },
+            inherited: () => {
+                let all_inherited_attrs = [],
+                    prv_attrs = null;
+                // check from parent onwards, keep going up till hierarchy ends
+                let prv = def.previous();
+                while(true) { // eslint-disable-line no-constant-condition
+                    if (prv === null) { break; }
+                    prv_attrs = prv[defItemName].type.slice();
+                    if (prv_attrs) { all_inherited_attrs.push(...prv_attrs); }
+                    prv = prv.previous(); // go one level back now
+                }
+                return all_inherited_attrs;
+            },
+            anywhere: () => {
+                return [..._all.current(), ..._all.inherited()];
+            }
+        };
+        return _all;
+    };
+    const root = {
         get: root_get,
         has: root_has,
         type: {
@@ -224,25 +295,14 @@ const modifierOrAttrRefl = (isModifier, def) => {
             has: (name, isCheckInheritance) => {
                 return root.has(name, true, isCheckInheritance);
             },
-            all: (isJustName) => {
-                if (isJustName) {
-                    return def[defItemName].type.map(item => item.name);
-                } else {
-                    return def[defItemName].type.slice();
-                }
-            }
+            all: type_all,
+            probe: type_probe
         },
         members: {
             get: root_get,
             has: root_has,
-            all: (memberName, isJustName) => {
-                if (isJustName) {
-                    return def[defItemName].members[memberName].map(item => item.name);
-                } else {
-                    return def[defItemName].members[memberName].slice();
-                }
-            },
-            probe: probe
+            all: members_all,
+            probe: members_probe,
         }
     };
     if (isModifier) {
@@ -250,16 +310,16 @@ const modifierOrAttrRefl = (isModifier, def) => {
             // it applied modifiers' relative logic to identify 
             // if specified member is of that type depending upon
             // modifier definitions on current and previous levels
-            let _probe = probe(modifierName, memberName); // local
+            let _probe = members_probe(modifierName, memberName); // local
             switch(modifierName) {
                 case 'static': 
                     return _probe.anywhere(); 
                 case 'abstract':
-                    return _probe.anywhere() && !(probe.anywhere('virtual', memberName) || probe.anywhere('override', memberName)); 
+                    return _probe.anywhere() && !(members_probe.anywhere('virtual', memberName) || members_probe.anywhere('override', memberName)); 
                 case 'virtual':
-                    return _probe.anywhere() && !probe.anywhere('override', memberName); 
+                    return _probe.anywhere() && !members_probe.anywhere('override', memberName); 
                 case 'override':
-                    return _probe.anywhere() && !probe.anywhere('sealed', memberName); 
+                    return _probe.anywhere() && !members_probe.anywhere('sealed', memberName); 
                 case 'sealed':
                     return _probe.anywhere(); 
                 case 'private':
@@ -289,6 +349,9 @@ const modifierOrAttrRefl = (isModifier, def) => {
             }
             return result;
         };
+        root.members.isProperty = (memberName) => { return root.members.type(memberName) === 'prop'; };
+        root.members.isFunction = (memberName) => { return root.members.type(memberName) === 'func'; };
+        root.members.isEvent = (memberName) => { return root.members.type(memberName) === 'event'; };
     }
     return root;
 };
@@ -320,12 +383,79 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
         },
         proxy = null,
         isBuildingObj = false,
-        _sessionStorage = _Port('sessionStorage'),
-        _localStorage = _Port('localStorage');
-        _member_dispatcher = null;
+        _member_dispatcher = null,
+        _local_storage_not_supported_message = "Use of 'state' is not support on server. Using 'session' instead.";
 
+    const _sessionStorage = {
+        key: (key) => {
+            if (isServer) {
+                return ((global.sessionStorage && global.sessionStorage[key]) ? true : false); // the way, on browser sessionStorage is different for each tab, here 'sessionStorage' property on global is different for each node instance in a cluster
+            } else { // client
+                return sessionStorage.key(key);
+            }
+        },
+        getItem: (key) => {
+            if (isServer) {
+                return ((global.sessionStorage && global.sessionStorage[key]) ? global.sessionStorage[key] : null);
+            } else {
+                return sessionStorage.getItem(key);
+            }
+        },
+        setItem: (key, value) => {
+            if (isServer) {
+                if (!global.sessionStorage) { global.sessionStorage = {}; }
+                global.sessionStorage[key] = value;
+                
+            } else {
+                sessionStorage.setItem(key, value);
+            }
+        },
+        removeItem: (key) => {
+            if (isServer) {
+                if (global.sessionStorage) { 
+                    delete global.sessionStorage[key];
+                }
+            } else {
+                sessionStorage.removeItem(key);
+            }
+        }
+    };
+    const _localStorage = {
+        key: (key) => {
+            if (isServer) {
+                console.log(_local_storage_not_supported_message); // eslint-disable-line no-console
+                return _sessionStorage.key(key);
+            } else { // client
+                return localStorage.key(key);
+            }
+        },
+        getItem: (key) => {
+            if (isServer) {
+                console.log(_local_storage_not_supported_message); // eslint-disable-line no-console
+                return _sessionStorage.getItem(key);
+            } else {
+                return localStorage.getItem(key);
+            }
+        },
+        setItem: (key, value) => {
+            if (isServer) {
+                console.log(_local_storage_not_supported_message); // eslint-disable-line no-console
+                return _sessionStorage.setItem(key, value);
+            } else {
+                localStorage.setItem(key, value);
+            }            
+        },
+        removeItem: (key) => {
+            if (isServer) {
+                console.log(_local_storage_not_supported_message); // eslint-disable-line no-console
+                return _sessionStorage.removeItem(key);
+            } else {
+                localStorage.removeItem(key);
+            }
+        }
+    };
     const applyCustomAttributes = (bindingHost, memberName, memberType, member) => {
-        for(let appliedAttr of attrs.members.all(memberName)) {
+        for(let appliedAttr of attrs.members.all(memberName).current()) {
             if (appliedAttr.isCustom) { // custom attribute instance
                 if (memberType === 'prop') {
                     let newSet = appliedAttr.attr.decorate(memberName, memberType, member.get, member.set); // set must return a object with get and set members
@@ -356,7 +486,7 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
             funcAspects = [];
 
         // get aspects that are applicable for this function
-        funcAspects = _Aspects.get(def.name, memberName, attrs.members.all(memberName, true));
+        funcAspects = _Aspects.get(def.name, memberName, attrs.members.all(memberName).anywhere());
         def.aspects.members[memberName] = funcAspects; // store for reference
             
         // apply these aspects
@@ -505,7 +635,8 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
         
         // duplicate check, if not overriding and its not a mixin factory running
         // mixins overwrite previous mixin's member, if any
-        // at class/struct level, overwriting any mixin added member is allowed
+        // at class/struct level, overwriting any mixin added member is allowed (and when added, it's attributes, type and modified etc. 
+        // which might be added earlier, will be overwritten anyways)
         if (mixin_being_applied === null && typeof obj[memberName] !== 'undefined' &&
             (!attrs.members.probe('mixed', memberName).current()) &&
             (!cfg.inheritance || (cfg.inheritance && !attrs.members.probe('override', memberName).current()))) {
@@ -539,7 +670,6 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
             if (memberDef.get && typeof memberDef.get === 'function') {
                 throw new _Exception('InvalidOperation', `Session properties cannot be defined with a custom getter/setter. (${memberName})`); 
             }
-            if (!_sessionStorage) { throw new _Exception('NotConfigured', 'Port is not configured. (sessionStorage)'); }
         }
         if (cfg.storage && attrs.members.probe('state', memberName).current()) {
             if (memberDef.get && typeof memberDef.get === 'function') {
@@ -563,12 +693,15 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
         _isSession = attrs.members.probe('session', memberName).anywhere(),
         _isState = attrs.members.probe('state', memberName).anywhere(),
         _deprecate_attr = attrs.members.probe('deprecate', memberName).current(),
+        inject_attr = attrs.members.probe('inject', memberName).current(),
+        type_attr = attrs.members.probe('type', memberName).current(),
         _isDeprecate = (_deprecate_attr !== null),
         _deprecate_message = (_isDeprecate ? (_deprecate_attr.args[0] || `Event is marked as deprecate. (${memberName})`) : ''),
         propHost = _props, // default place to store property values inside closure
         bindingHost = obj,
         uniqueName = def.name + '_' + memberName,
-        isStorageHost = false;        
+        isStorageHost = false,
+        _injections = [];     
 
         // define or redefine
         if (memberDef.get || memberDef.set) { // normal property, cannot be static because static cannot have custom getter/setter
@@ -579,53 +712,67 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
                 _setter = memberDef.set;
             }
             _member.get = function() {
-                if (_isDeprecate) {
-                    console.log(_deprecate_message); // eslint-disable-line no-console
-                }                
-                if (isArrow(_getter)) { return _getter(); } else { return _getter.apply(bindingHost); }
+                if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
+                return _getter.apply(bindingHost);
             }.bind(bindingHost);
             _member.set = function(value) {
-                if (_isDeprecate) {
-                    console.log(_deprecate_message); // eslint-disable-line no-console
-                }                
-                if (_isReadOnly) { // readonly props can be set only when object is being constructed 
-                    if (!obj._.constructing) { throw new _Exception('InvalidOperation', `Property is readonly. (${memberName})`); }
-                }
-                if (isArrow(_setter)) { return _setter(value); } else { return _setter.apply(bindingHost, [value]); }
+                if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
+                if (_isReadOnly && !obj._.constructing) { throw new _Exception('InvalidOperation', `Property is readonly. (${memberName})`); } // readonly props can be set only when object is being constructed 
+                if (type_attr && type_attr.args[0] && !_is(value, type_attr.args[0])) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (value)'); } // type attribute is defined
+                return _setter.apply(bindingHost, [value]);
             }.bind(bindingHost);            
         } else { // direct value
             if (cfg.static && _isStatic) {
                 propHost = params.staticInterface._.props; // property values are stored on static interface itself in  ._.props
                 bindingHost = params.staticInterface; // binding to static interface, so with 'this' object internals are not accessible
+                if (type_attr && type_attr.args[0] && !_is(memberDef, type_attr.args[0])) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (value)'); } // type attribute is defined
+                propHost[uniqueName] = memberDef;
             } else if (cfg.storage && (_isSession || _isState)) {
                 propHost = (_isSession ? _sessionStorage : _localStorage);
                 isStorageHost = true;
+                uniqueName = obj._.id + '_' + uniqueName; // because multiple instances of same object will have different id
+                addDisposable((_isSession ? 'session' : 'state'), uniqueName);
                 if (!propHost.key(uniqueName)) { 
-                    propHost.setKey(uniqueName, JSON.stringify({value: memberDef})); 
+                    if (type_attr && type_attr.args[0] && !_is(memberDef, type_attr.args[0])) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (value)'); } // type attribute is defined
+                    propHost.setItem(uniqueName, JSON.stringify({value: memberDef})); 
                 }
-            } 
+            } else { // normal value
+                if (type_attr && type_attr.args[0] && !_is(memberDef, type_attr.args[0])) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (value)'); } // type attribute is defined
+                propHost[uniqueName] = memberDef;
+            }
             _member.get = function() {
-                if (_isDeprecate) {
-                    console.log(_deprecate_message); // eslint-disable-line no-console
-                }                
-                if (isStorageHost) { 
-                    return JSON.parse(propHost.getKey(uniqueName)).value; 
-                }
+                if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
+                if (isStorageHost) { return JSON.parse(propHost.getItem(uniqueName)).value; }
                 return propHost[uniqueName];             
             }.bind(bindingHost);
             _member.set = function(value) {
-                if (_isDeprecate) {
-                    console.log(_deprecate_message); // eslint-disable-line no-console
-                }                
-                if (_isReadOnly && !_isStatic) { // readonly props can be set only when object is being constructed 
-                    if (!obj._.constructing) { throw new _Exception('InvalidOperation', `Property is readonly. (${memberName})`); }
-                }
+                if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
+                if (_isReadOnly && !_isStatic && !obj._.constructing) { throw new _Exception('InvalidOperation', `Property is readonly. (${memberName})`); } // readonly props can be set only when object is being constructed 
+                if (type_attr && type_attr.args[0] && !_is(value, type_attr.args[0])) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (value)'); } // type attribute is defined
                 if (isStorageHost) {
-                    propHost.setKey(uniqueName, JSON.stringify({value: value}));
+                    propHost.setItem(uniqueName, JSON.stringify({value: value}));
                 } else {
                     propHost[uniqueName] = value;
                 }
             }.bind(bindingHost);
+        }
+
+        // set injected value now
+        if (inject_attr && !_isStatic && !isStorageHost) {
+            // resolve injections
+            let _injectWhat = inject_attr.args[0],                                          // aliasName || qualifiedTypeName || Type itself || array ot Types // TODO: Map this that container.resolve() can work on all these
+                _injectWith = (inject_attr.args.length > 0 ? inject_attr.args[1] : []),     // [..., ...] <- any parameters to pass to constructor of type(s) being injected
+                _injectMany = (inject_attr.args.length > 1 ? inject_attr.args[2] : false);  // true | false <- if multi injection to be done
+
+            _injections = _Container.resolve(_injectWhat, _injectWith, _injectMany);
+            if(!Array.isArray(_injections)) { _injections = [_injections]; }
+
+            _member.set(_injections); // set injected value now - this includes the case of customer setter
+        }
+
+        // disposable
+        if (attrs.members.probe('dispose', memberName).anywhere() || inject_attr) { // if injected or marked for disposal
+            addDisposable('prop', memberName);
         }
 
         // apply custom attributes
@@ -648,10 +795,12 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
             _isStatic = (cfg.static && attrs.members.probe('static', memberName).current()),
             _isASync = (modifiers.members.probe('async', memberName).current()),
             _deprecate_attr = attrs.members.probe('deprecate', memberName).current(),
+            inject_attr = attrs.members.probe('inject', memberName).current(),
+            args_attr = attrs.members.probe('args', memberName).current(),
             _isDeprecate = (_deprecate_attr !== null),
             _deprecate_message = (_isDeprecate ? (_deprecate_attr.args[0] || `Function is marked as deprecate. (${memberName})`) : ''),
             base = null,
-            fnArgs = null;
+            _injections = [];
 
         // override, if required
         if (_isOverriding) {
@@ -662,32 +811,50 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
             bindingHost = params.staticInterface; // redefine binding host
         }
 
+        // resolve injections first
+        if (inject_attr) {  
+            let _injectWhat = inject_attr.args[0],                                          // aliasName || qualifiedTypeName || Type itself
+                _injectWith = (inject_attr.args.length > 0 ? inject_attr.args[1] : []),     // [..., ...] <- any parameters to pass to constructor of type(s) being injected
+                _injectMany = (inject_attr.args.length > 1 ? inject_attr.args[2] : false);  // true | false <- if multi injection to be done
+
+            _injections = _Container.resolve(_injectWhat, _injectWith, _injectMany);
+            if(!Array.isArray(_injections)) { _injections = [_injections]; }
+        }
+
         // define
         if (_isASync) {
             _member = function(...args) {
                 return new Promise(function(resolve, reject) {
-                    if (_isDeprecate) {
-                        console.log(_deprecate_message); // eslint-disable-line no-console
-                    }                    
-                    if (base) {
-                        fnArgs = [base, resolve, reject].concat(args); 
+                    if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
+                    let fnArgs = [];
+                    if (base) { fnArgs.push(base); }                                // base is always first, if overriding
+                    if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base or as first, if injected
+                    fnArgs.push(resolve);                                           // resolve, reject follows, in async mode
+                    fnArgs.push(reject);
+                    if(args_attr && args.attr.args.length > 0) {
+                        let argsObj = _Args(...args.attr.args)(...args);
+                        if (argsObj.isInvalid) { throw argsObj.error; }
+                        fnArgs.push(argsObj);                                       // push a single args processor's result object
                     } else {
-                        fnArgs = [resolve, reject].concat(args); 
+                        fnArgs.concat(args);                                        // add args as is
                     }
-                    if (isArrow(memberDef)) { return memberDef(...fnArgs); } else { return memberDef.apply(bindingHost, fnArgs); }
+                    return memberDef.apply(bindingHost, fnArgs);
                 }.bind(bindingHost));
             }.bind(bindingHost);                 
         } else {
             _member = function(...args) {
-                if (_isDeprecate) {
-                    console.log(_deprecate_message); // eslint-disable-line no-console
-                }                
-                if (base) {
-                    fnArgs = [base].concat(args); 
+                if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
+                let fnArgs = [];
+                if (base) { fnArgs.push(base); }                                // base is always first, if overriding
+                if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base or as first, if injected
+                if(args_attr && args.attr.args.length > 0) {
+                    let argsObj = _Args(...args.attr.args)(...args);
+                    if (argsObj.isInvalid) { throw argsObj.error; }
+                    fnArgs.push(argsObj);                                       // push a single args processor's result object
                 } else {
-                    fnArgs = args; 
+                    fnArgs.concat(args);                                        // add args as is
                 }
-                if (isArrow(memberDef)) { return memberDef(...fnArgs); } else { return memberDef.apply(bindingHost, fnArgs); }
+                return memberDef.apply(bindingHost, fnArgs);
             }.bind(bindingHost);                  
         }
 
@@ -707,7 +874,6 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
     const buildEvent = (memberName, memberType, memberDef) => {
         let _member = null,
             argsProcessorFn = null,
-            _member_dispatcher = _member_dispatcher || new Dispatcher();
             base = null,
             fnArgs = null,     
             _isOverriding = (cfg.inheritance && attrs.members.probe('override', memberName).current()), 
@@ -715,6 +881,12 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
             _isDeprecate = (_deprecate_attr !== null),
             _deprecate_message = (_isDeprecate ? (_deprecate_attr.args[0] || `Event is marked as deprecate. (${memberName})`) : ''),
             bindingHost = obj;
+
+        // create dispatcher, if not already created
+        if (!_member_dispatcher) {
+            _member_dispatcher = new Dispatcher();
+            addDisposable('event', _member_dispatcher); // so it can be cleared on dispose
+        }
 
         // override, if required
         if (_isOverriding) {
@@ -724,15 +896,13 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
    
         // define
         _member = function(...args) {
-            if (_isDeprecate) {
-                console.log(_deprecate_message); // eslint-disable-line no-console
-            }
+            if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
             if (base) {
                 fnArgs = [base].concat(args); 
             } else {
                 fnArgs = args; 
             }
-            if (isArrow(memberDef)) { return memberDef(...fnArgs); } else { return memberDef.apply(bindingHost, fnArgs); }
+            return memberDef.apply(bindingHost, fnArgs);
         }.bind(bindingHost);                  
 
        // apply custom attributes (before event interface is added)
@@ -780,6 +950,9 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
         memberType = validatePreMemberDefinitionFeasibility(memberName, memberType, memberDef); 
 
         // set/update member meta
+        // NOTE: This also means, when a mixed member is being overwritten either
+        // because of other mixin or by being defined here, these values will be
+        // overwritten as per last added member
         def.members[memberName] = memberType;
         def.attrs.members[memberName] = [];
         def.modifiers.members[memberName] = [];
@@ -833,6 +1006,9 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
         // finally hold the references for reflector
         def.members[memberName] = memberValue;
     };
+    const addDisposable = (disposableType, data) => {
+        obj._.disposables.push({type: disposableType, data: data});
+    }
     const modifiers = modifierOrAttrRefl(true, def);
     const attrs = modifierOrAttrRefl(false, def);
     
@@ -870,10 +1046,13 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
         if (cfg.interfaces) {
             def.interfaces = cfg.params.interfaces; // interface types that were applied to this type, will be deleted after validation
         }
+        if (cfg.dispose) {
+            obj._.disposables = []; // can have {type: 'session', data: ''} OR {type: 'state', data: ''} OR {type: 'prop', data: ''} OR {type: 'event', data: dispatcher object}
+        }
      }
+     obj._.id = obj._.id || guid(); // inherited one or create here
      obj._.type = cfg.types.instance; // as defined for this instance by builder, this will always be same for all levels -- class 'instance' at all levels will be 'instance' only
     if (params.isTopLevelInstance) {
-        obj._.id = guid();
         obj._.Type = Type; // top level Type (all inheritance for these types will come from Type._.inherits)
         obj._.isInstanceOf = (name) => {
             if (!name) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
@@ -951,12 +1130,45 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
     isBuildingObj = false; 
 
     // move constructor and dispose out of main object
-    if (cfg.construct && typeof obj[_constructName] === 'function') {
-        obj._.construct = obj[_constructName]; delete obj[_constructName];
+    if (params.isTopLevelInstance) { // so that till now, a normal override behavior can be applied to these functions as well
+        if (cfg.construct && typeof obj[_constructName] === 'function') {
+            obj._.construct = obj[_constructName]; delete obj[_constructName];
+        }
+        if (cfg.dispose && typeof obj[_disposeName] === 'function') {
+            // wrap dispose to clean all types of disposables
+            let customDisposer = obj[_disposeName]; delete obj[_disposeName];
+            obj._.dispose = () => {
+                // clear all disposables
+                for(let item of obj._.disposables) {
+                    switch(item.type) {
+                        case 'session': _sessionStorage.removeItem(item.data); break;   // data = sessionStorage key name
+                        case 'state': _localStorage.removeItem(item.data); break;       // data = localStorage key name
+                        case 'prop': obj[item.data] = null; break;                      // data = property name
+                        case 'event': obj[item.data].clear(); break;                    // data = dispatcher object
+                    }
+                }
+
+                // call customer disposer
+                if (typeof customDisposer === 'function') {
+                    customDisposer();
+                }
+
+                // clear all key references related to this object
+                obj._.disposables.length = 0; 
+                obj._.Type = null;
+                obj._.modifiers = null;
+                obj._.attrs = null;
+                obj._ = null;
+                _props = null;
+                _previousDef = null;
+                def = null;
+                proxy = null;
+                _member_dispatcher = null;
+                exposed_obj = null;
+                obj = null;
+            };
+        }  
     }
-    if (cfg.dispose && typeof obj[_disposeName] === 'function') {
-        obj._.dispose = obj[_disposeName]; delete obj[_disposeName];
-    }  
 
     // prepare protected and public interfaces of object
     buildExposedObj();

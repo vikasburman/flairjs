@@ -77,7 +77,7 @@ const doTask = (done) => {
     .on('error', errorHandler('write-minified'));
 };
 const doCLITask = (done) => {
-    gulp.src('./src/cli/build-asm.js', {base: './src/cli/'})
+    gulp.src('./src/bundle/cli/build-asm.js', {base: './src/bundle/cli/'})
 
     // assemble pieces
     .pipe(inject())
