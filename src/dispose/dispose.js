@@ -15,5 +15,5 @@ const _dispose = (obj) => {
 };
 
 // attach
-flair.dispose = _dispose;
+flair.dispose = Object.freeze(_dispose);
 flair.members.push('dispose');

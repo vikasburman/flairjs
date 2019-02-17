@@ -3,7 +3,7 @@
  * FlairJS
  * True Object Oriented JavaScript
  * Version 0.15.30
- * Sun, 17 Feb 2019 01:17:00 GMT
+ * Sun, 17 Feb 2019 01:19:56 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  * https://flairjs.com
@@ -29,7 +29,6 @@
     // locals
     let isServer = new Function("try {return this===global;}catch(e){return false;}")(),
         _global = (isServer ? global : window),
-        _noop = () => {},
         flair = {},
         sym = [],
         options = {},
@@ -64,7 +63,7 @@
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
         link: 'https://flairjs.com',
-        lupdate: new Date('Sun, 17 Feb 2019 01:17:00 GMT')
+        lupdate: new Date('Sun, 17 Feb 2019 01:19:56 GMT')
     });
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -4102,8 +4101,19 @@
     // };
     
     
+    /**
+     * @name noop
+     * @description No Operation function
+     * @example
+     *  noop()
+     * @params
+     * @returns
+     */ 
+    const _noop = () => {};
+    
+    // attach
     flair.noop = Object.freeze(_noop);
-    flair.members.push('noop');
+    flair.members.push('noop'); // OK
     /**
      * @name telemetry
      * @description Telemetry enable/disable/filter/collect
@@ -4836,7 +4846,7 @@
     // attach
     flair.Serializer = Object.freeze(_Serializer);
     flair.members.push('Serializer');
-    
+     // OK
 
     // freeze members
     flair.members = Object.freeze(flair.members);

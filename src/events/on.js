@@ -1,6 +1,3 @@
-const _dispatcher = new Dispatcher();
-const dispatch = _dispatcher.dispatch;  // this can be used in any other member to dispatch any event
-
 /**
  * @name on
  * @description Register an event handler to handle a specific event. 
@@ -13,9 +10,13 @@ const dispatch = _dispatcher.dispatch;  // this can be used in any other member 
  *  isRemove: boolean - is previously associated handler to be removed
  * @returns void
  */ 
-const _on = (event, handler, isRemove) => {
+const _dispatcher = new Dispatcher();
+const dispatch = _dispatcher.dispatch;  // this can be used in any other member to dispatch any event
+ const _on = (event, handler, isRemove) => {
     if (isRemove) { _dispatcher.remove(event, handler); return; }
     _dispatcher.add(event, handler);
 };
+
+// attach
 flair.on = Object.freeze(_on);
 flair.members.push('on');

@@ -40,5 +40,5 @@ const _using = (obj, fn) => {
 };
 
 // attach
-flair.using = _using;
+flair.using = Object.freeze(_using);
 flair.members.push('using');

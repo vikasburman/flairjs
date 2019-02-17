@@ -1,12 +1,3 @@
-
-/**
- * @name Dispatcher
- * @description Lightweight Exception class that extends Error object and serves as base of all exceptions
- * @example
- *  Dispatcher()
- * @params
- * @constructs Dispatcher object
- */ 
 const Dispatcher = function() {
     let events = {};
 

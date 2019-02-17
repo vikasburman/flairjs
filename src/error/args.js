@@ -89,5 +89,5 @@ const _Args = (...patterns) => {
 };
 
 // attach
-flair.Args = _Args;
+flair.Args = Object.freeze(_Args);
 flair.members.push('Args');

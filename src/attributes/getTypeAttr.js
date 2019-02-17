@@ -29,6 +29,6 @@ const _getTypeAttr = (Type, attributeName) => {
     return result;
 };
 
-// expose
-flair.getTypeAttr = _getTypeAttr;
+// attach
+flair.getTypeAttr = Object.freeze(_getTypeAttr);
 flair.members.push('getTypeAttr');

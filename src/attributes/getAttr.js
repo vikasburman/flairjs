@@ -32,6 +32,6 @@ const _getAttr = (obj, memberName, attributeName) => {
     return result;
 };
 
-// expose
-flair.getAttr = _getAttr;
+// attach
+flair.getAttr = Object.freeze(_getAttr);
 flair.members.push('getAttr');

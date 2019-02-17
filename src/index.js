@@ -29,7 +29,6 @@
     // locals
     let isServer = new Function("try {return this===global;}catch(e){return false;}")(),
         _global = (isServer ? global : window),
-        _noop = () => {},
         flair = {},
         sym = [],
         options = {},
@@ -75,10 +74,10 @@
 
     <!-- inject: ./attributes/attr.js -->
     <!-- inject: ./attributes/attribute.js -->
-    <!-- inject: ./attributes/getAttr.js -->
-    <!-- inject: ./attributes/getTypeAttr.js -->
+    <!-- inject: ./attributes/getAttr.js -->    // OK
+    <!-- inject: ./attributes/getTypeAttr.js -->    // OK
 
-    <!-- inject: ./bundle/cli.js -->
+    <!-- inject: ./bundle/cli.js -->    // OK
     <!-- inject: ./bundle/assembly.js -->
     <!-- inject: ./bundle/namespace.js -->
     <!-- inject: ./bundle/resource.js -->
@@ -86,17 +85,17 @@
     <!-- inject: ./di/container.js -->
     <!-- inject: ./di/include.js -->
 
-    <!-- inject: ./dispose/dispose.js -->
-    <!-- inject: ./dispose/using.js -->
+    <!-- inject: ./dispose/dispose.js -->   // OK
+    <!-- inject: ./dispose/using.js -->     // OK
 
-    <!-- inject: ./error/args.js -->
+    <!-- inject: ./error/args.js -->    // OK
     <!-- inject: ./error/exception.js -->
 
-    <!-- inject: ./events/dispatcher.js -->
-    <!-- inject: ./events/on.js -->
+    <!-- inject: ./events/on.js --> // OK
 
-    <!-- inject: ./helpers/builder.js -->
-    <!-- inject: ./helpers/general.js -->
+    <!-- inject: ./helpers/builder.js -->   // OK
+    <!-- inject: ./helpers/dispatcher.js -->    // OK
+    <!-- inject: ./helpers/general.js -->   // OK
 
     <!-- inject: ./inheritance/class.js -->
     <!-- inject: ./inheritance/getTypeOf.js -->
@@ -113,15 +112,15 @@
     <!-- inject: ./interface/isImplements.js -->
 
     <!-- inject: ./misc/enum.js -->
-    <!-- inject: ./misc/noop.js -->
-    <!-- inject: ./misc/telemetry.js -->
+    <!-- inject: ./misc/noop.js -->     // OK
+    <!-- inject: ./misc/telemetry.js -->    // OK
 
     <!-- inject: ./mixin/isMixed.js -->
     <!-- inject: ./mixin/mixin.js -->
 
     <!-- inject: ./reflection/reflector.js -->    
 
-    <!-- inject: ./serialization/serializer.js -->
+    <!-- inject: ./serialization/serializer.js -->  // OK
 
     // freeze members
     flair.members = Object.freeze(flair.members);
