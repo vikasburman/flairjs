@@ -37,8 +37,6 @@ const _Args = (...patterns) => {
      *  <name(s)>: <value(s)> - argument name as given in pattern having corresponding argument value
      *                          if a name was not given in pattern, a default unique name will be created
      *                          special names like 'raw', 'index' and 'isInvalid' cannot be used.
-     * @throws
-     *   InvalidArgumentException
      */    
     let _args = (...args) => {
         // process each pattern - exit with first matching pattern
@@ -88,6 +86,5 @@ const _Args = (...patterns) => {
     return Object.freeze(_args);
 };
 
-// attach
-flair.Args = Object.freeze(_Args);
-flair.members.push('Args');
+// attach to flair
+a2f('Args', _Args);

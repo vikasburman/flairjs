@@ -8,6 +8,5 @@
  */ 
 const _noop = () => {};
 
-// attach
-flair.noop = Object.freeze(_noop);
-flair.members.push('noop');
+// attach to flair
+a2f('noop', _noop);

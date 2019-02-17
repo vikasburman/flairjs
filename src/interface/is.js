@@ -19,40 +19,50 @@
  * @returns boolean - true/false
  */ 
 const _is = (obj, type) => {
-    // obj may be undefined or null or false, so don't check
+    // obj may be undefined or null or false, so don't check for validation of that here
+    if (type._ && type._.name) { type = type._.name; } // can be a type as well
     if (_typeOf(type) !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
     let isMatched = false, 
         _typ = '';
 
-    if (obj) {
-        // array
-        if (type === 'array' || type === 'Array') { isMatched = Array.isArray(obj); }
+    // undefined
+    if (type === 'undefined') { isMatched = (typeof obj === 'undefined'); }
 
-        // date
-        if (!isMatched && (type === 'date' || type === 'Date')) { isMatched = (obj instanceof Date); }
+    // null
+    if (!isMatched && type === 'null') { isMatched = (obj === null); }
 
-        // flair
-        if (!isMatched && (type === 'flair' && obj._ && obj._.type)) { isMatched = true; }
+    // NaN
+    if (!isMatched && type === 'NaN') { isMatched = isNaN(obj); }
 
-        // native javascript types
-        if (!isMatched) { isMatched = (typeof obj === type); }
+    // infinity
+    if (!isMatched && type === 'infinity') { isMatched = (typeof obj === 'number' && isFinite(obj) === false); }
 
-        // flair types
-        if (!isMatched) {
-            if (obj._ && obj._.type) { 
-                _typ = obj._.type;
-                isMatched = _typ === type; 
-            }
+    // array
+    if (!isMatched && (type === 'array' || type === 'Array')) { isMatched = Array.isArray(obj); }
+
+    // date
+    if (!isMatched && (type === 'date' || type === 'Date')) { isMatched = (obj instanceof Date); }
+
+    // flair
+    if (!isMatched && (type === 'flair' && obj._ && obj._.type)) { isMatched = true; }
+
+    // native javascript types
+    if (!isMatched) { isMatched = (typeof obj === type); }
+
+    // flair types
+    if (!isMatched) {
+        if (obj._ && obj._.type) { 
+            _typ = obj._.type;
+            isMatched = _typ === type; 
         }
-        
-        // flair custom types
-        if (!isMatched && _typ && ['instance', 'sinstance'].indexOf(_typ) !== -1) { isMatched = _isInstanceOf(obj, type); }
     }
+    
+    // flair custom types (i.e., class or struct type names)
+    if (!isMatched && _typ && ['instance', 'sinstance'].indexOf(_typ) !== -1) { isMatched = _isInstanceOf(obj, type); }
 
     // return
     return isMatched;
 };
 
-// attach
-flair.is = _is;
-flair.members.push('is');
+// attach to flair
+a2f('is', _is);

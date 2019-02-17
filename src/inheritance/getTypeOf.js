@@ -8,9 +8,8 @@
  * @returns type - flair type for the given object
  */ 
 const _getTypeOf = (obj) => {
-    return (obj._ && obj._.Type) || null;
+    return ((obj._ && obj._.Type)  ? obj._.Type : null);
 };
 
-// expose
-flair.getTypeOf = _getTypeOf;
-flair.members.push('getTypeOf');
+// attach to flair
+a2f('getTypeOf', _getTypeOf);

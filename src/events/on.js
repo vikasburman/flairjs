@@ -12,11 +12,12 @@
  */ 
 const _dispatcher = new Dispatcher();
 const dispatch = _dispatcher.dispatch;  // this can be used in any other member to dispatch any event
- const _on = (event, handler, isRemove) => {
+const _on = (event, handler, isRemove) => {
     if (isRemove) { _dispatcher.remove(event, handler); return; }
     _dispatcher.add(event, handler);
 };
 
-// attach
-flair.on = Object.freeze(_on);
-flair.members.push('on');
+// attach to flair
+a2f('on', _on, () => {
+    _dispatcher.clear();
+});

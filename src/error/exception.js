@@ -16,57 +16,37 @@
  * @constructs Exception object
  */  
 const _Exception = function(arg1, arg2, arg3) {
-    let typ = '', msg = '', err = null;
-    if (arg1) {
-        if (typeof arg1 === 'string') { 
-            typ = arg1; 
-        } else if (typeof arg1 === 'object') {
-            typ = arg1.name || 'UnknownException';
-            err = arg1;
-            msg = err.message;
-        } else {
-            typ = 'UndefinedException';
-        }
-    } else {
-        typ = 'UndefinedException';
-    }
-    if (arg2) {
-        if (typeof arg2 === 'string') { 
-            msg = arg2; 
-        } else if (typeof arg2 === 'object') {
-            if (!err) { 
-                err = arg2; 
-                typ = typ || err.name;
-                msg = err.message;
+    let _this = new Error();
+    switch(typeof arg1) {
+        case 'string':
+            _this.name = arg1;
+            switch(typeof arg2) {
+                case 'string': 
+                    _this.message = arg2;
+                    _this.error = (typeof arg3 === 'object' ? arg3 : null);
+                    break;
+                case 'object': 
+                    _this.message = arg2.message || '';
+                    _this.error = arg2;
+                    break;
             }
-        } else {
-            typ = 'UndefinedException';
-        }               
-    } else {
-        if (err) { 
-            typ = typ || err.name;
-            msg = err.message; 
-        }
+            break;
+        case 'object':
+            _this.name = arg1.name || 'Unknown';
+            _this.message = arg1.message || '';
+            _this.error = arg1;
+            break;
     }
-    if (arg3) {
-        if (typeof arg3 === 'object') { 
-            if (!err) { err = arg3; }
-        }
-    }
-    if (typ && !typ.endsWith('Exception')) { typ+= 'Exception'; }
 
-    let _ex = new Error(msg || '');
-    _ex.name = typ || 'UndefinedException';
-    _ex.error = err || null;
+    _this.name =  _this.name || 'Undefined';
+    if (!_this.name.endsWith('Exception')) { _this.name += 'Exception'; }
 
     // return
-    return Object.freeze(_ex);
+    return Object.freeze(_this);
 };
 
 // all inbuilt exceptions
 _Exception.InvalidArgument = (name) => { return new _Exception('InvalidArgument', `Argument type is invalid. (${name})`); }
 
-
-// expose
-flair.Exception = _Exception;
-flair.members.push('Exception');
+// attach to flair
+a2f('Exception', _Exception);

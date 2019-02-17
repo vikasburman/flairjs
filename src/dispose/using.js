@@ -24,7 +24,7 @@ const _using = (obj, fn) => {
         };
     try {
         result = fn(obj);
-        if(result && typeof result.finally === 'function') { // a promise is returned
+        if (result && typeof result.finally === 'function') { // a promise is returned
             isPromiseReturned = true;
             result = result.finally((args) => {
                 doDispose();
@@ -39,6 +39,5 @@ const _using = (obj, fn) => {
     return result;
 };
 
-// attach
-flair.using = Object.freeze(_using);
-flair.members.push('using');
+// attach to flair
+a2f('using', _using);

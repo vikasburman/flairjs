@@ -5,7 +5,7 @@ const Dispatcher = function() {
     this.add = (event, handler) => {
         if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (event)'); }
         if (typeof handler !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (handler)'); }
-        if(!events[event]) { events[name] = []; }
+        if (!events[event]) { events[name] = []; }
         events[name].push(handler);
     };
 
@@ -13,7 +13,7 @@ const Dispatcher = function() {
     this.remove = (event, handler) => {
         if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (event)'); }
         if (typeof handler !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (handler)'); }
-        if(events[event]) {
+        if (events[event]) {
             let idx = events[event].indexOf(handler);
             if (idx !== -1) { events[event].splice(idx, 1); }
         }

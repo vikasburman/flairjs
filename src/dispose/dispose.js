@@ -5,15 +5,20 @@
  *  dispose(obj)
  * @params
  *  obj: object - flair object that needs to be disposed
+ *       boolean - if passed true, it will clear all of flair internal system
  * @returns void
  */ 
 const _dispose = (obj) => {
-    if (_typeOf(obj) !== 'instance') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
-    
-    // call disposer
-    obj._.dispose();
+    if (typeof obj === 'boolean' && obj === true) { // special call to dispose flair
+        disposers.forEach(disposer => { disposer(); });
+        disposers.length = 0;
+    } else { // regular call
+        if (_typeOf(obj) !== 'instance') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+
+        // call disposer
+        obj._.dispose();
+    }
 };
 
-// attach
-flair.dispose = Object.freeze(_dispose);
-flair.members.push('dispose');
+// attach to flair
+a2f('dispose', _dispose);

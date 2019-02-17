@@ -18,8 +18,6 @@ let asmFiles = {},
  *      assets: - array - list of all assets that are available outside this assembly but deployed together
  *      settings: - assembly settings
  * @returns object - flair assembly object
- * @throws
- *  InvalidArgumentException
  */ 
 flair.Assembly = (ado) => {
     if (typeof ado !== 'object') { throw _Exception.InvalidArgument('ado'); }
@@ -35,7 +33,7 @@ flair.Assembly = (ado) => {
         this.construct((ado) => {
             this.ado = ado;
             this.name = ado.name;
-            this.file = which(ado.file, true); // min/dev contextual pick
+            this.file = which(ado.file, true); // min/dev contextual pick //TODO: make this readonly actuall all of it
             this.desc = ado.desc || '';
             this.version = ado.version || '';
             this.copyright = ado.copyright || '';
@@ -46,6 +44,8 @@ flair.Assembly = (ado) => {
             this.hasAssets = (ado.assets.length > 0);
         });
 
+        // TODO: isLoaded should be a property - as used in include
+        // load is a async method
 
         // TODO: check, this should be same as in build engine
         // const appendADO = (ados, asm, asm_min, asmName, dest) => {
@@ -70,7 +70,7 @@ flair.Assembly = (ado) => {
         this.func('getType', (name) => {
             if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
             if (!this.isLoaded) { throw new _Exception('NotLoaded', `Assembly is not yet loaded. (${this.file})`); }
-            if(this.types.indexOf(name) === -1) { throw new _Exception('NotFound', `Type is not found in this assembly. (${name})`); }
+            if (this.types.indexOf(name) === -1) { throw new _Exception('NotFound', `Type is not found in this assembly. (${name})`); }
             let Type = flair.Namespace.getType(name);
             if (!Type) { throw new _Exception('NotRegistered', `Type is not registered. (${name})`); }
             return Type;
@@ -109,9 +109,6 @@ flair.Assembly = (ado) => {
  *      assets: - array - list of all assets that are available outside this assembly but deployed together
  *      settings: - assembly settings
  * @returns boolean - true/false
- * @throws
- *  InvalidArgumentException
- *  DuplicateNameException
  */ 
 flair.Assembly.register = (...ados) => { 
     if (!ados) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (ados)'); }
@@ -153,10 +150,6 @@ flair.Assembly.register = (...ados) => {
  * @params
  *  file: string - Assembly file to be loaded
  * @returns object - promise object
- * @throws
- *  InvalidArgumentException
- *  NotFoundException
- *  FileLoadException
  */
 flair.Assembly.load = (file) => {
     return new Promise((resolve, reject) => {
@@ -197,8 +190,6 @@ flair.Assembly.load = (file) => {
  * @params
  *  file: string - full path and name of the assembly file to check for
  * @returns boolean - true/false
- * @throws
- *  InvalidArgumentException
  */ 
 flair.Assembly.isRegistered = (file) => {
     if (typeof file !== 'string') { throw new _Exception('InvalidArgument', 'Argument type if not valid. (file)'); }
@@ -213,8 +204,6 @@ flair.Assembly.isRegistered = (file) => {
  * @params
  *  file: string - full path and name of the assembly file to check for
  * @returns boolean - true/false
- * @throws
- *  InvalidArgumentException
  */ 
 flair.Assembly.isLoaded = (file) => {
     if (typeof file !== 'string') { throw new _Exception('InvalidArgument', 'Argument type if not valid. (file)'); }
@@ -229,8 +218,6 @@ flair.Assembly.isLoaded = (file) => {
  * @params
  *  name: string - qualified type name of the flair type whose assembly is to be located
  * @returns object - flair assembly type object
- * @throws
- *  InvalidArgumentException
  */ 
 flair.Assembly.get = (name) => {
     if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type if not valid. (name)'); }
@@ -245,8 +232,6 @@ flair.Assembly.get = (name) => {
  * @params
  *  None
  * @returns array - registered assemblies list
- * @throws
- *  None
  */ 
 flair.Assembly.all = () => { 
     return Object.values(asmFiles).slice();
@@ -260,8 +245,6 @@ flair.Assembly.all = () => {
  * @params
  *  None
  * @returns array - registered types list
- * @throws
- *  None
  */ 
 flair.Assembly.allTypes = () => { 
     return Object.keys(asmTypes).slice();

@@ -1,6 +1,6 @@
 /**
  * @name isImplements
- * @description Checks if given flair class/struct instance or class implements given interface
+ * @description Checks if given flair class/struct instance or class/struct implements given interface
  * @example
  *  isImplements(obj, intf)
  * @params
@@ -16,6 +16,5 @@ const _isImplements = (obj, intf) => {
     return obj._.isImplements(intf);
 };
 
-// attach
-flair.isImplements = _isImplements;
-flair.members.push('isImplements');
+// attach to flair
+a2f('isImplements', _isImplements);

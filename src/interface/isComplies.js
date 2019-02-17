@@ -24,6 +24,5 @@ const _isComplies = (obj, intf) => {
     return complied;
 };
 
-// attach
-flair.isComplies = _isComplies;
-flair.members.push('isComplies');
+// attach to flair
+a2f('isComplies', _isComplies);

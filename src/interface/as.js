@@ -23,6 +23,5 @@ const _as = (obj, type) => {
     return null;
 };
 
-// attach
-flair.as = _as;
-flair.members.push('as');
+// attach to flair
+a2f('as', _as);

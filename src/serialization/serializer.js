@@ -49,7 +49,7 @@ const serilzer_process = (source, isDeserialize) => {
         if (!src.type && !src.data) { throw _Exception.InvalidArgument('json'); }
 
         // get base instance to load property values
-        Type = _Namespace.getType(src.type);
+        Type = _getType(src.type);
         if (!Type) { throw new _Exception('NotRegistered', `Type is not registered. (${src.type})`); }
         result = new Type(); // that's why serializable objects must be able to create themselves without arguments 
         
@@ -96,6 +96,6 @@ const _Serializer = {
     }
 };
 
-// attach
-flair.Serializer = Object.freeze(_Serializer);
-flair.members.push('Serializer');
+// attach to flair
+a2f('Serializer', _Serializer);
+

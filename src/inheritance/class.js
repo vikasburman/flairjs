@@ -23,8 +23,6 @@
  *                        mixins will be applied in order they are defined here
  *  factory: function - factory function to build class definition
  * @returns type - constructed flair class type
- * @throws
- *  InvalidArgumentException
  */
 flair.Class = (name, inherits, mixinsAndInterfaces, factory) => {
     if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }

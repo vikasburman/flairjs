@@ -16,6 +16,5 @@ const _isDerivedFrom = (type, parent) => {
     return type._.isDerivedFrom(parent);
 }; 
 
-// attach
-flair.isDerivedFrom = _isDerivedFrom;
-flair.members.push('isDerivedFrom');
+// attach to flair
+a2f('isDerivedFrom', _isDerivedFrom);

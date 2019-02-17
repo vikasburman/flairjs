@@ -8,6 +8,6 @@ const _cli = {
     build: (isServer ? require('./flair.build.js') : null)
 };
 
-// attach
-flair.cli = Object.freeze(_cli);
-flair.members.push('cli');
+// attach to flair
+a2f('cli', _cli);
+

@@ -1,3 +1,95 @@
+/**
+ * @name attr / $$
+ * @description Decorator function to apply attributes on type and member definitions
+ * @example
+ *  attr(name) OR $$(name)
+ *  attr(name, ...args) OR $$(name, ...args)
+ * @params
+ *  attrName: string/type - Name of the attribute, it can be an internal attribute or namespaced attribute name
+ *                          It can also be the Attribute flair type itself
+ *  args: any - Any arguments that may be needed by attribute
+ * @returns void
+ */ 
+const _$$ = (name, ...args) => {
+    if (!name || ['string', 'class'].indexOf(_typeOf(name) === -1)) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+    if (name && typeof name !== 'string' && !_isDerivedFrom(name, 'Attribute')) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+
+    let AttrType = null,
+        attrInstance = null,
+        cfg = null;
+    if (typeof name === 'string') {
+        cfg = _attr._.inbuilt[name] || null;
+        if (!cfg) { // not an inbuilt attr
+            AttrType = _getType(name);
+            if (!AttrType) { throw new _Exception('NotFound', `Attribute is not found. (${name})`); }
+            name = AttrType._.name;
+        }
+    } else {
+        AttrType = name; // the actual Attribute type
+        name = AttrType._.name;
+    }
+
+    // duplicate check
+    if (findIndexByProp(_attr._.bucket, 'name', name) !== -1) { throw new _Exception('Duplicate', `Duplicate attributes are not allowed. (${name})`); }
+
+    // custom attribute instance
+    if (AttrType) {
+        attrInstance = new AttrType(...args);
+        cfg = new _attrConfig(attrInstance.constraints);
+    }
+
+    // store
+    _attr._.bucket.push({name: name, cfg: cfg, isCustom: (attrInstance !== null), attr: attrInstance, args: args});
+};
+const _attr = (name, ...args) => {
+    return _$$(name, ...args);
+};
+_attr._ = Object.freeze({
+    bucket: [],
+    inbuilt: Object.freeze({ 
+        static: new _attrConfig(true, '((class || struct) && !$abstract) || (((class || struct) && (prop || func)) && !($abstract || $virtual || $override))'),
+    
+        abstract: new _attrConfig(true, '((class || struct) && !$sealed && !$static) || (((class || struct) && (prop || func || event)) && !($override || $sealed || $static))'),
+        virtual: new _attrConfig(true, '(class || struct) && (prop || func || construct || dispose || event) && !($abstract || $override || $sealed || $static)'),
+        override: new _attrConfig(true, '(class || struct) && (prop || func || construct || dispose || event) && ((@virtual || @abstract) && !(virtual || abstract)) && !($sealed || $static))'),
+        sealed: new _attrConfig(true, '(class || ((class && (prop || func || event)) && override)'), 
+    
+        private: new _attrConfig(true, '(class || struct) && (prop || func || event) && !($protected || @private || $static)'),
+        protected: new _attrConfig(true, '(class || struct) && (prop || func || event) && !($private|| $static)'),
+        readonly: new _attrConfig(true, '(class || struct) && prop && !abstract'),
+        async: new _attrConfig(true, '(class || struct) && func'),
+    
+        enumerate: new _attrConfig('(class || struct) && prop || func || event'),
+        dispose: new _attrConfig('class && prop'),
+        post: new _attrConfig('(class || struct || mixin) && event'),
+        on: new _attrConfig('class && func && !(event || $async || $args || $inject || $static)'),
+        timer: new _attrConfig('class && func && !(event || $async || $args || $inject || @timer || $static)'),
+        type: new _attrConfig('(class || struct || mixin) && prop'),
+        args: new _attrConfig('(class || struct || mixin) && (func || construct) && !$on'),
+        inject: new _attrConfig('class && (prop || func || construct) && !(static || session || state)'),
+        singleton: new _attrConfig('(class && !(prop || func || event) && !($abstract || $static)'),
+        serialize: new _attrConfig('((class || struct) || ((class || struct) && prop)) && !($abstract || $static)'),
+        deprecate: new _attrConfig('!construct && !dispose'),
+        session: new _attrConfig('(class && prop) && !($static || $state || $readonly || $abstract || $virtual)'),
+        state: new _attrConfig('(class && prop) && !($static || $session || $readonly || $abstract || $virtual)'),
+        conditional: new _attrConfig('(class || struct || mixin) && (prop || func || event)'),
+        noserialize: new _attrConfig('(class || struct || mixin) && prop'),
+    
+        mixed: new _attrConfig('class && (prop || func || event)'),
+        event: new _attrConfig('(class || struct || mixin || interface) && func && !($inject || $async)')
+    })
+});
+_attr.collect = () => {
+    let attrs = _attr._.bucket.slice();
+    _attr.clear();
+    return attrs;
+}
+_attr.has = (name) => {
+    return (_attr._.bucket.findIndex(item => item.name === name) !== -1);
+};
+_attr.clear = () => {
+    _attr._.bucket.length = 0; // remove all
+};
 
 /**
  * @name attr.Config
@@ -61,95 +153,6 @@ const _attrConfig = function(isModifier, constraints) {
     return _this;
 };
 
-/**
- * @name attr
- * @description Decorator function to apply attributes on type and member definitions
- * @example
- *  attr(attrName)
- *  attr(attrName, ...args)
- * @params
- *  attrName: string/type - Name of the attribute, it can be an internal attribute or namespaced attribute name
- *                          It can also be the Attribute flair type itself
- *  args: any - Any arguments that may be needed by attribute
- * @returns void
- */ 
-const _attr = (name, ...args) => {
-    if (!name || ['string', 'class'].indexOf(_typeOf(name) === -1)) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
-    if (name && typeof name !== 'string' && !_isDerivedFrom(name, 'Attribute')) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
-
-    let Attr = null,
-        attrInstance = null,
-        cfg = null;
-    if (typeof name === 'string') {
-        cfg = _attr._.inbuilt[name] || null;
-        if (!cfg) { // not an inbuilt attr
-            Attr = _Namespace.getType(name);
-            if (!Attr) { throw new _Exception('NotFound', `Attribute is not found. (${name})`); }
-            name = Attr._.name;
-        }
-    } else {
-        Attr = name; // the actual Attribute type
-        name = Attr._.name;
-    }
-
-    // duplicate check
-    if (findIndexByProp(_attr._.bucket, 'name', name) !== -1) { throw new _Exception('Duplicate', `Duplicate attributes are not allowed. (${name})`); }
-
-    // custom attribute instance
-    if (Attr) {
-        attrInstance = new Attr(...args);
-        cfg = new _attrConfig(attrInstance.constraints);
-    }
-
-    // store
-    _attr._.bucket.push({name: name, cfg: cfg, isCustom: (attrInstance !== null), attr: attrInstance, args: args});
-};
-_attr._ = Object.freeze({
-    bucket: [],
-    inbuilt: Object.freeze({ 
-        static: new _attrConfig(true, '((class || struct) && !$abstract) || (((class || struct) && (prop || func)) && !$abstract && !$virtual && !$override)'),
-    
-        abstract: new _attrConfig(true, '((class || struct) && !$sealed && !$static) || (((class || struct) && (prop || func || event)) && !$override && !$sealed && !$static)'),
-        virtual: new _attrConfig(true, '(class || struct) && (prop || func || construct || dispose || event) && !$abstract && !$override && !$sealed && !$static'),
-        override: new _attrConfig(true, '(class || struct) && (prop || func || construct || dispose || event) && ((@virtual || @abstract) && !virtual && !abstract) && !$sealed, !$static)'),
-        sealed: new _attrConfig(true, '(class || ((class && (prop || func || event)) && override)'), 
-    
-        private: new _attrConfig(true, '(class || struct) && (prop || func || event) && !$protected && !@private && !$static'),
-        protected: new _attrConfig(true, '(class || struct) && (prop || func || event) && !$private && !$static'),
-        readonly: new _attrConfig(true, '(class || struct) && prop && !abstract'),
-        async: new _attrConfig(true, '(class || struct) && func'),
-    
-        enumerate: new _attrConfig('(class || struct) && prop || func || event'),
-        dispose: new _attrConfig('class && prop'),
-        type: new _attrConfig('(class || struct || mixin) && prop'),
-        args: new _attrConfig('(class || struct || mixin) && (func || construct)'),
-        inject: new _attrConfig('class && (prop || func || construct) && !static && !session && !state'),
-        singleton: new _attrConfig('(class && !$abstract && !$static && !(prop || func || event))'),
-        serialize: new _attrConfig('((class || struct) || ((class || struct) && prop)) && !$abstract, !$static'),
-        deprecate: new _attrConfig('!construct && !dispose'),
-        session: new _attrConfig('class && prop && !$static && !$state && !$readonly && !$abstract && !$virtual'),
-        state: new _attrConfig('class && prop && !$static && !$session && !$readonly && !$abstract && !$virtual'),
-        conditional: new _attrConfig('(class || struct || mixin) && (prop || func || event)'),
-        noserialize: new _attrConfig('(class || struct || mixin) && prop'),
-    
-        mixed: new _attrConfig('prop || func || event'),
-        event: new _attrConfig('func')
-    })
-});
-_attr.collect = () => {
-    let attrs = _attr._.bucket.slice();
-    _attr.clear();
-    return attrs;
-}
-_attr.has = (name) => {
-    return (_attr._.bucket.findIndex(item => item.name === name) !== -1);
-};
-_attr.clear = () => {
-    _attr._.bucket.length = 0; // remove all
-};
-
-// attach
-flair.attr = _attr;
-flair.members.push('attr');
-
-// TODO: define $$ which is just attr without any attr.collect etc.
+// attach to flair (NOTE: _attr is for internal use only, so collect/clear etc. are not exposed out)
+a2f('attr', _$$);
+a2f('$$', _$$);

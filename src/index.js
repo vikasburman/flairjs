@@ -31,6 +31,7 @@
         _global = (isServer ? global : window),
         flair = {},
         sym = [],
+        disposers = [],
         options = {},
         argsString = '';
 
@@ -67,55 +68,61 @@
     });
     flair.members = [];
     flair.options = Object.freeze(options);
+    const a2f = (name, obj, disposer) => {
+        flair[name] = Object.freeze(obj);
+        flair.members.push(name);
+        if (typeof disposer === 'function') { disposers.push(disposer); }
+    };
 
     // members
     <!-- inject: ./aop/aspect.js -->
     <!-- inject: ./aop/aspects.js -->
 
-    <!-- inject: ./attributes/attr.js -->
+    <!-- inject: ./attributes/attr.js -->   // OK
     <!-- inject: ./attributes/attribute.js -->
     <!-- inject: ./attributes/getAttr.js -->    // OK
-    <!-- inject: ./attributes/getTypeAttr.js -->    // OK
 
     <!-- inject: ./bundle/cli.js -->    // OK
+    <!-- inject: ./bundle/getAssembly.js -->    // OK
+    <!-- inject: ./bundle/getType.js -->    // OK
     <!-- inject: ./bundle/assembly.js -->
     <!-- inject: ./bundle/namespace.js -->
     <!-- inject: ./bundle/resource.js -->
 
     <!-- inject: ./di/container.js -->
-    <!-- inject: ./di/include.js -->
+    <!-- inject: ./di/include.js -->    // OK
 
     <!-- inject: ./dispose/dispose.js -->   // OK
     <!-- inject: ./dispose/using.js -->     // OK
 
     <!-- inject: ./error/args.js -->    // OK
-    <!-- inject: ./error/exception.js -->
+    <!-- inject: ./error/exception.js -->   // OK
 
     <!-- inject: ./events/on.js --> // OK
+    <!-- inject: ./events/post.js --> // OK
 
     <!-- inject: ./helpers/builder.js -->   // OK
     <!-- inject: ./helpers/dispatcher.js -->    // OK
     <!-- inject: ./helpers/general.js -->   // OK
 
-    <!-- inject: ./inheritance/class.js -->
-    <!-- inject: ./inheritance/getTypeOf.js -->
-    <!-- inject: ./inheritance/isDerivedFrom.js -->
-    <!-- inject: ./inheritance/isInstanceOf.js -->
+    <!-- inject: ./inheritance/class.js --> 
+    <!-- inject: ./inheritance/getTypeOf.js -->     // OK 
+    <!-- inject: ./inheritance/isDerivedFrom.js --> // OK
+    <!-- inject: ./inheritance/isInstanceOf.js -->  // OK
     <!-- inject: ./inheritance/struct.js -->
-    <!-- inject: ./inheritance/typeOf.js -->
-    <!-- inject: ./inheritance/types.js -->
+    <!-- inject: ./inheritance/typeOf.js -->    // OK
 
-    <!-- inject: ./interface/as.js -->
+    <!-- inject: ./interface/as.js -->  // OK
     <!-- inject: ./interface/interface.js -->
-    <!-- inject: ./interface/is.js -->
-    <!-- inject: ./interface/isComplies.js -->
-    <!-- inject: ./interface/isImplements.js -->
+    <!-- inject: ./interface/is.js -->  // OK
+    <!-- inject: ./interface/isComplies.js -->  // OK
+    <!-- inject: ./interface/isImplements.js -->    // OK
 
     <!-- inject: ./misc/enum.js -->
     <!-- inject: ./misc/noop.js -->     // OK
     <!-- inject: ./misc/telemetry.js -->    // OK
 
-    <!-- inject: ./mixin/isMixed.js -->
+    <!-- inject: ./mixin/isMixed.js --> // OK
     <!-- inject: ./mixin/mixin.js -->
 
     <!-- inject: ./reflection/reflector.js -->    

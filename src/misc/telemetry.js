@@ -80,6 +80,7 @@ const _telemetry = {
     })
 };
 
-// attach
-flair.telemetry = Object.freeze(_telemetry);
-flair.members.push('telemetry');
+// attach to flair
+a2f('telemetry', _telemetry, () => {
+    telemetry_buffer.length = 0;
+});

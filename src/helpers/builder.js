@@ -142,7 +142,7 @@ const attributesAndModifiers = (def, memberName) => {
             if (appliedAttr.isCustom) { // custom attribute instance
                 attrBucket.push(appliedAttr);
             } else { // inbuilt attribute or modifier
-                if(appliedAttr.cfg.isModifier) { 
+                if (appliedAttr.cfg.isModifier) { 
                     modifierBucket.push(appliedAttr);
                 } else {
                     attrBucket.push(appliedAttr);
@@ -765,7 +765,7 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
                 _injectMany = (inject_attr.args.length > 1 ? inject_attr.args[2] : false);  // true | false <- if multi injection to be done
 
             _injections = _Container.resolve(_injectWhat, _injectWith, _injectMany);
-            if(!Array.isArray(_injections)) { _injections = [_injections]; }
+            if (!Array.isArray(_injections)) { _injections = [_injections]; }
 
             _member.set(_injections); // set injected value now - this includes the case of customer setter
         }
@@ -796,6 +796,8 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
             _isASync = (modifiers.members.probe('async', memberName).current()),
             _deprecate_attr = attrs.members.probe('deprecate', memberName).current(),
             inject_attr = attrs.members.probe('inject', memberName).current(),
+            on_attr = attrs.members.probe('on', memberName).current(),              // always look for current on, inherited case would already be baked in
+            timer_attr = attrs.members.probe('timer', memberName).current(),          // always look for current auto
             args_attr = attrs.members.probe('args', memberName).current(),
             _isDeprecate = (_deprecate_attr !== null),
             _deprecate_message = (_isDeprecate ? (_deprecate_attr.args[0] || `Function is marked as deprecate. (${memberName})`) : ''),
@@ -818,7 +820,7 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
                 _injectMany = (inject_attr.args.length > 1 ? inject_attr.args[2] : false);  // true | false <- if multi injection to be done
 
             _injections = _Container.resolve(_injectWhat, _injectWith, _injectMany);
-            if(!Array.isArray(_injections)) { _injections = [_injections]; }
+            if (!Array.isArray(_injections)) { _injections = [_injections]; }
         }
 
         // define
@@ -831,7 +833,7 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
                     if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base or as first, if injected
                     fnArgs.push(resolve);                                           // resolve, reject follows, in async mode
                     fnArgs.push(reject);
-                    if(args_attr && args.attr.args.length > 0) {
+                    if (args_attr && args.attr.args.length > 0) {
                         let argsObj = _Args(...args.attr.args)(...args);
                         if (argsObj.isInvalid) { throw argsObj.error; }
                         fnArgs.push(argsObj);                                       // push a single args processor's result object
@@ -847,7 +849,7 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
                 let fnArgs = [];
                 if (base) { fnArgs.push(base); }                                // base is always first, if overriding
                 if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base or as first, if injected
-                if(args_attr && args.attr.args.length > 0) {
+                if (args_attr && args.attr.args.length > 0) {
                     let argsObj = _Args(...args.attr.args)(...args);
                     if (argsObj.isInvalid) { throw argsObj.error; }
                     fnArgs.push(argsObj);                                       // push a single args processor's result object
@@ -868,6 +870,26 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
             _member = applyAspects(memberName, _member);
         }
 
+        // hook it to handle posted event, if configured
+        if (on_attr && on_attr.args.length > 0) {
+            _on(on_attr.args[0], _member); // attach event handler
+            addDisposable('handler', {name: on_attr.args[0], handler: _member});
+        }
+
+        // hook it to run on timer if configured
+        if (timer_attr && timer_attr.args.length > 0) {
+            let isInTimerCode = false;
+            let intervalId = setInterval(() => {
+                // run only, when object construction is completed
+                if (!obj._.constructing && !isInTimerCode) {
+                    isInTimerCode = true;
+                    obj[memberName](); // call as if called from outside
+                    isInTimerCode = false;
+                }
+            }, (timer_attr.args[0] * 1000));         // timer_attr.args[0] is number of seconds (not milliseconds)
+            addDisposable('timer', intervalId);
+        }
+
         // return
         return _member;
     };
@@ -878,6 +900,7 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
             fnArgs = null,     
             _isOverriding = (cfg.inheritance && attrs.members.probe('override', memberName).current()), 
             _deprecate_attr = attrs.members.probe('deprecate', memberName).current(),
+            _post_attr = attrs.members.probe('post', memberName).current(), // always post as per what is defined here, in case of overriding
             _isDeprecate = (_deprecate_attr !== null),
             _deprecate_message = (_isDeprecate ? (_deprecate_attr.args[0] || `Event is marked as deprecate. (${memberName})`) : ''),
             bindingHost = obj;
@@ -924,6 +947,11 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
 
             // dispatch
             _member_dispatcher.dispatch(name, processedArgs);
+
+            // post, if configured
+            if (_post_attr && _post_attr.args.length > 0) { // post always happens for current() configuration, in case of overriding, any post defined on inherited event is lost
+                _post(_post_attr.args[0], processedArgs);   // .args[0] is supposed to the channel name on which to post, so there is no conflict
+            }
         }.bind(bindingHost);
         _member._ = Object.freeze({
             processor: argsProcessorFn
@@ -1047,7 +1075,7 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
             def.interfaces = cfg.params.interfaces; // interface types that were applied to this type, will be deleted after validation
         }
         if (cfg.dispose) {
-            obj._.disposables = []; // can have {type: 'session', data: ''} OR {type: 'state', data: ''} OR {type: 'prop', data: ''} OR {type: 'event', data: dispatcher object}
+            obj._.disposables = []; // can have {type: 'session', data: 'unique name'} OR {type: 'state', data: 'unique name'} OR {type: 'prop', data: 'prop name'} OR {type: 'event', data: dispatcher object} OR {type: 'handler', data: {name: 'event name', handler: exact func that was attached}}
         }
      }
      obj._.id = obj._.id || guid(); // inherited one or create here
@@ -1055,8 +1083,8 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
     if (params.isTopLevelInstance) {
         obj._.Type = Type; // top level Type (all inheritance for these types will come from Type._.inherits)
         obj._.isInstanceOf = (name) => {
-            if (!name) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
             if (name._ && name._.name) { name = name._.name; } // could be the 'Type' itself
+            if (!name) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
             return (obj._.Type._.name === name) || Type._.isDerivedFrom(name); 
         };
         if (cfg.mixins) {
@@ -1141,10 +1169,12 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
                 // clear all disposables
                 for(let item of obj._.disposables) {
                     switch(item.type) {
-                        case 'session': _sessionStorage.removeItem(item.data); break;   // data = sessionStorage key name
-                        case 'state': _localStorage.removeItem(item.data); break;       // data = localStorage key name
-                        case 'prop': obj[item.data] = null; break;                      // data = property name
-                        case 'event': obj[item.data].clear(); break;                    // data = dispatcher object
+                        case 'session': _sessionStorage.removeItem(item.data); break;           // data = sessionStorage key name
+                        case 'state': _localStorage.removeItem(item.data); break;               // data = localStorage key name
+                        case 'prop': obj[item.data] = null; break;                              // data = property name
+                        case 'event': obj[item.data].clear(); break;                            // data = dispatcher object
+                        case 'handler': _on(item.data.name, item.data.handler, true); break;    // data = {name: event name, handler: handler func}
+                        case 'timer': clearInterval(item.data); break;                          // data = id returned by the setInterval() call
                     }
                 }
 
@@ -1337,8 +1367,8 @@ const builder = (cfg) => {
         _Object._.isAbstract = () => { return modifiers.type.has('abstract'); };
         _Object._.isSealed = () => { return modifiers.type.has('sealed'); };
         _Object._.isDerivedFrom = (name) => { 
-            if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
             if (name._ && name._.name) { name = name._.name; }
+            if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
             let result = false,
                 prv = cfg.params.inherits; // look from parent onwards
             if (!result) {
@@ -1371,8 +1401,8 @@ const builder = (cfg) => {
     if (cfg.mixins) {
         _Object._.mixins = cfg.params.mixins; // mixin types that were applied to this type
         _Object._.isMixed = (name) => {
-            if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
             if (name._ && name._.name) { name = name._.name; }
+            if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
             let result = false,
                 prv = _Object; // look from this itself
             while(true) { // eslint-disable-line no-constant-condition
@@ -1387,8 +1417,8 @@ const builder = (cfg) => {
     if (cfg.interfaces) {
         _Object._.interfaces = cfg.params.interfaces,     
         _Object._.isImplements = (name) => {
-            if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
             if (name._ && name._.name) { name = name._.name; }
+            if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
             let result = false,
                 prv = _Object; // look from this itself
             while(true) { // eslint-disable-line no-constant-condition
