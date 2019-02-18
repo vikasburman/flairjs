@@ -75,21 +75,21 @@
     };
 
     // members
-    <!-- inject: ./aop/aspect.js -->
-    <!-- inject: ./aop/aspects.js -->
+    <!-- inject: ./aop/aspect.js -->    // OK
+    <!-- inject: ./aop/aspects.js -->   // OK
 
     <!-- inject: ./attributes/attr.js -->   // OK
-    <!-- inject: ./attributes/attribute.js -->
+    <!-- inject: ./attributes/attribute.js -->  // OK
     <!-- inject: ./attributes/getAttr.js -->    // OK
 
     <!-- inject: ./bundle/cli.js -->    // OK
     <!-- inject: ./bundle/getAssembly.js -->    // OK
     <!-- inject: ./bundle/getType.js -->    // OK
-    <!-- inject: ./bundle/assembly.js -->
-    <!-- inject: ./bundle/namespace.js -->
+    <!-- inject: ./bundle/assembly.js -->   // OK
+    <!-- inject: ./bundle/namespace.js -->  // OK
     <!-- inject: ./bundle/resource.js -->
 
-    <!-- inject: ./di/container.js -->
+    <!-- inject: ./di/container.js -->  // OK
     <!-- inject: ./di/include.js -->    // OK
 
     <!-- inject: ./dispose/dispose.js -->   // OK

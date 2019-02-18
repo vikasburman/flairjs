@@ -3,7 +3,7 @@
  * FlairJS
  * True Object Oriented JavaScript
  * Version 0.15.30
- * Sun, 17 Feb 2019 18:51:42 GMT
+ * Mon, 18 Feb 2019 00:16:28 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  * https://flairjs.com
@@ -64,7 +64,7 @@
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
         link: 'https://flairjs.com',
-        lupdate: new Date('Sun, 17 Feb 2019 18:51:42 GMT')
+        lupdate: new Date('Mon, 18 Feb 2019 00:16:28 GMT')
     });
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -75,194 +75,166 @@
     };
 
     // members
-    // Aspect
-    flair.Aspect = flair.Class('Aspect', function(attr) {
-        let beforeFn = null,
-            afterFn = null,
-            aroundFn = null;
-        attr('abstract');
-        this.construct((...args) => {
-            this.args = args;
-        });
-        
-        this.prop('args', []);
-        this.func('before', (fn) => {
-            if (typeof fn === 'function') {
-                beforeFn = fn;
-            }
-            return beforeFn;
-        });
-        this.func('after', (fn) => {
-            if (typeof fn === 'function') {
-                afterFn = fn;
-            }
-            return afterFn;
-        });
-        this.func('around', (fn) => {
-            if (typeof fn === 'function') {
-                aroundFn = fn;
-            }
-            return aroundFn;
-        });
+    /**
+     * @name Aspect
+     * @description Aspect base class.
+     */
+    _$$('abstract');
+    _Class('.Aspect', function() { // registered at root namespace (can be get as: getType('Aspect'))
+        /** 
+         * @name before
+         * @description Before advise
+         * @example
+         *  before(ctx)
+         * @arguments
+         * ctx: object - context object that is shared across all weavings
+         *  typeName()      - gives the name of the type
+         *  funcName()      - gives the name of the function
+         *  error(err)      - store new error to context, or just call error() to get last error
+         *  result(value)   - store new result to context, or just call result() to get last stored result
+         *  args()          - get original args passed to main call
+         *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
+         */  
+        _$$('virtual');
+        this.before = this.noop;
+    
+        /** 
+         * @name around
+         * @description Around advise
+         * @example
+         *  around(ctx, fn)
+         * @arguments
+         * ctx: object - context object that is shared across all weavings
+         *  typeName()      - gives the name of the type
+         *  funcName()      - gives the name of the function
+         *  error(err)      - store new error to context, or just call error() to get last error
+         *  result(value)   - store new result to context, or just call result() to get last stored result
+         *  args()          - get original args passed to main call
+         *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
+         * fn: function - function which is wrapped, it should be called in between pre and post actions
+         */  
+        _$$('virtual');
+        this.around = this.noop;
+    
+        /** 
+         * @name after
+         * @description After advise
+         * @example
+         *  after(ctx)
+         * @arguments
+         * ctx: object - context object that is shared across all weavings
+         *  typeName()      - gives the name of the type
+         *  funcName()      - gives the name of the function
+         *  error(err)      - store new error to context, or just call error() to get last error
+         *  result(value)   - store new result to context, or just call result() to get last stored result
+         *  args()          - get original args passed to main call
+         *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
+         */  
+        _$$('virtual');
+        this.after = this.noop;
     });
+        // OK
+    /**
+     * @name Aspects
+     * @description Aspect orientation support.
+     * @example
+     *  .register(pointcut, Aspect)             // - void
+     * @params
+     *  pointcut: string - pointcut identifier string as -> [namespace.]class[:func]
+     *      namespace/class/func: use wildcard characters ? or * to build the pointcut identifier
+     *     
+     *      Examples:
+     *          abc                 - on all functions of all classes named abc in root namespace (without any namespace)
+     *          *.abc               - on all functions of all classes named abc in all namespaces
+     *          xyz.*               - on all functions of all classes in xyz namespace
+     *          xyz.abc             - on all functions of class abc under xyz namespace
+     *          xyz.abc:*           - on all functions of class abc under xyz namespace
+     *          xyz.abc:f1          - on func f1 of class abc under xyz namespace
+     *          xyz.abc:f?test      - on all funcs that are named like f1test, f2test, f3test, etc. in class abc under xyz namespace
+     *          xyz.xx*.abc         - on functions of all classes names abc under namespaces where pattern matches xyz.xx* (e.g., xyz.xx1 and xyz.xx2)
+     *          *xyx.xx*.abc        - on functions of all classes names abc under namespaces where pattern matches *xyz.xx* (e.g., 1xyz.xx1 and 2xyz.xx1)
+     *     
+     * Aspect: type - flair Aspect type
+     */ 
+    const allAspects = [];
+    const _Aspects = {
+        // register Aspect against given pointcut definition
+        register: (pointcut, Aspect) => {
+            if (typeof pointcut !== 'string') { throw new _Exception.InvalidArgument('pointcut'); }
+            if (!_is(Aspect, 'Aspect')) { throw new _Exception.InvalidArgument('Aspect'); }
+            
+            // add new entry
+            let pc = pointcut,
+                __ns = '',
+                __class = '',
+                __func = '',
+                __identifier = '',
+                items = null;
     
-    // Aspects
-    let allAspects = [],
-        regExpEscape = (s) => { return s.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&'); },
-        wildcardToRegExp = (s) => { return new RegExp('^' + s.split(/\*+/).map(regExpEscape).join('.*') + '$'); };
-    flair.Aspects = {};
-    flair.Aspects.raw = () => { return allAspects; }
-    flair.Aspects.register = (pointcut, Aspect) => {
-        // pointcut: [namespace.]class[:func][/attr1[,attr2[,...]]]
-        //      namespace/class/func:
-        //          ~ - any
-        //          *<text> - any name that ends with <text> 
-        //          <text>* - any name that starts with <text>
-        //          <text>  - exact name
-        //      attribute:
-        //          <text>  - exact name
-        //
-        //      Examples:
-        //          ~                   - on all functions of all classes in all namespaces
-        //          abc                 - on all functions of all classes names abc in root namespace (without any namespace)
-        //          ~.abc               - on all functions of all classes names abc in all namespaces
-        //          ~.abc:~             - on all functions of all classes names abc in all namespaces
-        //          xyz.*               - on all functions of all classes in xyz namespace
-        //          xyz.abc             - on all functions of class abc under xyz namespace
-        //          xyz.abc:*           - on all functions of class abc under xyz namespace
-        //          xyz.abc:f1          - on func f1 of class abc under xyz namespace
-        //          xyz.abc:f*          - on all funcs that starts with f in class abc under xyz namespace
-        //          xyz.xx*.abc         - on functions of all classes names abc under namespaces where pattern matches xyz.xx* (e.g., xyz.xx1 and xyz.xx2)
-        //          xy*.xx*.abc         - on functions of all classes names abc under namespaces where pattern matches xyz.xx* (e.g., xy1.xx1 and xy2.xx1)
-        //          abc/service         - on all functions of abc class in root namespace which has service attribute applied
-        //          ~/service           - on all functions of all classes in all namespaces which has service attribute applied
-        //          /service            - on all functions of all classes which has service attribute applied
-        //          /service*           - on all functions of all classes which has service* attribute name pattern applied
-    
-    
-        // split name and attributes
-        let nm = pointcut || '~',
-            ns = '',
-            cls = '',
-            fnc = '',
-            attr = '~',     
-            bucket = '';    
-        if (nm.indexOf('/') !== -1) {
-            let items = nm.split('/');
-            nm = items[0].trim();
-            attr = items[1].trim();
-        }
-    
-        // get bucket to store in
-        if (nm === '~') { 
-            ns = '~';
-            cls = '~';
-            fnc = '~';
-        } else if (nm === '') {
-            ns = '^';
-            cls = '~';
-            fnc = '~';
-        } else if (nm.indexOf('.') === -1) {
-            ns = '^';
-            if (nm.indexOf(':') === -1) {
-                cls = nm;
-                fnc = '~';
-            } else {
-                let itms = nm.split(':');
-                cls = itms[0].trim();
-                fnc = itms[1].trim();
+            if (pc.indexOf(':') !== -1) { // extract func
+                items = pc.split(':');
+                pc = items[0].trim();
+                __func = items[1].trim() || '*';
             }
-        } else {
-            ns = nm.substr(0, nm.lastIndexOf('.'));
-            nm = nm.substr(nm.lastIndexOf('.') + 1);
-            if (nm.indexOf(':') === -1) {
-                cls = nm;
-                fnc = '~';
+    
+            if (pc.indexOf('.') !== -1) { // extract class and namespace
+                __ns = pc.substr(0, pc.lastIndexOf('.'));
+                __class = pc.substr(pc.lastIndexOf('.') + 1);
             } else {
-                let itms = nm.split(':');
-                cls = itms[0].trim();
-                fnc = itms[1].trim();
-            }        
+                __ns = ''; // no namespace
+                __class = pc;
+            }    
+    
+            // build regex
+            __identifier = __ns + '\/' +__class + ':' + __func; // eslint-disable-line no-useless-escape
+            __identifier = replaceAll(__identifier, '.', '[.]');    // . -> [.]
+            __identifier = replaceAll(__identifier, '?', '.');      // ? -> .
+            __identifier = replaceAll(__identifier, '*', '.*');     // * -> .*
+    
+            // register
+            allAspects.push({rex: new RegExp(__identifier), Aspect: Aspect});
         }
-        if (ns === '*' || ns === '') { ns = '~'; }
-        if (cls === '*' || cls === '') { cls = '~'; }
-        if (fnc === '*' || fnc === '') { fnc = '~'; }
-        if (attr === '*' || attr === '') { attr = '~'; }
-        bucket = `${ns}=${cls}=${fnc}=${attr}`;
-    
-        // add bucket if not already there
-        allAspects[bucket] = allAspects[bucket] || [];
-        allAspects[bucket].push(Aspect);
     };
-    flair.Aspects.get = (typeName, funcName, attrs) => {
-    
-        //TODO: attrs is an array of attrs - check name by .name property
+    const _get_Aspects = (typeName, funcName) => {
         // get parts
         let funcAspects = [],
-            ns = '',
-            cls = '',
-            fnc = funcName.trim();
+            __ns = '',
+            __class = '',
+            __func = funcName.trim(),
+            __identifier = ''
     
         if (typeName.indexOf('.') !== -1) {
-            ns = typeName.substr(0, typeName.lastIndexOf('.')).trim();
-            cls = typeName.substr(typeName.lastIndexOf('.') + 1).trim(); 
+            __ns = typeName.substr(0, typeName.lastIndexOf('.')).trim();
+            __class = typeName.substr(typeName.lastIndexOf('.') + 1).trim(); 
         } else {
-            ns = '^';
-            cls = typeName.trim();
+            __ns = ''; // no namespace
+            __class = typeName.trim();
         }
+        __identifier = __ns + '/' + __class + ':' + __func;
     
-        for(let bucket in allAspects) {
-            let items = bucket.split('='),
-                thisNS = items[0],
-                rxNS = wildcardToRegExp(thisNS),
-                thisCls = items[1],
-                rxCls = wildcardToRegExp(thisCls),
-                thisFnc = items[2],
-                rxFnc = wildcardToRegExp(thisFnc),
-                thisAttr = items[3],
-                rxAttr = wildcardToRegExp(thisAttr),
-                isMatched = (thisAttr === '~');
-            
-            if (((ns === thisNS || rxNS.test(ns)) &&
-                (cls === thisCls || rxCls.test(cls)) &&
-                (fnc === thisFnc || rxFnc.test(fnc)))) {
-                if (!isMatched) {
-                    for(let attr of attrs) {
-                        if (attr.name === thisAttr || rxAttr.test(attr.name)) {
-                            isMatched = true;
-                            break; // matched
-                        }
-                    }
-                }
-                if (isMatched) {
-                    for(let aspect of allAspects[bucket]) {
-                        if (funcAspects.indexOf(aspect) === -1) {
-                            funcAspects.push(aspect);
-                        }
-                    }                  
+        allAspects.forEach(item => {
+            if (item.rex.test(__identifier)) { 
+                if (funcAspects.indexOf(item.Aspect) === -1) {
+                    funcAspects.push(item.Aspect);
                 }
             }
-        }
+        });
     
         // return
         return funcAspects;
     };
-    flair.Aspects.attach = (fn, typeName, funcName, funcAspects) => {
-    // TODO: consider now functions and events are also supported as join points
-    
-    
+    const _attach_Aspects = (fn, typeName, funcName, funcAspects) => {
         let before = [],
             after = [],
             around = [],
-            instance = null,
-            _fn = null;
+            instance = null;
     
         // collect all advices
         for(let funcAspect of funcAspects) {
             instance = new funcAspect();
-            _fn = instance.before(); if (typeof _fn === 'function') { before.push(_fn); }
-            _fn = instance.around(); if (typeof _fn === 'function') { around.push(_fn); }
-            _fn = instance.after(); if (typeof _fn === 'function') { after.push(_fn); }
+            if (instance.before !== _noop) { before.push(instance.before); }
+            if (instance.around !== _noop) { around.push(instance.around); }
+            if (instance.after !== _noop) { after.push(instance.after); }
         }
     
         // around weaving
@@ -337,7 +309,11 @@
         return weavedFn;
     };
     
-    const _Aspects = flair.Aspects;
+    // attach to flair
+    a2f('Aspects', _Aspects, () => {
+        allAspects.length = 0;
+    });
+       // OK
 
     /**
      * @name attr / $$
@@ -446,8 +422,8 @@
      *                  NAMES can be: 
      *                      type names: class, struct, enum, interface, mixin, resource
      *                      type member names: prop, func, construct, dispose, event
-     *                      inbuilt modifier names: static, abstract, sealed, virtual, override, private, protected, readonly, async
-     *                      inbuilt attribute names: promise, singleton, serialize, deprecate, session, state, conditional, noserialize
+     *                      inbuilt modifier names: static, abstract, sealed, virtual, override, private, protected, readonly, async, etc.
+     *                      inbuilt attribute names: promise, singleton, serialize, deprecate, session, state, conditional, noserialize, etc.
      *                      custom attribute names: any registered custom attribute name
      *                      type names itself: e.g., Assembly, Attribute, etc. (any registered type name is fine)
      *                          SUFFIX: A typename must have a suffix (^) e.g., Assembly^, Attribute^, etc. Otherwise this name will be treated as custom attribute name
@@ -498,57 +474,34 @@
     a2f('attr', _$$);
     a2f('$$', _$$);
        // OK
-    // Attribute
-    flair.Attribute = flair.Class('Attribute', function(attr) {
-        let decoratorFn = null;
-        
-        attr('abstract'); // for Attribute type
-        this.construct((...args) => {
-            // args can be static or dynamic or settings
-            // static ones are defined just as is, e.g.,
-            //  ('text', 012, false, Reference)
-            // dynamic ones are defined as special string
-            //  ('[publicPropOrFuncName]', 012, false, Reference)
-            // when string is defined as '[...]', this argument is replaced by a 
-            // function which can be called (with binded this) to get dynamic value of the argument
-            // the publicPropName is the name of a public property or function
-            // name of the same object where this attribute is applied
-            // settings ones are defined as another special string
-            this.args = [];
-            for(let arg of args) {
-                if (typeof arg === 'string') {
-                    if (arg.startsWith('[') && arg.endsWith(']')) {
-                        let fnName = arg.replace('[', '').replace(']', ''),
-                            fn = function() {
-                                let member = this[fnName]; // 'this' would change because of binding call when this function is called
-                                if (typeof member === 'function') {
-                                    return member();
-                                } else {
-                                    return member;
-                                }
-                            };
-                            this.args.push(fn);
-                    } else {
-                        this.args.push(arg);
-                    }
-                } else {
-                    this.args.push(arg);
-                }
-            }
-        });
-        
+    /**
+     * @name Attribute
+     * @description Attribute base class.
+     */
+    _$$('abstract');
+    _Class('.Attribute', function() { // registered at root namespace (can be get as: getType('Attribute'))
+        this.construct = (args) => {
+            this.args = args;
+        };
+    
        /** 
-        *  constraints: string - An expression that defined the constraints of applying this attribute 
-        *                        using NAMES, PREFIXES, SUFFIXES and logical Javascript operator
+        *  @name args: array - arguments as defined where attribute is applied e.g., ('text', 012, false, Reference)
+        */
+        _$$('readonly');
+        this.args = [];
+    
+       /** 
+        *  @name constraints: string - An expression that defined the constraints of applying this attribute 
+        *                     using NAMES, PREFIXES, SUFFIXES and logical Javascript operator
         * 
         *                  NAMES can be: 
-        *                      type names: class, struct, enum, interface, mixin, resource
+        *                      type names: class, struct, enum, interface, mixin
         *                      type member names: prop, func, construct, dispose, event
-        *                      inbuilt modifier names: static, abstract, sealed, virtual, override, private, protected, readonly, async
-        *                      inbuilt attribute names: promise, singleton, serialize, deprecate, session, state, conditional, noserialize
+        *                      inbuilt modifier names: static, abstract, sealed, virtual, override, private, protected, readonly, async, etc.
+        *                      inbuilt attribute names: promise, singleton, serialize, deprecate, session, state, conditional, noserialize, etc.
         *                      custom attribute names: any registered custom attribute name
-        *                      type names itself: e.g., Assembly, Attribute, etc. (any registered type name is fine)
-        *                          SUFFIX: A typename must have a suffix (^) e.g., Assembly^, Attribute^, etc. Otherwise this name will be treated as custom attribute name
+        *                      type names itself: e.g., Aspect, Attribute, etc. (any registered type name is fine)
+        *                          SUFFIX: A typename must have a suffix (^) e.g., Aspect^, Attribute^, etc. Otherwise this name will be treated as custom attribute name
         *                  
         *                  PREFIXES can be:
         *                      No Prefix: means it must match or be present at the level where it is being defined
@@ -572,30 +525,59 @@
         *                                  (((<name1> || <name2>) && (<name1> || <name2>)) || <name3>)
         * 
         **/
-        this.func('constraints', ''); 
-        this.prop('args', []);
-        this.func('decorate', (fn) => {
-            if (typeof fn === 'function') {
-                decoratorFn = fn;
-            }
-            return decoratorFn;
-        });
+        this.constraints = '';
     
-        // TODO: following cannot be name of any custom attributes
-        // _supportedMembers = ['prop', 'func', 'construct', 'dispose', 'event'],
-        // _supportedTypes = ['class', 'struct', 'enum', 'interface', 'mixin'],
-        // _supportedModifiers = ['static', 'abstract', 'sealed', 'virtual', 'override', 'private', 'protected', 'readonly', 'async'],
+        /** 
+         * @name decorateProperty
+         * @description Property decorator
+         * @example
+         *  decorateProperty(typeName, memberName, member)
+         * @arguments
+         *  typeName: string - typeName
+         *  memberName: string - member name
+         *  member - object - having get: getter function and set: setter function
+         *          both getter and setter can be applied attribute functionality on
+         * @returns
+         *  object - having decorated { get: fn, set: fn }
+         *           Note: decorated get must call member's get
+         *                 decorated set must accept value argument and pass it to member's set with or without processing
+         */  
+        _$$('virtual');
+        this.decorateProperty = this.noop;
     
+        /** 
+         * @name decorateFunction
+         * @description Function decorator
+         * @example
+         *  decorateFunction(typeName, memberName, member)
+         * @arguments
+         *  typeName: string - typeName
+         *  memberName: string - member name
+         *  member - function - function to decorate
+         * @returns
+         *  function - decorated function
+         *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
+         */  
+        _$$('virtual');
+        this.decorateFunction = this.noop;    
     
-        // TODO: how to decorate prop, func, evebt seperately
-        this.func('resetEventInterface', (source, target) => {
-            // TODO: this should be outside somewhere when applying attribute to the member
-            target.subscribe = source.subscribe;
-            target.unsubscribe = source.unsubscribe;
-            delete source.subscribe;
-            delete source.unsubscribe;
-        });
+        /** 
+         * @name decorateEvent
+         * @description Event decorator
+         * @example
+         *  decorateEvent(typeName, memberName, member)
+         * @arguments
+         *  typeName: string - typeName
+         *  memberName: string - member name
+         *  member - function - event argument processor function
+         * @returns
+         *  function - decorated function
+         *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
+         */  
+        _$$('virtual');
+        this.decorateEvent = this.noop;
     });
+    
     
     /**
      * @name getAttr
@@ -658,7 +640,7 @@
      *  _getAssembly(obj)
      * @params
      *  obj: instance/type/string - instance or flair type ir qualified type name whose assembly information is required
-     * @returns object - if type is available and registered, assembly definition object is returned
+     * @returns object - if type is available and registered, its assembly object is returned
      */ 
     const _getAssembly = (obj) => { 
         if (!obj) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
@@ -688,14 +670,13 @@
     // attach to flair
     a2f('getType', _getType);
         // OK
-    let asmFiles = {},
-        asmTypes = {};
-    
     /**
      * @name Assembly
-     * @description Constructs an Assembly object
+     * @description Assembly registration and locator functionality.
      * @example
-     *  Assembly(ado)
+     *  .register(...ados)          // - void
+     *  .get(typeName)              // - assembly object or null
+     *  .all()                      // - array of all registered assemblies
      * @params
      *  ado: object - An ADO is an object that defines assembly definition as:
      *      name: string - name
@@ -707,383 +688,147 @@
      *      types: - array - list of all type names that reside in this assembly
      *      assets: - array - list of all assets that are available outside this assembly but deployed together
      *      settings: - assembly settings
-     * @returns object - flair assembly object
+     * typeName: string - qualified type name for which assembly object is needed
      */ 
-    flair.Assembly = (ado) => {
+    let asmFiles = {}, asmTypes = {};
+    const _Assembly = {
+        // register one or more assemblies as per given Assembly Definition Objects
+        register: (...ados) => {
+            if (!ados) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (ados)'); }
+    
+            ados.forEach(ado => {
+                let asm = new __Assembly(ado),
+                    asmFile = asm.file;
+                if (asmFiles[asmFile]) {
+                    throw new _Exception('DuplicateName', `Assembly is already registered. (${asmFile})`);
+                } else {
+                    // register
+                    asmFiles[asmFile] = asm;
+    
+                    // load types
+                    asm.types.forEach(type => {
+                        // qualified names across anywhere should be unique
+                        if (asmTypes[type]) {
+                            throw new _Exception('DuplicateName', `Type is already registered. (${type})`);
+                        } else {
+                            asmTypes[type] = asm; // means this type can be loaded from this assembly Assembly.get() give this only
+                        }
+                    });
+                }
+            });
+        },
+    
+        // returns assembly object that is associated with given flair type name
+        get: (typeName) => {
+            if (typeof typeName !== 'string') { throw new _Exception('InvalidArgument', 'Argument type if not valid. (typeName)'); }
+            return asmTypes[typeName] || null;
+        },
+    
+        // returns all registered assembly objects
+        all: () => {
+            return Object.values(asmFiles).slice();
+        }
+    };
+    const __Assembly = function (ado) {
         if (typeof ado !== 'object') { throw _Exception.InvalidArgument('ado'); }
         if (_typeOf(ado.types) !== 'array' || 
             _typeOf(ado.assets) !== 'array' ||
             typeof ado.name !== 'string' ||
-            typeof ado.file !== 'string') {
+            typeof ado.file !== 'string' || ado.file === '') {
             throw _Exception.InvalidArgument('ado');
         }
-      
-        // define assembly structure
-        let _Assembly = flair.Struct('Assembly', function() {
-            this.construct((ado) => {
-                this.ado = ado;
-                this.name = ado.name;
-                this.file = which(ado.file, true); // min/dev contextual pick //TODO: make this readonly actuall all of it
-                this.desc = ado.desc || '';
-                this.version = ado.version || '';
-                this.copyright = ado.copyright || '';
-                this.license = ado.license || '';
-                this.types = ado.types.slice() || [];
-                this.settings = ado.settings || {};
-                this.assets = ado.assets.slice() || [];
-                this.hasAssets = (ado.assets.length > 0);
-            });
-    
-            // TODO: isLoaded should be a property - as used in include
-            // load is a async method
-    
-            // TODO: check, this should be same as in build engine
-            // const appendADO = (ados, asm, asm_min, asmName, dest) => {
-            //     // each ADO object has:
-            //     //      "name": "", 
-            //     //      "file": "",
-            //     //      "desc": "",
-            //     //      "version": "",
-            //     //      "copyright": "",
-            //     //      "license": "",
-            //     //      "types": ["", "", ...],
-            //     //      "assets": ["", "", ...],
-            //     //      "settings: {}"
+        let isLoaded = false;
+        let _this = {
+            // pick all ado properties as is
+            ado: ado,
+            name: ado.name,
+            file: which(ado.file, true), // min/dev contextual pick
+            desc: ado.desc || '',
+            version: ado.version || '',
+            copyright: ado.copyright || '',
+            license: ado.license || '',
+            types: Object.freeze(ado.types.slice()),
+            settings: Object.freeze(ado.settings || {}),
+            assets: Object.freeze(ado.assets.slice()),
+            hasAssets: (ado.assets.length > 0),
             
-            /// TODO: props is no longer supported
-            this.props(['readonly'], ['ado', 'name', 'file', 'desc', 'version', 'copyright', 'license', 'types', 'hasAssets']);
-            
-            this.prop('isLoaded', false);
-            this.func('load', () => {
-                return flair.Assembly.load(this.file);
-            });
-            this.func('getType', (name) => {
-                if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
-                if (!this.isLoaded) { throw new _Exception('NotLoaded', `Assembly is not yet loaded. (${this.file})`); }
-                if (this.types.indexOf(name) === -1) { throw new _Exception('NotFound', `Type is not found in this assembly. (${name})`); }
-                let Type = flair.Namespace.getType(name);
-                if (!Type) { throw new _Exception('NotRegistered', `Type is not registered. (${name})`); }
-                return Type;
-            });
-            this.func('createInstance', (name, ...args) => {
-                if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
-                let Type = flair.Assembly.get(name),
-                    obj = null;
-                if (args) {
-                    obj = new Type(...args);
-                } else {
-                    obj = new Type();
-                }
-                return obj;
-            });
-        });
+            isLoaded: () => { return isLoaded; },
+            load: () => { 
+                return new Promise((resolve, reject) => {
+                    if (isLoaded) { resolve(); return; }
+                    loadModule(_this.file).then(() => { // since we want this js to be loaded and executed
+                        isLoaded = true;
+                        resolve();
+                    }).catch((e) => {
+                        reject(new _Exception('ModuleLoad', `Module load operation failed. (${_this.file})`, e));
+                    });
+                });
+            }
+        };
     
         // return
-        return new _Assembly(ado);
+        return Object.freeze(_this);
     };
     
+    // attach to flair
+    a2f('Assembly', _Assembly, () => {
+        asmFiles = {}; asmTypes = {};
+    });
+       // OK
     /**
-     * @name register
-     * @description Register one or more assemblies as per given Assembly Definition Objects
+     * @name Namespace
+     * @description Namespace registration and type locator functionality.
      * @example
-     *  register(...ados)
+     *  .getType(qualifiedName)     // - flair type if registered or null
      * @params
-     *  ados: object - An ADO is an object that defines assembly definition as:
-     *      name: string - name
-     *      file: string - file name and path
-     *      desc: string - description
-     *      version: string - version
-     *      copyright: string - copyright message
-     *      license: - string - license
-     *      types: - array - list of all type names that reside in this assembly
-     *      assets: - array - list of all assets that are available outside this assembly but deployed together
-     *      settings: - assembly settings
-     * @returns boolean - true/false
+     * qualifiedName: string - qualified type name which is to be looked for.
      */ 
-    flair.Assembly.register = (...ados) => { 
-        if (!ados) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (ados)'); }
-    
-        let success = false;
-        for(let ado of ados) {
-            let asm = flair.Assembly(ado),
-                asmFile = asm.file;
-            if (asmFiles[asmFile]) {
-                throw new _Exception('DuplicateName', `Assembly is already registered. (${asmFile})`);
-            } else {
-                // register
-                asmFiles[asmFile] = asm;
-    
-                // load types
-                for(let type of asm.types) {
-                    // qualified names across anywhere should be unique
-                    if (asmTypes[type]) {
-                        throw new _Exception('DuplicateName', `Type is already registered. (${type})`);
-                    } else {
-                        asmTypes[type] = asm; // means this type can be loaded from this assembly
-                    }
-                }
-    
-                // success
-                success = true;
-            }
+    let ns_types = {};
+    const _Namespace = {
+        // get registered type
+        getType: (qualifiedName) => {
+            return ns_types[qualifiedName] || null;
         }
-    
-        // returns
-        return success;
     };
-    
-    /**
-     * @name load
-     * @description Loads an assembly file
-     * @example
-     *  load(file)
-     * @params
-     *  file: string - Assembly file to be loaded
-     * @returns object - promise object
-     */
-    flair.Assembly.load = (file) => {
-        return new Promise((resolve, reject) => {
-            if (typeof file !== 'string') { reject(new _Exception('InvalidArgument', 'Argument type is invalid. (file)')); return; }
-            if (!flair.Assembly.isRegistered(file)) { reject(new _Exception('NotFound', `Assembly is not registered. (${file})`)); return; }
-    
-            if (asmFiles[file].isLoaded) { resolve(); return; }
-                
-            if (isServer) {
-                try {
-                    require(file);
-                    asmFiles[file].markLoaded();
-                    resolve();
-                } catch (e) {
-                    reject(new _Exception('FileLoad', `File load operation failed. (${file})`, e));
-                }
-            } else {
-                const script = flair.options.env.global.document.createElement('script');
-                script.onload = () => {
-                    asmFiles[file].isLoaded = true;
-                    resolve();
-                };
-                script.onerror = (e) => {
-                    reject(new _Exception('FileLoad', `File load operation failed. (${file})`, e));
-                };
-                script.async = true;
-                script.src = file;
-                flair.options.env.global.document.body.appendChild(script);
-            }
-        });
-    };
-    
-    /**
-     * @name isRegistered
-     * @description Checks to see if given assembly file is registered
-     * @example
-     *  isRegistered(file)
-     * @params
-     *  file: string - full path and name of the assembly file to check for
-     * @returns boolean - true/false
-     */ 
-    flair.Assembly.isRegistered = (file) => {
-        if (typeof file !== 'string') { throw new _Exception('InvalidArgument', 'Argument type if not valid. (file)'); }
-        return typeof asmFiles[file] !== 'undefined';
-    };
-    
-    /**
-     * @name isLoaded
-     * @description Checks to see if given assembly file is loaded
-     * @example
-     *  isLoaded(file)
-     * @params
-     *  file: string - full path and name of the assembly file to check for
-     * @returns boolean - true/false
-     */ 
-    flair.Assembly.isLoaded = (file) => {
-        if (typeof file !== 'string') { throw new _Exception('InvalidArgument', 'Argument type if not valid. (file)'); }
-        return typeof asmFiles[file] !== 'undefined' && asmFiles[file].isLoaded;
-    };
-    
-    /**
-     * @name get
-     * @description Returns assembly object that is associated with given flair type name
-     * @example
-     *  get(name)
-     * @params
-     *  name: string - qualified type name of the flair type whose assembly is to be located
-     * @returns object - flair assembly type object
-     */ 
-    flair.Assembly.get = (name) => {
-        if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type if not valid. (name)'); }
-        return asmTypes[name] || null;
-    };
-    
-    /**
-     * @name all
-     * @description Returns all registered assembly files
-     * @example
-     *  all()
-     * @params
-     *  None
-     * @returns array - registered assemblies list
-     */ 
-    flair.Assembly.all = () => { 
-        return Object.values(asmFiles).slice();
-    };
-    
-    /**
-     * @name allTypes
-     * @description Returns all registered types
-     * @example
-     *  allTypes()
-     * @params
-     *  None
-     * @returns array - registered types list
-     */ 
-    flair.Assembly.allTypes = () => { 
-        return Object.keys(asmTypes).slice();
-    };
-    
-    // reset api
-    flair.Assembly._ = {
-        reset: () => { asmFiles = {}; asmTypes = {}; }
-    };
-    
-    // add to members list
-    flair.members.push('Assembly');
-    
-    const _Assembly = flair.Assembly; // TODO: To fix
-    
-    // Namespace
-    // Namespace(Type)
-    flair.Namespace = (Type) => {
+    const _NSRegister = (Type) => { // registration support -- needed by builder
         // any type name can be in this format:
-        // .name <-- means, no namespace is given but still register this with root namespace
-        // name <-- means, no namespace is given but since it is not forced, do not register this with root namespace
+        // .name <-- means, no namespace is given but still register this with root namespace (this is generally for flair system's core type's use only)
+        // name <-- means, no namespace is given but since it is not forced, do not register this with root namespace (this helps in creating adhoc types without registering anywhere)
         // namespace.name
         
+        // check if need not to process
+        let name = Type._.name,
+            ns = '';
+        if (name.indexOf('.') === -1) { // no namespace is given, neither forced, go back
+            return;
+        } else if (name.startsWith('.')) { // forced
+            name = name.substr(1); // remove .
+        }
+        ns = name.substr(0, name.lastIndexOf('.'));
+    
         // only valid types are allowed
-        if (['class', 'enum', 'interface', 'mixin', 'struct', 'resource'].indexOf(Type._.type) === -1) { throw `Type (${Type._.type}) cannot be placed in a namespace.`; }
+        if (['class', 'enum', 'interface', 'mixin', 'struct'].indexOf(_typeOf(Type)) === -1) { throw new _Exception('InvalidArgument', `Type cannot be placed in a namespace. (${name})`); }
     
         // only unattached types are allowed
-        if (Type._.namespace) { throw `Type (${Type._.name}) is already contained in a namespace.`; }
+        if (Type._.namespace) { throw `Type (${name}) is already contained in a namespace.`; }
     
-        // remove force register symbol (.) from name and also fix name
-        let isForced = false;
-        if (Type._.name.startsWith('.')) {
-            Type._.name = Type._.name.substr(1); // remove .
-            isForced = true;
-        }
+        // check if already registered
+        if (ns_types[name]) { throw `Type (${name}) is already registered.`; }
     
-        // merge/add type in namespace tree
-        let nextLevel = flair.Namespace.root,
-            nm = Type._.name,
-            nsName = '',
-            ns = nm.substr(0, nm.lastIndexOf('.'));
-        nm = nm.substr(nm.lastIndexOf('.') + 1);
-        if (ns) {
-            let nsList = ns.split('.');
-            for(let nsItem of nsList) {
-                if (nsItem) {
-                    // special name not allowed
-                    if (nsItem === '_') { throw `Special name "_" is used as namespace in ${Type._.name}.`; }
-                    nextLevel[nsItem] = nextLevel[nsItem] || {};
-                    nsName = nsItem;
+        // register
+        ns_types[name] = Type;
     
-                    // check if this is not a type itself
-                    if (nextLevel[nsItem]._ && nextLevel[nsItem]._.type !== 'namespace') { throw `${Type._.name} cannot be contained in another type (${nextLevel[nsItem]._.name})`; }
-    
-                    // pick it
-                    nextLevel = nextLevel[nsItem];
-                }
-            }
-        } else {
-            if (!isForced) {
-                return; // don't do anything
-            }
-        }
-    
-            // add type at the bottom, if not already exists
-        if (nextLevel[nm]) { throw `Type ${nm} already contained at ${ns}.`; }
-        nextLevel[nm] = Type;
-    
-        // add namespace
-        Type._.namespace = nextLevel;
-    
-        // define namespace meta
-        nextLevel._ = nextLevel._ || {};
-        nextLevel._.name = nextLevel._.name || nsName;
-        nextLevel._.type = nextLevel._.type || 'namespace';
-        nextLevel._.types = nextLevel._.types || [];
-        
-        // add to Namespace
-        nextLevel._.types.push(Type);
-    
-        // attach Namespace functions
-        let getTypes = () => { 
-            return nextLevel._.types.slice(); 
-        }
-        let getType = (qualifiedName) => {
-            let _Type = null,
-                level = nextLevel; // TODO: This is problem, in this case it is b and I am finding from root .....
-            if (qualifiedName.indexOf('.') !== -1) { // if a qualified name is given
-                let items = qualifiedName.split('.');
-                for(let item of items) {
-                    if (item) {
-                        // special name not allowed InvalidNameException
-                        if (item === '_') { throw `Special name "_" is used as name in ${qualifiedName}.`; }
-        
-                        // pick next level
-                        level = level[item];
-                        if (!level) { break; }
-                    }
-                }
-                _Type = level;
-            } else {
-                _Type = level[qualifiedName];
-            }
-            if (!_Type || !_Type._ || ['class', 'enum', 'interface', 'mixin', 'struct'].indexOf(_Type._.type) === -1) { return null; }
-            return _Type;
-        };
-        let createInstance = (qualifiedName, ...args) => {
-            let _Type = nextLevel.getType(qualifiedName);
-            if (_Type && _Type._.type != 'class') { throw `${name} is not a class.`; }
-            if (_Type) { return new _Type(...args); }
-            return null;
-        };   
-        nextLevel.getTypes = nextLevel.getTypes || getTypes;
-        nextLevel.getType = nextLevel.getType || getType;
-        nextLevel.createInstance = nextLevel.createInstance || createInstance;
-    };
-    flair.Namespace.root = {};
-    flair.Namespace.getType = (qualifiedName) => { // TOOD: used in serialize and elsewhere -- throw exception when not found
-        if (flair.Namespace.root.getType) {
-            return flair.Namespace.root.getType(qualifiedName);
-        }
-        return null;
-    };
-    flair.Namespace.getTypes = () => {
-        if (flair.Namespace.root.getTypes) {
-            return flair.Namespace.root.getTypes();
-        }
-        return [];
-    };
-    flair.Namespace.createInstance = (qualifiedName, ...args) => { 
-        if (flair.Namespace.root.createInstance) {
-            return flair.Namespace.root.createInstance(qualifiedName, ...args);
-        }
-        return null;
+        // update
+        Type._.namespace = ns;
+        Type._.name = name;
     };
     
-    const _Namespace = flair.Namespace; // TODO: Fix
-    
-    // reset api
-    flair.Namespace._ = {
-        reset: () => { 
-            // flair.Namespace.root = {}; 
-        }
-    };
-    
-    // In Reset func, clean all static and singleton flags as well for all registered classes
-    
-    // add to members list
-    flair.members.push('Namespace');
+    // attach to flair
+    a2f('Namespace', _Namespace, () => {
+        // clear registry
+        ns_types = {};
+    });
+      // OK
     // Resource
     // Resource(resName, resFile)
     flair.Resource = (resName, resFile, data) => {
@@ -1222,124 +967,73 @@
     // let dump = `;flair.Resource("${resName}", "${resFile}", "${content}");`;
     // appendToFile(asm_min, dump);
 
-    let container = {};
-    
     /**
      * @name Container
-     * @description Returns registered types associated with given alias
+     * @description Dependency injection container system
      * @example
-     *  Container(alias)
-     *  Container(alias, isAll)
+     *  .isRegistered(alias)                                // - true/false
+     *  .get(alias, isAll)                                  // - item / array of registered unresolved items, as is
+     *  .register(alias, item)                              // - void
+     *  .resolve(alias, isAll, ...args)                     // - item / array of resolved items
      * @params
-     *  alias: string - name of alias to return registered items for //
-     *  isAll: boolean - whether to return all items or only first item
-     * @returns array/item - depending upon the value of isAll, return only first or all registered items
-     *                        returns null, if nothing is registered for given alias
+     *  alias: string - name of alias for an item
+     *  item: type/object/string - either a flair type, any object or a qualified type name or a file name
+     *        when giving string, it can be of format 'x | y' for different resolution on server and client
+     *  args: arguments to pass to type constructor when created instances for items
+     *  isAll: boolean - if resolve with all registered items against given alias or only first
      */ 
-    flair.Container = (alias, isAll) => {
-        if (typeof alias !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
-        // TODO: check and don't allow alias to have '.', as this means qualified name
-        if (isAll) {
-            return (container[alias] || []).slice();
-        } else {
-            if (container[alias] && container[alias].length > 0) {
-                return container[alias][0]; 
+    let container_registry = {};
+    const _Container = {
+        // if an alias is registered
+        isRegistered: (alias) => {
+            if (typeof alias !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
+            return (typeof container_registry[alias] !== 'undefined' && container_registry[alias].length > 0);
+        },
+    
+        // get registered items as is for given alias
+        get: (alias, isAll) => {
+            if (typeof alias !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
+            if (typeof isAll !== 'boolean') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (isAll)'); }
+        
+            if (isAll) {
+                return (container_registry[alias] ? container_registry[alias].slice() : []);
             } else {
-                return null;
+                return (container_registry[alias] ? container_registry[alias][0] : null);
             }
-        }
-    };
+        },
     
-    /**
-     * @name isRegistered
-     * @description Checks if given alias is registered with container
-     * @example
-     *  isRegistered(alias)
-     * @params
-     *  alias: string - name of alias to check
-     * @returns boolean - true/false
-     */ 
-    flair.Container.isRegistered = (alias) => {
-        if (typeof alias !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
-        return (typeof container[alias] !== 'undefined' &&  container[alias].length > 0);
-    };
-    
-    /**
-     * @name register
-     * @description Register an actual type object OR a qualified name of a type OR a file, to resolve against given alias
-     * @example
-     *  register(alias, type)
-     * @params
-     *  alias: string - name of alias to register given type or qualified name
-     *  type: object/string - it can be following:
-     *      object - actual flair type or any non-primitive object
-     *      string - qualified name of flair type OR path/name of a .js/.mjs file
-     *      
-     *      NOTE: Each type definition can also be defined for contextual consideration as:
-     *      '<typeA> | <typeB>'
-     *      when running on server, <typeA> would be considered, and when running on client <typeB> will be used* 
-     * @returns boolean - true/false
-     */ 
-    flair.Container.register = (alias, type) => {
-        if (typeof alias !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
-        if (!type) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
-    
-        // get what is being registered
-        if (_is(type, 'flair')) {
-            // flair type
-        } else if (typeof type === 'object') {
-            // some object
-        } else if (typeof type === 'string') {
-            // get contextual type for Server/Client scenario
-            type = which(type);
-    
-            if (type.endsWith('.js') || type.endsWith('.mjs')) { 
-                // its a JS file
-            } else { 
-                // qualified name
-                // or it can be some other type of file as well like css, jpeg, anything and it is allowed
+        // register given alias
+        register: (alias, item) => {
+            if (typeof alias !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
+            if (alias.indexOf('.') !== -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
+            if (!item) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (item)'); }
+            if (typeof item === 'string') { 
+                item = which(item); // register only relevant item for server/client
+                if (item.endsWith('.js') || item.endsWith('.mjs')) { 
+                    item = which(item, true); // consider prod/dev scenario as well
+                }
             }
-        } else { // unknown type
-            throw new _Exception('InvalidArgument', `Argument type is invalid. (${_typeOf(type)})`);
-        }
+            // register
+            if (!container_registry[alias]) { container_registry[alias] = []; }
+            container_registry[alias].push(item);
+        },
     
-        // register
-        if (!container[alias]) { container[alias] = []; }
-        container[alias].push(type);
-    
-        // return
-        return true;
-    };
-    
-    /**
-     * @name resolve
-     * @description Returns registered type(s) or associated with given alias
-     * @example
-     *  resolve(alias)
-     *  resolve(alias, isMultiResolve)
-     *  resolve(alias, isMultiResolve, ...args)
-     * @params
-     *  alias: string - name of alias to resolve
-     *  isMultiResolve: boolean - should it resolve with all registered types or only first registered
-     *  args: any - any number of arguments to pass to instance created for registered class or struct type
-     * @returns array - having list of resolved types, qualified names or urls or created instances
-     */ 
-    flair.Container.resolve = (alias, isMultiResolve, ...args) => {
-        if (typeof alias !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
-        if (typeof isMultiResolve !== 'boolean') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (isMultiResolve)'); }
-    
-        let result = null,
-            getResolvedObject = (Type) => {
+        // resolve alias with registered item(s)
+        resolve: (alias, isAll, ...args) => {
+            if (typeof alias !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
+            if (typeof isAll !== 'boolean') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (isAll)'); }
+        
+            let result = null;
+            const getResolvedObject = (Type) => {
                 let obj = Type; // whatever it was
                 if (typeof Type === 'string') {
                     if (Type.endsWith('.js') || Type.endsWith('.mjs')) { 
                         // file, leave it as is
                     } else { // try to resolve it from a loaded type
-                        let _Type = flair.Namespace.getType(Type); 
+                        let _Type = _getType(Type);
                         if (_Type) { Type = _Type; }
                     }
                 }
-    
                 if (['class', 'struct'].indexOf(_typeOf(Type)) !== -1) { // only class and struct need a new instance
                     if (args) {
                         obj = new Type(...args); 
@@ -1347,34 +1041,30 @@
                         obj = new Type(); 
                     }
                 }
+                // any other type of object will be passed through as is
+    
+                // return
                 return obj;
             };
-        
-        if (container[alias] && container[alias].length > 0) {
-            if (isMultiResolve) {
-                result = [];
-                for(let Type of container[alias]) {
-                    result.push(getResolvedObject(Type));
+            
+            if (container_registry[alias] && container_registry[alias].length > 0) {
+                if (isAll) {
+                    result = [];
+                    container_registry[alias].forEach(Type => { result.push(getResolvedObject(Type)); });
+                } else {
+                    result = getResolvedObject(container_registry[alias][0]); // pick first
                 }
-            } else {
-                let Type = container[alias][0]; // pick first
-                result = getResolvedObject(Type);
             }
+    
+            // return
+            return result;
         }
-    
-        // resolved
-        return result;
     };
     
-    // reset api
-    flair.Container._ = {
-        reset: () => { container = {}; }
-    };
-    
-    // add to members list
-    flair.members.push('Container');
-    
-    const _Container = flair.Container;
+    // attach to flair
+    a2f('Container', _Container, () => {
+        container_registry = {};
+    });  // OK
     /**
      * @name include
      * @description Fetch, load and/or resolve an external dependency for required context
@@ -1475,7 +1165,7 @@
                 let option3 = (done) => {
                     let asm = _getAssembly(_dep);
                     if (asm) { // if type exists in an assembly
-                        if (!asm.isLoaded) {
+                        if (!asm.isLoaded()) {
                             asm.load().then(() => {
                                 _resolved = _getType(_dep); done();
                             }).catch((e) => {
@@ -1516,7 +1206,7 @@
                     loadModule(_dep).then((content) => { // as last option, try to load it as module
                         _resolved = content; done();
                     }).catch((e) => {
-                       throw new _Exception('ModuleLoad', `Module load operation failed with error: ${e}. (${_dep})`);
+                       throw new _Exception('ModuleLoad', `Module load operation failed. (${_dep})`, e);
                     });
                 };
     
@@ -2285,7 +1975,7 @@
             for(let appliedAttr of attrs.members.all(memberName).current()) {
                 if (appliedAttr.isCustom) { // custom attribute instance
                     if (memberType === 'prop') {
-                        let newSet = appliedAttr.attr.decorate(memberName, memberType, member.get, member.set); // set must return a object with get and set members
+                        let newSet = appliedAttr.attr.decorateProperty(def.name, memberName, member); // set must return a object with get and set members
                         if (newSet.get && newSet.set) {
                             newSet.get = newSet.get.bind(bindingHost);
                             newSet.set = newSet.set.bind(bindingHost);
@@ -2294,7 +1984,12 @@
                             throw new _Exception('Unexpected', `${appliedAttr.name} decoration result is unexpected. (${memberName})`);
                         }
                     } else { // func or event
-                        let newFn = appliedAttr.attr.decorate(memberName, memberType, member);
+                        let newFn = null;
+                        if (memberType === 'func') { // func
+                            newFn = appliedAttr.attr.decorateFunction(def.name, memberName, member);
+                        } else { // event
+                            newFn = appliedAttr.attr.decorateEvent(def.name, memberName, member);
+                        }
                         if (newFn) {
                             member = newFn.bind(bindingHost); // update for next attribute application
                         } else {
@@ -2312,13 +2007,13 @@
             let weavedFn = null,
                 funcAspects = [];
     
-            // get aspects that are applicable for this function
-            funcAspects = _Aspects.get(def.name, memberName, attrs.members.all(memberName).anywhere());
+            // get aspects that are applicable for this function (NOTE: Optimization will be needed here, eventually)
+            funcAspects = _get_Aspects(def.name, memberName);
             def.aspects.members[memberName] = funcAspects; // store for reference
                 
             // apply these aspects
             if (funcAspects.length > 0) {
-                weavedFn = _Aspects.attach(member, def.name, memberName, funcAspects); 
+                weavedFn = _attach_Aspects(member, def.name, memberName, funcAspects); 
                 if (weavedFn) {
                     member = weavedFn; // update member itself
                 }
@@ -2607,11 +2302,6 @@
                 _member = applyCustomAttributes(bindingHost, memberName, memberType, _member);
             }
     
-            // weave advices from aspects
-            if (cfg.aop) {
-                _member = applyAspects(memberName, _member);
-            }        
-    
             // return
             return _member;
         };
@@ -2758,11 +2448,6 @@
            // apply custom attributes (before event interface is added)
             if (cfg.customAttrs) {
                 _member = applyCustomAttributes(bindingHost, memberName, memberType, _member);
-            }
-    
-            // weave advices from aspects (before event interface is added)
-            if (cfg.aop) {
-                _member = applyAspects(memberName, _member);
             }
     
             // attach event interface
@@ -2929,7 +2614,10 @@
     
         // define proxy for clean syntax inside factory
         proxy = new Proxy({}, {
-            get: (_obj, name) => { return obj[name]; },
+            get: (_obj, name) => { 
+                if (name === 'noop') { return _noop; }
+                return obj[name]; 
+            },
             set: (_obj, name, value) => {
                 if (isBuildingObj) {
                     // get member type
@@ -2953,8 +2641,8 @@
                     // add member
                     addMember(name, memberType, value);
                 } else {
-                    // a function or event is being redefined
-                    if (typeof value === 'function') { throw new _Exception('InvalidOperation', `Redefinition of members is not allowed. (${name})`); }
+                    // a function or event is being redefined or noop is being redefined
+                    if (typeof value === 'function' || name === 'noop') { throw new _Exception('InvalidOperation', `Redefinition of members is not allowed. (${name})`); }
     
                     // allow setting property values
                     obj[name] = value;
@@ -3270,7 +2958,7 @@
         _Object._.attrs = attrs;
     
         // register type with namespace
-        _Namespace(_Object); 
+        _NSRegister(_Object);
     
         // freeze object meta
         _Object._ = Object.freeze(_Object._);
@@ -3577,6 +3265,8 @@
         // return built type
         return builder(cfg);
     };
+    
+    const _Class = flair.Class; // TODO: fix
     
     // add to members list
     flair.members.push('Class'); 

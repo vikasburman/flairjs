@@ -3,7 +3,7 @@
  * FlairJS - Assembly Builder
  * True Object Oriented JavaScript
  * Version 0.15.30
- * Sun, 17 Feb 2019 18:51:43 GMT
+ * Mon, 18 Feb 2019 00:16:30 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  * https://flairjs.com

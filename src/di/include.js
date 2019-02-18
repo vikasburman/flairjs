@@ -98,7 +98,7 @@ const _include = (deps, fn) => {
             let option3 = (done) => {
                 let asm = _getAssembly(_dep);
                 if (asm) { // if type exists in an assembly
-                    if (!asm.isLoaded) {
+                    if (!asm.isLoaded()) {
                         asm.load().then(() => {
                             _resolved = _getType(_dep); done();
                         }).catch((e) => {
@@ -139,7 +139,7 @@ const _include = (deps, fn) => {
                 loadModule(_dep).then((content) => { // as last option, try to load it as module
                     _resolved = content; done();
                 }).catch((e) => {
-                   throw new _Exception('ModuleLoad', `Module load operation failed with error: ${e}. (${_dep})`);
+                   throw new _Exception('ModuleLoad', `Module load operation failed. (${_dep})`, e);
                 });
             };
 

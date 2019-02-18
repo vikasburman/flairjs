@@ -5,7 +5,7 @@
  *  _getAssembly(obj)
  * @params
  *  obj: instance/type/string - instance or flair type ir qualified type name whose assembly information is required
- * @returns object - if type is available and registered, assembly definition object is returned
+ * @returns object - if type is available and registered, its assembly object is returned
  */ 
 const _getAssembly = (obj) => { 
     if (!obj) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }

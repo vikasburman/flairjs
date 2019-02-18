@@ -458,7 +458,7 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
         for(let appliedAttr of attrs.members.all(memberName).current()) {
             if (appliedAttr.isCustom) { // custom attribute instance
                 if (memberType === 'prop') {
-                    let newSet = appliedAttr.attr.decorate(memberName, memberType, member.get, member.set); // set must return a object with get and set members
+                    let newSet = appliedAttr.attr.decorateProperty(def.name, memberName, member); // set must return a object with get and set members
                     if (newSet.get && newSet.set) {
                         newSet.get = newSet.get.bind(bindingHost);
                         newSet.set = newSet.set.bind(bindingHost);
@@ -467,7 +467,12 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
                         throw new _Exception('Unexpected', `${appliedAttr.name} decoration result is unexpected. (${memberName})`);
                     }
                 } else { // func or event
-                    let newFn = appliedAttr.attr.decorate(memberName, memberType, member);
+                    let newFn = null;
+                    if (memberType === 'func') { // func
+                        newFn = appliedAttr.attr.decorateFunction(def.name, memberName, member);
+                    } else { // event
+                        newFn = appliedAttr.attr.decorateEvent(def.name, memberName, member);
+                    }
                     if (newFn) {
                         member = newFn.bind(bindingHost); // update for next attribute application
                     } else {
@@ -485,13 +490,13 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
         let weavedFn = null,
             funcAspects = [];
 
-        // get aspects that are applicable for this function
-        funcAspects = _Aspects.get(def.name, memberName, attrs.members.all(memberName).anywhere());
+        // get aspects that are applicable for this function (NOTE: Optimization will be needed here, eventually)
+        funcAspects = _get_Aspects(def.name, memberName);
         def.aspects.members[memberName] = funcAspects; // store for reference
             
         // apply these aspects
         if (funcAspects.length > 0) {
-            weavedFn = _Aspects.attach(member, def.name, memberName, funcAspects); 
+            weavedFn = _attach_Aspects(member, def.name, memberName, funcAspects); 
             if (weavedFn) {
                 member = weavedFn; // update member itself
             }
@@ -780,11 +785,6 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
             _member = applyCustomAttributes(bindingHost, memberName, memberType, _member);
         }
 
-        // weave advices from aspects
-        if (cfg.aop) {
-            _member = applyAspects(memberName, _member);
-        }        
-
         // return
         return _member;
     };
@@ -931,11 +931,6 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
        // apply custom attributes (before event interface is added)
         if (cfg.customAttrs) {
             _member = applyCustomAttributes(bindingHost, memberName, memberType, _member);
-        }
-
-        // weave advices from aspects (before event interface is added)
-        if (cfg.aop) {
-            _member = applyAspects(memberName, _member);
         }
 
         // attach event interface
@@ -1102,7 +1097,10 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
 
     // define proxy for clean syntax inside factory
     proxy = new Proxy({}, {
-        get: (_obj, name) => { return obj[name]; },
+        get: (_obj, name) => { 
+            if (name === 'noop') { return _noop; }
+            return obj[name]; 
+        },
         set: (_obj, name, value) => {
             if (isBuildingObj) {
                 // get member type
@@ -1126,8 +1124,8 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
                 // add member
                 addMember(name, memberType, value);
             } else {
-                // a function or event is being redefined
-                if (typeof value === 'function') { throw new _Exception('InvalidOperation', `Redefinition of members is not allowed. (${name})`); }
+                // a function or event is being redefined or noop is being redefined
+                if (typeof value === 'function' || name === 'noop') { throw new _Exception('InvalidOperation', `Redefinition of members is not allowed. (${name})`); }
 
                 // allow setting property values
                 obj[name] = value;
@@ -1443,7 +1441,7 @@ const builder = (cfg) => {
     _Object._.attrs = attrs;
 
     // register type with namespace
-    _Namespace(_Object); 
+    _NSRegister(_Object);
 
     // freeze object meta
     _Object._ = Object.freeze(_Object._);

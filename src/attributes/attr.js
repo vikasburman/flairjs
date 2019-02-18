@@ -105,8 +105,8 @@ _attr.clear = () => {
  *                  NAMES can be: 
  *                      type names: class, struct, enum, interface, mixin, resource
  *                      type member names: prop, func, construct, dispose, event
- *                      inbuilt modifier names: static, abstract, sealed, virtual, override, private, protected, readonly, async
- *                      inbuilt attribute names: promise, singleton, serialize, deprecate, session, state, conditional, noserialize
+ *                      inbuilt modifier names: static, abstract, sealed, virtual, override, private, protected, readonly, async, etc.
+ *                      inbuilt attribute names: promise, singleton, serialize, deprecate, session, state, conditional, noserialize, etc.
  *                      custom attribute names: any registered custom attribute name
  *                      type names itself: e.g., Assembly, Attribute, etc. (any registered type name is fine)
  *                          SUFFIX: A typename must have a suffix (^) e.g., Assembly^, Attribute^, etc. Otherwise this name will be treated as custom attribute name

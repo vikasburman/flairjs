@@ -1,160 +1,104 @@
-// Aspects
-let allAspects = [],
-    regExpEscape = (s) => { return s.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&'); },
-    wildcardToRegExp = (s) => { return new RegExp('^' + s.split(/\*+/).map(regExpEscape).join('.*') + '$'); };
-flair.Aspects = {};
-flair.Aspects.raw = () => { return allAspects; }
-flair.Aspects.register = (pointcut, Aspect) => {
-    // pointcut: [namespace.]class[:func][/attr1[,attr2[,...]]]
-    //      namespace/class/func:
-    //          ~ - any
-    //          *<text> - any name that ends with <text> 
-    //          <text>* - any name that starts with <text>
-    //          <text>  - exact name
-    //      attribute:
-    //          <text>  - exact name
-    //
-    //      Examples:
-    //          ~                   - on all functions of all classes in all namespaces
-    //          abc                 - on all functions of all classes names abc in root namespace (without any namespace)
-    //          ~.abc               - on all functions of all classes names abc in all namespaces
-    //          ~.abc:~             - on all functions of all classes names abc in all namespaces
-    //          xyz.*               - on all functions of all classes in xyz namespace
-    //          xyz.abc             - on all functions of class abc under xyz namespace
-    //          xyz.abc:*           - on all functions of class abc under xyz namespace
-    //          xyz.abc:f1          - on func f1 of class abc under xyz namespace
-    //          xyz.abc:f*          - on all funcs that starts with f in class abc under xyz namespace
-    //          xyz.xx*.abc         - on functions of all classes names abc under namespaces where pattern matches xyz.xx* (e.g., xyz.xx1 and xyz.xx2)
-    //          xy*.xx*.abc         - on functions of all classes names abc under namespaces where pattern matches xyz.xx* (e.g., xy1.xx1 and xy2.xx1)
-    //          abc/service         - on all functions of abc class in root namespace which has service attribute applied
-    //          ~/service           - on all functions of all classes in all namespaces which has service attribute applied
-    //          /service            - on all functions of all classes which has service attribute applied
-    //          /service*           - on all functions of all classes which has service* attribute name pattern applied
+/**
+ * @name Aspects
+ * @description Aspect orientation support.
+ * @example
+ *  .register(pointcut, Aspect)             // - void
+ * @params
+ *  pointcut: string - pointcut identifier string as -> [namespace.]class[:func]
+ *      namespace/class/func: use wildcard characters ? or * to build the pointcut identifier
+ *     
+ *      Examples:
+ *          abc                 - on all functions of all classes named abc in root namespace (without any namespace)
+ *          *.abc               - on all functions of all classes named abc in all namespaces
+ *          xyz.*               - on all functions of all classes in xyz namespace
+ *          xyz.abc             - on all functions of class abc under xyz namespace
+ *          xyz.abc:*           - on all functions of class abc under xyz namespace
+ *          xyz.abc:f1          - on func f1 of class abc under xyz namespace
+ *          xyz.abc:f?test      - on all funcs that are named like f1test, f2test, f3test, etc. in class abc under xyz namespace
+ *          xyz.xx*.abc         - on functions of all classes names abc under namespaces where pattern matches xyz.xx* (e.g., xyz.xx1 and xyz.xx2)
+ *          *xyx.xx*.abc        - on functions of all classes names abc under namespaces where pattern matches *xyz.xx* (e.g., 1xyz.xx1 and 2xyz.xx1)
+ *     
+ * Aspect: type - flair Aspect type
+ */ 
+const allAspects = [];
+const _Aspects = {
+    // register Aspect against given pointcut definition
+    register: (pointcut, Aspect) => {
+        if (typeof pointcut !== 'string') { throw new _Exception.InvalidArgument('pointcut'); }
+        if (!_is(Aspect, 'Aspect')) { throw new _Exception.InvalidArgument('Aspect'); }
+        
+        // add new entry
+        let pc = pointcut,
+            __ns = '',
+            __class = '',
+            __func = '',
+            __identifier = '',
+            items = null;
 
-
-    // split name and attributes
-    let nm = pointcut || '~',
-        ns = '',
-        cls = '',
-        fnc = '',
-        attr = '~',     
-        bucket = '';    
-    if (nm.indexOf('/') !== -1) {
-        let items = nm.split('/');
-        nm = items[0].trim();
-        attr = items[1].trim();
-    }
-
-    // get bucket to store in
-    if (nm === '~') { 
-        ns = '~';
-        cls = '~';
-        fnc = '~';
-    } else if (nm === '') {
-        ns = '^';
-        cls = '~';
-        fnc = '~';
-    } else if (nm.indexOf('.') === -1) {
-        ns = '^';
-        if (nm.indexOf(':') === -1) {
-            cls = nm;
-            fnc = '~';
-        } else {
-            let itms = nm.split(':');
-            cls = itms[0].trim();
-            fnc = itms[1].trim();
+        if (pc.indexOf(':') !== -1) { // extract func
+            items = pc.split(':');
+            pc = items[0].trim();
+            __func = items[1].trim() || '*';
         }
-    } else {
-        ns = nm.substr(0, nm.lastIndexOf('.'));
-        nm = nm.substr(nm.lastIndexOf('.') + 1);
-        if (nm.indexOf(':') === -1) {
-            cls = nm;
-            fnc = '~';
+
+        if (pc.indexOf('.') !== -1) { // extract class and namespace
+            __ns = pc.substr(0, pc.lastIndexOf('.'));
+            __class = pc.substr(pc.lastIndexOf('.') + 1);
         } else {
-            let itms = nm.split(':');
-            cls = itms[0].trim();
-            fnc = itms[1].trim();
-        }        
+            __ns = ''; // no namespace
+            __class = pc;
+        }    
+
+        // build regex
+        __identifier = __ns + '\/' +__class + ':' + __func; // eslint-disable-line no-useless-escape
+        __identifier = replaceAll(__identifier, '.', '[.]');    // . -> [.]
+        __identifier = replaceAll(__identifier, '?', '.');      // ? -> .
+        __identifier = replaceAll(__identifier, '*', '.*');     // * -> .*
+
+        // register
+        allAspects.push({rex: new RegExp(__identifier), Aspect: Aspect});
     }
-    if (ns === '*' || ns === '') { ns = '~'; }
-    if (cls === '*' || cls === '') { cls = '~'; }
-    if (fnc === '*' || fnc === '') { fnc = '~'; }
-    if (attr === '*' || attr === '') { attr = '~'; }
-    bucket = `${ns}=${cls}=${fnc}=${attr}`;
-
-    // add bucket if not already there
-    allAspects[bucket] = allAspects[bucket] || [];
-    allAspects[bucket].push(Aspect);
 };
-flair.Aspects.get = (typeName, funcName, attrs) => {
-
-    //TODO: attrs is an array of attrs - check name by .name property
+const _get_Aspects = (typeName, funcName) => {
     // get parts
     let funcAspects = [],
-        ns = '',
-        cls = '',
-        fnc = funcName.trim();
+        __ns = '',
+        __class = '',
+        __func = funcName.trim(),
+        __identifier = ''
 
     if (typeName.indexOf('.') !== -1) {
-        ns = typeName.substr(0, typeName.lastIndexOf('.')).trim();
-        cls = typeName.substr(typeName.lastIndexOf('.') + 1).trim(); 
+        __ns = typeName.substr(0, typeName.lastIndexOf('.')).trim();
+        __class = typeName.substr(typeName.lastIndexOf('.') + 1).trim(); 
     } else {
-        ns = '^';
-        cls = typeName.trim();
+        __ns = ''; // no namespace
+        __class = typeName.trim();
     }
+    __identifier = __ns + '/' + __class + ':' + __func;
 
-    for(let bucket in allAspects) {
-        let items = bucket.split('='),
-            thisNS = items[0],
-            rxNS = wildcardToRegExp(thisNS),
-            thisCls = items[1],
-            rxCls = wildcardToRegExp(thisCls),
-            thisFnc = items[2],
-            rxFnc = wildcardToRegExp(thisFnc),
-            thisAttr = items[3],
-            rxAttr = wildcardToRegExp(thisAttr),
-            isMatched = (thisAttr === '~');
-        
-        if (((ns === thisNS || rxNS.test(ns)) &&
-            (cls === thisCls || rxCls.test(cls)) &&
-            (fnc === thisFnc || rxFnc.test(fnc)))) {
-            if (!isMatched) {
-                for(let attr of attrs) {
-                    if (attr.name === thisAttr || rxAttr.test(attr.name)) {
-                        isMatched = true;
-                        break; // matched
-                    }
-                }
-            }
-            if (isMatched) {
-                for(let aspect of allAspects[bucket]) {
-                    if (funcAspects.indexOf(aspect) === -1) {
-                        funcAspects.push(aspect);
-                    }
-                }                  
+    allAspects.forEach(item => {
+        if (item.rex.test(__identifier)) { 
+            if (funcAspects.indexOf(item.Aspect) === -1) {
+                funcAspects.push(item.Aspect);
             }
         }
-    }
+    });
 
     // return
     return funcAspects;
 };
-flair.Aspects.attach = (fn, typeName, funcName, funcAspects) => {
-// TODO: consider now functions and events are also supported as join points
-
-
+const _attach_Aspects = (fn, typeName, funcName, funcAspects) => {
     let before = [],
         after = [],
         around = [],
-        instance = null,
-        _fn = null;
+        instance = null;
 
     // collect all advices
     for(let funcAspect of funcAspects) {
         instance = new funcAspect();
-        _fn = instance.before(); if (typeof _fn === 'function') { before.push(_fn); }
-        _fn = instance.around(); if (typeof _fn === 'function') { around.push(_fn); }
-        _fn = instance.after(); if (typeof _fn === 'function') { after.push(_fn); }
+        if (instance.before !== _noop) { before.push(instance.before); }
+        if (instance.around !== _noop) { around.push(instance.around); }
+        if (instance.after !== _noop) { after.push(instance.after); }
     }
 
     // around weaving
@@ -229,4 +173,7 @@ flair.Aspects.attach = (fn, typeName, funcName, funcAspects) => {
     return weavedFn;
 };
 
-const _Aspects = flair.Aspects;
+// attach to flair
+a2f('Aspects', _Aspects, () => {
+    allAspects.length = 0;
+});

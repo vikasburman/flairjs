@@ -90,5 +90,7 @@ flair.Class = (name, inherits, mixinsAndInterfaces, factory) => {
     return builder(cfg);
 };
 
+const _Class = flair.Class; // TODO: fix
+
 // add to members list
 flair.members.push('Class');
