@@ -84,6 +84,7 @@
 
     <!-- inject: ./bundle/cli.js -->    // OK
     <!-- inject: ./bundle/getAssembly.js -->    // OK
+    <!-- inject: ./bundle/getResource.js -->    // OK
     <!-- inject: ./bundle/getType.js -->    // OK
     <!-- inject: ./bundle/assembly.js -->   // OK
     <!-- inject: ./bundle/namespace.js -->  // OK
@@ -105,20 +106,20 @@
     <!-- inject: ./helpers/dispatcher.js -->    // OK
     <!-- inject: ./helpers/general.js -->   // OK
 
-    <!-- inject: ./inheritance/class.js --> 
+    <!-- inject: ./inheritance/class.js -->  // OK
     <!-- inject: ./inheritance/getTypeOf.js -->     // OK 
     <!-- inject: ./inheritance/isDerivedFrom.js --> // OK
     <!-- inject: ./inheritance/isInstanceOf.js -->  // OK
-    <!-- inject: ./inheritance/struct.js -->
+    <!-- inject: ./inheritance/struct.js -->    // OK
     <!-- inject: ./inheritance/typeOf.js -->    // OK
 
     <!-- inject: ./interface/as.js -->  // OK
-    <!-- inject: ./interface/interface.js -->
+    <!-- inject: ./interface/interface.js -->   // OK
     <!-- inject: ./interface/is.js -->  // OK
     <!-- inject: ./interface/isComplies.js -->  // OK
     <!-- inject: ./interface/isImplements.js -->    // OK
 
-    <!-- inject: ./misc/enum.js -->
+    <!-- inject: ./misc/enum.js --> // OK
     <!-- inject: ./misc/noop.js -->     // OK
     <!-- inject: ./misc/telemetry.js -->    // OK
 

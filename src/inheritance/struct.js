@@ -16,24 +16,19 @@
  *         NOTE: Qualified names are automatically registered with Namespace while simple names are not.
  *               to register simple name on root Namespace, use special naming technique, it will register
  *               this with Namespace at root, and will still keep the name without '.'
- *  implementations: array - An array of mixin and/or interface types which needs to be applied to this struct type
+ *  mixints: array - An array of mixin and/or interface types which needs to be applied to this struct type
  *                        mixins will be applied in order they are defined here
  *  factory: function - factory function to build struct definition
  * @returns type - constructed flair struct type
  */
-const _Struct = (name, implementations, factory) => {
-    if (typeof name !== 'string') { throw _Exception.InvalidArgument('name'); }
-    if (_typeOf(implementations) === 'array') {
-        if (typeof factory !== 'function') { throw _Exception.InvalidArgument('factory'); }
-    } else if (typeof implementations !== 'function') {
-        throw _Exception.InvalidArgument('factory');
-    } else {
-        factory = implementations;
-        implementations = [];
-    }
+const _Struct = (name, mixints, factory) => {
+    let args = _Args('name: string, factory: function', 
+                     'name: string, mixints: array, factory: function')(name, mixints, factory);
+    if (args.isInvalid) { throw args.error; }
 
     // builder config
     let cfg = {
+        new: true,
         mixins: true,
         interfaces: true,
         static: true,
@@ -47,10 +42,9 @@ const _Struct = (name, implementations, factory) => {
             type: 'struct'
         },
         params: {
-            typeName: name,
-            inherits: null,
-            mixinsAndInterfaces: implementations,
-            factory: factory
+            typeName: args.values.name,
+            mixinsAndInterfaces: args.values.mixints,
+            factory: args.values.factory
         }
     };
 
@@ -58,6 +52,5 @@ const _Struct = (name, implementations, factory) => {
     return builder(cfg);
 };
 
-// attach
-flair.Struct = Object.freeze(_Struct);
-flair.members.push('Struct');
+// attach to flair
+a2f('Struct', _Struct);

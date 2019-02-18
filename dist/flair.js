@@ -3,7 +3,7 @@
  * FlairJS
  * True Object Oriented JavaScript
  * Version 0.15.30
- * Mon, 18 Feb 2019 01:33:13 GMT
+ * Mon, 18 Feb 2019 04:51:40 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  * https://flairjs.com
@@ -64,7 +64,7 @@
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
         link: 'https://flairjs.com',
-        lupdate: new Date('Mon, 18 Feb 2019 01:33:13 GMT')
+        lupdate: new Date('Mon, 18 Feb 2019 04:51:40 GMT')
     });
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -392,8 +392,8 @@
             conditional: new _attrConfig('(class || struct || mixin) && (prop || func || event)'),
             noserialize: new _attrConfig('(class || struct || mixin) && prop'),
         
-            mixed: new _attrConfig('class && (prop || func || event)'),
-            event: new _attrConfig('(class || struct || mixin || interface) && func && !($inject || $async)')
+            mixin: new _attrConfig('class && (prop || func || event)'),
+            interface: new _attrConfig('class && (prop || func || event)')
         })
     });
     _attr.collect = () => {
@@ -654,6 +654,22 @@
     a2f('getAssembly', _getAssembly);
         // OK
     /**
+     * @name getResource
+     * @description Gets the registered resource
+     * @example
+     *  getResource(name)
+     * @params
+     *  name: string - qualified resource name
+     * @returns object - resource object
+     */ 
+    const _getResource = (name) => { 
+        if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+        return _Resource.get(name);
+    };
+    
+    // attach to flair
+    a2f('getResource', _getResource);    // OK
+    /**
      * @name getType
      * @description Gets the flair Type of a registered type definition
      * @example
@@ -857,7 +873,6 @@
         }
     };
     
-    
     _$$('sealed');
     const __Resource = _Class('.Resource', function() { // registered at root namespace (can be get as: getType('Resource'))
          this.construct = (name, locale, encodingType, file, data) => {
@@ -930,7 +945,7 @@
     a2f('Resource', _Resource, () => {
         resources_registry = {};
     });
-    
+       // OK
 
     /**
      * @name Container
@@ -1676,7 +1691,7 @@
             return root.get(name, memberName, isCheckInheritance) !== null;
         }; 
         const members_probe = (name, memberName) => {
-            let _probe = {
+            let _probe = Object.freeze({
                 anywhere: () => {
                     return root.get(name, memberName) || root.get(name, memberName, true); 
                 },
@@ -1686,19 +1701,19 @@
                 inherited: () => {
                     return root.get(name, memberName, true); 
                 },
-                only: {
+                only: Object.freeze({
                     current: () => {
                         return root.get(name, memberName) && !root.get(name, memberName, true); 
                     },
                     inherited: () => {
                         return !root.get(name, memberName) && root.get(name, memberName, true); 
                     }
-                }
-            };
+                })
+            });
             return _probe;      
         };    
         const type_probe = (name) => {
-            let _probe = {
+            let _probe = Object.freeze({
                 anywhere: () => {
                     return root.get(name, '') || root.get(name, '', true); 
                 },
@@ -1708,19 +1723,19 @@
                 inherited: () => {
                     return root.get(name, '', true); 
                 },
-                only: {
+                only: Object.freeze({
                     current: () => {
                         return root.get(name, '') && !root.get(name, '', true); 
                     },
                     inherited: () => {
                         return !root.get(name, '') && root.get(name, '', true); 
                     }
-                }
-            };
+                })
+            });
             return _probe;
         };
         const members_all = (memberName) => {
-            let _all = {
+            let _all = Object.freeze({
                 current: () => {
                     return def[defItemName].members[memberName].slice();
                 },
@@ -1740,11 +1755,11 @@
                 anywhere: () => {
                     return [..._all.current(), ..._all.inherited()];
                 }
-            };
+            });
             return _all;
         };
         const type_all = () => {
-            let _all = {
+            let _all = Object.freeze({
                 current: () => {
                     return def[defItemName].type.slice();
                 },
@@ -1764,13 +1779,13 @@
                 anywhere: () => {
                     return [..._all.current(), ..._all.inherited()];
                 }
-            };
+            });
             return _all;
         };
         const root = {
             get: root_get,
             has: root_has,
-            type: {
+            type: Object.freeze({
                 get: (name, isCheckInheritance) => {
                     return root.get(name, true, isCheckInheritance);
                 },
@@ -1779,7 +1794,7 @@
                 },
                 all: type_all,
                 probe: type_probe
-            },
+            }),
             members: {
                 get: root_get,
                 has: root_has,
@@ -1835,7 +1850,8 @@
             root.members.isFunction = (memberName) => { return root.members.type(memberName) === 'func'; };
             root.members.isEvent = (memberName) => { return root.members.type(memberName) === 'event'; };
         }
-        return root;
+        root.members = Object.freeze(root.members);
+        return Object.freeze(root);
     };
     const buildTypeInstance = (cfg, Type, params, obj) => {
         if (cfg.singleton && params.isTopLevelInstance && Type._.singleInstance()) { return Type._.singleInstance(); }
@@ -1843,6 +1859,7 @@
         // define vars
         let exposed_obj = {},
             mixin_being_applied = null,
+            interface_being_validated = null,
             _constructName = '_construct',
             _disposeName = '_dispose',
             _props = {}, // plain property values storage inside this closure
@@ -1867,6 +1884,9 @@
             isBuildingObj = false,
             _member_dispatcher = null,
             _local_storage_not_supported_message = "Use of 'state' is not support on server. Using 'session' instead.";
+    
+        // dump this def for builder to process at the end
+        cfg.dump.push(def);
     
         const _sessionStorage = {
             key: (key) => {
@@ -2048,15 +2068,9 @@
                 // an interface define members just like a type
                 // with but its function and event will be noop and
                 // property values will be null
-                let _interface = new _interfaceType(); // so we get to read members of interface
-                for(let _memberName in _interface) {
-                    if (_interface.hasOwnProperty(_memberName) && _memberName !== '_') {
-                        if (exposed_obj[_memberName]) {
-                            let _interfaceMemberType = _interface._.modifiers.members.type(_memberName);
-                            if (_interfaceMemberType !== def.members[_memberName]) { throw new _Exception('NotDefined', `Interface (${_interface._.name}) member is not defined as ${_interfaceMemberType}. (${_memberName})`); }
-                        }
-                    }
-                }
+                interface_being_validated = _interfaceType;
+                _interfaceType.apply(proxy); // run interface's factory too having 'this' being proxy object
+                interface_being_validated = null;
             }
     
             // delete it, no longer needed (a reference is available at Type level)
@@ -2125,7 +2139,7 @@
             // at class/struct level, overwriting any mixin added member is allowed (and when added, it's attributes, type and modified etc. 
             // which might be added earlier, will be overwritten anyways)
             if (mixin_being_applied === null && typeof obj[memberName] !== 'undefined' &&
-                (!attrs.members.probe('mixed', memberName).current()) &&
+                (!attrs.members.probe('mixin', memberName).current()) &&
                 (!cfg.inheritance || (cfg.inheritance && !attrs.members.probe('override', memberName).current()))) {
                     throw new _Exception('InvalidOperation', `Member with this name is already defined. (${memberName})`); 
             }
@@ -2470,7 +2484,7 @@
             // pick mixin being applied at this time
             if (cfg.mixins) {        
                 if (mixin_being_applied !== null) {
-                    _attr('mixed', mixin_being_applied);
+                    _attr('mixin', mixin_being_applied._.name);
                 }
             }
     
@@ -2511,6 +2525,18 @@
             // finally hold the references for reflector
             def.members[memberName] = memberValue;
         };
+        const validateMember = (memberName, memberType) => {
+            // must exists check
+            if (typeof exposed_obj[memberName] === 'undefined' || modifiers.members.type(memberName) !== memberType) {
+                throw new _Exception('NotImplemented', `Interface member is not implemented. (${memberName})`); 
+            } else {
+                // pick interface being validated at this time
+                _attr('interface', interface_being_validated._.name);
+    
+                // collect attributes and modifiers - validate applied attributes as per attribute configuration - throw when failed
+                attributesAndModifiers(def, memberName);
+            }
+        };    
         const addDisposable = (disposableType, data) => {
             obj._.disposables.push({type: disposableType, data: data});
         }
@@ -2581,6 +2607,14 @@
         proxy = new Proxy({}, {
             get: (_obj, name) => { 
                 if (name === 'noop') { return _noop; }
+                if (name === 'event') { // will help defining events like: this.myEvent = this.event(() => { });
+                    let _fn = (fn) => {
+                        if (typeof fn !== 'function') { throw new _Exception.InvalidArgument('fn'); }
+                        fn.event = true;
+                        return fn;
+                    };
+                    return _fn;
+                }
                 return obj[name]; 
             },
             set: (_obj, name, value) => {
@@ -2593,7 +2627,8 @@
                         memberType = 'dispose'; 
                     } else {
                         if (typeof value === 'function') {
-                            if (_attr.has('event')) {
+                            if (value.event === true) {
+                                delete value.event;
                                 memberType = 'event'; 
                             } else {
                                 memberType = 'func'; 
@@ -2603,11 +2638,15 @@
                         }
                     }
                     
-                    // add member
-                    addMember(name, memberType, value);
+                    // add or validate member
+                    if (interface_being_validated) {
+                        validateMember(name, memberType, value);
+                    } else {
+                        addMember(name, memberType, value);
+                    }
                 } else {
                     // a function or event is being redefined or noop is being redefined
-                    if (typeof value === 'function' || name === 'noop') { throw new _Exception('InvalidOperation', `Redefinition of members is not allowed. (${name})`); }
+                    if (typeof value === 'function' || name === 'noop' || name === 'event') { throw new _Exception('InvalidOperation', `Redefinition of members is not allowed. (${name})`); }
     
                     // allow setting property values
                     obj[name] = value;
@@ -2633,9 +2672,6 @@
     
         // clear any (by user's error left out) attributes, so that are not added by mistake elsewhere
         _attr.clear();
-    
-        // building ends
-        isBuildingObj = false; 
     
         // move constructor and dispose out of main object
         if (params.isTopLevelInstance) { // so that till now, a normal override behavior can be applied to these functions as well
@@ -2712,11 +2748,15 @@
             exposed_obj = Object.seal(exposed_obj);
         }
     
+        // building ends
+        isBuildingObj = false;     
+    
         // return
         return exposed_obj;
     };
     const builder = (cfg) => {
         // process cfg
+        cfg.new = cfg.new || false;
         cfg.mixins = cfg.mixins || false;
         cfg.interfaces = cfg.interfaces || false;
         cfg.inheritance = cfg.inheritance || false;
@@ -2757,13 +2797,15 @@
         }
     
         // extract mixins and interfaces
-        for(let item of cfg.params.mixinsAndInterfaces) {
-           if (item._ && item._.type) {
-                switch (item._.type) {
-                    case 'mixin': cfg.params.mixins.push(item); break;
-                    case 'interface': cfg.params.interfaces.push(item); break;
+        if (cfg.params.mixinsAndInterfaces) {
+            for(let item of cfg.params.mixinsAndInterfaces) {
+                if (item._ && item._.type) {
+                    switch (item._.type) {
+                        case 'mixin': cfg.params.mixins.push(item); break;
+                        case 'interface': cfg.params.interfaces.push(item); break;
+                    }
                 }
-           }
+            }
         }
         delete cfg.params.mixinsAndInterfaces;
     
@@ -2775,38 +2817,46 @@
         // top level definitions
         let _flagName = '___flag___';
     
+        // collect complete hierarchy defs while the type is building
+        cfg.dump = []; // TODO: Check what is heppening with this, not implemented yet, idea is to collect all hierarchy and made it available at Type level for reflector
+    
         // base type definition
-        let _Object = function(_flag, _static, ...args) {
-            // define parameters and context
-            let params = {
-                _flagName: _flagName
-            };
-            if (typeof _flag !== 'undefined' && _flag === _flagName) { // inheritance in play
-                params.isNeedProtected = true;
-                params.isTopLevelInstance = false;
-                params.staticInterface = _static;
-                params.args = args;
-            } else {
-                params.isNeedProtected = false;
-                params.isTopLevelInstance = true;
-                params.staticInterface = _Object;
-                if (typeof _flag !== 'undefined') {
-                    if (typeof _static !== 'undefined') {
-                        params.args = [_flag, _static].concat(args); // one set
-                    } else {
-                        params.args = [_flag]; // no other args given
-                    }
+        let _Object = null;
+        if (cfg.new) { // class, struct
+            _Object = function(_flag, _static, ...args) {
+                // define parameters and context
+                let params = {
+                    _flagName: _flagName
+                };
+                if (typeof _flag !== 'undefined' && _flag === _flagName) { // inheritance in play
+                    params.isNeedProtected = true;
+                    params.isTopLevelInstance = false;
+                    params.staticInterface = _static;
+                    params.args = args;
                 } else {
-                    params.args = []; // no args
+                    params.isNeedProtected = false;
+                    params.isTopLevelInstance = true;
+                    params.staticInterface = _Object;
+                    if (typeof _flag !== 'undefined') {
+                        if (typeof _static !== 'undefined') {
+                            params.args = [_flag, _static].concat(args); // one set
+                        } else {
+                            params.args = [_flag]; // no other args given
+                        }
+                    } else {
+                        params.args = []; // no args
+                    }
                 }
-            }
     
-            // base object
-            let _this = {};
+                // base object
+                let _this = {};
     
-            // build instance
-            return buildTypeInstance(cfg, _Object, params, _this);
-        };
+                // build instance
+                return buildTypeInstance(cfg, _Object, params, _this);
+            };
+        } else { // mixin, interface, enum
+            _Object = cfg.params.factory;
+        }
     
         // extend type itself
         _Object = extend(_Object, cfg.ex.type, false); // don't overwrite while adding type extensions, this means defaults override is allowed
@@ -3160,8 +3210,8 @@
      * @example
      *  Class(name, factory)
      *  Class(name, inherits, factory)
-     *  Class(name, applications, factory)
-     *  Class(name, inherits, applications, factory)
+     *  Class(name, mixints, factory)
+     *  Class(name, inherits, mixints, factory)
      * @params
      *  name: string - name of the class
      *                 it can take following forms:
@@ -3175,40 +3225,21 @@
      *               to register simple name on root Namespace, use special naming technique, it will register
      *               this with Namespace at root, and will still keep the name without '.'
      *  inherits: type - A flair class type from which to inherit this class
-     *  applications: array - An array of mixin and/or interface types which needs to be applied to this class type
+     *  mixints: array - An array of mixin and/or interface types which needs to be applied to this class type
      *                        mixins will be applied in order they are defined here
      *  factory: function - factory function to build class definition
      * @returns type - constructed flair class type
      */
-    flair.Class = (name, inherits, mixinsAndInterfaces, factory) => {
-        if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
-        switch(_typeOf(inherits)) {
-            case 'function':
-                factory = inherits;
-                inherits = null;
-                mixinsAndInterfaces = [];
-                break;
-            case 'array':
-                if (typeof mixinsAndInterfaces !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (factory)'); }
-                factory = mixinsAndInterfaces;
-                mixinsAndInterfaces = inherits;
-                inherits = null;
-                break;
-            case 'class':
-                if (['array', 'function'].indexOf(_typeOf(mixinsAndInterfaces)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (factory)'); }
-                if (typeof mixinsAndInterfaces === 'function') {
-                    factory = mixinsAndInterfaces;
-                    mixinsAndInterfaces = [];
-                } else {
-                    if (typeof factory !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (factory)'); }
-                }
-                break;
-            default:
-                throw new _Exception('InvalidArgument', 'Argument type is invalid. (factory)'); 
-        }
+    const _Class = (name, inherits, mixints, factory) => {
+        let args = _Args('name: string, factory: function', 
+                         'name: string, inherits: class, factory: function',
+                         'name: string, mixints: array, factory: function',
+                         'name: string, inherits: class, mixints: array, factory: function')(name, inherits, mixints, factory);
+        if (args.isInvalid) { throw args.error; }
     
         // builder config
         let cfg = {
+            new: true,
             mixins: true,
             interfaces: true,
             inheritance: true,
@@ -3227,10 +3258,10 @@
                 type: 'class'
             },
             params: {
-                typeName: name,
-                inherits: inherits,
-                mixinsAndInterfaces: mixinsAndInterfaces,
-                factory: factory
+                typeName: args.values.name,
+                inherits: args.values.inherits,
+                mixinsAndInterfaces: args.values.mixints,
+                factory: args.values.factory
             },
             mex: {  // meta extensions (under <>._ property)
                 instance: {},
@@ -3246,10 +3277,8 @@
         return builder(cfg);
     };
     
-    const _Class = flair.Class; // TODO: fix
-    
-    // add to members list
-    flair.members.push('Class'); 
+    // attach to flair
+    a2f('Class', _Class);  // OK
     /**
      * @name getTypeOf
      * @description Gets the underlying type which was used to construct this object
@@ -3348,24 +3377,19 @@
      *         NOTE: Qualified names are automatically registered with Namespace while simple names are not.
      *               to register simple name on root Namespace, use special naming technique, it will register
      *               this with Namespace at root, and will still keep the name without '.'
-     *  implementations: array - An array of mixin and/or interface types which needs to be applied to this struct type
+     *  mixints: array - An array of mixin and/or interface types which needs to be applied to this struct type
      *                        mixins will be applied in order they are defined here
      *  factory: function - factory function to build struct definition
      * @returns type - constructed flair struct type
      */
-    const _Struct = (name, implementations, factory) => {
-        if (typeof name !== 'string') { throw _Exception.InvalidArgument('name'); }
-        if (_typeOf(implementations) === 'array') {
-            if (typeof factory !== 'function') { throw _Exception.InvalidArgument('factory'); }
-        } else if (typeof implementations !== 'function') {
-            throw _Exception.InvalidArgument('factory');
-        } else {
-            factory = implementations;
-            implementations = [];
-        }
+    const _Struct = (name, mixints, factory) => {
+        let args = _Args('name: string, factory: function', 
+                         'name: string, mixints: array, factory: function')(name, mixints, factory);
+        if (args.isInvalid) { throw args.error; }
     
         // builder config
         let cfg = {
+            new: true,
             mixins: true,
             interfaces: true,
             static: true,
@@ -3379,10 +3403,9 @@
                 type: 'struct'
             },
             params: {
-                typeName: name,
-                inherits: null,
-                mixinsAndInterfaces: implementations,
-                factory: factory
+                typeName: args.values.name,
+                mixinsAndInterfaces: args.values.mixints,
+                factory: args.values.factory
             }
         };
     
@@ -3390,10 +3413,9 @@
         return builder(cfg);
     };
     
-    // attach
-    flair.Struct = Object.freeze(_Struct);
-    flair.members.push('Struct');
-    
+    // attach to flair
+    a2f('Struct', _Struct);
+        // OK
     /**
      * @name typeOf
      * @description Finds the type of given object in flair type system
@@ -3470,59 +3492,51 @@
     // attach to flair
     a2f('as', _as);
       // OK
-    // Interface
-    // Interface(interfaceName, function() {})
-    flair.Interface = (interfaceName, factory) => {
-        let meta = {},
-            _this = {};
+    /**
+     * @name Interface
+     * @description Constructs a Interface type
+     * @example
+     *  Interface(name, factory)
+     * @params
+     *  name: string - name of the interface
+     *                 it can take following forms:
+     *                 >> simple, e.g.,
+     *                    MyInterface
+     *                 >> qualified, e.g., 
+     *                    com.myCompany.myProduct.myFeature.MyInterface
+     *                 >> special, e.g.,
+     *                    .MyInterface
+     *         NOTE: Qualified names are automatically registered with Namespace while simple names are not.
+     *               to register simple name on root Namespace, use special naming technique, it will register
+     *               this with Namespace at root, and will still keep the name without '.'
+     *  factory: function - factory function to build interface definition
+     * @returns type - constructed flair interface type
+     */
+    const _Interface = (name, factory) => {
+        let args = _Args('name: string, factory: function')(name, factory);
+        if (args.isInvalid) { throw args.error; }
     
-        // definition helpers
-        const isSpecialMember = (member) => {
-            return ['constructor', 'dispose', '_constructor', '_dispose', '_'].indexOf(member) !== -1;
-        };     
-        _this.func = (name) => {
-            if (typeof meta[name] !== 'undefined') { throw `${interfaceName}.${name} is already defined.`; }
-            if (isSpecialMember(name)) { throw `${interfaceName}.${name} can only be defined for a class.`; }
-            meta[name] = [];
-            meta[name].type = 'func';
+        // builder config
+        let cfg = {
+            func: true,
+            prop: true,
+            event: true,
+            types: {
+                type: 'interface'
+            },
+            params: {
+                typeName: args.values.name,
+                factory: args.values.factory
+            }
         };
-        _this.prop = (name) => {
-            if (typeof meta[name] !== 'undefined') { throw `${interfaceName}.${name} is already defined.`; }
-            if (isSpecialMember(name)) { throw `${interfaceName}.${name} can only be defined as a function for a class.`; }
-            meta[name] = [];
-            meta[name].type = 'prop';
-        };
-        _this.event = (name) => {
-            if (typeof meta[name] !== 'undefined') { throw `${interfaceName}.${name} is already defined.`; }
-            if (isSpecialMember(name)) { throw `${interfaceName}.${name} can only be defined as a function for a class.`; }
-            meta[name] = [];
-            meta[name].type = 'event';
-        };
     
-        // add name
-        meta._ = {
-            name: interfaceName,
-            type: 'interface',
-            namespace: null        
-        };
-    
-        // register type with namespace
-        flair.Namespace(meta);
-    
-        // run factory
-        factory.apply(_this);
-    
-        // remove definition helpers
-        delete _this.func;
-        delete _this.prop;
-        delete _this.event;
-    
-        // return
-        return meta;
+        // return built type
+        return builder(cfg);
     };
     
-    // add to members list
-    flair.members.push('Interface');
+    // attach to flair
+    a2f('Interface', _Interface);
+       // OK
     /**
      * @name is
      * @description Checks if given object is of a given type
@@ -3609,7 +3623,7 @@
         let complied = true;
         for(let member in intf) {
             if (intf.hasOwnProperty(member) && member !== '_') {
-                if (typeof obj[member] !== typeof intf[member]) {
+                if (typeof obj[member] !== typeof intf[member]) { // TODO: check, how it is happening, this seems a bug - Interface type might not have members
                     complied = false; break;
                 }
             }
@@ -3660,30 +3674,22 @@
      *         NOTE: Qualified names are automatically registered with Namespace while simple names are not.
      *               to register simple name on root Namespace, use special naming technique, it will register
      *               this with Namespace at root, and will still keep the name without '.'
-     *  data: object - enum data in form of object literal. It can have:
-     *                  { Key1, Key2, Key3, ... }
-     *                  { Key1: startingValue, Key2, Key3, ... }
-     *                  { Key1: value, Key2: value, Key3: value, ... }
-     * 
-     * TODO: https://www.alanzucconi.com/2015/07/26/enum-flags-and-bitwise-operators/
+     *  factory: function - factory function to build enum definition
      * @returns type - constructed flair enum type
      */
     const _Enum = (name, factory) => {
-        if (typeof name !== 'string') { throw _Exception.InvalidArgument('name'); }
-        if (typeof factory !== 'function') { throw _Exception.InvalidArgument('factory'); }
+        let args = _Args('name: string, factory: function')(name, factory);
+        if (args.isInvalid) { throw args.error; }
     
         // builder config
         let cfg = {
-            prop: true, // TODO: fix this whole config
+            prop: true,
             types: {
-                instance: 'einstance',
                 type: 'enum'
             },
             params: {
-                typeName: name,
-                inherits: null,
-                mixinsAndInterfaces: null,
-                factory: factory
+                typeName: args.values.name,
+                factory: args.values.factory
             }
         };
     
@@ -3691,75 +3697,9 @@
         return builder(cfg);
     };
     
-    // attach
-    flair.Enum = Object.freeze(_Enum);
-    flair.members.push('Enum');
-    
-    
-    // // Enum
-    // // Enum(name, def)
-    // //  name: name of the enum
-    // //  def: object with key/values or an array of values
-    // flair.Enum = (name, data) => {
-    //     'use strict';
-    
-    //     // args validation
-    //     if (!(typeof data === 'object' || Array.isArray(data))) { throw flair.Exception('ENUM01', 'Invalid enum data.'); }
-    
-    //     // // enum type
-    //     // let _Enum = data;
-    //     // if (Array.isArray(data)) {
-    //     //     let i = 0,
-    //     //         _Enum = {};
-    //     //     for(let value of data) {
-    //     //         _Enum[i] = value; i++;
-    //     //     }
-    //     // } 
-    
-    //     // // meta extensions
-    //     // let mex = {
-    //     //     keys: () => {
-    //     //         let keys = [];
-    //     //         for(let key in _Enum) {
-    //     //             if (_Enum.hasOwnProperty(key) && key !== '_') {
-    //     //                 keys.push(key);
-    //     //             }
-    //     //         }
-    //     //         return keys;
-    //     //     },
-    //     //     values: () => {
-    //     //         let values = [];
-    //     //         for(let key in _Enum) {
-    //     //             if (_Enum.hasOwnProperty(key) && key !== '_') {
-    //     //                 values.push(_Enum[key]);
-    //     //             }
-    //     //         }
-    //     //         return values;
-    //     //     }
-    //     // };
-    
-    //     // return
-    //     //return flarizedType('enum', name, _Enum, mex);
-    // };
-    // flair.Enum.getKeys = (obj) => {
-    //     try {
-    //         return obj._.keys();
-    //     } catch (e) {
-    //         throw flair.Exception('ENUM02', 'Object is not an Enum.', e);
-    //     }
-    // };
-    // flair.Enum.getValues = (obj) => {
-    //     try {
-    //         return obj._.values();
-    //     } catch (e) {
-    //         throw flair.Exception('ENUM02', 'Object is not an Enum.', e);
-    //     }
-    // };
-    // flair.Enum.isDefined = (obj, keyOrValue) => {
-    //     return (flair.Enum.getKeys().indexOf(keyOrValue) !== -1 || flair.Enum.getValues().indexOf(keyOrValue) !== -1);
-    // };
-    
-    
+    // attach to flair
+    a2f('Enum', _Enum);
+     // OK
     /**
      * @name noop
      * @description No Operation function
@@ -3882,42 +3822,74 @@
     // attach to flair
     a2f('isMixed', _isMixed);
      // OK
-    // Mixin
-    // Mixin(mixinName, function() {})
-    flair.Mixin = (mixinName, factory) => {
-        // add name
-        factory._ = {
-            name: mixinName,
-            type: 'mixin',
-            namespace: null        
+    /**
+     * @name Mixin
+     * @description Constructs a Mixin type
+     * @example
+     *  Mixin(name, factory)
+     * @params
+     *  name: string - name of the mixin
+     *                 it can take following forms:
+     *                 >> simple, e.g.,
+     *                    MyMixin
+     *                 >> qualified, e.g., 
+     *                    com.myCompany.myProduct.myFeature.MyMixin
+     *                 >> special, e.g.,
+     *                    .MyMixin
+     *         NOTE: Qualified names are automatically registered with Namespace while simple names are not.
+     *               to register simple name on root Namespace, use special naming technique, it will register
+     *               this with Namespace at root, and will still keep the name without '.'
+     *  factory: function - factory function to build mixin definition
+     * @returns type - constructed flair mixin type
+     */
+    const _Mixin = (name, factory) => {
+        let args = _Args('name: string, factory: function')(name, factory);
+        if (args.isInvalid) { throw args.error; }
+    
+        // builder config
+        let cfg = {
+            func: true,
+            prop: true,
+            event: true,
+            customAttrs: true,
+            types: {
+                type: 'mixin'
+            },
+            params: {
+                typeName: args.values.name,
+                factory: args.values.factory
+            }
         };
-    // TODO: check that mixin either can be defined as struct or should have at least basic class definition approach or allow mixing classes itself
     
-    
-        // register type with namespace
-        flair.Namespace(factory);
-    
-        // return
-        return factory;
+        // return built type
+        return builder(cfg);
     };
     
-    // add to members list
-    flair.members.push('Mixin');
+    // attach to flair
+    a2f('Mixin', _Mixin);
+    
 
-    // Reflector
-    flair.Reflector = function (forTarget) {
+    /**
+     * @name Reflector
+     * @description Reflection of flair types and objects.
+     * @example
+     *  Reflector(forTarget)
+     * @params
+     *  forTarget: object - object or type to reflect on
+     */ 
+    const _Reflector = function (forTarget) {
+        if (!forTarget || !(forTarget._ && forTarget._.type)) { throw new _Exception.InvalidArgument('forTarget'); }
+    
         // define
         const CommonTypeReflector = function(target) {
             this.getType = () => { return target._.type; };
+            this.getId = () => { return target._.id; };
             this.getName = () => { return target._.name || ''; };
             this.getNamespace = () => { 
-                let _Namespace = target._.namespace;
-                if (_Namespace) { return new NamespaceReflector(_Namespace); }
-                return null; 
+                return target._.namespace;
             };
             this.getAssembly = () => {
-                let _Assembly = flair.Assembly.get(target._.name);
-                if (_Assembly) { return new AssemblyReflector(_Assembly); }
+                let _Assembly = _Assembly.get(target._.name);
                 return null;
             }
             this.getTarget = () => { return target; };
@@ -3926,11 +3898,10 @@
             this.isEnum = () => { return target._.type === 'enum'; };
             this.isStruct = () => { return target._.type === 'struct'; };
             this.isStructInstance = () => { return target._.type === 'sinstance'; };
-            this.isNamespace = () => { return target._.type === 'namespace'; };
-            this.isResource = () => { return target._.type === 'resource'; };
-            this.isAssembly = () => { return target._.type === 'assembly'; };
             this.isMixin = () => { return target._.type === 'mixin'; };
             this.isInterface = () => { return target._.type === 'interface'; };
+            this.getModifiers = () => { return target._.modifiers.type; }
+            this.getAttributes = () => { return target._.attrs.type; }
         };
         const CommonMemberReflector = function(type, target, name) {
             this.getType = () => { return 'member'; }
@@ -3938,6 +3909,8 @@
             this.getTarget = () => { return target; }
             this.getTargetType = () => { return target._.type; }
             this.getName = () => { return name; }
+            this.getModifiers = () => { return target._.modifiers.members; }
+            this.getAttributes = () => { return target._.attrs.members; }
         };
         const AttrReflector = function(Attr, name, args, target) {
             this.getType = () => { return 'attribute'; }
@@ -4236,6 +4209,7 @@
             return refl;              
         };    
         const ClassReflector = function(target) {
+            // NOTE: For now types cannot reflect on members, without instance being created, this needs to change
             let refl = new CommonTypeReflector(target);
             refl.getParent = () => { 
                 if (target._.inherits !== null) {
@@ -4271,9 +4245,9 @@
             refl.isSingleton = () => { return target._.isSingleton(); };                       
             refl.isSingleInstanceCreated = () => { return target._.singleInstance() !== null; };
             refl.isSealed = () => { return target._.isSealed(); }
-            refl.isDerivedFrom = (name) => { return target._.isDerivedFrom(name); }
-            refl.isMixed = (name) => { return target._.isMixed(name); }
-            refl.isImplements = (name) => { return target._.isImplements(name); }
+            refl.isAbstract = () => { return target._.isAbstract(); }
+            refl.isStatic = () => { return target._.isStatic(); }
+            refl.isDeprecated = () => { return target._.isDeprecated(); }
             return refl;                
         };
         const EnumReflector = function(target) {
@@ -4294,90 +4268,29 @@
             refl.getValues = () => { return target._.values(); }
             return refl;
         };
-        const ResourceReflector = function(target) {
-            let refl = new CommonTypeReflector(target);
-            refl.getFile = () => { return target.file(); };
-            refl.getResType = () => { return target.type(); };
-            refl.getContent = () => { return target.get(); };
-            return refl;
-        };
         const StructReflector = function(target) {
             let refl = new CommonTypeReflector(target);
-            return refl;
-        };            
-        const NamespaceReflector = function(target) {
-            let refl = new CommonTypeReflector(target);
             refl.getMembers = () => { 
-                let types = target.getTypes(),
-                    members = [];
-                if (types) {
-                    for(let type of types) {
-                        switch(type._.type) {
-                            case 'class': members.push(new ClassReflector(type)); break;
-                            case 'enum': members.push(new EnumReflector(type)); break;
-                            case 'struct': members.push(new StructReflector(type)); break;
-                            case 'mixin': members.push(new MixinReflector(type)); break;
-                            case 'interface': members.push(new InterfaceReflector(type)); break;                    
-                        }
+                let members = [];
+                for(let _memberName in target) {
+                    if (target.hasOwnProperty(_memberName) && _memberName !== '_') {
+                        members.push(new CommonMemberReflector(target[_memberName].type, target, _memberName));
                     }
                 }
-                return members;
+                return members;             
             };
-            refl.getMember = (qualifiedName) => {
-                let Type = target.getType(qualifiedName),
-                    member = null;
-                if (Type) {
-                    switch(Type._.type) {
-                        case 'class': member = new ClassReflector(Type); break;
-                        case 'enum': member = new EnumReflector(Type); break;
-                        case 'struct': member = new StructReflector(Type); break;
-                        case 'mixin': member = new MixinReflector(Type); break;
-                        case 'interface': member = new InterfaceReflector(Type); break;                    
-                    }
-                }
-                return member;
-            };
-            refl.createInstance = (qualifiedName, ...args) => {
-                return target.createInstance(qualifiedName, ...args);
-            };
-            return refl;
-        };
-        const AssemblyReflector = function(target) {
-            let refl = new CommonTypeReflector(target);
-            refl.getTypes = () => { 
-                return target.types;
-            };
-            refl.getAssets = () => { 
-                return target.assets;
-            };
-            refl.getADO = () => { return target._.ado; }
-            refl.load = () => {
-                return target.load();
-            };
-            return refl;
-        };    
-        const MixinReflector = function(target) {
-            let refl = new CommonTypeReflector(target);
-            return refl;
-        };
-        const InterfaceReflector = function(target) {
-            let refl = new CommonTypeReflector(target),
-                getMembers = () => {
-                    let members = [];
-                    for(let _memberName in target) {
-                        if (target.hasOwnProperty(_memberName) && _memberName !== '_') {
-                            members.push(new CommonMemberReflector(target[_memberName].type, target, _memberName));
-                        }
-                    }
-                    return members;                     
-                };
-            refl.getMembers = () => { 
-                return getMembers();
-            }
             refl.getMember = (name) => {
                 if (typeof target[name] === 'undefined') { throw `${name} is not defined.`; }
                 return new CommonMemberReflector(target[name].type, target, name);
-            };
+            };        
+            return refl;
+        };            
+        const MixinReflector = function(target) {
+            let refl = new StructReflector(target);
+            return refl;
+        };
+        const InterfaceReflector = function(target) {
+            let refl = new StructReflector(target);
             return refl;
         };
     
@@ -4388,10 +4301,7 @@
             case 'sinstance': ref = new StructInstanceReflector(forTarget); break;
             case 'class': ref = new ClassReflector(forTarget); break;
             case 'enum': ref = new EnumReflector(forTarget); break;
-            case 'resource': ref = new ResourceReflector(forTarget); break;
             case 'struct': ref = new StructReflector(forTarget); break;
-            case 'namespace': ref = new NamespaceReflector(forTarget); break;
-            case 'assembly': ref = new AssemblyReflector(forTarget); break;
             case 'mixin': ref = new MixinReflector(forTarget); break;
             case 'interface': ref = new InterfaceReflector(forTarget); break;
             default:
@@ -4402,8 +4312,8 @@
         return ref;
     };
     
-    // add to members list
-    flair.members.push('Reflector');    
+    // attach to flair
+    a2f('Reflector', _Reflector);    
 
     /**
      * @name Serializer

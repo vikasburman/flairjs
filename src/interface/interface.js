@@ -1,53 +1,44 @@
-// Interface
-// Interface(interfaceName, function() {})
-flair.Interface = (interfaceName, factory) => {
-    let meta = {},
-        _this = {};
+/**
+ * @name Interface
+ * @description Constructs a Interface type
+ * @example
+ *  Interface(name, factory)
+ * @params
+ *  name: string - name of the interface
+ *                 it can take following forms:
+ *                 >> simple, e.g.,
+ *                    MyInterface
+ *                 >> qualified, e.g., 
+ *                    com.myCompany.myProduct.myFeature.MyInterface
+ *                 >> special, e.g.,
+ *                    .MyInterface
+ *         NOTE: Qualified names are automatically registered with Namespace while simple names are not.
+ *               to register simple name on root Namespace, use special naming technique, it will register
+ *               this with Namespace at root, and will still keep the name without '.'
+ *  factory: function - factory function to build interface definition
+ * @returns type - constructed flair interface type
+ */
+const _Interface = (name, factory) => {
+    let args = _Args('name: string, factory: function')(name, factory);
+    if (args.isInvalid) { throw args.error; }
 
-    // definition helpers
-    const isSpecialMember = (member) => {
-        return ['constructor', 'dispose', '_constructor', '_dispose', '_'].indexOf(member) !== -1;
-    };     
-    _this.func = (name) => {
-        if (typeof meta[name] !== 'undefined') { throw `${interfaceName}.${name} is already defined.`; }
-        if (isSpecialMember(name)) { throw `${interfaceName}.${name} can only be defined for a class.`; }
-        meta[name] = [];
-        meta[name].type = 'func';
+    // builder config
+    let cfg = {
+        func: true,
+        prop: true,
+        event: true,
+        types: {
+            type: 'interface'
+        },
+        params: {
+            typeName: args.values.name,
+            factory: args.values.factory
+        }
     };
-    _this.prop = (name) => {
-        if (typeof meta[name] !== 'undefined') { throw `${interfaceName}.${name} is already defined.`; }
-        if (isSpecialMember(name)) { throw `${interfaceName}.${name} can only be defined as a function for a class.`; }
-        meta[name] = [];
-        meta[name].type = 'prop';
-    };
-    _this.event = (name) => {
-        if (typeof meta[name] !== 'undefined') { throw `${interfaceName}.${name} is already defined.`; }
-        if (isSpecialMember(name)) { throw `${interfaceName}.${name} can only be defined as a function for a class.`; }
-        meta[name] = [];
-        meta[name].type = 'event';
-    };
 
-    // add name
-    meta._ = {
-        name: interfaceName,
-        type: 'interface',
-        namespace: null        
-    };
-
-    // register type with namespace
-    flair.Namespace(meta);
-
-    // run factory
-    factory.apply(_this);
-
-    // remove definition helpers
-    delete _this.func;
-    delete _this.prop;
-    delete _this.event;
-
-    // return
-    return meta;
+    // return built type
+    return builder(cfg);
 };
 
-// add to members list
-flair.members.push('Interface');
+// attach to flair
+a2f('Interface', _Interface);

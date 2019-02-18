@@ -15,7 +15,7 @@ const _isComplies = (obj, intf) => {
     let complied = true;
     for(let member in intf) {
         if (intf.hasOwnProperty(member) && member !== '_') {
-            if (typeof obj[member] !== typeof intf[member]) {
+            if (typeof obj[member] !== typeof intf[member]) { // TODO: check, how it is happening, this seems a bug - Interface type might not have members
                 complied = false; break;
             }
         }

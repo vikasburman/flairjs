@@ -194,7 +194,7 @@ const modifierOrAttrRefl = (isModifier, def) => {
         return root.get(name, memberName, isCheckInheritance) !== null;
     }; 
     const members_probe = (name, memberName) => {
-        let _probe = {
+        let _probe = Object.freeze({
             anywhere: () => {
                 return root.get(name, memberName) || root.get(name, memberName, true); 
             },
@@ -204,19 +204,19 @@ const modifierOrAttrRefl = (isModifier, def) => {
             inherited: () => {
                 return root.get(name, memberName, true); 
             },
-            only: {
+            only: Object.freeze({
                 current: () => {
                     return root.get(name, memberName) && !root.get(name, memberName, true); 
                 },
                 inherited: () => {
                     return !root.get(name, memberName) && root.get(name, memberName, true); 
                 }
-            }
-        };
+            })
+        });
         return _probe;      
     };    
     const type_probe = (name) => {
-        let _probe = {
+        let _probe = Object.freeze({
             anywhere: () => {
                 return root.get(name, '') || root.get(name, '', true); 
             },
@@ -226,19 +226,19 @@ const modifierOrAttrRefl = (isModifier, def) => {
             inherited: () => {
                 return root.get(name, '', true); 
             },
-            only: {
+            only: Object.freeze({
                 current: () => {
                     return root.get(name, '') && !root.get(name, '', true); 
                 },
                 inherited: () => {
                     return !root.get(name, '') && root.get(name, '', true); 
                 }
-            }
-        };
+            })
+        });
         return _probe;
     };
     const members_all = (memberName) => {
-        let _all = {
+        let _all = Object.freeze({
             current: () => {
                 return def[defItemName].members[memberName].slice();
             },
@@ -258,11 +258,11 @@ const modifierOrAttrRefl = (isModifier, def) => {
             anywhere: () => {
                 return [..._all.current(), ..._all.inherited()];
             }
-        };
+        });
         return _all;
     };
     const type_all = () => {
-        let _all = {
+        let _all = Object.freeze({
             current: () => {
                 return def[defItemName].type.slice();
             },
@@ -282,13 +282,13 @@ const modifierOrAttrRefl = (isModifier, def) => {
             anywhere: () => {
                 return [..._all.current(), ..._all.inherited()];
             }
-        };
+        });
         return _all;
     };
     const root = {
         get: root_get,
         has: root_has,
-        type: {
+        type: Object.freeze({
             get: (name, isCheckInheritance) => {
                 return root.get(name, true, isCheckInheritance);
             },
@@ -297,7 +297,7 @@ const modifierOrAttrRefl = (isModifier, def) => {
             },
             all: type_all,
             probe: type_probe
-        },
+        }),
         members: {
             get: root_get,
             has: root_has,
@@ -353,7 +353,8 @@ const modifierOrAttrRefl = (isModifier, def) => {
         root.members.isFunction = (memberName) => { return root.members.type(memberName) === 'func'; };
         root.members.isEvent = (memberName) => { return root.members.type(memberName) === 'event'; };
     }
-    return root;
+    root.members = Object.freeze(root.members);
+    return Object.freeze(root);
 };
 const buildTypeInstance = (cfg, Type, params, obj) => {
     if (cfg.singleton && params.isTopLevelInstance && Type._.singleInstance()) { return Type._.singleInstance(); }
@@ -361,6 +362,7 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
     // define vars
     let exposed_obj = {},
         mixin_being_applied = null,
+        interface_being_validated = null,
         _constructName = '_construct',
         _disposeName = '_dispose',
         _props = {}, // plain property values storage inside this closure
@@ -385,6 +387,9 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
         isBuildingObj = false,
         _member_dispatcher = null,
         _local_storage_not_supported_message = "Use of 'state' is not support on server. Using 'session' instead.";
+
+    // dump this def for builder to process at the end
+    cfg.dump.push(def);
 
     const _sessionStorage = {
         key: (key) => {
@@ -566,15 +571,9 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
             // an interface define members just like a type
             // with but its function and event will be noop and
             // property values will be null
-            let _interface = new _interfaceType(); // so we get to read members of interface
-            for(let _memberName in _interface) {
-                if (_interface.hasOwnProperty(_memberName) && _memberName !== '_') {
-                    if (exposed_obj[_memberName]) {
-                        let _interfaceMemberType = _interface._.modifiers.members.type(_memberName);
-                        if (_interfaceMemberType !== def.members[_memberName]) { throw new _Exception('NotDefined', `Interface (${_interface._.name}) member is not defined as ${_interfaceMemberType}. (${_memberName})`); }
-                    }
-                }
-            }
+            interface_being_validated = _interfaceType;
+            _interfaceType.apply(proxy); // run interface's factory too having 'this' being proxy object
+            interface_being_validated = null;
         }
 
         // delete it, no longer needed (a reference is available at Type level)
@@ -643,7 +642,7 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
         // at class/struct level, overwriting any mixin added member is allowed (and when added, it's attributes, type and modified etc. 
         // which might be added earlier, will be overwritten anyways)
         if (mixin_being_applied === null && typeof obj[memberName] !== 'undefined' &&
-            (!attrs.members.probe('mixed', memberName).current()) &&
+            (!attrs.members.probe('mixin', memberName).current()) &&
             (!cfg.inheritance || (cfg.inheritance && !attrs.members.probe('override', memberName).current()))) {
                 throw new _Exception('InvalidOperation', `Member with this name is already defined. (${memberName})`); 
         }
@@ -988,7 +987,7 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
         // pick mixin being applied at this time
         if (cfg.mixins) {        
             if (mixin_being_applied !== null) {
-                _attr('mixed', mixin_being_applied);
+                _attr('mixin', mixin_being_applied._.name);
             }
         }
 
@@ -1029,6 +1028,18 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
         // finally hold the references for reflector
         def.members[memberName] = memberValue;
     };
+    const validateMember = (memberName, memberType) => {
+        // must exists check
+        if (typeof exposed_obj[memberName] === 'undefined' || modifiers.members.type(memberName) !== memberType) {
+            throw new _Exception('NotImplemented', `Interface member is not implemented. (${memberName})`); 
+        } else {
+            // pick interface being validated at this time
+            _attr('interface', interface_being_validated._.name);
+
+            // collect attributes and modifiers - validate applied attributes as per attribute configuration - throw when failed
+            attributesAndModifiers(def, memberName);
+        }
+    };    
     const addDisposable = (disposableType, data) => {
         obj._.disposables.push({type: disposableType, data: data});
     }
@@ -1099,6 +1110,14 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
     proxy = new Proxy({}, {
         get: (_obj, name) => { 
             if (name === 'noop') { return _noop; }
+            if (name === 'event') { // will help defining events like: this.myEvent = this.event(() => { });
+                let _fn = (fn) => {
+                    if (typeof fn !== 'function') { throw new _Exception.InvalidArgument('fn'); }
+                    fn.event = true;
+                    return fn;
+                };
+                return _fn;
+            }
             return obj[name]; 
         },
         set: (_obj, name, value) => {
@@ -1111,7 +1130,8 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
                     memberType = 'dispose'; 
                 } else {
                     if (typeof value === 'function') {
-                        if (_attr.has('event')) {
+                        if (value.event === true) {
+                            delete value.event;
                             memberType = 'event'; 
                         } else {
                             memberType = 'func'; 
@@ -1121,11 +1141,15 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
                     }
                 }
                 
-                // add member
-                addMember(name, memberType, value);
+                // add or validate member
+                if (interface_being_validated) {
+                    validateMember(name, memberType, value);
+                } else {
+                    addMember(name, memberType, value);
+                }
             } else {
                 // a function or event is being redefined or noop is being redefined
-                if (typeof value === 'function' || name === 'noop') { throw new _Exception('InvalidOperation', `Redefinition of members is not allowed. (${name})`); }
+                if (typeof value === 'function' || name === 'noop' || name === 'event') { throw new _Exception('InvalidOperation', `Redefinition of members is not allowed. (${name})`); }
 
                 // allow setting property values
                 obj[name] = value;
@@ -1151,9 +1175,6 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
 
     // clear any (by user's error left out) attributes, so that are not added by mistake elsewhere
     _attr.clear();
-
-    // building ends
-    isBuildingObj = false; 
 
     // move constructor and dispose out of main object
     if (params.isTopLevelInstance) { // so that till now, a normal override behavior can be applied to these functions as well
@@ -1230,11 +1251,15 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
         exposed_obj = Object.seal(exposed_obj);
     }
 
+    // building ends
+    isBuildingObj = false;     
+
     // return
     return exposed_obj;
 };
 const builder = (cfg) => {
     // process cfg
+    cfg.new = cfg.new || false;
     cfg.mixins = cfg.mixins || false;
     cfg.interfaces = cfg.interfaces || false;
     cfg.inheritance = cfg.inheritance || false;
@@ -1275,13 +1300,15 @@ const builder = (cfg) => {
     }
 
     // extract mixins and interfaces
-    for(let item of cfg.params.mixinsAndInterfaces) {
-       if (item._ && item._.type) {
-            switch (item._.type) {
-                case 'mixin': cfg.params.mixins.push(item); break;
-                case 'interface': cfg.params.interfaces.push(item); break;
+    if (cfg.params.mixinsAndInterfaces) {
+        for(let item of cfg.params.mixinsAndInterfaces) {
+            if (item._ && item._.type) {
+                switch (item._.type) {
+                    case 'mixin': cfg.params.mixins.push(item); break;
+                    case 'interface': cfg.params.interfaces.push(item); break;
+                }
             }
-       }
+        }
     }
     delete cfg.params.mixinsAndInterfaces;
 
@@ -1293,38 +1320,46 @@ const builder = (cfg) => {
     // top level definitions
     let _flagName = '___flag___';
 
+    // collect complete hierarchy defs while the type is building
+    cfg.dump = []; // TODO: Check what is heppening with this, not implemented yet, idea is to collect all hierarchy and made it available at Type level for reflector
+
     // base type definition
-    let _Object = function(_flag, _static, ...args) {
-        // define parameters and context
-        let params = {
-            _flagName: _flagName
-        };
-        if (typeof _flag !== 'undefined' && _flag === _flagName) { // inheritance in play
-            params.isNeedProtected = true;
-            params.isTopLevelInstance = false;
-            params.staticInterface = _static;
-            params.args = args;
-        } else {
-            params.isNeedProtected = false;
-            params.isTopLevelInstance = true;
-            params.staticInterface = _Object;
-            if (typeof _flag !== 'undefined') {
-                if (typeof _static !== 'undefined') {
-                    params.args = [_flag, _static].concat(args); // one set
-                } else {
-                    params.args = [_flag]; // no other args given
-                }
+    let _Object = null;
+    if (cfg.new) { // class, struct
+        _Object = function(_flag, _static, ...args) {
+            // define parameters and context
+            let params = {
+                _flagName: _flagName
+            };
+            if (typeof _flag !== 'undefined' && _flag === _flagName) { // inheritance in play
+                params.isNeedProtected = true;
+                params.isTopLevelInstance = false;
+                params.staticInterface = _static;
+                params.args = args;
             } else {
-                params.args = []; // no args
+                params.isNeedProtected = false;
+                params.isTopLevelInstance = true;
+                params.staticInterface = _Object;
+                if (typeof _flag !== 'undefined') {
+                    if (typeof _static !== 'undefined') {
+                        params.args = [_flag, _static].concat(args); // one set
+                    } else {
+                        params.args = [_flag]; // no other args given
+                    }
+                } else {
+                    params.args = []; // no args
+                }
             }
-        }
 
-        // base object
-        let _this = {};
+            // base object
+            let _this = {};
 
-        // build instance
-        return buildTypeInstance(cfg, _Object, params, _this);
-    };
+            // build instance
+            return buildTypeInstance(cfg, _Object, params, _this);
+        };
+    } else { // mixin, interface, enum
+        _Object = cfg.params.factory;
+    }
 
     // extend type itself
     _Object = extend(_Object, cfg.ex.type, false); // don't overwrite while adding type extensions, this means defaults override is allowed

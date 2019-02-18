@@ -1,24 +1,17 @@
-/**
- * @name Reflector
- * @description Reflection of flair types and objects.
- * @example
- *  Reflector(forTarget)
- * @params
- *  forTarget: object - object or type to reflect on
- */ 
-const _Reflector = function (forTarget) {
-    if (!forTarget || !(forTarget._ && forTarget._.type)) { throw new _Exception.InvalidArgument('forTarget'); }
-
+// Reflector
+flair.Reflector = function (forTarget) {
     // define
     const CommonTypeReflector = function(target) {
         this.getType = () => { return target._.type; };
-        this.getId = () => { return target._.id; };
         this.getName = () => { return target._.name || ''; };
         this.getNamespace = () => { 
-            return target._.namespace;
+            let _Namespace = target._.namespace;
+            if (_Namespace) { return new NamespaceReflector(_Namespace); }
+            return null; 
         };
         this.getAssembly = () => {
-            let _Assembly = _Assembly.get(target._.name);
+            let _Assembly = flair.Assembly.get(target._.name);
+            if (_Assembly) { return new AssemblyReflector(_Assembly); }
             return null;
         }
         this.getTarget = () => { return target; };
@@ -27,10 +20,11 @@ const _Reflector = function (forTarget) {
         this.isEnum = () => { return target._.type === 'enum'; };
         this.isStruct = () => { return target._.type === 'struct'; };
         this.isStructInstance = () => { return target._.type === 'sinstance'; };
+        this.isNamespace = () => { return target._.type === 'namespace'; };
+        this.isResource = () => { return target._.type === 'resource'; };
+        this.isAssembly = () => { return target._.type === 'assembly'; };
         this.isMixin = () => { return target._.type === 'mixin'; };
         this.isInterface = () => { return target._.type === 'interface'; };
-        this.getModifiers = () => { return target._.modifiers.type; }
-        this.getAttributes = () => { return target._.attrs.type; }
     };
     const CommonMemberReflector = function(type, target, name) {
         this.getType = () => { return 'member'; }
@@ -38,8 +32,6 @@ const _Reflector = function (forTarget) {
         this.getTarget = () => { return target; }
         this.getTargetType = () => { return target._.type; }
         this.getName = () => { return name; }
-        this.getModifiers = () => { return target._.modifiers.members; }
-        this.getAttributes = () => { return target._.attrs.members; }
     };
     const AttrReflector = function(Attr, name, args, target) {
         this.getType = () => { return 'attribute'; }
@@ -338,7 +330,6 @@ const _Reflector = function (forTarget) {
         return refl;              
     };    
     const ClassReflector = function(target) {
-        // NOTE: For now types cannot reflect on members, without instance being created, this needs to change
         let refl = new CommonTypeReflector(target);
         refl.getParent = () => { 
             if (target._.inherits !== null) {
@@ -374,9 +365,9 @@ const _Reflector = function (forTarget) {
         refl.isSingleton = () => { return target._.isSingleton(); };                       
         refl.isSingleInstanceCreated = () => { return target._.singleInstance() !== null; };
         refl.isSealed = () => { return target._.isSealed(); }
-        refl.isAbstract = () => { return target._.isAbstract(); }
-        refl.isStatic = () => { return target._.isStatic(); }
-        refl.isDeprecated = () => { return target._.isDeprecated(); }
+        refl.isDerivedFrom = (name) => { return target._.isDerivedFrom(name); }
+        refl.isMixed = (name) => { return target._.isMixed(name); }
+        refl.isImplements = (name) => { return target._.isImplements(name); }
         return refl;                
     };
     const EnumReflector = function(target) {
@@ -397,29 +388,90 @@ const _Reflector = function (forTarget) {
         refl.getValues = () => { return target._.values(); }
         return refl;
     };
+    const ResourceReflector = function(target) {
+        let refl = new CommonTypeReflector(target);
+        refl.getFile = () => { return target.file(); };
+        refl.getResType = () => { return target.type(); };
+        refl.getContent = () => { return target.get(); };
+        return refl;
+    };
     const StructReflector = function(target) {
         let refl = new CommonTypeReflector(target);
-        refl.getMembers = () => { 
-            let members = [];
-            for(let _memberName in target) {
-                if (target.hasOwnProperty(_memberName) && _memberName !== '_') {
-                    members.push(new CommonMemberReflector(target[_memberName].type, target, _memberName));
-                }
-            }
-            return members;             
-        };
-        refl.getMember = (name) => {
-            if (typeof target[name] === 'undefined') { throw `${name} is not defined.`; }
-            return new CommonMemberReflector(target[name].type, target, name);
-        };        
         return refl;
     };            
+    const NamespaceReflector = function(target) {
+        let refl = new CommonTypeReflector(target);
+        refl.getMembers = () => { 
+            let types = target.getTypes(),
+                members = [];
+            if (types) {
+                for(let type of types) {
+                    switch(type._.type) {
+                        case 'class': members.push(new ClassReflector(type)); break;
+                        case 'enum': members.push(new EnumReflector(type)); break;
+                        case 'struct': members.push(new StructReflector(type)); break;
+                        case 'mixin': members.push(new MixinReflector(type)); break;
+                        case 'interface': members.push(new InterfaceReflector(type)); break;                    
+                    }
+                }
+            }
+            return members;
+        };
+        refl.getMember = (qualifiedName) => {
+            let Type = target.getType(qualifiedName),
+                member = null;
+            if (Type) {
+                switch(Type._.type) {
+                    case 'class': member = new ClassReflector(Type); break;
+                    case 'enum': member = new EnumReflector(Type); break;
+                    case 'struct': member = new StructReflector(Type); break;
+                    case 'mixin': member = new MixinReflector(Type); break;
+                    case 'interface': member = new InterfaceReflector(Type); break;                    
+                }
+            }
+            return member;
+        };
+        refl.createInstance = (qualifiedName, ...args) => {
+            return target.createInstance(qualifiedName, ...args);
+        };
+        return refl;
+    };
+    const AssemblyReflector = function(target) {
+        let refl = new CommonTypeReflector(target);
+        refl.getTypes = () => { 
+            return target.types;
+        };
+        refl.getAssets = () => { 
+            return target.assets;
+        };
+        refl.getADO = () => { return target._.ado; }
+        refl.load = () => {
+            return target.load();
+        };
+        return refl;
+    };    
     const MixinReflector = function(target) {
-        let refl = new StructReflector(target);
+        let refl = new CommonTypeReflector(target);
         return refl;
     };
     const InterfaceReflector = function(target) {
-        let refl = new StructReflector(target);
+        let refl = new CommonTypeReflector(target),
+            getMembers = () => {
+                let members = [];
+                for(let _memberName in target) {
+                    if (target.hasOwnProperty(_memberName) && _memberName !== '_') {
+                        members.push(new CommonMemberReflector(target[_memberName].type, target, _memberName));
+                    }
+                }
+                return members;                     
+            };
+        refl.getMembers = () => { 
+            return getMembers();
+        }
+        refl.getMember = (name) => {
+            if (typeof target[name] === 'undefined') { throw `${name} is not defined.`; }
+            return new CommonMemberReflector(target[name].type, target, name);
+        };
         return refl;
     };
 
@@ -430,7 +482,10 @@ const _Reflector = function (forTarget) {
         case 'sinstance': ref = new StructInstanceReflector(forTarget); break;
         case 'class': ref = new ClassReflector(forTarget); break;
         case 'enum': ref = new EnumReflector(forTarget); break;
+        case 'resource': ref = new ResourceReflector(forTarget); break;
         case 'struct': ref = new StructReflector(forTarget); break;
+        case 'namespace': ref = new NamespaceReflector(forTarget); break;
+        case 'assembly': ref = new AssemblyReflector(forTarget); break;
         case 'mixin': ref = new MixinReflector(forTarget); break;
         case 'interface': ref = new InterfaceReflector(forTarget); break;
         default:
@@ -441,5 +496,5 @@ const _Reflector = function (forTarget) {
     return ref;
 };
 
-// attach to flair
-a2f('Reflector', _Reflector);
+// add to members list
+flair.members.push('Reflector');

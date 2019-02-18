@@ -75,8 +75,8 @@ _attr._ = Object.freeze({
         conditional: new _attrConfig('(class || struct || mixin) && (prop || func || event)'),
         noserialize: new _attrConfig('(class || struct || mixin) && prop'),
     
-        mixed: new _attrConfig('class && (prop || func || event)'),
-        event: new _attrConfig('(class || struct || mixin || interface) && func && !($inject || $async)')
+        mixin: new _attrConfig('class && (prop || func || event)'),
+        interface: new _attrConfig('class && (prop || func || event)')
     })
 });
 _attr.collect = () => {
