@@ -3,7 +3,7 @@
  * FlairJS
  * True Object Oriented JavaScript
  * Version 0.15.30
- * Mon, 18 Feb 2019 00:16:28 GMT
+ * Mon, 18 Feb 2019 01:33:13 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  * https://flairjs.com
@@ -64,7 +64,7 @@
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
         link: 'https://flairjs.com',
-        lupdate: new Date('Mon, 18 Feb 2019 00:16:28 GMT')
+        lupdate: new Date('Mon, 18 Feb 2019 01:33:13 GMT')
     });
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -578,7 +578,7 @@
         this.decorateEvent = this.noop;
     });
     
-    
+      // OK
     /**
      * @name getAttr
      * @description Gets the attributes for given object or Type.
@@ -829,143 +829,108 @@
         ns_types = {};
     });
       // OK
-    // Resource
-    // Resource(resName, resFile)
-    flair.Resource = (resName, resFile, data) => {
-        const b64EncodeUnicode = (str) => { // eslint-disable-line no-unused-vars
-            // first we use encodeURIComponent to get percent-encoded UTF-8,
-            // then we convert the percent encodings into raw bytes which
-            // can be fed into btoa.
-            return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
-                function toSolidBytes(match, p1) {
-                    return String.fromCharCode('0x' + p1);
-            }));
-        };
-        const b64DecodeUnicode = (str) => {
-            // Going backwards: from bytestream, to percent-encoding, to original string.
-            return decodeURIComponent(atob(str).split('').map(function(c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
-        };
-        
-        let resData = data; // data is base64 encoded string, added by build engine
-        let resType = resFile.substr(resFile.lastIndexOf('.') + 1).toLowerCase(),
-            textTypes = ['txt', 'xml', 'js', 'json', 'md', 'css', 'html', 'svg'];
-        
-        // decode
-        if (textTypes.indexOf(resType) !== -1) { // text
-            if (flair.options.env.isServer) {
-                let buff = new Buffer(resData).toString('base64');
-                resData = buff.toString('utf8');
-            } else { // client
-                resData = b64DecodeUnicode(resData); 
-            }
-        } else { // binary
-            if (flair.options.env.isServer) {
-                resData = new Buffer(resData).toString('base64');
-            } else { // client
-                // no change, leave it as is
-            }        
-        }
+    /**
+     * @name Resource
+     * @description Resource registration and locator functionality.
+     * @example
+     *  .register(name, locale, encodingType, file, data)               // - void
+     *  .get(name)                                                      // - resource object
+     * @params
+     *  name: string - qualified name of resource
+     *  locale: string - locale of the resource or empty, if no locale is associated
+     *  encodingType: string - type of encoding applied to resource data
+     *  file: string - resource file name and path
+     *  data: string - base 64 encoded (or binary) data of resource
+     *  typeName: string - qualified type name for which assembly object is needed
+     */ 
+    let resources_registry = {};
+    const _Resource = {
+        // register resource
+        register: (name, locale, encodingType, file, data) => {
+            if (resources_registry[name]) { throw new _Exception('AlreadyRegistered', 'Resource is already registered'); }
+            resources_registry[name] = new __Resource(name, locale, encodingType, file, data);
+        },
     
-        let _res = {
-            file: () => { return resFile; },
-            type: () => { return resType; },
-            get: () => { return resData; },
-            load: (...args) => {
-                if (flair.options.env.isClient) {
-                    if (!_res._.isLoaded) {
-                        _res._.isLoaded = true;
-                        if (['gif', 'jpeg', 'jpg', 'png'].indexOf(resType) !== -1) { // image types
-                            // args:    node
-                            let node = args[0];
-                            if (node) {
-                                let image = new Image();
-                                image.src = 'data:image/png;base64,' + data; // use base64 version itself
-                                node.appendChild(image);
-                                _res._.isLoaded = true;
-                            }
-                        } else { // css, js, html or others
-                            let css, js, node, position = null;
-                            switch(resType) {
-                                case 'css':     // args: ()
-                                    css = flair.options.env.global.document.createElement('style');
-                                    css.type = 'text/css';
-                                    css.name = resFile;
-                                    css.innerHTML = resData;
-                                    flair.options.env.global.document.head.appendChild(css);
-                                    break;
-                                case 'js':      // args: (callback)
-                                    js = flair.options.env.global.document.createElement('script');
-                                    js.type = 'text/javascript';
-                                    js.name = resFile;
-                                    js.src = resData;
-                                    if (typeof cb === 'function') {
-                                        js.onload = args[0]; // callback
-                                        js.onerror = () => { _res._.isLoaded = false; }
-                                    }
-                                    flair.options.env.global.document.head.appendChild(js);
-                                    break;           
-                                case 'html':    // args: (node, position)
-                                    // position can be: https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML
-                                    // if empty, it will replace node html
-                                    node = args[0];
-                                    position = args[1] || '';
-                                    if (node) {
-                                        if (position) {
-                                            node.innerHTML = resData;
-                                        } else {
-                                            node.insertAdjacentHTML(position, resData);
-                                        }
-                                    }
-                                    break;
-                                default:
-                                    // load not supported for all other types
-                                    break;
-                            }
-                        }
-                    }
+        // get registered resource
+        get: (name) => {
+            return resources_registry[name] || null;
+        }
+    };
+    
+    
+    _$$('sealed');
+    const __Resource = _Class('.Resource', function() { // registered at root namespace (can be get as: getType('Resource'))
+         this.construct = (name, locale, encodingType, file, data) => {
+            let resData = data; // data is base64 encoded string, added by build engine
+            let resType = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
+    
+            // decode
+            if (encodingType.indexOf('utf8;') !== -1) {
+                if (isServer) {
+                    let buff = new Buffer(resData).toString('base64');
+                    resData = buff.toString('utf8');
+                } else { // client
+                    resData = b64DecodeUnicode(resData); 
                 }
-                return _res._.isLoaded;
+            } else { // binary
+                if (isServer) {
+                    resData = new Buffer(resData).toString('base64');
+                } else { // client
+                    // no change, leave it as is
+                }
             }
+    
+            // store
+            this.locale = locale;
+            this.encodingType = encodingType;
+            this.file = file;
+            this.type = resType;
+            this.data = resData;
         };
-        _res._ = {
-            name: resName,
-            type: 'resource',
-            namespace: null,
-            file: resFile,
-            isLoaded: false,
-            data: () => { return resData; }
-        };
     
-        // set json 
-        _res.JSON = null;
-        if (_res.type() === 'json') {
-            try {
-                _res.JSON = Object.freeze(JSON.parse(resData));
-            } catch (e) {
-                // ignore
-            }
-        }
+       /** 
+        *  @name name: string - name of the resource
+        */
+        _$$('readonly');
+        this.name = '';
     
-        // register type with namespace
-        flair.Namespace(_res);
-    
-        // return
-        return Object.freeze(_res);
-    };
-    flair.Resource.get = (resName) => {
-        let resObj = flair.Namespace.getType(resName);
-        if (resObj._ && resObj._.type === 'resource') {
-           return resObj.get();
-        }
-        return null;
-    };
+       /** 
+        *  @name locale: string - locale of the resource
+        */
+       _$$('readonly');
+       this.locale = '';
     
     
-    // TODO: Update build engine, as per new definitions defined here - once done
-    // let dump = `;flair.Resource("${resName}", "${resFile}", "${content}");`;
-    // appendToFile(asm_min, dump);
+       /** 
+        *  @name locale: string - locale of the resource
+        */
+       _$$('readonly');
+       this.locale = '';   
+    
+       /** 
+        *  @name encodingType: string - resource encoding type
+        */
+        _$$('readonly');
+        this.encodingType = '';
+       
+       /** 
+        *  @name type: string - resource type
+        */
+        _$$('readonly');
+        this.type = '';
+    
+       /** 
+        *  @name data: string - resource data
+        */
+       _$$('readonly');
+       this.data = '';
+    });
+    
+    // attach to flair
+    a2f('Resource', _Resource, () => {
+        resources_registry = {};
+    });
+    
 
     /**
      * @name Container
@@ -3172,6 +3137,21 @@
         } else {
             return extract(obj);
         }
+    };
+    const b64EncodeUnicode = (str) => { // eslint-disable-line no-unused-vars
+        // first we use encodeURIComponent to get percent-encoded UTF-8,
+        // then we convert the percent encodings into raw bytes which
+        // can be fed into btoa.
+        return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+            function toSolidBytes(match, p1) {
+                return String.fromCharCode('0x' + p1);
+        }));
+    };
+    const b64DecodeUnicode = (str) => {
+        // Going backwards: from bytestream, to percent-encoding, to original string.
+        return decodeURIComponent(atob(str).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
     };   // OK
 
     /**

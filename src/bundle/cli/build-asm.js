@@ -271,23 +271,28 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
     const appendResource = (ado, asm, asm_min, resFile) => {
         // each resource name is the qualified name of the resource following by .res.<ext>
         // so for example, a resource flair.abc.res.json can be placed anywhere
-        // and it will be accessible as a normal type via namespaced get calls
+        // and it will be accessible as a normal type via getResource(name) calls
         let ext = path.extname(resFile).toLowerCase(),
             resName = '',
-            content = '';
+            content = '',
+            encodingType = '',
+            resLocale = ''; // for now it is empty - means undefined // TODO: sometime later consider passing locale of the resource
         resName = path.basename(resFile);
         resName = resName.substr(0, resName.indexOf('.res'));
 
         // read file
         if (utf8EncResFileTypes.indexOf(ext) === -1) { // utf8 encoding resFileTypes must contain extension names with a .
             content = fsx.readFileSync(resFile, 'utf8');
+            encodingType = 'utf8;';
         } else { // no encoding
             content = fsx.readFileSync(resFile);
+            encodingType = '';
         }
         content = new Buffer(content).toString('base64');
+        encodingType += 'base64;';
 
         // add to minified
-        let dump = `;flair.Resource("${resName}", "${resFile}", "${content}");`;
+        let dump = `;flair.Resource.register("${resName}", "${resLocale}", "${encodingType}", "${resFile}", "${content}");`;
         appendToFile(asm_min, dump);
 
         // add to standard

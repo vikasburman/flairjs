@@ -87,7 +87,7 @@
     <!-- inject: ./bundle/getType.js -->    // OK
     <!-- inject: ./bundle/assembly.js -->   // OK
     <!-- inject: ./bundle/namespace.js -->  // OK
-    <!-- inject: ./bundle/resource.js -->
+    <!-- inject: ./bundle/resource.js -->   // OK
 
     <!-- inject: ./di/container.js -->  // OK
     <!-- inject: ./di/include.js -->    // OK
