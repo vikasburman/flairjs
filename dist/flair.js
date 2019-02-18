@@ -3,7 +3,7 @@
  * FlairJS
  * True Object Oriented JavaScript
  * Version 0.15.30
- * Mon, 18 Feb 2019 04:51:40 GMT
+ * Mon, 18 Feb 2019 21:37:05 GMT
  * (c) 2017-2019 Vikas Burman
  * MIT
  * https://flairjs.com
@@ -64,7 +64,7 @@
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
         link: 'https://flairjs.com',
-        lupdate: new Date('Mon, 18 Feb 2019 04:51:40 GMT')
+        lupdate: new Date('Mon, 18 Feb 2019 21:37:05 GMT')
     });
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -76,509 +76,289 @@
 
     // members
     /**
-     * @name Aspect
-     * @description Aspect base class.
-     */
-    _$$('abstract');
-    _Class('.Aspect', function() { // registered at root namespace (can be get as: getType('Aspect'))
-        /** 
-         * @name before
-         * @description Before advise
-         * @example
-         *  before(ctx)
-         * @arguments
-         * ctx: object - context object that is shared across all weavings
-         *  typeName()      - gives the name of the type
-         *  funcName()      - gives the name of the function
-         *  error(err)      - store new error to context, or just call error() to get last error
-         *  result(value)   - store new result to context, or just call result() to get last stored result
-         *  args()          - get original args passed to main call
-         *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
-         */  
-        _$$('virtual');
-        this.before = this.noop;
-    
-        /** 
-         * @name around
-         * @description Around advise
-         * @example
-         *  around(ctx, fn)
-         * @arguments
-         * ctx: object - context object that is shared across all weavings
-         *  typeName()      - gives the name of the type
-         *  funcName()      - gives the name of the function
-         *  error(err)      - store new error to context, or just call error() to get last error
-         *  result(value)   - store new result to context, or just call result() to get last stored result
-         *  args()          - get original args passed to main call
-         *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
-         * fn: function - function which is wrapped, it should be called in between pre and post actions
-         */  
-        _$$('virtual');
-        this.around = this.noop;
-    
-        /** 
-         * @name after
-         * @description After advise
-         * @example
-         *  after(ctx)
-         * @arguments
-         * ctx: object - context object that is shared across all weavings
-         *  typeName()      - gives the name of the type
-         *  funcName()      - gives the name of the function
-         *  error(err)      - store new error to context, or just call error() to get last error
-         *  result(value)   - store new result to context, or just call result() to get last stored result
-         *  args()          - get original args passed to main call
-         *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
-         */  
-        _$$('virtual');
-        this.after = this.noop;
-    });
-        // OK
-    /**
-     * @name Aspects
-     * @description Aspect orientation support.
+     * @name noop
+     * @description No Operation function
      * @example
-     *  .register(pointcut, Aspect)             // - void
+     *  noop()
      * @params
-     *  pointcut: string - pointcut identifier string as -> [namespace.]class[:func]
-     *      namespace/class/func: use wildcard characters ? or * to build the pointcut identifier
-     *     
-     *      Examples:
-     *          abc                 - on all functions of all classes named abc in root namespace (without any namespace)
-     *          *.abc               - on all functions of all classes named abc in all namespaces
-     *          xyz.*               - on all functions of all classes in xyz namespace
-     *          xyz.abc             - on all functions of class abc under xyz namespace
-     *          xyz.abc:*           - on all functions of class abc under xyz namespace
-     *          xyz.abc:f1          - on func f1 of class abc under xyz namespace
-     *          xyz.abc:f?test      - on all funcs that are named like f1test, f2test, f3test, etc. in class abc under xyz namespace
-     *          xyz.xx*.abc         - on functions of all classes names abc under namespaces where pattern matches xyz.xx* (e.g., xyz.xx1 and xyz.xx2)
-     *          *xyx.xx*.abc        - on functions of all classes names abc under namespaces where pattern matches *xyz.xx* (e.g., 1xyz.xx1 and 2xyz.xx1)
-     *     
-     * Aspect: type - flair Aspect type
+     * @returns
      */ 
-    const allAspects = [];
-    const _Aspects = {
-        // register Aspect against given pointcut definition
-        register: (pointcut, Aspect) => {
-            if (typeof pointcut !== 'string') { throw new _Exception.InvalidArgument('pointcut'); }
-            if (!_is(Aspect, 'Aspect')) { throw new _Exception.InvalidArgument('Aspect'); }
-            
-            // add new entry
-            let pc = pointcut,
-                __ns = '',
-                __class = '',
-                __func = '',
-                __identifier = '',
-                items = null;
+    const _noop = () => {};
     
-            if (pc.indexOf(':') !== -1) { // extract func
-                items = pc.split(':');
-                pc = items[0].trim();
-                __func = items[1].trim() || '*';
-            }
-    
-            if (pc.indexOf('.') !== -1) { // extract class and namespace
-                __ns = pc.substr(0, pc.lastIndexOf('.'));
-                __class = pc.substr(pc.lastIndexOf('.') + 1);
-            } else {
-                __ns = ''; // no namespace
-                __class = pc;
-            }    
-    
-            // build regex
-            __identifier = __ns + '\/' +__class + ':' + __func; // eslint-disable-line no-useless-escape
-            __identifier = replaceAll(__identifier, '.', '[.]');    // . -> [.]
-            __identifier = replaceAll(__identifier, '?', '.');      // ? -> .
-            __identifier = replaceAll(__identifier, '*', '.*');     // * -> .*
-    
-            // register
-            allAspects.push({rex: new RegExp(__identifier), Aspect: Aspect});
-        }
+    // attach to flair
+    a2f('noop', _noop);
+         // OK
+    const guid = () => {
+        return '_xxxxxxxx_xxxx_4xxx_yxxx_xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
     };
-    const _get_Aspects = (typeName, funcName) => {
-        // get parts
-        let funcAspects = [],
-            __ns = '',
-            __class = '',
-            __func = funcName.trim(),
-            __identifier = ''
-    
-        if (typeName.indexOf('.') !== -1) {
-            __ns = typeName.substr(0, typeName.lastIndexOf('.')).trim();
-            __class = typeName.substr(typeName.lastIndexOf('.') + 1).trim(); 
-        } else {
-            __ns = ''; // no namespace
-            __class = typeName.trim();
+    const which = (def, isFile) => {
+        if (isFile) { // debug/prod specific decision
+            // pick minified or dev version
+            if (def.indexOf('{.min}') !== -1) {
+                if (flair.options.env.isProd) {
+                    return def.replace('{.min}', '.min'); // a{.min}.js => a.min.js
+                } else {
+                    return def.replace('{.min}', ''); // a{.min}.js => a.js
+                }
+            }
+        } else { // server/client specific decision
+            if (def.indexOf('|') !== -1) { 
+                let items = def.split('|'),
+                    item = '';
+                if (flair.options.env.isServer) {
+                    item = items[0].trim();
+                } else {
+                    item = items[1].trim();
+                }
+                if (item === 'x') { item = ''; } // special case to explicitely mark absence of a type
+                return item;
+            }            
         }
-        __identifier = __ns + '/' + __class + ':' + __func;
-    
-        allAspects.forEach(item => {
-            if (item.rex.test(__identifier)) { 
-                if (funcAspects.indexOf(item.Aspect) === -1) {
-                    funcAspects.push(item.Aspect);
+        return def; // as is
+    };
+    const isArrow = (fn) => {
+        return (!(fn).hasOwnProperty('prototype'));
+    };
+    const findIndexByProp = (arr, propName, propValue) => {
+        return arr.findIndex((item) => {
+            return (item[propName] === propValue ? true : false);
+        });
+    };
+    const findItemByProp = (arr, propName, propValue) => {
+        let idx = arr.findIndex((item) => {
+            return (item[propName] === propValue ? true : false);
+        });
+        if (idx !== -1) { return arr[idx]; }
+        return null;
+    };
+    const splitAndTrim = (str) => {
+        return str.split(',').map((item) => { return item.trim(); });
+    };
+    const escapeRegExp = (string) => {
+        return string.replace(/([.*+?\^=!:${}()|\[\]\/\\])/g, '\\$1'); // eslint-disable-line no-useless-escape
+    };
+    const replaceAll = (string, find, replace) => {
+        return string.replace(new RegExp(escapeRegExp(find), 'g'), replace);
+    };
+    const shallowCopy = (target, source, overwrite, except) => {
+        if (!except) { except = []; }
+        for(let item in source) {
+            if (source.hasOwnProperty(item) && except.indexOf(item) === -1) { 
+                if (!overwrite) { if (item in target) { continue; }}
+                target[item] = source[item];
+            }
+        }
+        return target;
+    };
+    const loadFile = (file) => {
+        return new Promise((resolve, reject) => {
+            let ext = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
+            if (isServer) {
+                try {
+                    let httpOrhttps = null,
+                        body = '';
+                    if (file.startsWith('https')) {
+                        httpOrhttps = require('https');
+                    } else {
+                        httpOrhttps = require('http'); // for urls where it is not defined
+                    }
+                    httpOrhttps.get(file, (resp) => {
+                        resp.on('data', (chunk) => { body += chunk; });
+                        resp.on('end', () => { 
+                            if (ext === 'json') { 
+                                resolve(JSON.parse(body));
+                            } else {
+                                resolve(body);
+                            }
+                        });
+                    }).on('error', reject);
+                } catch(e) {
+                    reject(e);
+                }
+            } else { // client
+                fetch(file).then((response) => {
+                    if (response.status !== 200) {
+                        reject(response.status);
+                    } else {
+                        if (ext === 'json') { // special case of JSON
+                            response.json().then(resolve).catch(reject);
+                        } else {
+                            resolve(response.text());
+                        }
+                    }
+                }).catch(reject);
+            }
+        });
+    };
+    const loadModule = (module) => {
+        return new Promise((resolve, reject) => {
+            if (isServer) {
+                try {
+                    resolve(require(module));
+                } catch(e) {
+                    reject(e);
+                }
+            } else { // client
+                let ext = module.substr(module.lastIndexOf('.') + 1).toLowerCase();
+                try {
+                    if (typeof require !== 'undefined') { // if requirejs type library having require() is available to load modules / files on client
+                        require([module], resolve, reject);
+                    } else { // load it as file on browser
+                        let js = flair.options.env.global.document.createElement('script');
+                        if (ext === 'mjs') {
+                            js.type = 'module';
+                        } else {
+                            js.type = 'text/javascript';
+                        }
+                        js.name = module;
+                        js.src = module;
+                        js.onload = resolve;    // TODO: Check how we can pass the loaded 'exported' object of module to this resolve.
+                        js.onerror = reject;
+                        flair.options.env.global.document.head.appendChild(js);
+                    }
+                } catch(e) {
+                    reject(e);
                 }
             }
         });
-    
-        // return
-        return funcAspects;
     };
-    const _attach_Aspects = (fn, typeName, funcName, funcAspects) => {
-        let before = [],
-            after = [],
-            around = [],
-            instance = null;
+    const sieve = (obj, props, isFreeze, add) => {
+        let _props = props ? splitAndTrim(props) : Object.keys(obj); // if props are not give, pick all
+        const extract = (_obj) => {
+            let result = {};
+            if (_props.length > 0) { // copy defined
+                for(let prop of _props) { result[prop] = _obj[prop]; } 
+            } else { // copy all
+                for(let prop in obj) { 
+                    if (obj.hasOwnProperty(prop)) { result[prop] = obj[prop]; }
+                }            
+            }
+            if (add) { for(let prop in add) { result[prop] = add[prop]; } }
+            if (isFreeze) { result = Object.freeze(result); }
+            return result;
+        };
+        if (Array.isArray(obj)) {
+            let result = [];
+            for(let item of obj) { result.push(extract(item)); }
+            return result;
+        } else {
+            return extract(obj);
+        }
+    };
+    const b64EncodeUnicode = (str) => { // eslint-disable-line no-unused-vars
+        // first we use encodeURIComponent to get percent-encoded UTF-8,
+        // then we convert the percent encodings into raw bytes which
+        // can be fed into btoa.
+        return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+            function toSolidBytes(match, p1) {
+                return String.fromCharCode('0x' + p1);
+        }));
+    };
+    const b64DecodeUnicode = (str) => {
+        // Going backwards: from bytestream, to percent-encoding, to original string.
+        return decodeURIComponent(atob(str).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+    };   // OK
     
-        // collect all advices
-        for(let funcAspect of funcAspects) {
-            instance = new funcAspect();
-            if (instance.before !== _noop) { before.push(instance.before); }
-            if (instance.around !== _noop) { around.push(instance.around); }
-            if (instance.after !== _noop) { after.push(instance.after); }
+    /**
+     * @name Exception
+     * @description Lightweight Exception class that extends Error object and serves as base of all exceptions
+     * @example
+     *  Exception()
+     *  Exception(type)
+     *  Exception(error)
+     *  Exception(type, message)
+     *  Exception(type, error)
+     *  Exception(type, message, error)
+     * @params
+     *  type: string - error name or type
+     *  message: string - error message
+     *  error: object - inner error or exception object
+     * @constructs Exception object
+     */  
+    const _Exception = function(arg1, arg2, arg3) {
+        let _this = Error();
+        switch(typeof arg1) {
+            case 'string':
+                _this.name = arg1;
+                switch(typeof arg2) {
+                    case 'string': 
+                        _this.message = arg2;
+                        _this.error = (typeof arg3 === 'object' ? arg3 : null);
+                        break;
+                    case 'object': 
+                        _this.message = arg2.message || '';
+                        _this.error = arg2;
+                        break;
+                }
+                break;
+            case 'object':
+                _this.name = arg1.name || 'Unknown';
+                _this.message = arg1.message || '';
+                _this.error = arg1;
+                break;
         }
     
-        // around weaving
-        if (around.length > 0) { around.reverse(); }
+        _this.name =  _this.name || 'Undefined';
+        if (!_this.name.endsWith('Exception')) { _this.name += 'Exception'; }
     
-        // weaved function
-        let weavedFn = function(...args) {
-            let error = null,
-                result = null,
-                ctx = {
-                    typeName: () => { return typeName; },
-                    funcName: () => { return funcName; },
-                    error: (err) => { if (err) { error = err; } return error;  },
-                    result: (value) => { if (typeof value !== 'undefined') { result = value; } return result; },
-                    args: () => { return args; },
-                    data: {}
-                };
-            
-            // run before functions
-            for(let beforeFn of before) {
-                try {
-                    beforeFn(ctx);
-                } catch (err) {
-                    error = err;
-                }
-            }
-    
-            // after functions executor
-            const runAfterFn = (_ctx) =>{
-                for(let afterFn of after) {
-                    try {
-                        afterFn(_ctx);
-                    } catch (err) {
-                        ctx.error(err);
-                    }
-                }
-            };
-    
-            // run around func
-            let newFn = fn,
-                _result = null;
-            for(let aroundFn of around) { // build a nested function call having each wrapper calling an inner function wrapped inside advices' functionality
-                newFn = aroundFn(ctx, newFn);
-            }                    
-            try {
-                _result = newFn(...args);
-                if (_result && typeof _result.then === 'function') { // async function
-                    ctx.result(new Promise((__resolve, __reject) => {
-                        _result.then((value) => {
-                            ctx.result(value);
-                            runAfterFn(ctx);
-                            __resolve(ctx.result());
-                        }).catch((err) => {
-                            ctx.error(err);
-                            runAfterFn(ctx);
-                            __reject(ctx.error());
-                        });
-                    }));
-                } else {
-                    ctx.result(_result);
-                    runAfterFn(ctx);
-                }
-            } catch (err) {
-                ctx.error(err);
-            }
-    
-            // return
-            return ctx.result();
-        };
-    
-        // done
-        return weavedFn;
+        // return
+        return Object.freeze(_this);
     };
+    
+    // all inbuilt exceptions
+    _Exception.InvalidArgument = (name) => { return new _Exception('InvalidArgument', `Argument type is invalid. (${name})`); }
     
     // attach to flair
-    a2f('Aspects', _Aspects, () => {
-        allAspects.length = 0;
-    });
+    a2f('Exception', _Exception);
        // OK
-
-    /**
-     * @name attr / $$
-     * @description Decorator function to apply attributes on type and member definitions
-     * @example
-     *  attr(name) OR $$(name)
-     *  attr(name, ...args) OR $$(name, ...args)
-     * @params
-     *  attrName: string/type - Name of the attribute, it can be an internal attribute or namespaced attribute name
-     *                          It can also be the Attribute flair type itself
-     *  args: any - Any arguments that may be needed by attribute
-     * @returns void
-     */ 
-    const _$$ = (name, ...args) => {
-        if (!name || ['string', 'class'].indexOf(_typeOf(name) === -1)) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
-        if (name && typeof name !== 'string' && !_isDerivedFrom(name, 'Attribute')) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+    const Dispatcher = function() {
+        let events = {};
     
-        let AttrType = null,
-            attrInstance = null,
-            cfg = null;
-        if (typeof name === 'string') {
-            cfg = _attr._.inbuilt[name] || null;
-            if (!cfg) { // not an inbuilt attr
-                AttrType = _getType(name);
-                if (!AttrType) { throw new _Exception('NotFound', `Attribute is not found. (${name})`); }
-                name = AttrType._.name;
+        // add event listener
+        this.add = (event, handler) => {
+            if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (event)'); }
+            if (typeof handler !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (handler)'); }
+            if (!events[event]) { events[name] = []; }
+            events[name].push(handler);
+        };
+    
+        // remove event listener
+        this.remove = (event, handler) => {
+            if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (event)'); }
+            if (typeof handler !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (handler)'); }
+            if (events[event]) {
+                let idx = events[event].indexOf(handler);
+                if (idx !== -1) { events[event].splice(idx, 1); }
             }
-        } else {
-            AttrType = name; // the actual Attribute type
-            name = AttrType._.name;
-        }
-    
-        // duplicate check
-        if (findIndexByProp(_attr._.bucket, 'name', name) !== -1) { throw new _Exception('Duplicate', `Duplicate attributes are not allowed. (${name})`); }
-    
-        // custom attribute instance
-        if (AttrType) {
-            attrInstance = new AttrType(...args);
-            cfg = new _attrConfig(attrInstance.constraints);
-        }
-    
-        // store
-        _attr._.bucket.push({name: name, cfg: cfg, isCustom: (attrInstance !== null), attr: attrInstance, args: args});
-    };
-    const _attr = (name, ...args) => {
-        return _$$(name, ...args);
-    };
-    _attr._ = Object.freeze({
-        bucket: [],
-        inbuilt: Object.freeze({ 
-            static: new _attrConfig(true, '((class || struct) && !$abstract) || (((class || struct) && (prop || func)) && !($abstract || $virtual || $override))'),
-        
-            abstract: new _attrConfig(true, '((class || struct) && !$sealed && !$static) || (((class || struct) && (prop || func || event)) && !($override || $sealed || $static))'),
-            virtual: new _attrConfig(true, '(class || struct) && (prop || func || construct || dispose || event) && !($abstract || $override || $sealed || $static)'),
-            override: new _attrConfig(true, '(class || struct) && (prop || func || construct || dispose || event) && ((@virtual || @abstract) && !(virtual || abstract)) && !($sealed || $static))'),
-            sealed: new _attrConfig(true, '(class || ((class && (prop || func || event)) && override)'), 
-        
-            private: new _attrConfig(true, '(class || struct) && (prop || func || event) && !($protected || @private || $static)'),
-            protected: new _attrConfig(true, '(class || struct) && (prop || func || event) && !($private|| $static)'),
-            readonly: new _attrConfig(true, '(class || struct) && prop && !abstract'),
-            async: new _attrConfig(true, '(class || struct) && func'),
-        
-            enumerate: new _attrConfig('(class || struct) && prop || func || event'),
-            dispose: new _attrConfig('class && prop'),
-            post: new _attrConfig('(class || struct || mixin) && event'),
-            on: new _attrConfig('class && func && !(event || $async || $args || $inject || $static)'),
-            timer: new _attrConfig('class && func && !(event || $async || $args || $inject || @timer || $static)'),
-            type: new _attrConfig('(class || struct || mixin) && prop'),
-            args: new _attrConfig('(class || struct || mixin) && (func || construct) && !$on'),
-            inject: new _attrConfig('class && (prop || func || construct) && !(static || session || state)'),
-            singleton: new _attrConfig('(class && !(prop || func || event) && !($abstract || $static)'),
-            serialize: new _attrConfig('((class || struct) || ((class || struct) && prop)) && !($abstract || $static)'),
-            deprecate: new _attrConfig('!construct && !dispose'),
-            session: new _attrConfig('(class && prop) && !($static || $state || $readonly || $abstract || $virtual)'),
-            state: new _attrConfig('(class && prop) && !($static || $session || $readonly || $abstract || $virtual)'),
-            conditional: new _attrConfig('(class || struct || mixin) && (prop || func || event)'),
-            noserialize: new _attrConfig('(class || struct || mixin) && prop'),
-        
-            mixin: new _attrConfig('class && (prop || func || event)'),
-            interface: new _attrConfig('class && (prop || func || event)')
-        })
-    });
-    _attr.collect = () => {
-        let attrs = _attr._.bucket.slice();
-        _attr.clear();
-        return attrs;
-    }
-    _attr.has = (name) => {
-        return (_attr._.bucket.findIndex(item => item.name === name) !== -1);
-    };
-    _attr.clear = () => {
-        _attr._.bucket.length = 0; // remove all
-    };
-    
-    /**
-     * @name attr.Config
-     * @description Attribute definition configuration
-     * @example
-     *  attr(constraints)
-     *  attr(isModifier, constraints)
-     * @params
-     *  isModifier: boolean - if this is actually a modifier
-     *  constraints: string - An expression that defined the constraints of applying this attribute 
-     *                        using NAMES, PREFIXES, SUFFIXES and logical Javascript operator
-     * 
-     *                  NAMES can be: 
-     *                      type names: class, struct, enum, interface, mixin, resource
-     *                      type member names: prop, func, construct, dispose, event
-     *                      inbuilt modifier names: static, abstract, sealed, virtual, override, private, protected, readonly, async, etc.
-     *                      inbuilt attribute names: promise, singleton, serialize, deprecate, session, state, conditional, noserialize, etc.
-     *                      custom attribute names: any registered custom attribute name
-     *                      type names itself: e.g., Assembly, Attribute, etc. (any registered type name is fine)
-     *                          SUFFIX: A typename must have a suffix (^) e.g., Assembly^, Attribute^, etc. Otherwise this name will be treated as custom attribute name
-     *                  
-     *                  PREFIXES can be:
-     *                      No Prefix: means it must match or be present at the level where it is being defined
-     *                      @: means it must be inherited from or present at up in hierarchy chain
-     *                      $: means it either must be present at the level where it is being defined or must be present up in hierarchy chain
-     *                  <name> 
-     *                  @<name>
-     *                  $<name>
-     * 
-     *                  BOOLEAN Not (!) can also be used to negate:
-     *                  !<name>
-     *                  !@<name>
-     *                  !$<name>
-     *                  
-     *                  NOTE: Constraints are processed as logical boolean expressions and 
-     *                        can be grouped, ANDed or ORed as:
-     * 
-     *                        AND: <name1> && <name2> && ...
-     *                        OR: <name1> || <name2>
-     *                        GROUPING: ((<name1> || <name2>) && (<name1> || <name2>))
-     *                                  (((<name1> || <name2>) && (<name1> || <name2>)) || <name3>)
-     * 
-     * 
-     * @constructs Constructs attribute configuration object
-     */ 
-    const _attrConfig = function(isModifier, constraints) {
-        if (typeof isModifier === 'string') {
-            constraints = isModifier;
-            isModifier = false;
-        }
-        if (typeof constraints !== 'string') { throw new _Exception.InvalidArgument('constraints'); }
-    
-    
-        // config object
-        let _this = {
-            isModifier: isModifier,
-            constraints: constraints
         };
     
-        // return
-        return _this;
-    };
-    
-    // attach to flair (NOTE: _attr is for internal use only, so collect/clear etc. are not exposed out)
-    a2f('attr', _$$);
-    a2f('$$', _$$);
-       // OK
-    /**
-     * @name Attribute
-     * @description Attribute base class.
-     */
-    _$$('abstract');
-    _Class('.Attribute', function() { // registered at root namespace (can be get as: getType('Attribute'))
-        this.construct = (args) => {
-            this.args = args;
+        // dispatch event
+        this.dispatch = (event, args) => {
+            if (events[event]) {
+                events[event].forEach(handler => {
+                    setTimeout(() => { handler({ name: event, args: args }); }, 0);
+                });
+            }
         };
     
-       /** 
-        *  @name args: array - arguments as defined where attribute is applied e.g., ('text', 012, false, Reference)
-        */
-        _$$('readonly');
-        this.args = [];
+        // get number of attached listeners
+        this.count = (event) => {
+            return (events[event] ? events[event].length : 0);
+        };
     
-       /** 
-        *  @name constraints: string - An expression that defined the constraints of applying this attribute 
-        *                     using NAMES, PREFIXES, SUFFIXES and logical Javascript operator
-        * 
-        *                  NAMES can be: 
-        *                      type names: class, struct, enum, interface, mixin
-        *                      type member names: prop, func, construct, dispose, event
-        *                      inbuilt modifier names: static, abstract, sealed, virtual, override, private, protected, readonly, async, etc.
-        *                      inbuilt attribute names: promise, singleton, serialize, deprecate, session, state, conditional, noserialize, etc.
-        *                      custom attribute names: any registered custom attribute name
-        *                      type names itself: e.g., Aspect, Attribute, etc. (any registered type name is fine)
-        *                          SUFFIX: A typename must have a suffix (^) e.g., Aspect^, Attribute^, etc. Otherwise this name will be treated as custom attribute name
-        *                  
-        *                  PREFIXES can be:
-        *                      No Prefix: means it must match or be present at the level where it is being defined
-        *                      @: means it must be inherited from or present at up in hierarchy chain
-        *                      $: means it either must ne present at the level where it is being defined or must be present up in hierarchy chain
-        *                  <name> 
-        *                  @<name>
-        *                  $<name>
-        * 
-        *                  BOOLEAN Not (!) can also be used to negate:
-        *                  !<name>
-        *                  !@<name>
-        *                  !$<name>
-        *                  
-        *                  NOTE: Constraints are processed as logical boolean expressions and 
-        *                        can be grouped, ANDed or ORed as:
-        * 
-        *                        AND: <name1> && <name2> && ...
-        *                        OR: <name1> || <name2>
-        *                        GROUPING: ((<name1> || <name2>) && (<name1> || <name2>))
-        *                                  (((<name1> || <name2>) && (<name1> || <name2>)) || <name3>)
-        * 
-        **/
-        this.constraints = '';
+        // clear all handlers for all events associated with this dispatcher
+        this.clear = () => {
+            events = {};
+        };
+    };
     
-        /** 
-         * @name decorateProperty
-         * @description Property decorator
-         * @example
-         *  decorateProperty(typeName, memberName, member)
-         * @arguments
-         *  typeName: string - typeName
-         *  memberName: string - member name
-         *  member - object - having get: getter function and set: setter function
-         *          both getter and setter can be applied attribute functionality on
-         * @returns
-         *  object - having decorated { get: fn, set: fn }
-         *           Note: decorated get must call member's get
-         *                 decorated set must accept value argument and pass it to member's set with or without processing
-         */  
-        _$$('virtual');
-        this.decorateProperty = this.noop;
-    
-        /** 
-         * @name decorateFunction
-         * @description Function decorator
-         * @example
-         *  decorateFunction(typeName, memberName, member)
-         * @arguments
-         *  typeName: string - typeName
-         *  memberName: string - member name
-         *  member - function - function to decorate
-         * @returns
-         *  function - decorated function
-         *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
-         */  
-        _$$('virtual');
-        this.decorateFunction = this.noop;    
-    
-        /** 
-         * @name decorateEvent
-         * @description Event decorator
-         * @example
-         *  decorateEvent(typeName, memberName, member)
-         * @arguments
-         *  typeName: string - typeName
-         *  memberName: string - member name
-         *  member - function - event argument processor function
-         * @returns
-         *  function - decorated function
-         *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
-         */  
-        _$$('virtual');
-        this.decorateEvent = this.noop;
-    });
-    
-      // OK
+        // OK
+
     /**
      * @name getAttr
      * @description Gets the attributes for given object or Type.
@@ -617,21 +397,6 @@
     
     // attach to flair
     a2f('getAttr', _getAttr);
-        // OK
-
-    /**
-     * @name cli
-     * @description Command Line Interface setup for server use
-     * @example
-     *  cli.build(options, cb)
-     */
-    const _cli = {
-        build: (isServer ? require('./flair.build.js') : null)
-    };
-    
-    // attach to flair
-    a2f('cli', _cli);
-    
         // OK
     /**
      * @name getAssembly
@@ -687,364 +452,298 @@
     a2f('getType', _getType);
         // OK
     /**
-     * @name Assembly
-     * @description Assembly registration and locator functionality.
+     * @name typeOf
+     * @description Finds the type of given object in flair type system
      * @example
-     *  .register(...ados)          // - void
-     *  .get(typeName)              // - assembly object or null
-     *  .all()                      // - array of all registered assemblies
+     *  typeOf(obj)
      * @params
-     *  ado: object - An ADO is an object that defines assembly definition as:
-     *      name: string - name
-     *      file: string - file name and path
-     *      desc: string - description
-     *      version: string - version
-     *      copyright: string - copyright message
-     *      license: - string - license
-     *      types: - array - list of all type names that reside in this assembly
-     *      assets: - array - list of all assets that are available outside this assembly but deployed together
-     *      settings: - assembly settings
-     * typeName: string - qualified type name for which assembly object is needed
+     *  obj: object - object that needs to be checked
+     * @returns string - type of the given object
+     *                   it can be following:
+     *                    > special ones like 'undefined', 'null', 'NaN', infinity
+     *                    > special javascript data types like 'array', 'date', etc.
+     *                    > inbuilt flair object types like 'class', 'struct', 'enum', etc.
+     *                    > native regular javascript data types like 'string', 'number', 'function', 'symbol', etc.
      */ 
-    let asmFiles = {}, asmTypes = {};
-    const _Assembly = {
-        // register one or more assemblies as per given Assembly Definition Objects
-        register: (...ados) => {
-            if (!ados) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (ados)'); }
+    const _typeOf = (obj) => {
+        let _type = '';
     
-            ados.forEach(ado => {
-                let asm = new __Assembly(ado),
-                    asmFile = asm.file;
-                if (asmFiles[asmFile]) {
-                    throw new _Exception('DuplicateName', `Assembly is already registered. (${asmFile})`);
-                } else {
-                    // register
-                    asmFiles[asmFile] = asm;
+        // undefined
+        if (typeof obj === 'undefined') { _type = 'undefined'; }
     
-                    // load types
-                    asm.types.forEach(type => {
-                        // qualified names across anywhere should be unique
-                        if (asmTypes[type]) {
-                            throw new _Exception('DuplicateName', `Type is already registered. (${type})`);
-                        } else {
-                            asmTypes[type] = asm; // means this type can be loaded from this assembly Assembly.get() give this only
-                        }
-                    });
-                }
-            });
-        },
+        // null
+        if (!_type && obj === null) { _type = 'null'; }
     
-        // returns assembly object that is associated with given flair type name
-        get: (typeName) => {
-            if (typeof typeName !== 'string') { throw new _Exception('InvalidArgument', 'Argument type if not valid. (typeName)'); }
-            return asmTypes[typeName] || null;
-        },
+        // infinity
+        if (!_type && typeof obj === 'number' && isFinite(obj) === false) { _type = 'infinity'; }
     
-        // returns all registered assembly objects
-        all: () => {
-            return Object.values(asmFiles).slice();
-        }
-    };
-    const __Assembly = function (ado) {
-        if (typeof ado !== 'object') { throw _Exception.InvalidArgument('ado'); }
-        if (_typeOf(ado.types) !== 'array' || 
-            _typeOf(ado.assets) !== 'array' ||
-            typeof ado.name !== 'string' ||
-            typeof ado.file !== 'string' || ado.file === '') {
-            throw _Exception.InvalidArgument('ado');
-        }
-        let isLoaded = false;
-        let _this = {
-            // pick all ado properties as is
-            ado: ado,
-            name: ado.name,
-            file: which(ado.file, true), // min/dev contextual pick
-            desc: ado.desc || '',
-            version: ado.version || '',
-            copyright: ado.copyright || '',
-            license: ado.license || '',
-            types: Object.freeze(ado.types.slice()),
-            settings: Object.freeze(ado.settings || {}),
-            assets: Object.freeze(ado.assets.slice()),
-            hasAssets: (ado.assets.length > 0),
-            
-            isLoaded: () => { return isLoaded; },
-            load: () => { 
-                return new Promise((resolve, reject) => {
-                    if (isLoaded) { resolve(); return; }
-                    loadModule(_this.file).then(() => { // since we want this js to be loaded and executed
-                        isLoaded = true;
-                        resolve();
-                    }).catch((e) => {
-                        reject(new _Exception('ModuleLoad', `Module load operation failed. (${_this.file})`, e));
-                    });
-                });
-            }
-        };
+        // array
+        if (!_type && Array.isArray(obj)) { _type = 'array'; }
+    
+        // date
+        if (!_type && (obj instanceof Date)) { _type = 'date'; }
+    
+        // flair types
+        if (!_type && obj._ && obj._.type) { _type = obj._.type; }
+    
+        // native javascript types
+        if (!_type) { _type = typeof obj; }
     
         // return
-        return Object.freeze(_this);
+        return _type;
     };
     
     // attach to flair
-    a2f('Assembly', _Assembly, () => {
-        asmFiles = {}; asmTypes = {};
-    });
-       // OK
+    a2f('typeOf', _typeOf);    // OK
     /**
-     * @name Namespace
-     * @description Namespace registration and type locator functionality.
+     * @name getTypeOf
+     * @description Gets the underlying type which was used to construct this object
      * @example
-     *  .getType(qualifiedName)     // - flair type if registered or null
+     *  getType(obj)
      * @params
-     * qualifiedName: string - qualified type name which is to be looked for.
+     *  obj: object - object that needs to be checked
+     * @returns type - flair type for the given object
      */ 
-    let ns_types = {};
-    const _Namespace = {
-        // get registered type
-        getType: (qualifiedName) => {
-            return ns_types[qualifiedName] || null;
-        }
-    };
-    const _NSRegister = (Type) => { // registration support -- needed by builder
-        // any type name can be in this format:
-        // .name <-- means, no namespace is given but still register this with root namespace (this is generally for flair system's core type's use only)
-        // name <-- means, no namespace is given but since it is not forced, do not register this with root namespace (this helps in creating adhoc types without registering anywhere)
-        // namespace.name
-        
-        // check if need not to process
-        let name = Type._.name,
-            ns = '';
-        if (name.indexOf('.') === -1) { // no namespace is given, neither forced, go back
-            return;
-        } else if (name.startsWith('.')) { // forced
-            name = name.substr(1); // remove .
-        }
-        ns = name.substr(0, name.lastIndexOf('.'));
-    
-        // only valid types are allowed
-        if (['class', 'enum', 'interface', 'mixin', 'struct'].indexOf(_typeOf(Type)) === -1) { throw new _Exception('InvalidArgument', `Type cannot be placed in a namespace. (${name})`); }
-    
-        // only unattached types are allowed
-        if (Type._.namespace) { throw `Type (${name}) is already contained in a namespace.`; }
-    
-        // check if already registered
-        if (ns_types[name]) { throw `Type (${name}) is already registered.`; }
-    
-        // register
-        ns_types[name] = Type;
-    
-        // update
-        Type._.namespace = ns;
-        Type._.name = name;
+    const _getTypeOf = (obj) => {
+        return ((obj._ && obj._.Type)  ? obj._.Type : null);
     };
     
     // attach to flair
-    a2f('Namespace', _Namespace, () => {
-        // clear registry
-        ns_types = {};
-    });
+    a2f('getTypeOf', _getTypeOf);
+         // OK 
+    /**
+     * @name isDerivedFrom
+     * @description Checks if given flair class type is derived from given class type, directly or indirectly
+     * @example
+     *  isDerivedFrom(type, parent)
+     * @params
+     *  type: class - flair class type that needs to be checked
+     *  parent: string OR class - class type to be checked for being in parent hierarchy, it can be following:
+     *                            > fully qualified class type name
+     *                            > class type reference
+     * @returns boolean - true/false
+     */ 
+    const _isDerivedFrom = (type, parent) => {
+        if (_typeOf(type) !== 'class') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
+        if (['string', 'class'].indexOf(_typeOf(parent)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (parent)'); }
+        return type._.isDerivedFrom(parent);
+    }; 
+    
+    // attach to flair
+    a2f('isDerivedFrom', _isDerivedFrom);
+     // OK
+    /**
+     * @name isInstanceOf
+     * @description Checks if given flair class/struct instance is an instance of given class/struct type or
+     *              if given class instance implements given interface or has given mixin mixed somewhere in class/struct 
+     *              hierarchy
+     * @example
+     *  isInstanceOf(obj, type)
+     * @params
+     *  obj: object - flair object that needs to be checked
+     *  type: string OR class OR struct OR interface OR mixin - type to be checked for, it can be following:
+     *                         > fully qualified type name
+     *                         > type reference
+     * @returns boolean - true/false
+     */ 
+    const _isInstanceOf = (obj, type) => {
+        let _objType = _typeOf(obj),
+            _typeType = _typeOf(type),
+            isMatched = false;
+        if (['instance', 'sinstance'].indexOf(_objType) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+        if (['string', 'class', 'interface', 'struct', 'mixin'].indexOf(_typeType) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
+    
+        switch(_typeType) {
+            case 'class':
+            case 'struct':
+                isMatched = obj._.isInstanceOf(type); break;
+            case 'interface':
+                isMatched = obj._.isImplements(type); break;
+            case 'mixin':
+                isMatched = obj._.isMixed(type); break;
+            case 'string':
+                isMatched = obj._.isInstanceOf(type);
+                if (!isMatched && typeof obj._.isImplements === 'function') { isMatched = obj._.isImplements(type); }
+                if (!isMatched && typeof obj._.isMixed === 'function') { isMatched = obj._.isMixed(type); }
+                break;
+        }
+    
+        // return
+        return isMatched;
+    };
+    
+    // attach to flair
+    a2f('isInstanceOf', _isInstanceOf);
       // OK
     /**
-     * @name Resource
-     * @description Resource registration and locator functionality.
+     * @name as
+     * @description Checks if given object can be consumed as an instance of given type
      * @example
-     *  .register(name, locale, encodingType, file, data)               // - void
-     *  .get(name)                                                      // - resource object
+     *  as(obj, type)
      * @params
-     *  name: string - qualified name of resource
-     *  locale: string - locale of the resource or empty, if no locale is associated
-     *  encodingType: string - type of encoding applied to resource data
-     *  file: string - resource file name and path
-     *  data: string - base 64 encoded (or binary) data of resource
-     *  typeName: string - qualified type name for which assembly object is needed
+     *  obj: object - object that needs to be checked
+     *  type: string OR type - type to be checked for, it can be following:
+     *                         > expected native javascript data types like 'string', 'number', 'function', 'array', 'date', etc.
+     *                         > any 'flair' object or type
+     *                         > inbuilt flair object types like 'class', 'struct', 'enum', etc.
+     *                         > custom flair object instance types which are checked in following order:
+     *                           >> for class instances: 
+     *                              isInstanceOf given as type
+     *                              isImplements given as interface 
+     *                              isMixed given as mixin
+     *                           >> for struct instances:
+     *                              isInstance of given as struct type
+     * @returns object - if can be used as specified type, return same object, else null
      */ 
-    let resources_registry = {};
-    const _Resource = {
-        // register resource
-        register: (name, locale, encodingType, file, data) => {
-            if (resources_registry[name]) { throw new _Exception('AlreadyRegistered', 'Resource is already registered'); }
-            resources_registry[name] = new __Resource(name, locale, encodingType, file, data);
-        },
-    
-        // get registered resource
-        get: (name) => {
-            return resources_registry[name] || null;
-        }
+    const _as = (obj, type) => {
+        if (_is(obj, type)) { return obj; }
+        return null;
     };
     
-    _$$('sealed');
-    const __Resource = _Class('.Resource', function() { // registered at root namespace (can be get as: getType('Resource'))
-         this.construct = (name, locale, encodingType, file, data) => {
-            let resData = data; // data is base64 encoded string, added by build engine
-            let resType = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
-    
-            // decode
-            if (encodingType.indexOf('utf8;') !== -1) {
-                if (isServer) {
-                    let buff = new Buffer(resData).toString('base64');
-                    resData = buff.toString('utf8');
-                } else { // client
-                    resData = b64DecodeUnicode(resData); 
-                }
-            } else { // binary
-                if (isServer) {
-                    resData = new Buffer(resData).toString('base64');
-                } else { // client
-                    // no change, leave it as is
-                }
-            }
-    
-            // store
-            this.locale = locale;
-            this.encodingType = encodingType;
-            this.file = file;
-            this.type = resType;
-            this.data = resData;
-        };
-    
-       /** 
-        *  @name name: string - name of the resource
-        */
-        _$$('readonly');
-        this.name = '';
-    
-       /** 
-        *  @name locale: string - locale of the resource
-        */
-       _$$('readonly');
-       this.locale = '';
-    
-    
-       /** 
-        *  @name locale: string - locale of the resource
-        */
-       _$$('readonly');
-       this.locale = '';   
-    
-       /** 
-        *  @name encodingType: string - resource encoding type
-        */
-        _$$('readonly');
-        this.encodingType = '';
-       
-       /** 
-        *  @name type: string - resource type
-        */
-        _$$('readonly');
-        this.type = '';
-    
-       /** 
-        *  @name data: string - resource data
-        */
-       _$$('readonly');
-       this.data = '';
-    });
-    
     // attach to flair
-    a2f('Resource', _Resource, () => {
-        resources_registry = {};
-    });
-       // OK
-
+    a2f('as', _as);
+      // OK
     /**
-     * @name Container
-     * @description Dependency injection container system
+     * @name is
+     * @description Checks if given object is of a given type
      * @example
-     *  .isRegistered(alias)                                // - true/false
-     *  .get(alias, isAll)                                  // - item / array of registered unresolved items, as is
-     *  .register(alias, item)                              // - void
-     *  .resolve(alias, isAll, ...args)                     // - item / array of resolved items
+     *  is(obj, type)
      * @params
-     *  alias: string - name of alias for an item
-     *  item: type/object/string - either a flair type, any object or a qualified type name or a file name
-     *        when giving string, it can be of format 'x | y' for different resolution on server and client
-     *  args: arguments to pass to type constructor when created instances for items
-     *  isAll: boolean - if resolve with all registered items against given alias or only first
+     *  obj: object - object that needs to be checked
+     *  type: string OR type - type to be checked for, it can be following:
+     *                         > expected native javascript data types like 'string', 'number', 'function', 'array', 'date', etc.
+     *                         > any 'flair' object or type
+     *                         > inbuilt flair object types like 'class', 'struct', 'enum', etc.
+     *                         > custom flair object instance types which are checked in following order:
+     *                           >> for class instances: 
+     *                              isInstanceOf given as type
+     *                              isImplements given as interface 
+     *                              isMixed given as mixin
+     *                           >> for struct instances:
+     *                              isInstance of given as struct type
+     * @returns boolean - true/false
      */ 
-    let container_registry = {};
-    const _Container = {
-        // if an alias is registered
-        isRegistered: (alias) => {
-            if (typeof alias !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
-            return (typeof container_registry[alias] !== 'undefined' && container_registry[alias].length > 0);
-        },
+    const _is = (obj, type) => {
+        // obj may be undefined or null or false, so don't check for validation of that here
+        if (type._ && type._.name) { type = type._.name; } // can be a type as well
+        if (_typeOf(type) !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
+        let isMatched = false, 
+            _typ = '';
     
-        // get registered items as is for given alias
-        get: (alias, isAll) => {
-            if (typeof alias !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
-            if (typeof isAll !== 'boolean') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (isAll)'); }
-        
-            if (isAll) {
-                return (container_registry[alias] ? container_registry[alias].slice() : []);
-            } else {
-                return (container_registry[alias] ? container_registry[alias][0] : null);
+        // undefined
+        if (type === 'undefined') { isMatched = (typeof obj === 'undefined'); }
+    
+        // null
+        if (!isMatched && type === 'null') { isMatched = (obj === null); }
+    
+        // NaN
+        if (!isMatched && type === 'NaN') { isMatched = isNaN(obj); }
+    
+        // infinity
+        if (!isMatched && type === 'infinity') { isMatched = (typeof obj === 'number' && isFinite(obj) === false); }
+    
+        // array
+        if (!isMatched && (type === 'array' || type === 'Array')) { isMatched = Array.isArray(obj); }
+    
+        // date
+        if (!isMatched && (type === 'date' || type === 'Date')) { isMatched = (obj instanceof Date); }
+    
+        // flair
+        if (!isMatched && (type === 'flair' && obj._ && obj._.type)) { isMatched = true; }
+    
+        // native javascript types
+        if (!isMatched) { isMatched = (typeof obj === type); }
+    
+        // flair types
+        if (!isMatched) {
+            if (obj._ && obj._.type) { 
+                _typ = obj._.type;
+                isMatched = _typ === type; 
             }
-        },
-    
-        // register given alias
-        register: (alias, item) => {
-            if (typeof alias !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
-            if (alias.indexOf('.') !== -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
-            if (!item) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (item)'); }
-            if (typeof item === 'string') { 
-                item = which(item); // register only relevant item for server/client
-                if (item.endsWith('.js') || item.endsWith('.mjs')) { 
-                    item = which(item, true); // consider prod/dev scenario as well
-                }
-            }
-            // register
-            if (!container_registry[alias]) { container_registry[alias] = []; }
-            container_registry[alias].push(item);
-        },
-    
-        // resolve alias with registered item(s)
-        resolve: (alias, isAll, ...args) => {
-            if (typeof alias !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
-            if (typeof isAll !== 'boolean') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (isAll)'); }
-        
-            let result = null;
-            const getResolvedObject = (Type) => {
-                let obj = Type; // whatever it was
-                if (typeof Type === 'string') {
-                    if (Type.endsWith('.js') || Type.endsWith('.mjs')) { 
-                        // file, leave it as is
-                    } else { // try to resolve it from a loaded type
-                        let _Type = _getType(Type);
-                        if (_Type) { Type = _Type; }
-                    }
-                }
-                if (['class', 'struct'].indexOf(_typeOf(Type)) !== -1) { // only class and struct need a new instance
-                    if (args) {
-                        obj = new Type(...args); 
-                    } else {
-                        obj = new Type(); 
-                    }
-                }
-                // any other type of object will be passed through as is
-    
-                // return
-                return obj;
-            };
-            
-            if (container_registry[alias] && container_registry[alias].length > 0) {
-                if (isAll) {
-                    result = [];
-                    container_registry[alias].forEach(Type => { result.push(getResolvedObject(Type)); });
-                } else {
-                    result = getResolvedObject(container_registry[alias][0]); // pick first
-                }
-            }
-    
-            // return
-            return result;
         }
+        
+        // flair custom types (i.e., class or struct type names)
+        if (!isMatched && _typ && ['instance', 'sinstance'].indexOf(_typ) !== -1) { isMatched = _isInstanceOf(obj, type); }
+    
+        // return
+        return isMatched;
     };
     
     // attach to flair
-    a2f('Container', _Container, () => {
-        container_registry = {};
-    });  // OK
+    a2f('is', _is);
+      // OK
+    /**
+     * @name isComplies
+     * @description Checks if given object complies to given flair interface
+     * @example
+     *  isComplies(obj, intf)
+     * @params
+     *  obj: object - any object that needs to be checked
+     *  intf: interface - flair interface type to be checked for
+     * @returns boolean - true/false
+     */ 
+    const _isComplies = (obj, intf) => {
+        if (!obj) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+        if (_typeOf(intf) !== 'interface') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (intf)'); }
+        
+        let complied = true;
+        for(let member in intf) {
+            if (intf.hasOwnProperty(member) && member !== '_') {
+                if (typeof obj[member] !== typeof intf[member]) { // TODO: check, how it is happening, this seems a bug - Interface type might not have members
+                    complied = false; break;
+                }
+            }
+        }
+    
+        return complied;
+    };
+    
+    // attach to flair
+    a2f('isComplies', _isComplies);
+      // OK
+    /**
+     * @name isImplements
+     * @description Checks if given flair class/struct instance or class/struct implements given interface
+     * @example
+     *  isImplements(obj, intf)
+     * @params
+     *  obj: object - flair object that needs to be checked
+     *  intf: string OR interface - interface to be checked for, it can be following:
+     *                              > fully qualified interface name
+     *                              > interface type reference
+     * @returns boolean - true/false
+     */ 
+    const _isImplements = (obj, intf) => {
+        if (['instance', 'class', 'sinstance', 'struct'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+        if (['string', 'interface'].indexOf(_typeOf(intf)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (intf)'); }
+        return obj._.isImplements(intf);
+    };
+    
+    // attach to flair
+    a2f('isImplements', _isImplements);
+        // OK
+    /**
+     * @name isMixed
+     * @description Checks if given flair class/struct instance or class/struct has mixed with given mixin
+     * @example
+     *  isMixed(obj, mixin)
+     * @params
+     *  obj: object - flair object instance or type that needs to be checked
+     *  mixin: string OR mixin - mixin to be checked for, it can be following:
+     *                           > fully qualified mixin name
+     *                           > mixin type reference
+     * @returns boolean - true/false
+     */ 
+    const _isMixed = (obj, mixin) => {
+        if (['instance', 'class', 'sinstance', 'struct'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+        if (['string', 'mixin'].indexOf(_typeOf(mixin)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (mixin)'); }
+        return obj._.isMixed(mixin);
+    };
+    
+    // attach to flair
+    a2f('isMixed', _isMixed);
+     // OK
+
     /**
      * @name include
      * @description Fetch, load and/or resolve an external dependency for required context
@@ -1235,7 +934,6 @@
         incCycle.length = 0;
     });
         // OK
-
     /**
      * @name dispose
      * @description Call dispose of given flair object
@@ -1303,7 +1001,6 @@
     
     // attach to flair
     a2f('using', _using);     // OK
-
     /**
      * @name Args
      * @description Lightweight args pattern processing that returns a validator function to validate arguments against given arg patterns
@@ -1348,9 +1045,9 @@
             // process each pattern - exit with first matching pattern
             let types = null, items = null,
                 name = '', type = '',
-                pIndex = -1, aIndex = -1,
+                pIndex = -1, aIndex = -1,   // pattern index, argument index
                 matched = false,
-                mCount = 0,
+                mCount = 0, // matched arguments count of pattern
                 result = {
                     raw: args || [],
                     index: -1,
@@ -1359,7 +1056,7 @@
                     values: {}
                 };
             if (patterns) {
-                for(let pattern of patterns) {
+                for(let pattern of patterns) { // pattern
                     pIndex++; aIndex=-1; matched = false; mCount = 0;
                     types = pattern.split(',');
                     for(let item of types) {
@@ -1376,7 +1073,7 @@
                         if (!_is(result.raw[aIndex], type)) { matched = false; break; }
                         result.values[name] = result.raw[aIndex]; matched = true; mCount++;
                     }
-                    if (matched && mCount === result.raw.length) {result.index = pIndex; break; }
+                    if (matched && mCount === types.length) {result.index = pIndex; break; }
                 }
             }
     
@@ -1395,116 +1092,182 @@
     // attach to flair
     a2f('Args', _Args);
         // OK
-    
     /**
-     * @name Exception
-     * @description Lightweight Exception class that extends Error object and serves as base of all exceptions
+     * @name attr / $$
+     * @description Decorator function to apply attributes on type and member definitions
      * @example
-     *  Exception()
-     *  Exception(type)
-     *  Exception(error)
-     *  Exception(type, message)
-     *  Exception(type, error)
-     *  Exception(type, message, error)
+     *  attr(name) OR $$(name)
+     *  attr(name, ...args) OR $$(name, ...args)
      * @params
-     *  type: string - error name or type
-     *  message: string - error message
-     *  error: object - inner error or exception object
-     * @constructs Exception object
-     */  
-    const _Exception = function(arg1, arg2, arg3) {
-        let _this = new Error();
-        switch(typeof arg1) {
-            case 'string':
-                _this.name = arg1;
-                switch(typeof arg2) {
-                    case 'string': 
-                        _this.message = arg2;
-                        _this.error = (typeof arg3 === 'object' ? arg3 : null);
-                        break;
-                    case 'object': 
-                        _this.message = arg2.message || '';
-                        _this.error = arg2;
-                        break;
-                }
-                break;
-            case 'object':
-                _this.name = arg1.name || 'Unknown';
-                _this.message = arg1.message || '';
-                _this.error = arg1;
-                break;
+     *  attrName: string/type - Name of the attribute, it can be an internal attribute or namespaced attribute name
+     *                          It can also be the Attribute flair type itself
+     *  args: any - Any arguments that may be needed by attribute
+     * @returns void
+     */ 
+    const _$$ = (name, ...args) => {
+        if (!name || ['string', 'class'].indexOf(_typeOf(name)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+        if (name && typeof name !== 'string' && !_isDerivedFrom(name, 'Attribute')) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+    
+        let AttrType = null,
+            attrInstance = null,
+            cfg = null;
+        if (typeof name === 'string') {
+            cfg = _attr._.inbuilt[name] || null;
+            if (!cfg) { // not an inbuilt attr
+                AttrType = _getType(name);
+                if (!AttrType) { throw new _Exception('NotFound', `Attribute is not found. (${name})`); }
+                name = AttrType._.name;
+            }
+        } else {
+            AttrType = name; // the actual Attribute type
+            name = AttrType._.name;
         }
     
-        _this.name =  _this.name || 'Undefined';
-        if (!_this.name.endsWith('Exception')) { _this.name += 'Exception'; }
+        // duplicate check
+        if (findIndexByProp(_attr._.bucket, 'name', name) !== -1) { throw new _Exception('Duplicate', `Duplicate attributes are not allowed. (${name})`); }
+    
+        // custom attribute instance
+        if (AttrType) {
+            attrInstance = new AttrType(...args);
+            cfg = new _attrConfig(attrInstance.constraints);
+        }
+    
+        // store
+        _attr._.bucket.push({name: name, cfg: cfg, isCustom: (attrInstance !== null), attr: attrInstance, args: args});
+    };
+    
+    /**
+     * @name attr.Config
+     * @description Attribute definition configuration
+     * @example
+     *  attr(constraints)
+     *  attr(isModifier, constraints)
+     * @params
+     *  isModifier: boolean - if this is actually a modifier
+     *  constraints: string - An expression that defined the constraints of applying this attribute 
+     *                        using NAMES, PREFIXES, SUFFIXES and logical Javascript operator
+     * 
+     *                  NAMES can be: 
+     *                      type names: class, struct, enum, interface, mixin, resource
+     *                      type member names: prop, func, construct, dispose, event
+     *                      inbuilt modifier names: static, abstract, sealed, virtual, override, private, protected, readonly, async, etc.
+     *                      inbuilt attribute names: promise, singleton, serialize, deprecate, session, state, conditional, noserialize, etc.
+     *                      custom attribute names: any registered custom attribute name
+     *                      type names itself: e.g., Assembly, Attribute, etc. (any registered type name is fine)
+     *                          SUFFIX: A typename must have a suffix (^) e.g., Assembly^, Attribute^, etc. Otherwise this name will be treated as custom attribute name
+     *                  
+     *                  PREFIXES can be:
+     *                      No Prefix: means it must match or be present at the level where it is being defined
+     *                      @: means it must be inherited from or present at up in hierarchy chain
+     *                      $: means it either must be present at the level where it is being defined or must be present up in hierarchy chain
+     *                  <name> 
+     *                  @<name>
+     *                  $<name>
+     * 
+     *                  BOOLEAN Not (!) can also be used to negate:
+     *                  !<name>
+     *                  !@<name>
+     *                  !$<name>
+     *                  
+     *                  NOTE: Constraints are processed as logical boolean expressions and 
+     *                        can be grouped, ANDed or ORed as:
+     * 
+     *                        AND: <name1> && <name2> && ...
+     *                        OR: <name1> || <name2>
+     *                        GROUPING: ((<name1> || <name2>) && (<name1> || <name2>))
+     *                                  (((<name1> || <name2>) && (<name1> || <name2>)) || <name3>)
+     * 
+     * 
+     * @constructs Constructs attribute configuration object
+     */ 
+    const _attrConfig = function(isModifier, constraints) {
+        if (typeof isModifier === 'string') {
+            constraints = isModifier;
+            isModifier = false;
+        }
+        if (typeof constraints !== 'string') { throw new _Exception.InvalidArgument('constraints'); }
+    
+    
+        // config object
+        let _this = {
+            isModifier: isModifier,
+            constraints: constraints
+        };
     
         // return
-        return Object.freeze(_this);
+        return _this;
     };
     
-    // all inbuilt exceptions
-    _Exception.InvalidArgument = (name) => { return new _Exception('InvalidArgument', `Argument type is invalid. (${name})`); }
+    const _attr = (name, ...args) => {
+        return _$$(name, ...args);
+    };
+    _attr._ = Object.freeze({
+        bucket: [],
+        inbuilt: Object.freeze({ 
+            static: new _attrConfig(true, '((class || struct) && !$abstract) || (((class || struct) && (prop || func)) && !($abstract || $virtual || $override))'),
+        
+            abstract: new _attrConfig(true, '((class || struct) && !$sealed && !$static) || (((class || struct) && (prop || func || event)) && !($override || $sealed || $static))'),
+            virtual: new _attrConfig(true, '(class || struct) && (prop || func || construct || dispose || event) && !($abstract || $override || $sealed || $static)'),
+            override: new _attrConfig(true, '(class || struct) && (prop || func || construct || dispose || event) && ((@virtual || @abstract) && !(virtual || abstract)) && !($sealed || $static))'),
+            sealed: new _attrConfig(true, '(class || ((class && (prop || func || event)) && override))'), 
+        
+            private: new _attrConfig(true, '(class || struct) && (prop || func || event) && !($protected || @private || $static)'),
+            protected: new _attrConfig(true, '(class || struct) && (prop || func || event) && !($private|| $static)'),
+            readonly: new _attrConfig(true, '(class || struct) && prop && !abstract'),
+            async: new _attrConfig(true, '(class || struct) && func'),
+        
+            enumerate: new _attrConfig('(class || struct) && prop || func || event'),
+            dispose: new _attrConfig('class && prop'),
+            post: new _attrConfig('(class || struct || mixin) && event'),
+            on: new _attrConfig('class && func && !(event || $async || $args || $inject || $static)'),
+            timer: new _attrConfig('class && func && !(event || $async || $args || $inject || @timer || $static)'),
+            type: new _attrConfig('(class || struct || mixin) && prop'),
+            args: new _attrConfig('(class || struct || mixin) && (func || construct) && !$on'),
+            inject: new _attrConfig('class && (prop || func || construct) && !(static || session || state)'),
+            singleton: new _attrConfig('(class && !(prop || func || event) && !($abstract || $static)'),
+            serialize: new _attrConfig('((class || struct) || ((class || struct) && prop)) && !($abstract || $static)'),
+            deprecate: new _attrConfig('!construct && !dispose'),
+            session: new _attrConfig('(class && prop) && !($static || $state || $readonly || $abstract || $virtual)'),
+            state: new _attrConfig('(class && prop) && !($static || $session || $readonly || $abstract || $virtual)'),
+            conditional: new _attrConfig('(class || struct || mixin) && (prop || func || event)'),
+            noserialize: new _attrConfig('(class || struct || mixin) && prop'),
+            ns: new _attrConfig('(class || struct || mixin || interface || enum) && !(prop || func || event || construct || dispose)'),
+        
+            mixin: new _attrConfig('class && (prop || func || event)'),
+            interface: new _attrConfig('class && (prop || func || event)')
+        })
+    });
+    _attr.collect = () => {
+        let attrs = _attr._.bucket.slice();
+        _attr.clear();
+        return attrs;
+    }
+    _attr.has = (name) => {
+        return (_attr._.bucket.findIndex(item => item.name === name) !== -1);
+    };
+    _attr.get = (name) => {
+        let idx = _attr._.bucket.findIndex(item => item.name === name);
+        if (idx !== -1) { return _attr._.bucket[idx]; }
+        return null;
+    };
+    _attr.clear = () => {
+        _attr._.bucket.length = 0; // remove all
+    };
     
-    // attach to flair
-    a2f('Exception', _Exception);
+    // attach to flair (NOTE: _attr is for internal use only, so collect/clear etc. are not exposed out)
+    a2f('attr', _$$);
+    a2f('$$', _$$);
        // OK
 
-    /**
-     * @name on
-     * @description Register an event handler to handle a specific event. 
-     * @example
-     *  on(event, handler)
-     *  on(event, handler, isRemove)
-     * @params
-     *  event: string - Name of the even to subscribe to
-     *  handler: function - event handler function
-     *  isRemove: boolean - is previously associated handler to be removed
-     * @returns void
-     */ 
-    const _dispatcher = new Dispatcher();
-    const dispatch = _dispatcher.dispatch;  // this can be used in any other member to dispatch any event
-    const _on = (event, handler, isRemove) => {
-        if (isRemove) { _dispatcher.remove(event, handler); return; }
-        _dispatcher.add(event, handler);
-    };
-    
-    // attach to flair
-    a2f('on', _on, () => {
-        _dispatcher.clear();
-    });
-     // OK
-    /**
-     * @name post
-     * @description Post an event for any flair component to react.
-     *              This together with 'on' makes a local pub/sub system which is capable to react to external
-     *              events when they are posted via 'post' here and raise to external world which can be hooked to 'on'
-     * @example
-     *  post(event)
-     *  post(event, args)
-     * @params
-     *  event: string - Name of the even to dispatch
-     *         Note: external events are generally namespaced like pubsub.channelName
-     *  args: any - any arguments to pass to event handlers
-     * @returns void
-     */ 
-    const _post = (event, args) => {
-        dispatch(event, args);
-    };
-    
-    // attach to flair
-    a2f('post', _post);
-     // OK
-
-    const attributesAndModifiers = (def, memberName) => {
+    const attributesAndModifiers = (def, typeDef, memberName, isTypeLevel) => {
         let appliedAttrs = _attr.collect(), // [{name, cfg, attr, args}]
             attrBucket = null,
             modifierBucket = null,
-            isTypeLevel = (def.level === 'type'),
-            modifiers = modifierOrAttrRefl(true, def),
-            attrs = modifierOrAttrRefl(false, def);
+            modifiers = modifierOrAttrRefl(true, def, typeDef),
+            attrs = modifierOrAttrRefl(false, def, typeDef);
         if (isTypeLevel) {
-            attrBucket = def.attrs.type;
-            modifierBucket = def.modifiers.type;
+            attrBucket = typeDef.attrs.type;
+            modifierBucket = typeDef.modifiers.type;
         } else {
             attrBucket = def.attrs.members[memberName] = []; // create bucket
             modifierBucket = def.modifiers.members[memberName] = []; // create bucket
@@ -1517,8 +1280,9 @@
                 _supportedMemberTypes = ['prop', 'func', 'construct', 'dispose', 'event'],
                 _supportedModifiers = ['static', 'abstract', 'sealed', 'virtual', 'override', 'private', 'protected', 'readonly', 'async'],
                 _list = [], // { withWhat, matchType, original, name, value }
+                _list2 = [], // to store all struct types, which needs to be processed at end, else replaceAll causes problem and 'struct' state is replaced on 'construct' too
                 dump = [],
-                constraintsLex = appliedAttr.constraints; // logical version with filled booleans
+                constraintsLex = appliedAttr.cfg.constraints; // logical version with filled booleans
     
             // extract names
             const sortAndStore = (match) => {
@@ -1565,28 +1329,43 @@
                 }
     
                 // store
-                _list.push(item);
+                if (item.name === 'struct') {
+                    // note: 'struct' falls inside 'construct', so replaceAll happens to replace 'struct's state over 'construct'
+                    // too, and so, it being collected in _list2 and will be added at the end
+                    _list2.push(item);
+                } else {
+                    _list.push(item);
+                }
             }; 
             const extractConstraints = () => {
                 // select everything except these !, &, |, (, and )
-                let rex = new RegExp('/[^!\&!|()]/g'), // eslint-disable-line no-useless-escape
-                match = '';
+                let rex = new RegExp('[^!\&!|()]', 'g'), // eslint-disable-line no-useless-escape
+                    match = '',
+                    idx = 0;
                 while(true) { // eslint-disable-line no-constant-condition
                     match = rex.exec(constraintsLex);
                     if (match !== null) { dump.push(match); continue; }
                     break; 
                 }
-                match = '';
+                match = ''; idx = 0;
                 for(let char of dump) {
+                    idx++;
                     if (char[0] !== ' ') { 
-                        match+= char[0]; 
+                        match+= char[0];
+                        if (idx === dump.length)  { 
+                            if (match !== '') { sortAndStore(match); }
+                            match = '';
+                        }
                     } else {
                         if (match !== '') { sortAndStore(match); }
                         match = '';
                     }
                 }
+    
+                // merge _list and _list
+                _list = _list.concat(_list2);
             };    
-            extractConstraints(); // this will populate _list
+            extractConstraints(); // this will populate _list 
     
             // get true/false value of each item in expression
             for(let item of _list) {
@@ -1594,35 +1373,47 @@
                     case 'typeName':
                         switch(item.matchType) {
                             case 'anywhere':
-                                item.value = ((item.name === memberName) || def.Type._.isDerivedFrom(item.name)); break;
+                                item.value = ((item.name === typeDef.name) || typeDef.Type._.isDerivedFrom(item.name)); break;
                             case 'inherited':
-                                item.value = def.Type._.isDerivedFrom(item.name); break;
+                                item.value = typeDef.Type._.isDerivedFrom(item.name); break;
                             case 'current':
-                                item.value = (item.name === memberName); break;
+                                item.value = (item.name === typeDef.name); break;
                         }
                         break;
                     case 'typeType':
                         // matchType is always 'current' in this case 
-                        item.value = (def.type === item.name); 
+                        item.value = (typeDef.type === item.name); 
                         break;
                     case 'memberType':
                         // matchType is always 'current' in this case 
-                        item.value = (def.members[memberName] === item.name);
+                        if (isTypeLevel) {
+                            item.value = false; // member matching at type level is always false
+                        } else {
+                            item.value = (def.members[memberName] === item.name);
+                        }
                         break;
                     case 'modifier':
                         // call to configured probe's anywhere, inherited or current function
-                        item.value = (modifiers.members.probe(item.name, memberName)[item.matchType]() ? true : false);
+                        if (isTypeLevel) {
+                            item.value = (modifiers.type.probe(item.name)[item.matchType]() ? true : false);
+                        } else {
+                            item.value = (modifiers.members.probe(item.name, memberName)[item.matchType]() ? true : false);
+                        }
                         break;
                     case 'attribute':
                         // call to configured probe's anywhere, inherited or current function
-                        item.value = (attrs.members.probe(item.name, memberName)[item.matchType]() ? true : false);
+                        if (isTypeLevel) {
+                            item.value = (attrs.type.probe(item.name)[item.matchType]() ? true : false);
+                        } else {
+                            item.value = (attrs.members.probe(item.name, memberName)[item.matchType]() ? true : false);
+                        }
                         break;
                 }
                 constraintsLex = replaceAll(constraintsLex, item.original, item.value.toString());
             }
             
             // validate expression
-            result = (new Function("try {return constraintsLex;}catch(e){return false;}"))();
+            result = (new Function("try {return (" + constraintsLex + ");}catch(e){return false;}")());
             if (!result) {
                 // TODO: send telemetry of _list, so it can be debugged
                 throw new _Exception('InvalidOperation', `${appliedAttr.cfg.isModifier ? 'Modifier' : 'Attribute'} ${appliedAttr.name} could not be applied. (${memberName})`);
@@ -1635,7 +1426,7 @@
         // validate and collect
         for (let appliedAttr of appliedAttrs) {
             if (validator(appliedAttr)) {
-                appliedAttr = sieve(appliedAttr, null, false, { type: def.name });
+                appliedAttr = sieve(appliedAttr, null, false, { type: (isTypeLevel ? typeDef.name : def.name) });
                 if (appliedAttr.isCustom) { // custom attribute instance
                     attrBucket.push(appliedAttr);
                 } else { // inbuilt attribute or modifier
@@ -1648,17 +1439,16 @@
             }
         }
     };
-    const modifierOrAttrRefl = (isModifier, def) => {
+    const modifierOrAttrRefl = (isModifier, def, typeDef) => {
         let defItemName = (isModifier ? 'modifiers' : 'attrs');
-        let root_get = (name, memberName, isCheckInheritance) => {
-            let isTypeLevel = (def.level === 'type'),
-                result = null; 
+        let root_get = (name, memberName, isCheckInheritance, isTypeLevel) => {
+            let result = null; 
             if (isTypeLevel) {
                 if (!isCheckInheritance) {
-                    result = findItemByProp(def[defItemName].type, 'name', name);
+                    result = findItemByProp(typeDef[defItemName].type, 'name', name);
                 } else {
                     // check from parent onwards, keep going up till find it or hierarchy ends
-                    let prv = def.previous();
+                    let prv = typeDef.previous();
                     while(true) { // eslint-disable-line no-constant-condition
                         if (prv === null) { break; }
                         result = findItemByProp(prv[defItemName].type, 'name', name);
@@ -1687,26 +1477,26 @@
             }
             return result; // {name, cfg, attr, args}
         };     
-        let root_has = (name, memberName, isCheckInheritance) => {
-            return root.get(name, memberName, isCheckInheritance) !== null;
+        let root_has = (name, memberName, isCheckInheritance, isTypeLevel) => {
+            return root_get(name, memberName, isCheckInheritance, isTypeLevel) !== null;
         }; 
         const members_probe = (name, memberName) => {
             let _probe = Object.freeze({
                 anywhere: () => {
-                    return root.get(name, memberName) || root.get(name, memberName, true); 
+                    return root_get(name, memberName, false, false) || root_get(name, memberName, true, false); 
                 },
                 current: () => {
-                    return root.get(name, memberName); 
+                    return root_get(name, memberName, false, false); 
                 },
                 inherited: () => {
-                    return root.get(name, memberName, true); 
+                    return root_get(name, memberName, true, false); 
                 },
                 only: Object.freeze({
                     current: () => {
-                        return root.get(name, memberName) && !root.get(name, memberName, true); 
+                        return root_get(name, memberName, false, false) && !root_get(name, memberName, true, false); 
                     },
                     inherited: () => {
-                        return !root.get(name, memberName) && root.get(name, memberName, true); 
+                        return !root_get(name, memberName, false, false) && root_get(name, memberName, true, false); 
                     }
                 })
             });
@@ -1715,20 +1505,20 @@
         const type_probe = (name) => {
             let _probe = Object.freeze({
                 anywhere: () => {
-                    return root.get(name, '') || root.get(name, '', true); 
+                    return root_get(name, null, false, true) || root_get(name, null, true, true); 
                 },
                 current: () => {
-                    return root.get(name, ''); 
+                    return root_get(name, null, false, true); 
                 },
                 inherited: () => {
-                    return root.get(name, '', true); 
+                    return root_get(name, null, true, true); 
                 },
                 only: Object.freeze({
                     current: () => {
-                        return root.get(name, '') && !root.get(name, '', true); 
+                        return root_get(name, null, false, true) && !root_get(name, null, true, true); 
                     },
                     inherited: () => {
-                        return !root.get(name, '') && root.get(name, '', true); 
+                        return !root_get(name, null, false, true) && root_get(name, null, true, true); 
                     }
                 })
             });
@@ -1761,13 +1551,13 @@
         const type_all = () => {
             let _all = Object.freeze({
                 current: () => {
-                    return def[defItemName].type.slice();
+                    return typeDef[defItemName].type.slice();
                 },
                 inherited: () => {
                     let all_inherited_attrs = [],
                         prv_attrs = null;
                     // check from parent onwards, keep going up till hierarchy ends
-                    let prv = def.previous();
+                    let prv = typeDef.previous();
                     while(true) { // eslint-disable-line no-constant-condition
                         if (prv === null) { break; }
                         prv_attrs = prv[defItemName].type.slice();
@@ -1783,21 +1573,23 @@
             return _all;
         };
         const root = {
-            get: root_get,
-            has: root_has,
             type: Object.freeze({
                 get: (name, isCheckInheritance) => {
-                    return root.get(name, true, isCheckInheritance);
+                    return root_get(name, null, isCheckInheritance, true);
                 },
                 has: (name, isCheckInheritance) => {
-                    return root.has(name, true, isCheckInheritance);
+                    return root_has(name, null, isCheckInheritance, true);
                 },
                 all: type_all,
                 probe: type_probe
             }),
             members: {
-                get: root_get,
-                has: root_has,
+                get: (name, memberName, isCheckInheritance) => {
+                    return root_get(name, memberName, isCheckInheritance, false);
+                },
+                has: (name, memberName, isCheckInheritance) => {
+                    return root_has(name, memberName, isCheckInheritance, false);
+                }, 
                 all: members_all,
                 probe: members_probe,
             }
@@ -1853,7 +1645,33 @@
         root.members = Object.freeze(root.members);
         return Object.freeze(root);
     };
-    const buildTypeInstance = (cfg, Type, params, obj) => {
+    const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
+        // define parameters and context
+        let _flagName = '___flag___',
+            params = {
+                _flagName: _flagName
+            };
+        if (typeof _flag !== 'undefined' && _flag === _flagName) { // inheritance in play
+            params.isNeedProtected = true;
+            params.isTopLevelInstance = false;
+            params.staticInterface = _static;
+            params.args = args;
+        } else {
+            params.isNeedProtected = false;
+            params.isTopLevelInstance = true;
+            params.staticInterface = Type;
+            if (typeof _flag !== 'undefined') {
+                if (typeof _static !== 'undefined') {
+                    params.args = [_flag, _static].concat(args); // one set
+                } else {
+                    params.args = [_flag]; // no other args given
+                }
+            } else {
+                params.args = []; // no args
+            }
+        }
+    
+        // singleton specific case
         if (cfg.singleton && params.isTopLevelInstance && Type._.singleInstance()) { return Type._.singleInstance(); }
     
         // define vars
@@ -2055,7 +1873,7 @@
             // since these are of same object type, and since overwriting of this is allowed, add only at top level
             // and only missing ones
             if (params.isTopLevelInstance) {
-                exposed_obj = extend(exposed_obj, cfg.ex.instance, false); // don;t overwrite, since overriding defaults are allowed
+                exposed_obj = shallowCopy(exposed_obj, cfg.ex.instance, false); // don;t overwrite, since overriding defaults are allowed
             }
     
             // expose def of this level for upper level to access if not on top level
@@ -2451,7 +2269,7 @@
             _member.remove = (handler) => { _member_dispatcher.remove(name, handler); };
             _member.strip = (_exposed_obj) => {
                 // returns the stripped version of the event without event raising ability
-                let strippedEvent = Object.freeze(extend({}, _member, true, ['strip']));
+                let strippedEvent = Object.freeze(shallowCopy({}, _member, true, ['strip']));
     
                 // delete strip feature now, it is no longer needed
                 delete _member.strip;
@@ -2489,7 +2307,7 @@
             }
     
             // collect attributes and modifiers - validate applied attributes as per attribute configuration - throw when failed
-            attributesAndModifiers(def, memberName);
+            attributesAndModifiers(def, Type._.def(), memberName, false);
     
             // validate feasibility of member definition - throw when failed
             if (!validateMemberDefinitionFeasibility(memberName, memberType, memberDef)) { return; } // skip defining this member
@@ -2534,19 +2352,19 @@
                 _attr('interface', interface_being_validated._.name);
     
                 // collect attributes and modifiers - validate applied attributes as per attribute configuration - throw when failed
-                attributesAndModifiers(def, memberName);
+                attributesAndModifiers(def, Type._.def(), memberName, false);
             }
         };    
         const addDisposable = (disposableType, data) => {
             obj._.disposables.push({type: disposableType, data: data});
         }
-        const modifiers = modifierOrAttrRefl(true, def);
-        const attrs = modifierOrAttrRefl(false, def);
+        const modifiers = modifierOrAttrRefl(true, def, Type._.def());
+        const attrs = modifierOrAttrRefl(false, def, Type._.def());
         
         // construct base object from parent, if applicable
         if (cfg.inheritance) {
             if (params.isTopLevelInstance) {
-                if (modifiers.type.has('abstract')) { throw new _Exception('InvalidOperation', `Cannot create instance of an abstract type. (${def.name})`); }
+                if (modifiers.type.probe('abstract').current()) { throw new _Exception('InvalidOperation', `Cannot create instance of an abstract type. (${def.name})`); }
             }
     
             // create parent instance, if required, else use passed object as base object
@@ -2570,7 +2388,7 @@
     
          // set object meta
          if (typeof obj._ === 'undefined') {
-            obj._ = extend({}, cfg.mex.instance, false); // these will always be same, since inheritance happen in same types, and these are defined at a type configuration level, so these will always be same and should behave just like the next set of definitions here
+            obj._ = shallowCopy({}, cfg.mex.instance, false); // these will always be same, since inheritance happen in same types, and these are defined at a type configuration level, so these will always be same and should behave just like the next set of definitions here
             if (cfg.mixins) {
                 def.mixins = cfg.params.mixins; // mixin types that were applied to this type, will be deleted after apply
             }
@@ -2733,7 +2551,7 @@
     
         // add/update meta on top level instance
         if (params.isTopLevelInstance) {
-            if (cfg.singleton && attrs.type.has('singleton')) {
+            if (cfg.singleton && attrs.type.probe('singleton').current()) {
                 Type._.singleInstance = () => { return exposed_obj; }; 
                 Type._.singleInstance.clear = () => { 
                     Type._.singleInstance = () => { return null; };
@@ -2776,7 +2594,8 @@
         cfg.mex.type = ((cfg.mex && cfg.mex.type) ? cfg.mex.type : {})
         cfg.ex.instance = ((cfg.ex && cfg.ex.instance) ? cfg.ex.instance : {});
         cfg.ex.type = ((cfg.ex && cfg.ex.type) ? cfg.ex.type : {});
-        cfg.params.typeName = cfg.params.typeName || 'unknown';
+        cfg.params.typeName = cfg.params.typeName || '';
+        cfg.params.ns = '';
         cfg.params.inherits = cfg.params.inherits || null;
         cfg.params.mixins = [];
         cfg.params.interfaces = [];
@@ -2796,6 +2615,23 @@
             cfg.customAttrs = false;
         }
     
+        // type name and namespace validations
+        if (!cfg.params.typeName || cfg.params.typeName.indexOf('.') !== -1) { throw  `Type name is invalid. (${cfg.params.typeName})`; } // dots are not allowed in names
+        // peer ns attribute on type and if found merge it with name
+        let ns_attr = _attr.get('ns'),
+            ns = ns_attr ? ns_attr.args[0] : '';
+        switch(ns) {
+            case '(auto)':  // this is a placeholder that gets replaced by assembly builder with dynamic namespace based on folder structure, so if is it left, it is wrong
+                throw  `Namespace name is invalid. (${ns})`;
+            case '(root)':  // this is mark to instruct builder that register type at root namespace
+                break; // go on
+            default: // anything else
+                if (ns.startsWith('.') || ns.endsWith('.')) { throw  `Namespace name is invalid. (${ns})`; } // start and end dots are not allowed in namespace names
+                cfg.params.typeName = ns + '.' + cfg.params.typeName; // add namespace to name here onwards
+                cfg.params.ns = ns;
+                break;
+        }
+    
         // extract mixins and interfaces
         if (cfg.params.mixinsAndInterfaces) {
             for(let item of cfg.params.mixinsAndInterfaces) {
@@ -2812,10 +2648,7 @@
         // object extensions
         let _oex = { // every object of every type will have this, that means all types are derived from this common object
         }; 
-        cfg.ex.instance = extend(cfg.ex.instance, _oex, false); // don't override, which means defaults overriding is allowed
-    
-        // top level definitions
-        let _flagName = '___flag___';
+        cfg.ex.instance = shallowCopy(cfg.ex.instance, _oex, false); // don't override, which means defaults overriding is allowed
     
         // collect complete hierarchy defs while the type is building
         cfg.dump = []; // TODO: Check what is heppening with this, not implemented yet, idea is to collect all hierarchy and made it available at Type level for reflector
@@ -2824,42 +2657,14 @@
         let _Object = null;
         if (cfg.new) { // class, struct
             _Object = function(_flag, _static, ...args) {
-                // define parameters and context
-                let params = {
-                    _flagName: _flagName
-                };
-                if (typeof _flag !== 'undefined' && _flag === _flagName) { // inheritance in play
-                    params.isNeedProtected = true;
-                    params.isTopLevelInstance = false;
-                    params.staticInterface = _static;
-                    params.args = args;
-                } else {
-                    params.isNeedProtected = false;
-                    params.isTopLevelInstance = true;
-                    params.staticInterface = _Object;
-                    if (typeof _flag !== 'undefined') {
-                        if (typeof _static !== 'undefined') {
-                            params.args = [_flag, _static].concat(args); // one set
-                        } else {
-                            params.args = [_flag]; // no other args given
-                        }
-                    } else {
-                        params.args = []; // no args
-                    }
-                }
-    
-                // base object
-                let _this = {};
-    
-                // build instance
-                return buildTypeInstance(cfg, _Object, params, _this);
+                return buildTypeInstance(cfg, _Object, {}, _flag, _static, ...args);
             };
         } else { // mixin, interface, enum
             _Object = cfg.params.factory;
         }
     
         // extend type itself
-        _Object = extend(_Object, cfg.ex.type, false); // don't overwrite while adding type extensions, this means defaults override is allowed
+        _Object = shallowCopy(_Object, cfg.ex.type, false); // don't overwrite while adding type extensions, this means defaults override is allowed
     
         // type def
         let typeDef = { 
@@ -2878,14 +2683,11 @@
                 return _Object._.inherits ? _Object._.inherits._.def() : null;
             }
         };
-        const modifiers = modifierOrAttrRefl(true, typeDef);
-        const attrs = modifierOrAttrRefl(false, typeDef);
-    
-        // type level attributes pick here
-        attributesAndModifiers(typeDef, cfg.params.typeName);
+        const modifiers = modifierOrAttrRefl(true, null, typeDef);
+        const attrs = modifierOrAttrRefl(false, null, typeDef);
     
         // set type meta
-        _Object._ = extend({}, cfg.mex.type, true);
+        _Object._ = shallowCopy({}, cfg.mex.type, true);
         _Object._.name = cfg.params.typeName;
         _Object._.type = cfg.types.type;
         _Object._.id = guid();
@@ -2894,8 +2696,8 @@
         _Object._.inherits = null;
         if (cfg.inheritance) {
             _Object._.inherits = cfg.params.inherits || null;
-            _Object._.isAbstract = () => { return modifiers.type.has('abstract'); };
-            _Object._.isSealed = () => { return modifiers.type.has('sealed'); };
+            _Object._.isAbstract = () => { return modifiers.type.probe('abstract').current() ? true : false; };
+            _Object._.isSealed = () => { return modifiers.type.probe('sealed').current() ? true : false; };
             _Object._.isDerivedFrom = (name) => { 
                 if (name._ && name._.name) { name = name._.name; }
                 if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
@@ -2913,18 +2715,19 @@
     
             // warn for type deprecate at the time of inheritance
             if (_Object._.inherits) {
-                let deprecateMessage = _Object._.inherits._.isDeprecated();
-                if (deprecateMessage) {
+                let the_attr = attrs.type.probe('deprecate').anywhere();
+                if (the_attr) {
+                    let deprecateMessage = the_attr.args[0] || `Type is marked as deprecated. (${_Object._.name})`;
                     console.log(deprecateMessage); // eslint-disable-line no-console
-                }
+                }            
             }
         }
         if (cfg.static) {
-            _Object._.isStatic = () => { return modifiers.type.has('static'); };
+            _Object._.isStatic = () => { return modifiers.type.probe('static').current() ? true : false; };
             _Object._.props = {}; // static property values host
         }
         if (cfg.singleton) {
-            _Object._.isSingleton = () => { return attrs.type.has('singleton'); };
+            _Object._.isSingleton = () => { return attrs.type.probe('singleton').current() ? true : false; };
             _Object._.singleInstance = () => { return null; };
             _Object._.singleInstance.clear = _noop;
         }
@@ -2961,19 +2764,19 @@
             };                
         }
         _Object._.isDeprecated = () => { 
-            let the_attr = attrs.type.get('deprecate');
-            if (the_attr) {
-                return the_attr.args[0] || `Type is marked as deprecated. (${_Object._.name})`;
-            } else {
-                return false;
-            }
+            return attrs.type.probe('deprecate').current() ? true : false;
         };
         _Object._.def = () => { return typeDef; };
         _Object._.modifiers = modifiers;
         _Object._.attrs = attrs;
     
+        // type level attributes pick here
+        attributesAndModifiers(null, typeDef, null, true);
+    
         // register type with namespace
-        _NSRegister(_Object);
+        if (ns) { // if actual namespace or '(root)' is there, then go and register
+            _NSRegister(_Object);
+        }
     
         // freeze object meta
         _Object._ = Object.freeze(_Object._);
@@ -2986,224 +2789,6 @@
         }
     };
        // OK
-    const Dispatcher = function() {
-        let events = {};
-    
-        // add event listener
-        this.add = (event, handler) => {
-            if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (event)'); }
-            if (typeof handler !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (handler)'); }
-            if (!events[event]) { events[name] = []; }
-            events[name].push(handler);
-        };
-    
-        // remove event listener
-        this.remove = (event, handler) => {
-            if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (event)'); }
-            if (typeof handler !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (handler)'); }
-            if (events[event]) {
-                let idx = events[event].indexOf(handler);
-                if (idx !== -1) { events[event].splice(idx, 1); }
-            }
-        };
-    
-        // dispatch event
-        this.dispatch = (event, args) => {
-            if (events[event]) {
-                events[event].forEach(handler => {
-                    setTimeout(() => { handler({ name: event, args: args }); }, 0);
-                });
-            }
-        };
-    
-        // get number of attached listeners
-        this.count = (event) => {
-            return (events[event] ? events[event].length : 0);
-        };
-    
-        // clear all handlers for all events associated with this dispatcher
-        this.clear = () => {
-            events = {};
-        };
-    };
-    
-        // OK
-    const guid = () => {
-        return '_xxxxxxxx_xxxx_4xxx_yxxx_xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-        });
-    };
-    const which = (def, isFile) => {
-        if (isFile) { // debug/prod specific decision
-            // pick minified or dev version
-            if (def.indexOf('{.min}') !== -1) {
-                if (flair.options.env.isProd) {
-                    return def.replace('{.min}', '.min'); // a{.min}.js => a.min.js
-                } else {
-                    return def.replace('{.min}', ''); // a{.min}.js => a.js
-                }
-            }
-        } else { // server/client specific decision
-            if (def.indexOf('|') !== -1) { 
-                let items = def.split('|'),
-                    item = '';
-                if (flair.options.env.isServer) {
-                    item = items[0].trim();
-                } else {
-                    item = items[1].trim();
-                }
-                if (item === 'x') { item = ''; } // special case to explicitely mark absence of a type
-                return item;
-            }            
-        }
-        return def; // as is
-    };
-    const isArrow = (fn) => {
-        return (!(fn).hasOwnProperty('prototype'));
-    };
-    const findIndexByProp = (arr, propName, propValue) => {
-        return arr.findIndex((item) => {
-            return (item[propName] === propValue ? true : false);
-        });
-    };
-    const findItemByProp = (arr, propName, propValue) => {
-        let idx = arr.findIndex((item) => {
-            return (item[propName] === propValue ? true : false);
-        });
-        if (idx !== -1) { return arr[idx]; }
-        return null;
-    };
-    const splitAndTrim = (str) => {
-        return str.split(',').map((item) => { return item.trim(); });
-    };
-    const escapeRegExp = (string) => {
-        return string.replace(/([.*+?\^=!:${}()|\[\]\/\\])/g, '\\$1'); // eslint-disable-line no-useless-escape
-    };
-    const replaceAll = (string, find, replace) => {
-        return string.replace(new RegExp(escapeRegExp(find), 'g'), replace);
-    };
-    const extend = (target, source, overwrite, except) => {
-        if (!except) { except = []; }
-        for(let item in source) {
-            if (source.hasOwnProperty(item) && except.indexOf(item) === -1) { 
-                if (!overwrite) { if (item in target) { continue; }}
-                target[item] = source[item];
-            }
-        }
-        return target;
-    };
-    const loadFile = (file) => {
-        return new Promise((resolve, reject) => {
-            let ext = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
-            if (isServer) {
-                try {
-                    let httpOrhttps = null,
-                        body = '';
-                    if (file.startsWith('https')) {
-                        httpOrhttps = require('https');
-                    } else {
-                        httpOrhttps = require('http'); // for urls where it is not defined
-                    }
-                    httpOrhttps.get(file, (resp) => {
-                        resp.on('data', (chunk) => { body += chunk; });
-                        resp.on('end', () => { 
-                            if (ext === 'json') { 
-                                resolve(JSON.parse(body));
-                            } else {
-                                resolve(body);
-                            }
-                        });
-                    }).on('error', reject);
-                } catch(e) {
-                    reject(e);
-                }
-            } else { // client
-                fetch(file).then((response) => {
-                    if (response.status !== 200) {
-                        reject(response.status);
-                    } else {
-                        if (ext === 'json') { // special case of JSON
-                            response.json().then(resolve).catch(reject);
-                        } else {
-                            resolve(response.text());
-                        }
-                    }
-                }).catch(reject);
-            }
-        });
-    };
-    const loadModule = (module) => {
-        return new Promise((resolve, reject) => {
-            if (isServer) {
-                try {
-                    resolve(require(module));
-                } catch(e) {
-                    reject(e);
-                }
-            } else { // client
-                let ext = module.substr(module.lastIndexOf('.') + 1).toLowerCase();
-                try {
-                    if (typeof require !== 'undefined') { // if requirejs type library having require() is available to load modules / files on client
-                        require([module], resolve, reject);
-                    } else { // load it as file on browser
-                        let js = flair.options.env.global.document.createElement('script');
-                        if (ext === 'mjs') {
-                            js.type = 'module';
-                        } else {
-                            js.type = 'text/javascript';
-                        }
-                        js.name = module;
-                        js.src = module;
-                        js.onload = resolve;    // TODO: Check how we can pass the loaded 'exported' object of module to this resolve.
-                        js.onerror = reject;
-                        flair.options.env.global.document.head.appendChild(js);
-                    }
-                } catch(e) {
-                    reject(e);
-                }
-            }
-        });
-    };
-    const sieve = (obj, props, isFreeze, add) => {
-        let _props = splitAndTrim(props);
-        const extract = (_obj) => {
-            let result = {};
-            if (_props.length > 0) { // copy defined
-                for(let prop of _props) { result[prop] = _obj[prop]; } 
-            } else { // copy all
-                for(let prop in obj) { 
-                    if (obj.hasOwnProperty(prop)) { result[prop] = obj[prop]; }
-                }            
-            }
-            if (add) { for(let prop in add) { result[prop] = add[prop]; } }
-            if (isFreeze) { result = Object.freeze(result); }
-            return result;
-        };
-        if (Array.isArray(obj)) {
-            let result = [];
-            for(let item of obj) { result.push(extract(item)); }
-            return result;
-        } else {
-            return extract(obj);
-        }
-    };
-    const b64EncodeUnicode = (str) => { // eslint-disable-line no-unused-vars
-        // first we use encodeURIComponent to get percent-encoded UTF-8,
-        // then we convert the percent encodings into raw bytes which
-        // can be fed into btoa.
-        return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
-            function toSolidBytes(match, p1) {
-                return String.fromCharCode('0x' + p1);
-        }));
-    };
-    const b64DecodeUnicode = (str) => {
-        // Going backwards: from bytestream, to percent-encoding, to original string.
-        return decodeURIComponent(atob(str).split('').map(function(c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-    };   // OK
-
     /**
      * @name Class
      * @description Constructs a Class type.
@@ -3280,85 +2865,50 @@
     // attach to flair
     a2f('Class', _Class);  // OK
     /**
-     * @name getTypeOf
-     * @description Gets the underlying type which was used to construct this object
+     * @name Interface
+     * @description Constructs a Interface type
      * @example
-     *  getType(obj)
+     *  Interface(name, factory)
      * @params
-     *  obj: object - object that needs to be checked
-     * @returns type - flair type for the given object
-     */ 
-    const _getTypeOf = (obj) => {
-        return ((obj._ && obj._.Type)  ? obj._.Type : null);
+     *  name: string - name of the interface
+     *                 it can take following forms:
+     *                 >> simple, e.g.,
+     *                    MyInterface
+     *                 >> qualified, e.g., 
+     *                    com.myCompany.myProduct.myFeature.MyInterface
+     *                 >> special, e.g.,
+     *                    .MyInterface
+     *         NOTE: Qualified names are automatically registered with Namespace while simple names are not.
+     *               to register simple name on root Namespace, use special naming technique, it will register
+     *               this with Namespace at root, and will still keep the name without '.'
+     *  factory: function - factory function to build interface definition
+     * @returns type - constructed flair interface type
+     */
+    const _Interface = (name, factory) => {
+        let args = _Args('name: string, factory: function')(name, factory);
+        if (args.isInvalid) { throw args.error; }
+    
+        // builder config
+        let cfg = {
+            func: true,
+            prop: true,
+            event: true,
+            types: {
+                type: 'interface'
+            },
+            params: {
+                typeName: args.values.name,
+                factory: args.values.factory
+            }
+        };
+    
+        // return built type
+        return builder(cfg);
     };
     
     // attach to flair
-    a2f('getTypeOf', _getTypeOf);
-         // OK 
-    /**
-     * @name isDerivedFrom
-     * @description Checks if given flair class type is derived from given class type, directly or indirectly
-     * @example
-     *  isDerivedFrom(type, parent)
-     * @params
-     *  type: class - flair class type that needs to be checked
-     *  parent: string OR class - class type to be checked for being in parent hierarchy, it can be following:
-     *                            > fully qualified class type name
-     *                            > class type reference
-     * @returns boolean - true/false
-     */ 
-    const _isDerivedFrom = (type, parent) => {
-        if (_typeOf(type) !== 'class') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
-        if (['string', 'class'].indexOf(_typeOf(parent)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (parent)'); }
-        return type._.isDerivedFrom(parent);
-    }; 
-    
-    // attach to flair
-    a2f('isDerivedFrom', _isDerivedFrom);
-     // OK
-    /**
-     * @name isInstanceOf
-     * @description Checks if given flair class/struct instance is an instance of given class/struct type or
-     *              if given class instance implements given interface or has given mixin mixed somewhere in class/struct 
-     *              hierarchy
-     * @example
-     *  isInstanceOf(obj, type)
-     * @params
-     *  obj: object - flair object that needs to be checked
-     *  type: string OR class OR struct OR interface OR mixin - type to be checked for, it can be following:
-     *                         > fully qualified type name
-     *                         > type reference
-     * @returns boolean - true/false
-     */ 
-    const _isInstanceOf = (obj, type) => {
-        let _objType = _typeOf(obj),
-            _typeType = _typeOf(type),
-            isMatched = false;
-        if (['instance', 'sinstance'].indexOf(_objType) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
-        if (['string', 'class', 'interface', 'struct', 'mixin'].indexOf(_typeType) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
-    
-        switch(_typeType) {
-            case 'class':
-            case 'struct':
-                isMatched = obj._.isInstanceOf(type); break;
-            case 'interface':
-                isMatched = obj._.isImplements(type); break;
-            case 'mixin':
-                isMatched = obj._.isMixed(type); break;
-            case 'string':
-                isMatched = obj._.isInstanceOf(type);
-                if (!isMatched && typeof obj._.isImplements === 'function') { isMatched = obj._.isImplements(type); }
-                if (!isMatched && typeof obj._.isMixed === 'function') { isMatched = obj._.isMixed(type); }
-                break;
-        }
-    
-        // return
-        return isMatched;
-    };
-    
-    // attach to flair
-    a2f('isInstanceOf', _isInstanceOf);
-      // OK
+    a2f('Interface', _Interface);
+       // OK
     /**
      * @name Struct
      * @description Constructs a Struct type
@@ -3417,247 +2967,6 @@
     a2f('Struct', _Struct);
         // OK
     /**
-     * @name typeOf
-     * @description Finds the type of given object in flair type system
-     * @example
-     *  typeOf(obj)
-     * @params
-     *  obj: object - object that needs to be checked
-     * @returns string - type of the given object
-     *                   it can be following:
-     *                    > special ones like 'undefined', 'null', 'NaN', infinity
-     *                    > special javascript data types like 'array', 'date', etc.
-     *                    > inbuilt flair object types like 'class', 'struct', 'enum', etc.
-     *                    > native regular javascript data types like 'string', 'number', 'function', 'symbol', etc.
-     */ 
-    const _typeOf = (obj) => {
-        let _type = '';
-    
-        // undefined
-        if (typeof obj === 'undefined') { _type = 'undefined'; }
-    
-        // null
-        if (!_type && obj === null) { _type = 'null'; }
-    
-        // NaN
-        if (!_type && isNaN(obj)) { _type = 'NaN'; }
-    
-        // infinity
-        if (!_type && typeof obj === 'number' && isFinite(obj) === false) { _type = 'infinity'; }
-    
-        // array
-        if (!_type && Array.isArray(obj)) { _type = 'array'; }
-    
-        // date
-        if (!_type && (obj instanceof Date)) { _type = 'date'; }
-    
-        // flair types
-        if (!_type && obj._ && obj._.type) { _type = obj._.type; }
-    
-        // native javascript types
-        if (!_type) { _type = typeof obj; }
-    
-        // return
-        return _type;
-    };
-    
-    // attach to flair
-    a2f('typeOf', _typeOf);    // OK
-
-    /**
-     * @name as
-     * @description Checks if given object can be consumed as an instance of given type
-     * @example
-     *  as(obj, type)
-     * @params
-     *  obj: object - object that needs to be checked
-     *  type: string OR type - type to be checked for, it can be following:
-     *                         > expected native javascript data types like 'string', 'number', 'function', 'array', 'date', etc.
-     *                         > any 'flair' object or type
-     *                         > inbuilt flair object types like 'class', 'struct', 'enum', etc.
-     *                         > custom flair object instance types which are checked in following order:
-     *                           >> for class instances: 
-     *                              isInstanceOf given as type
-     *                              isImplements given as interface 
-     *                              isMixed given as mixin
-     *                           >> for struct instances:
-     *                              isInstance of given as struct type
-     * @returns object - if can be used as specified type, return same object, else null
-     */ 
-    const _as = (obj, type) => {
-        if (_is(obj, type)) { return obj; }
-        return null;
-    };
-    
-    // attach to flair
-    a2f('as', _as);
-      // OK
-    /**
-     * @name Interface
-     * @description Constructs a Interface type
-     * @example
-     *  Interface(name, factory)
-     * @params
-     *  name: string - name of the interface
-     *                 it can take following forms:
-     *                 >> simple, e.g.,
-     *                    MyInterface
-     *                 >> qualified, e.g., 
-     *                    com.myCompany.myProduct.myFeature.MyInterface
-     *                 >> special, e.g.,
-     *                    .MyInterface
-     *         NOTE: Qualified names are automatically registered with Namespace while simple names are not.
-     *               to register simple name on root Namespace, use special naming technique, it will register
-     *               this with Namespace at root, and will still keep the name without '.'
-     *  factory: function - factory function to build interface definition
-     * @returns type - constructed flair interface type
-     */
-    const _Interface = (name, factory) => {
-        let args = _Args('name: string, factory: function')(name, factory);
-        if (args.isInvalid) { throw args.error; }
-    
-        // builder config
-        let cfg = {
-            func: true,
-            prop: true,
-            event: true,
-            types: {
-                type: 'interface'
-            },
-            params: {
-                typeName: args.values.name,
-                factory: args.values.factory
-            }
-        };
-    
-        // return built type
-        return builder(cfg);
-    };
-    
-    // attach to flair
-    a2f('Interface', _Interface);
-       // OK
-    /**
-     * @name is
-     * @description Checks if given object is of a given type
-     * @example
-     *  is(obj, type)
-     * @params
-     *  obj: object - object that needs to be checked
-     *  type: string OR type - type to be checked for, it can be following:
-     *                         > expected native javascript data types like 'string', 'number', 'function', 'array', 'date', etc.
-     *                         > any 'flair' object or type
-     *                         > inbuilt flair object types like 'class', 'struct', 'enum', etc.
-     *                         > custom flair object instance types which are checked in following order:
-     *                           >> for class instances: 
-     *                              isInstanceOf given as type
-     *                              isImplements given as interface 
-     *                              isMixed given as mixin
-     *                           >> for struct instances:
-     *                              isInstance of given as struct type
-     * @returns boolean - true/false
-     */ 
-    const _is = (obj, type) => {
-        // obj may be undefined or null or false, so don't check for validation of that here
-        if (type._ && type._.name) { type = type._.name; } // can be a type as well
-        if (_typeOf(type) !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
-        let isMatched = false, 
-            _typ = '';
-    
-        // undefined
-        if (type === 'undefined') { isMatched = (typeof obj === 'undefined'); }
-    
-        // null
-        if (!isMatched && type === 'null') { isMatched = (obj === null); }
-    
-        // NaN
-        if (!isMatched && type === 'NaN') { isMatched = isNaN(obj); }
-    
-        // infinity
-        if (!isMatched && type === 'infinity') { isMatched = (typeof obj === 'number' && isFinite(obj) === false); }
-    
-        // array
-        if (!isMatched && (type === 'array' || type === 'Array')) { isMatched = Array.isArray(obj); }
-    
-        // date
-        if (!isMatched && (type === 'date' || type === 'Date')) { isMatched = (obj instanceof Date); }
-    
-        // flair
-        if (!isMatched && (type === 'flair' && obj._ && obj._.type)) { isMatched = true; }
-    
-        // native javascript types
-        if (!isMatched) { isMatched = (typeof obj === type); }
-    
-        // flair types
-        if (!isMatched) {
-            if (obj._ && obj._.type) { 
-                _typ = obj._.type;
-                isMatched = _typ === type; 
-            }
-        }
-        
-        // flair custom types (i.e., class or struct type names)
-        if (!isMatched && _typ && ['instance', 'sinstance'].indexOf(_typ) !== -1) { isMatched = _isInstanceOf(obj, type); }
-    
-        // return
-        return isMatched;
-    };
-    
-    // attach to flair
-    a2f('is', _is);
-      // OK
-    /**
-     * @name isComplies
-     * @description Checks if given object complies to given flair interface
-     * @example
-     *  isComplies(obj, intf)
-     * @params
-     *  obj: object - any object that needs to be checked
-     *  intf: interface - flair interface type to be checked for
-     * @returns boolean - true/false
-     */ 
-    const _isComplies = (obj, intf) => {
-        if (!obj) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
-        if (_typeOf(intf) !== 'interface') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (intf)'); }
-        
-        let complied = true;
-        for(let member in intf) {
-            if (intf.hasOwnProperty(member) && member !== '_') {
-                if (typeof obj[member] !== typeof intf[member]) { // TODO: check, how it is happening, this seems a bug - Interface type might not have members
-                    complied = false; break;
-                }
-            }
-        }
-    
-        return complied;
-    };
-    
-    // attach to flair
-    a2f('isComplies', _isComplies);
-      // OK
-    /**
-     * @name isImplements
-     * @description Checks if given flair class/struct instance or class/struct implements given interface
-     * @example
-     *  isImplements(obj, intf)
-     * @params
-     *  obj: object - flair object that needs to be checked
-     *  intf: string OR interface - interface to be checked for, it can be following:
-     *                              > fully qualified interface name
-     *                              > interface type reference
-     * @returns boolean - true/false
-     */ 
-    const _isImplements = (obj, intf) => {
-        if (['instance', 'class', 'sinstance', 'struct'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
-        if (['string', 'interface'].indexOf(_typeOf(intf)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (intf)'); }
-        return obj._.isImplements(intf);
-    };
-    
-    // attach to flair
-    a2f('isImplements', _isImplements);
-        // OK
-
-    /**
      * @name Enum
      * @description Constructs a Enum type
      * @example
@@ -3701,18 +3010,454 @@
     a2f('Enum', _Enum);
      // OK
     /**
-     * @name noop
-     * @description No Operation function
+     * @name Mixin
+     * @description Constructs a Mixin type
      * @example
-     *  noop()
+     *  Mixin(name, factory)
      * @params
-     * @returns
-     */ 
-    const _noop = () => {};
+     *  name: string - name of the mixin
+     *                 it can take following forms:
+     *                 >> simple, e.g.,
+     *                    MyMixin
+     *                 >> qualified, e.g., 
+     *                    com.myCompany.myProduct.myFeature.MyMixin
+     *                 >> special, e.g.,
+     *                    .MyMixin
+     *         NOTE: Qualified names are automatically registered with Namespace while simple names are not.
+     *               to register simple name on root Namespace, use special naming technique, it will register
+     *               this with Namespace at root, and will still keep the name without '.'
+     *  factory: function - factory function to build mixin definition
+     * @returns type - constructed flair mixin type
+     */
+    const _Mixin = (name, factory) => {
+        let args = _Args('name: string, factory: function')(name, factory);
+        if (args.isInvalid) { throw args.error; }
+    
+        // builder config
+        let cfg = {
+            func: true,
+            prop: true,
+            event: true,
+            customAttrs: true,
+            types: {
+                type: 'mixin'
+            },
+            params: {
+                typeName: args.values.name,
+                factory: args.values.factory
+            }
+        };
+    
+        // return built type
+        return builder(cfg);
+    };
     
     // attach to flair
-    a2f('noop', _noop);
-         // OK
+    a2f('Mixin', _Mixin);
+    
+
+    /**
+     * @name on
+     * @description Register an event handler to handle a specific event. 
+     * @example
+     *  on(event, handler)
+     *  on(event, handler, isRemove)
+     * @params
+     *  event: string - Name of the even to subscribe to
+     *  handler: function - event handler function
+     *  isRemove: boolean - is previously associated handler to be removed
+     * @returns void
+     */ 
+    const _dispatcher = new Dispatcher();
+    const dispatch = _dispatcher.dispatch;  // this can be used in any other member to dispatch any event
+    const _on = (event, handler, isRemove) => {
+        if (isRemove) { _dispatcher.remove(event, handler); return; }
+        _dispatcher.add(event, handler);
+    };
+    
+    // attach to flair
+    a2f('on', _on, () => {
+        _dispatcher.clear();
+    });
+     // OK
+    /**
+     * @name post
+     * @description Post an event for any flair component to react.
+     *              This together with 'on' makes a local pub/sub system which is capable to react to external
+     *              events when they are posted via 'post' here and raise to external world which can be hooked to 'on'
+     * @example
+     *  post(event)
+     *  post(event, args)
+     * @params
+     *  event: string - Name of the even to dispatch
+     *         Note: external events are generally namespaced like pubsub.channelName
+     *  args: any - any arguments to pass to event handlers
+     * @returns void
+     */ 
+    const _post = (event, args) => {
+        dispatch(event, args);
+    };
+    
+    // attach to flair
+    a2f('post', _post);
+     // OK
+    /**
+     * @name cli
+     * @description Command Line Interface setup for server use
+     * @example
+     *  cli.build(options, cb)
+     */
+    const _cli = {
+        build: (isServer ? require('./flair.build.js') : null)
+    };
+    
+    // attach to flair
+    a2f('cli', _cli);
+    
+        // OK
+    /**
+     * @name Assembly
+     * @description Assembly registration and locator functionality.
+     * @example
+     *  .register(...ados)          // - void
+     *  .get(typeName)              // - assembly object or null
+     *  .all()                      // - array of all registered assemblies
+     * @params
+     *  ado: object - An ADO is an object that defines assembly definition as:
+     *      name: string - name
+     *      file: string - file name and path
+     *      desc: string - description
+     *      version: string - version
+     *      copyright: string - copyright message
+     *      license: - string - license
+     *      types: - array - list of all type names that reside in this assembly
+     *      assets: - array - list of all assets that are available outside this assembly but deployed together
+     *      settings: - assembly settings
+     * typeName: string - qualified type name for which assembly object is needed
+     */ 
+    let asmFiles = {}, asmTypes = {};
+    const _Assembly = {
+        // register one or more assemblies as per given Assembly Definition Objects
+        register: (...ados) => {
+            if (!ados) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (ados)'); }
+    
+            ados.forEach(ado => {
+                let asm = new __Assembly(ado),
+                    asmFile = asm.file;
+                if (asmFiles[asmFile]) {
+                    throw new _Exception('DuplicateName', `Assembly is already registered. (${asmFile})`);
+                } else {
+                    // register
+                    asmFiles[asmFile] = asm;
+    
+                    // load types
+                    asm.types.forEach(type => {
+                        // qualified names across anywhere should be unique
+                        if (asmTypes[type]) {
+                            throw new _Exception('DuplicateName', `Type is already registered. (${type})`);
+                        } else {
+                            asmTypes[type] = asm; // means this type can be loaded from this assembly Assembly.get() give this only
+                        }
+                    });
+                }
+            });
+        },
+    
+        // returns assembly object that is associated with given flair type name
+        get: (typeName) => {
+            if (typeof typeName !== 'string') { throw new _Exception('InvalidArgument', 'Argument type if not valid. (typeName)'); }
+            return asmTypes[typeName] || null;
+        },
+    
+        // returns all registered assembly objects
+        all: () => {
+            return Object.values(asmFiles).slice();
+        }
+    };
+    const __Assembly = function (ado) {
+        if (typeof ado !== 'object') { throw _Exception.InvalidArgument('ado'); }
+        if (_typeOf(ado.types) !== 'array' || 
+            _typeOf(ado.assets) !== 'array' ||
+            typeof ado.name !== 'string' ||
+            typeof ado.file !== 'string' || ado.file === '') {
+            throw _Exception.InvalidArgument('ado');
+        }
+        let isLoaded = false;
+        let _this = {
+            // pick all ado properties as is
+            ado: ado,
+            name: ado.name,
+            file: which(ado.file, true), // min/dev contextual pick
+            desc: ado.desc || '',
+            version: ado.version || '',
+            copyright: ado.copyright || '',
+            license: ado.license || '',
+            types: Object.freeze(ado.types.slice()),
+            settings: Object.freeze(ado.settings || {}),
+            assets: Object.freeze(ado.assets.slice()),
+            hasAssets: (ado.assets.length > 0),
+            
+            isLoaded: () => { return isLoaded; },
+            load: () => { 
+                return new Promise((resolve, reject) => {
+                    if (isLoaded) { resolve(); return; }
+                    loadModule(_this.file).then(() => { // since we want this js to be loaded and executed
+                        isLoaded = true;
+                        resolve();
+                    }).catch((e) => {
+                        reject(new _Exception('ModuleLoad', `Module load operation failed. (${_this.file})`, e));
+                    });
+                });
+            }
+        };
+    
+        // return
+        return Object.freeze(_this);
+    };
+    
+    // attach to flair
+    a2f('Assembly', _Assembly, () => {
+        asmFiles = {}; asmTypes = {};
+    });
+       // OK
+    /**
+     * @name Namespace
+     * @description Namespace registration and type locator functionality.
+     * @example
+     *  .getType(qualifiedName)     // - flair type if registered or null
+     * @params
+     * qualifiedName: string - qualified type name which is to be looked for.
+     */ 
+    let ns_types = {};
+    const _Namespace = {
+        // get registered type
+        getType: (qualifiedName) => {
+            return ns_types[qualifiedName] || null;
+        }
+    };
+    const _NSRegister = (Type) => { // registration support -- needed by builder
+        let name = Type._.name, // namespace name is already attached to it, and for all '(root)' marked types' no namespace is added, so it will automatically go to root
+            ns = name.substr(0, name.lastIndexOf('.'));
+    
+        // only valid types are allowed
+        if (['class', 'enum', 'interface', 'mixin', 'struct'].indexOf(_typeOf(Type)) === -1) { throw new _Exception('InvalidArgument', `Type cannot be placed in a namespace. (${name})`); }
+    
+        // check if already registered
+        if (ns_types[name]) { throw `Type (${name}) is already registered.`; }
+    
+        // register
+        ns_types[name] = Type;
+    
+        // update
+        Type._.namespace = ns;
+    };
+    
+    // attach to flair
+    a2f('Namespace', _Namespace, () => {
+        // clear registry
+        ns_types = {};
+    });
+      // OK
+    /**
+     * @name Resource
+     * @description Resource registration and locator functionality.
+     * @example
+     *  .register(name, locale, encodingType, file, data)               // - void
+     *  .get(name)                                                      // - resource object
+     * @params
+     *  name: string - qualified name of resource
+     *  locale: string - locale of the resource or empty, if no locale is associated
+     *  encodingType: string - type of encoding applied to resource data
+     *  file: string - resource file name and path
+     *  data: string - base 64 encoded (or binary) data of resource
+     *  typeName: string - qualified type name for which assembly object is needed
+     */ 
+    let resources_registry = {};
+    const _Resource = {
+        // register resource
+        register: (name, locale, encodingType, file, data) => {
+            if (resources_registry[name]) { throw new _Exception('AlreadyRegistered', 'Resource is already registered'); }
+            resources_registry[name] = new __Resource(name, locale, encodingType, file, data);
+        },
+    
+        // get registered resource
+        get: (name) => {
+            return resources_registry[name] || null;
+        }
+    };
+    
+    _$$('sealed');
+    _$$('ns', '(root)');
+    const __Resource = _Class('Resource', function() {
+         this.construct = (name, locale, encodingType, file, data) => {
+            let resData = data; // data is base64 encoded string, added by build engine
+            let resType = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
+    
+            // decode
+            if (encodingType.indexOf('utf8;') !== -1) {
+                if (isServer) {
+                    let buff = new Buffer(resData).toString('base64');
+                    resData = buff.toString('utf8');
+                } else { // client
+                    resData = b64DecodeUnicode(resData); 
+                }
+            } else { // binary
+                if (isServer) {
+                    resData = new Buffer(resData).toString('base64');
+                } else { // client
+                    // no change, leave it as is
+                }
+            }
+    
+            // store
+            this.locale = locale;
+            this.encodingType = encodingType;
+            this.file = file;
+            this.type = resType;
+            this.data = resData;
+        };
+    
+       /** 
+        *  @name name: string - name of the resource
+        */
+        _$$('readonly');
+        this.name = '';
+    
+       /** 
+        *  @name locale: string - locale of the resource
+        */
+       _$$('readonly');
+       this.locale = '';
+    
+    
+       /** 
+        *  @name locale: string - locale of the resource
+        */
+       _$$('readonly');
+       this.locale = '';   
+    
+       /** 
+        *  @name encodingType: string - resource encoding type
+        */
+        _$$('readonly');
+        this.encodingType = '';
+       
+       /** 
+        *  @name type: string - resource type
+        */
+        _$$('readonly');
+        this.type = '';
+    
+       /** 
+        *  @name data: string - resource data
+        */
+       _$$('readonly');
+       this.data = '';
+    });
+    
+    // attach to flair
+    a2f('Resource', _Resource, () => {
+        resources_registry = {};
+    });
+       // OK
+    /**
+     * @name Container
+     * @description Dependency injection container system
+     * @example
+     *  .isRegistered(alias)                                // - true/false
+     *  .get(alias, isAll)                                  // - item / array of registered unresolved items, as is
+     *  .register(alias, item)                              // - void
+     *  .resolve(alias, isAll, ...args)                     // - item / array of resolved items
+     * @params
+     *  alias: string - name of alias for an item
+     *  item: type/object/string - either a flair type, any object or a qualified type name or a file name
+     *        when giving string, it can be of format 'x | y' for different resolution on server and client
+     *  args: arguments to pass to type constructor when created instances for items
+     *  isAll: boolean - if resolve with all registered items against given alias or only first
+     */ 
+    let container_registry = {};
+    const _Container = {
+        // if an alias is registered
+        isRegistered: (alias) => {
+            if (typeof alias !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
+            return (typeof container_registry[alias] !== 'undefined' && container_registry[alias].length > 0);
+        },
+    
+        // get registered items as is for given alias
+        get: (alias, isAll) => {
+            if (typeof alias !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
+            if (typeof isAll !== 'boolean') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (isAll)'); }
+        
+            if (isAll) {
+                return (container_registry[alias] ? container_registry[alias].slice() : []);
+            } else {
+                return (container_registry[alias] ? container_registry[alias][0] : null);
+            }
+        },
+    
+        // register given alias
+        register: (alias, item) => {
+            if (typeof alias !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
+            if (alias.indexOf('.') !== -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
+            if (!item) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (item)'); }
+            if (typeof item === 'string') { 
+                item = which(item); // register only relevant item for server/client
+                if (item.endsWith('.js') || item.endsWith('.mjs')) { 
+                    item = which(item, true); // consider prod/dev scenario as well
+                }
+            }
+            // register
+            if (!container_registry[alias]) { container_registry[alias] = []; }
+            container_registry[alias].push(item);
+        },
+    
+        // resolve alias with registered item(s)
+        resolve: (alias, isAll, ...args) => {
+            if (typeof alias !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
+            if (typeof isAll !== 'boolean') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (isAll)'); }
+        
+            let result = null;
+            const getResolvedObject = (Type) => {
+                let obj = Type; // whatever it was
+                if (typeof Type === 'string') {
+                    if (Type.endsWith('.js') || Type.endsWith('.mjs')) { 
+                        // file, leave it as is
+                    } else { // try to resolve it from a loaded type
+                        let _Type = _getType(Type);
+                        if (_Type) { Type = _Type; }
+                    }
+                }
+                if (['class', 'struct'].indexOf(_typeOf(Type)) !== -1) { // only class and struct need a new instance
+                    if (args) {
+                        obj = new Type(...args); 
+                    } else {
+                        obj = new Type(); 
+                    }
+                }
+                // any other type of object will be passed through as is
+    
+                // return
+                return obj;
+            };
+            
+            if (container_registry[alias] && container_registry[alias].length > 0) {
+                if (isAll) {
+                    result = [];
+                    container_registry[alias].forEach(Type => { result.push(getResolvedObject(Type)); });
+                } else {
+                    result = getResolvedObject(container_registry[alias][0]); // pick first
+                }
+            }
+    
+            // return
+            return result;
+        }
+    };
+    
+    // attach to flair
+    a2f('Container', _Container, () => {
+        container_registry = {};
+    });  // OK
     /**
      * @name telemetry
      * @description Telemetry enable/disable/filter/collect
@@ -3800,75 +3545,288 @@
         telemetry_buffer.length = 0;
     });
         // OK
-
     /**
-     * @name isMixed
-     * @description Checks if given flair class/struct instance or class/struct has mixed with given mixin
+     * @name Aspects
+     * @description Aspect orientation support.
      * @example
-     *  isMixed(obj, mixin)
+     *  .register(pointcut, Aspect)             // - void
      * @params
-     *  obj: object - flair object instance or type that needs to be checked
-     *  mixin: string OR mixin - mixin to be checked for, it can be following:
-     *                           > fully qualified mixin name
-     *                           > mixin type reference
-     * @returns boolean - true/false
+     *  pointcut: string - pointcut identifier string as -> [namespace.]class[:func]
+     *      namespace/class/func: use wildcard characters ? or * to build the pointcut identifier
+     *     
+     *      Examples:
+     *          abc                 - on all functions of all classes named abc in root namespace (without any namespace)
+     *          *.abc               - on all functions of all classes named abc in all namespaces
+     *          xyz.*               - on all functions of all classes in xyz namespace
+     *          xyz.abc             - on all functions of class abc under xyz namespace
+     *          xyz.abc:*           - on all functions of class abc under xyz namespace
+     *          xyz.abc:f1          - on func f1 of class abc under xyz namespace
+     *          xyz.abc:f?test      - on all funcs that are named like f1test, f2test, f3test, etc. in class abc under xyz namespace
+     *          xyz.xx*.abc         - on functions of all classes names abc under namespaces where pattern matches xyz.xx* (e.g., xyz.xx1 and xyz.xx2)
+     *          *xyx.xx*.abc        - on functions of all classes names abc under namespaces where pattern matches *xyz.xx* (e.g., 1xyz.xx1 and 2xyz.xx1)
+     *     
+     * Aspect: type - flair Aspect type
      */ 
-    const _isMixed = (obj, mixin) => {
-        if (['instance', 'class', 'sinstance', 'struct'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
-        if (['string', 'mixin'].indexOf(_typeOf(mixin)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (mixin)'); }
-        return obj._.isMixed(mixin);
-    };
+    const allAspects = [];
+    const _Aspects = {
+        // register Aspect against given pointcut definition
+        register: (pointcut, Aspect) => {
+            if (typeof pointcut !== 'string') { throw new _Exception.InvalidArgument('pointcut'); }
+            if (!_is(Aspect, 'Aspect')) { throw new _Exception.InvalidArgument('Aspect'); }
+            
+            // add new entry
+            let pc = pointcut,
+                __ns = '',
+                __class = '',
+                __func = '',
+                __identifier = '',
+                items = null;
     
-    // attach to flair
-    a2f('isMixed', _isMixed);
-     // OK
-    /**
-     * @name Mixin
-     * @description Constructs a Mixin type
-     * @example
-     *  Mixin(name, factory)
-     * @params
-     *  name: string - name of the mixin
-     *                 it can take following forms:
-     *                 >> simple, e.g.,
-     *                    MyMixin
-     *                 >> qualified, e.g., 
-     *                    com.myCompany.myProduct.myFeature.MyMixin
-     *                 >> special, e.g.,
-     *                    .MyMixin
-     *         NOTE: Qualified names are automatically registered with Namespace while simple names are not.
-     *               to register simple name on root Namespace, use special naming technique, it will register
-     *               this with Namespace at root, and will still keep the name without '.'
-     *  factory: function - factory function to build mixin definition
-     * @returns type - constructed flair mixin type
-     */
-    const _Mixin = (name, factory) => {
-        let args = _Args('name: string, factory: function')(name, factory);
-        if (args.isInvalid) { throw args.error; }
-    
-        // builder config
-        let cfg = {
-            func: true,
-            prop: true,
-            event: true,
-            customAttrs: true,
-            types: {
-                type: 'mixin'
-            },
-            params: {
-                typeName: args.values.name,
-                factory: args.values.factory
+            if (pc.indexOf(':') !== -1) { // extract func
+                items = pc.split(':');
+                pc = items[0].trim();
+                __func = items[1].trim() || '*';
             }
+    
+            if (pc.indexOf('.') !== -1) { // extract class and namespace
+                __ns = pc.substr(0, pc.lastIndexOf('.'));
+                __class = pc.substr(pc.lastIndexOf('.') + 1);
+            } else {
+                __ns = ''; // no namespace
+                __class = pc;
+            }    
+    
+            // build regex
+            __identifier = __ns + '\/' +__class + ':' + __func; // eslint-disable-line no-useless-escape
+            __identifier = replaceAll(__identifier, '.', '[.]');    // . -> [.]
+            __identifier = replaceAll(__identifier, '?', '.');      // ? -> .
+            __identifier = replaceAll(__identifier, '*', '.*');     // * -> .*
+    
+            // register
+            allAspects.push({rex: new RegExp(__identifier), Aspect: Aspect});
+        }
+    };
+    const _get_Aspects = (typeName, funcName) => {
+        // get parts
+        let funcAspects = [],
+            __ns = '',
+            __class = '',
+            __func = funcName.trim(),
+            __identifier = ''
+    
+        if (typeName.indexOf('.') !== -1) {
+            __ns = typeName.substr(0, typeName.lastIndexOf('.')).trim();
+            __class = typeName.substr(typeName.lastIndexOf('.') + 1).trim(); 
+        } else {
+            __ns = ''; // no namespace
+            __class = typeName.trim();
+        }
+        __identifier = __ns + '/' + __class + ':' + __func;
+    
+        allAspects.forEach(item => {
+            if (item.rex.test(__identifier)) { 
+                if (funcAspects.indexOf(item.Aspect) === -1) {
+                    funcAspects.push(item.Aspect);
+                }
+            }
+        });
+    
+        // return
+        return funcAspects;
+    };
+    const _attach_Aspects = (fn, typeName, funcName, funcAspects) => {
+        let before = [],
+            after = [],
+            around = [],
+            instance = null;
+    
+        // collect all advices
+        for(let funcAspect of funcAspects) {
+            instance = new funcAspect();
+            if (instance.before !== _noop) { before.push(instance.before); }
+            if (instance.around !== _noop) { around.push(instance.around); }
+            if (instance.after !== _noop) { after.push(instance.after); }
+        }
+    
+        // around weaving
+        if (around.length > 0) { around.reverse(); }
+    
+        // weaved function
+        let weavedFn = function(...args) {
+            let error = null,
+                result = null,
+                ctx = {
+                    typeName: () => { return typeName; },
+                    funcName: () => { return funcName; },
+                    error: (err) => { if (err) { error = err; } return error;  },
+                    result: (value) => { if (typeof value !== 'undefined') { result = value; } return result; },
+                    args: () => { return args; },
+                    data: {}
+                };
+            
+            // run before functions
+            for(let beforeFn of before) {
+                try {
+                    beforeFn(ctx);
+                } catch (err) {
+                    error = err;
+                }
+            }
+    
+            // after functions executor
+            const runAfterFn = (_ctx) =>{
+                for(let afterFn of after) {
+                    try {
+                        afterFn(_ctx);
+                    } catch (err) {
+                        ctx.error(err);
+                    }
+                }
+            };
+    
+            // run around func
+            let newFn = fn,
+                _result = null;
+            for(let aroundFn of around) { // build a nested function call having each wrapper calling an inner function wrapped inside advices' functionality
+                newFn = aroundFn(ctx, newFn);
+            }                    
+            try {
+                _result = newFn(...args);
+                if (_result && typeof _result.then === 'function') { // async function
+                    ctx.result(new Promise((__resolve, __reject) => {
+                        _result.then((value) => {
+                            ctx.result(value);
+                            runAfterFn(ctx);
+                            __resolve(ctx.result());
+                        }).catch((err) => {
+                            ctx.error(err);
+                            runAfterFn(ctx);
+                            __reject(ctx.error());
+                        });
+                    }));
+                } else {
+                    ctx.result(_result);
+                    runAfterFn(ctx);
+                }
+            } catch (err) {
+                ctx.error(err);
+            }
+    
+            // return
+            return ctx.result();
         };
     
-        // return built type
-        return builder(cfg);
+        // done
+        return weavedFn;
     };
     
     // attach to flair
-    a2f('Mixin', _Mixin);
+    a2f('Aspects', _Aspects, () => {
+        allAspects.length = 0;
+    });
+       // OK
+    /**
+     * @name Serializer
+     * @description Serializer/Deserialize object instances
+     * @example
+     *  .serialiaze(instance)
+     *  .deserialize(json)
+     * @params
+     *  instance: object - supported flair type's object instance to serialize
+     *  json: object - previously serialized object by the same process
+     * @returns
+     *  string: json string when serialized
+     *  object: flair object instance, when deserialized
+     */ 
+    const serilzer_process = (source, isDeserialize) => {
+        let result = null,
+            memberNames = null,
+            src = (isDeserialize ? JSON.parse(source) : source),
+            Type = (isDeserialize ? null : source._.Type);
+        const getMemberNames = (obj, isSelectAll) => {
+            let attrRefl = obj._.attrs,
+                modiRefl = obj._.modifiers,
+                props = [],
+                isOK = false;
+            for(let memberName in obj) {
+                if (obj.hasOwnProperty(memberName) && memberName !== '_') {
+                    isOK = modiRefl.members.isProperty(memberName);
+                    if (isOK) {
+                        if (isSelectAll) {
+                            isOK = !attrRefl.members.probe('noserialize', memberName).anywhere(); // not marked as noserialize when type itself is marked as serialize
+                        } else {
+                            isOK = attrRefl.members.probe('serialize', memberName).anywhere(); // marked as serialize when type is not marked as serialize
+                        }
+                        if (isOK) {
+                            isOK = (!modiRefl.members.is('private', memberName) &&
+                                    !modiRefl.members.is('protected', memberName) &&
+                                    !modiRefl.members.is('static', memberName) &&
+                                    !modiRefl.members.is('readonly', memberName) &&
+                                    !attrRefl.members.probe('inject', memberName).anywhere());
+                        }
+                    }
+                    if (isOK) { props.push(memberName); }
+                }
+            }
+            return props;
+        }; 
     
-
+        if (isDeserialize) {
+            // validate 
+            if (!src.type && !src.data) { throw _Exception.InvalidArgument('json'); }
+    
+            // get base instance to load property values
+            Type = _getType(src.type);
+            if (!Type) { throw new _Exception('NotRegistered', `Type is not registered. (${src.type})`); }
+            result = new Type(); // that's why serializable objects must be able to create themselves without arguments 
+            
+            // get members to deserialize
+            if (Type._.attrs.type.probe('serialize').anywhere()) {
+                memberNames = getMemberNames(result, true);
+            } else {
+                memberNames = getMemberNames(result, false);
+            }
+            
+            // deserialize
+            for(let memberName of memberNames) { result[memberName] = src.data[memberName]; }
+        } else {
+            // get members to serialize
+            if (Type._.attrs.type.probe('serialize').anywhere()) {
+                memberNames = getMemberNames(src, true);
+            } else {
+                memberNames = getMemberNames(src, false);
+            }
+    
+            // serialize
+            result = {
+                type: src._.Type._.name,
+                data: {}
+            };
+            for(let memberName of memberNames) { result.data[memberName] = src[memberName]; }
+            result = JSON.stringify(result);
+        }
+    
+        // return
+        return result;
+    };
+    const _Serializer = {
+        // serialize given supported flair type's instance
+        serialize: (instance) => { 
+            if (!(instance && instance._ && instance._.type) || ['instance', 'sinstance'].indexOf(instance._.type) === -1) { throw _Exception.InvalidArgument('instance'); }
+            return serilzer_process(instance);
+        },
+    
+        // deserialize last serialized instance
+        deserialize: (json) => {
+            if (!json || typeof json !== 'string') { throw _Exception.InvalidArgument('json'); }
+            return serilzer_process(json, true);
+        }
+    };
+    
+    // attach to flair
+    a2f('Serializer', _Serializer);
+    
+      // OK
     /**
      * @name Reflector
      * @description Reflection of flair types and objects.
@@ -4316,105 +4274,169 @@
     a2f('Reflector', _Reflector);    
 
     /**
-     * @name Serializer
-     * @description Serializer/Deserialize object instances
-     * @example
-     *  .serialiaze(instance)
-     *  .deserialize(json)
-     * @params
-     *  instance: object - supported flair type's object instance to serialize
-     *  json: object - previously serialized object by the same process
-     * @returns
-     *  string: json string when serialized
-     *  object: flair object instance, when deserialized
-     */ 
-    const serilzer_process = (source, isDeserialize) => {
-        let result = null,
-            memberNames = null,
-            src = (isDeserialize ? JSON.parse(source) : source),
-            Type = (isDeserialize ? null : source._.Type);
-        const getMemberNames = (obj, isSelectAll) => {
-            let attrRefl = obj._.attrs,
-                modiRefl = obj._.modifiers,
-                props = [],
-                isOK = false;
-            for(let memberName in obj) {
-                if (obj.hasOwnProperty(memberName) && memberName !== '_') {
-                    isOK = modiRefl.members.isProperty(memberName);
-                    if (isOK) {
-                        if (isSelectAll) {
-                            isOK = !attrRefl.members.probe('noserialize', memberName).anywhere(); // not marked as noserialize when type itself is marked as serialize
-                        } else {
-                            isOK = attrRefl.members.probe('serialize', memberName).anywhere(); // marked as serialize when type is not marked as serialize
-                        }
-                        if (isOK) {
-                            isOK = (!modiRefl.members.is('private', memberName) &&
-                                    !modiRefl.members.is('protected', memberName) &&
-                                    !modiRefl.members.is('static', memberName) &&
-                                    !modiRefl.members.is('readonly', memberName) &&
-                                    !attrRefl.members.probe('inject', memberName).anywhere());
-                        }
-                    }
-                    if (isOK) { props.push(memberName); }
-                }
-            }
-            return props;
-        }; 
+     * @name Aspect
+     * @description Aspect base class.
+     */
+    _$$('abstract');
+    _$$('ns', '(root)');
+    _Class('Aspect', function() {
+        /** 
+         * @name before
+         * @description Before advise
+         * @example
+         *  before(ctx)
+         * @arguments
+         * ctx: object - context object that is shared across all weavings
+         *  typeName()      - gives the name of the type
+         *  funcName()      - gives the name of the function
+         *  error(err)      - store new error to context, or just call error() to get last error
+         *  result(value)   - store new result to context, or just call result() to get last stored result
+         *  args()          - get original args passed to main call
+         *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
+         */  
+        _$$('virtual');
+        this.before = this.noop;
     
-        if (isDeserialize) {
-            // validate 
-            if (!src.type && !src.data) { throw _Exception.InvalidArgument('json'); }
+        /** 
+         * @name around
+         * @description Around advise
+         * @example
+         *  around(ctx, fn)
+         * @arguments
+         * ctx: object - context object that is shared across all weavings
+         *  typeName()      - gives the name of the type
+         *  funcName()      - gives the name of the function
+         *  error(err)      - store new error to context, or just call error() to get last error
+         *  result(value)   - store new result to context, or just call result() to get last stored result
+         *  args()          - get original args passed to main call
+         *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
+         * fn: function - function which is wrapped, it should be called in between pre and post actions
+         */  
+        _$$('virtual');
+        this.around = this.noop;
     
-            // get base instance to load property values
-            Type = _getType(src.type);
-            if (!Type) { throw new _Exception('NotRegistered', `Type is not registered. (${src.type})`); }
-            result = new Type(); // that's why serializable objects must be able to create themselves without arguments 
-            
-            // get members to deserialize
-            if (Type._.attrs.type.has('serialize', true)) {
-                memberNames = getMemberNames(result, true);
-            } else {
-                memberNames = getMemberNames(result, false);
-            }
-            
-            // deserialize
-            for(let memberName of memberNames) { result[memberName] = src.data[memberName]; }
-        } else {
-            // get members to serialize
-            if (Type._.attrs.type.has('serialize', true)) {
-                memberNames = getMemberNames(src, true);
-            } else {
-                memberNames = getMemberNames(src, false);
-            }
+        /** 
+         * @name after
+         * @description After advise
+         * @example
+         *  after(ctx)
+         * @arguments
+         * ctx: object - context object that is shared across all weavings
+         *  typeName()      - gives the name of the type
+         *  funcName()      - gives the name of the function
+         *  error(err)      - store new error to context, or just call error() to get last error
+         *  result(value)   - store new result to context, or just call result() to get last stored result
+         *  args()          - get original args passed to main call
+         *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
+         */  
+        _$$('virtual');
+        this.after = this.noop;
+    });
+        // OK
+    /**
+     * @name Attribute
+     * @description Attribute base class.
+     */
+    _$$('abstract');
+    _$$('ns', '(root)');
+    _Class('Attribute', function() {
+        this.construct = (args) => {
+            this.args = args;
+        };
     
-            // serialize
-            result = {
-                type: src._.Type._.name,
-                data: {}
-            };
-            for(let memberName of memberNames) { result.data[memberName] = src[memberName]; }
-            result = JSON.stringify(result);
-        }
+       /** 
+        *  @name args: array - arguments as defined where attribute is applied e.g., ('text', 012, false, Reference)
+        */
+        _$$('readonly');
+        this.args = [];
     
-        // return
-        return result;
-    };
-    const _Serializer = {
-        // serialize given supported flair type's instance
-        serialize: (instance) => { 
-            if (!(instance && instance._ && instance._.type) || ['instance', 'sinstance'].indexOf(instance._.type) === -1) { throw _Exception.InvalidArgument('instance'); }
-            return serilzer_process(instance);
-        },
+       /** 
+        *  @name constraints: string - An expression that defined the constraints of applying this attribute 
+        *                     using NAMES, PREFIXES, SUFFIXES and logical Javascript operator
+        * 
+        *                  NAMES can be: 
+        *                      type names: class, struct, enum, interface, mixin
+        *                      type member names: prop, func, construct, dispose, event
+        *                      inbuilt modifier names: static, abstract, sealed, virtual, override, private, protected, readonly, async, etc.
+        *                      inbuilt attribute names: promise, singleton, serialize, deprecate, session, state, conditional, noserialize, etc.
+        *                      custom attribute names: any registered custom attribute name
+        *                      type names itself: e.g., Aspect, Attribute, etc. (any registered type name is fine)
+        *                          SUFFIX: A typename must have a suffix (^) e.g., Aspect^, Attribute^, etc. Otherwise this name will be treated as custom attribute name
+        *                  
+        *                  PREFIXES can be:
+        *                      No Prefix: means it must match or be present at the level where it is being defined
+        *                      @: means it must be inherited from or present at up in hierarchy chain
+        *                      $: means it either must ne present at the level where it is being defined or must be present up in hierarchy chain
+        *                  <name> 
+        *                  @<name>
+        *                  $<name>
+        * 
+        *                  BOOLEAN Not (!) can also be used to negate:
+        *                  !<name>
+        *                  !@<name>
+        *                  !$<name>
+        *                  
+        *                  NOTE: Constraints are processed as logical boolean expressions and 
+        *                        can be grouped, ANDed or ORed as:
+        * 
+        *                        AND: <name1> && <name2> && ...
+        *                        OR: <name1> || <name2>
+        *                        GROUPING: ((<name1> || <name2>) && (<name1> || <name2>))
+        *                                  (((<name1> || <name2>) && (<name1> || <name2>)) || <name3>)
+        * 
+        **/
+        this.constraints = '';
     
-        // deserialize last serialized instance
-        deserialize: (json) => {
-            if (!json || typeof json !== 'string') { throw _Exception.InvalidArgument('json'); }
-            return serilzer_process(json, true);
-        }
-    };
+        /** 
+         * @name decorateProperty
+         * @description Property decorator
+         * @example
+         *  decorateProperty(typeName, memberName, member)
+         * @arguments
+         *  typeName: string - typeName
+         *  memberName: string - member name
+         *  member - object - having get: getter function and set: setter function
+         *          both getter and setter can be applied attribute functionality on
+         * @returns
+         *  object - having decorated { get: fn, set: fn }
+         *           Note: decorated get must call member's get
+         *                 decorated set must accept value argument and pass it to member's set with or without processing
+         */  
+        _$$('virtual');
+        this.decorateProperty = this.noop;
     
-    // attach to flair
-    a2f('Serializer', _Serializer);
+        /** 
+         * @name decorateFunction
+         * @description Function decorator
+         * @example
+         *  decorateFunction(typeName, memberName, member)
+         * @arguments
+         *  typeName: string - typeName
+         *  memberName: string - member name
+         *  member - function - function to decorate
+         * @returns
+         *  function - decorated function
+         *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
+         */  
+        _$$('virtual');
+        this.decorateFunction = this.noop;    
+    
+        /** 
+         * @name decorateEvent
+         * @description Event decorator
+         * @example
+         *  decorateEvent(typeName, memberName, member)
+         * @arguments
+         *  typeName: string - typeName
+         *  memberName: string - member name
+         *  member - function - event argument processor function
+         * @returns
+         *  function - decorated function
+         *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
+         */  
+        _$$('virtual');
+        this.decorateEvent = this.noop;
+    });
     
       // OK
 

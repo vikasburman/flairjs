@@ -27,7 +27,8 @@ const _Resource = {
 };
 
 _$$('sealed');
-const __Resource = _Class('.Resource', function() { // registered at root namespace (can be get as: getType('Resource'))
+_$$('ns', '(root)');
+const __Resource = _Class('Resource', function() {
      this.construct = (name, locale, encodingType, file, data) => {
         let resData = data; // data is base64 encoded string, added by build engine
         let resType = file.substr(file.lastIndexOf('.') + 1).toLowerCase();

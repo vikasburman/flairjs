@@ -53,7 +53,7 @@ const escapeRegExp = (string) => {
 const replaceAll = (string, find, replace) => {
     return string.replace(new RegExp(escapeRegExp(find), 'g'), replace);
 };
-const extend = (target, source, overwrite, except) => {
+const shallowCopy = (target, source, overwrite, except) => {
     if (!except) { except = []; }
     for(let item in source) {
         if (source.hasOwnProperty(item) && except.indexOf(item) === -1) { 
@@ -136,7 +136,7 @@ const loadModule = (module) => {
     });
 };
 const sieve = (obj, props, isFreeze, add) => {
-    let _props = splitAndTrim(props);
+    let _props = props ? splitAndTrim(props) : Object.keys(obj); // if props are not give, pick all
     const extract = (_obj) => {
         let result = {};
         if (_props.length > 0) { // copy defined

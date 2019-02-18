@@ -29,7 +29,7 @@
         "bump": "gulp bump",
         "release": "gulp release",
         "package": "gulp package",
-        "start": "http-server ./docs/ | open http://127.0.0.1:8080/examples/"
+        "start": "http-server ./docs/ | open http://127.0.0.1:8080/v1/examples/"
     },
     "devDependencies": {
         "babel-eslint": "^10.0.1",

@@ -21,9 +21,6 @@ const _typeOf = (obj) => {
     // null
     if (!_type && obj === null) { _type = 'null'; }
 
-    // NaN
-    if (!_type && isNaN(obj)) { _type = 'NaN'; }
-
     // infinity
     if (!_type && typeof obj === 'number' && isFinite(obj) === false) { _type = 'infinity'; }
 

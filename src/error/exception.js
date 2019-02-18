@@ -16,7 +16,7 @@
  * @constructs Exception object
  */  
 const _Exception = function(arg1, arg2, arg3) {
-    let _this = new Error();
+    let _this = Error();
     switch(typeof arg1) {
         case 'string':
             _this.name = arg1;

@@ -54,7 +54,7 @@ const serilzer_process = (source, isDeserialize) => {
         result = new Type(); // that's why serializable objects must be able to create themselves without arguments 
         
         // get members to deserialize
-        if (Type._.attrs.type.has('serialize', true)) {
+        if (Type._.attrs.type.probe('serialize').anywhere()) {
             memberNames = getMemberNames(result, true);
         } else {
             memberNames = getMemberNames(result, false);
@@ -64,7 +64,7 @@ const serilzer_process = (source, isDeserialize) => {
         for(let memberName of memberNames) { result[memberName] = src.data[memberName]; }
     } else {
         // get members to serialize
-        if (Type._.attrs.type.has('serialize', true)) {
+        if (Type._.attrs.type.probe('serialize').anywhere()) {
             memberNames = getMemberNames(src, true);
         } else {
             memberNames = getMemberNames(src, false);

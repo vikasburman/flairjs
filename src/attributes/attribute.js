@@ -3,7 +3,8 @@
  * @description Attribute base class.
  */
 _$$('abstract');
-_Class('.Attribute', function() { // registered at root namespace (can be get as: getType('Attribute'))
+_$$('ns', '(root)');
+_Class('Attribute', function() {
     this.construct = (args) => {
         this.args = args;
     };

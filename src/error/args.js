@@ -42,9 +42,9 @@ const _Args = (...patterns) => {
         // process each pattern - exit with first matching pattern
         let types = null, items = null,
             name = '', type = '',
-            pIndex = -1, aIndex = -1,
+            pIndex = -1, aIndex = -1,   // pattern index, argument index
             matched = false,
-            mCount = 0,
+            mCount = 0, // matched arguments count of pattern
             result = {
                 raw: args || [],
                 index: -1,
@@ -53,7 +53,7 @@ const _Args = (...patterns) => {
                 values: {}
             };
         if (patterns) {
-            for(let pattern of patterns) {
+            for(let pattern of patterns) { // pattern
                 pIndex++; aIndex=-1; matched = false; mCount = 0;
                 types = pattern.split(',');
                 for(let item of types) {
@@ -70,7 +70,7 @@ const _Args = (...patterns) => {
                     if (!_is(result.raw[aIndex], type)) { matched = false; break; }
                     result.values[name] = result.raw[aIndex]; matched = true; mCount++;
                 }
-                if (matched && mCount === result.raw.length) {result.index = pIndex; break; }
+                if (matched && mCount === types.length) {result.index = pIndex; break; }
             }
         }
 

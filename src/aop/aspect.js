@@ -3,7 +3,8 @@
  * @description Aspect base class.
  */
 _$$('abstract');
-_Class('.Aspect', function() { // registered at root namespace (can be get as: getType('Aspect'))
+_$$('ns', '(root)');
+_Class('Aspect', function() {
     /** 
      * @name before
      * @description Before advise

@@ -1,13 +1,12 @@
-const attributesAndModifiers = (def, memberName) => {
+const attributesAndModifiers = (def, typeDef, memberName, isTypeLevel) => {
     let appliedAttrs = _attr.collect(), // [{name, cfg, attr, args}]
         attrBucket = null,
         modifierBucket = null,
-        isTypeLevel = (def.level === 'type'),
-        modifiers = modifierOrAttrRefl(true, def),
-        attrs = modifierOrAttrRefl(false, def);
+        modifiers = modifierOrAttrRefl(true, def, typeDef),
+        attrs = modifierOrAttrRefl(false, def, typeDef);
     if (isTypeLevel) {
-        attrBucket = def.attrs.type;
-        modifierBucket = def.modifiers.type;
+        attrBucket = typeDef.attrs.type;
+        modifierBucket = typeDef.modifiers.type;
     } else {
         attrBucket = def.attrs.members[memberName] = []; // create bucket
         modifierBucket = def.modifiers.members[memberName] = []; // create bucket
@@ -20,8 +19,9 @@ const attributesAndModifiers = (def, memberName) => {
             _supportedMemberTypes = ['prop', 'func', 'construct', 'dispose', 'event'],
             _supportedModifiers = ['static', 'abstract', 'sealed', 'virtual', 'override', 'private', 'protected', 'readonly', 'async'],
             _list = [], // { withWhat, matchType, original, name, value }
+            _list2 = [], // to store all struct types, which needs to be processed at end, else replaceAll causes problem and 'struct' state is replaced on 'construct' too
             dump = [],
-            constraintsLex = appliedAttr.constraints; // logical version with filled booleans
+            constraintsLex = appliedAttr.cfg.constraints; // logical version with filled booleans
 
         // extract names
         const sortAndStore = (match) => {
@@ -68,28 +68,43 @@ const attributesAndModifiers = (def, memberName) => {
             }
 
             // store
-            _list.push(item);
+            if (item.name === 'struct') {
+                // note: 'struct' falls inside 'construct', so replaceAll happens to replace 'struct's state over 'construct'
+                // too, and so, it being collected in _list2 and will be added at the end
+                _list2.push(item);
+            } else {
+                _list.push(item);
+            }
         }; 
         const extractConstraints = () => {
             // select everything except these !, &, |, (, and )
-            let rex = new RegExp('/[^!\&!|()]/g'), // eslint-disable-line no-useless-escape
-            match = '';
+            let rex = new RegExp('[^!\&!|()]', 'g'), // eslint-disable-line no-useless-escape
+                match = '',
+                idx = 0;
             while(true) { // eslint-disable-line no-constant-condition
                 match = rex.exec(constraintsLex);
                 if (match !== null) { dump.push(match); continue; }
                 break; 
             }
-            match = '';
+            match = ''; idx = 0;
             for(let char of dump) {
+                idx++;
                 if (char[0] !== ' ') { 
-                    match+= char[0]; 
+                    match+= char[0];
+                    if (idx === dump.length)  { 
+                        if (match !== '') { sortAndStore(match); }
+                        match = '';
+                    }
                 } else {
                     if (match !== '') { sortAndStore(match); }
                     match = '';
                 }
             }
+
+            // merge _list and _list
+            _list = _list.concat(_list2);
         };    
-        extractConstraints(); // this will populate _list
+        extractConstraints(); // this will populate _list 
 
         // get true/false value of each item in expression
         for(let item of _list) {
@@ -97,35 +112,47 @@ const attributesAndModifiers = (def, memberName) => {
                 case 'typeName':
                     switch(item.matchType) {
                         case 'anywhere':
-                            item.value = ((item.name === memberName) || def.Type._.isDerivedFrom(item.name)); break;
+                            item.value = ((item.name === typeDef.name) || typeDef.Type._.isDerivedFrom(item.name)); break;
                         case 'inherited':
-                            item.value = def.Type._.isDerivedFrom(item.name); break;
+                            item.value = typeDef.Type._.isDerivedFrom(item.name); break;
                         case 'current':
-                            item.value = (item.name === memberName); break;
+                            item.value = (item.name === typeDef.name); break;
                     }
                     break;
                 case 'typeType':
                     // matchType is always 'current' in this case 
-                    item.value = (def.type === item.name); 
+                    item.value = (typeDef.type === item.name); 
                     break;
                 case 'memberType':
                     // matchType is always 'current' in this case 
-                    item.value = (def.members[memberName] === item.name);
+                    if (isTypeLevel) {
+                        item.value = false; // member matching at type level is always false
+                    } else {
+                        item.value = (def.members[memberName] === item.name);
+                    }
                     break;
                 case 'modifier':
                     // call to configured probe's anywhere, inherited or current function
-                    item.value = (modifiers.members.probe(item.name, memberName)[item.matchType]() ? true : false);
+                    if (isTypeLevel) {
+                        item.value = (modifiers.type.probe(item.name)[item.matchType]() ? true : false);
+                    } else {
+                        item.value = (modifiers.members.probe(item.name, memberName)[item.matchType]() ? true : false);
+                    }
                     break;
                 case 'attribute':
                     // call to configured probe's anywhere, inherited or current function
-                    item.value = (attrs.members.probe(item.name, memberName)[item.matchType]() ? true : false);
+                    if (isTypeLevel) {
+                        item.value = (attrs.type.probe(item.name)[item.matchType]() ? true : false);
+                    } else {
+                        item.value = (attrs.members.probe(item.name, memberName)[item.matchType]() ? true : false);
+                    }
                     break;
             }
             constraintsLex = replaceAll(constraintsLex, item.original, item.value.toString());
         }
         
         // validate expression
-        result = (new Function("try {return constraintsLex;}catch(e){return false;}"))();
+        result = (new Function("try {return (" + constraintsLex + ");}catch(e){return false;}")());
         if (!result) {
             // TODO: send telemetry of _list, so it can be debugged
             throw new _Exception('InvalidOperation', `${appliedAttr.cfg.isModifier ? 'Modifier' : 'Attribute'} ${appliedAttr.name} could not be applied. (${memberName})`);
@@ -138,7 +165,7 @@ const attributesAndModifiers = (def, memberName) => {
     // validate and collect
     for (let appliedAttr of appliedAttrs) {
         if (validator(appliedAttr)) {
-            appliedAttr = sieve(appliedAttr, null, false, { type: def.name });
+            appliedAttr = sieve(appliedAttr, null, false, { type: (isTypeLevel ? typeDef.name : def.name) });
             if (appliedAttr.isCustom) { // custom attribute instance
                 attrBucket.push(appliedAttr);
             } else { // inbuilt attribute or modifier
@@ -151,17 +178,16 @@ const attributesAndModifiers = (def, memberName) => {
         }
     }
 };
-const modifierOrAttrRefl = (isModifier, def) => {
+const modifierOrAttrRefl = (isModifier, def, typeDef) => {
     let defItemName = (isModifier ? 'modifiers' : 'attrs');
-    let root_get = (name, memberName, isCheckInheritance) => {
-        let isTypeLevel = (def.level === 'type'),
-            result = null; 
+    let root_get = (name, memberName, isCheckInheritance, isTypeLevel) => {
+        let result = null; 
         if (isTypeLevel) {
             if (!isCheckInheritance) {
-                result = findItemByProp(def[defItemName].type, 'name', name);
+                result = findItemByProp(typeDef[defItemName].type, 'name', name);
             } else {
                 // check from parent onwards, keep going up till find it or hierarchy ends
-                let prv = def.previous();
+                let prv = typeDef.previous();
                 while(true) { // eslint-disable-line no-constant-condition
                     if (prv === null) { break; }
                     result = findItemByProp(prv[defItemName].type, 'name', name);
@@ -190,26 +216,26 @@ const modifierOrAttrRefl = (isModifier, def) => {
         }
         return result; // {name, cfg, attr, args}
     };     
-    let root_has = (name, memberName, isCheckInheritance) => {
-        return root.get(name, memberName, isCheckInheritance) !== null;
+    let root_has = (name, memberName, isCheckInheritance, isTypeLevel) => {
+        return root_get(name, memberName, isCheckInheritance, isTypeLevel) !== null;
     }; 
     const members_probe = (name, memberName) => {
         let _probe = Object.freeze({
             anywhere: () => {
-                return root.get(name, memberName) || root.get(name, memberName, true); 
+                return root_get(name, memberName, false, false) || root_get(name, memberName, true, false); 
             },
             current: () => {
-                return root.get(name, memberName); 
+                return root_get(name, memberName, false, false); 
             },
             inherited: () => {
-                return root.get(name, memberName, true); 
+                return root_get(name, memberName, true, false); 
             },
             only: Object.freeze({
                 current: () => {
-                    return root.get(name, memberName) && !root.get(name, memberName, true); 
+                    return root_get(name, memberName, false, false) && !root_get(name, memberName, true, false); 
                 },
                 inherited: () => {
-                    return !root.get(name, memberName) && root.get(name, memberName, true); 
+                    return !root_get(name, memberName, false, false) && root_get(name, memberName, true, false); 
                 }
             })
         });
@@ -218,20 +244,20 @@ const modifierOrAttrRefl = (isModifier, def) => {
     const type_probe = (name) => {
         let _probe = Object.freeze({
             anywhere: () => {
-                return root.get(name, '') || root.get(name, '', true); 
+                return root_get(name, null, false, true) || root_get(name, null, true, true); 
             },
             current: () => {
-                return root.get(name, ''); 
+                return root_get(name, null, false, true); 
             },
             inherited: () => {
-                return root.get(name, '', true); 
+                return root_get(name, null, true, true); 
             },
             only: Object.freeze({
                 current: () => {
-                    return root.get(name, '') && !root.get(name, '', true); 
+                    return root_get(name, null, false, true) && !root_get(name, null, true, true); 
                 },
                 inherited: () => {
-                    return !root.get(name, '') && root.get(name, '', true); 
+                    return !root_get(name, null, false, true) && root_get(name, null, true, true); 
                 }
             })
         });
@@ -264,13 +290,13 @@ const modifierOrAttrRefl = (isModifier, def) => {
     const type_all = () => {
         let _all = Object.freeze({
             current: () => {
-                return def[defItemName].type.slice();
+                return typeDef[defItemName].type.slice();
             },
             inherited: () => {
                 let all_inherited_attrs = [],
                     prv_attrs = null;
                 // check from parent onwards, keep going up till hierarchy ends
-                let prv = def.previous();
+                let prv = typeDef.previous();
                 while(true) { // eslint-disable-line no-constant-condition
                     if (prv === null) { break; }
                     prv_attrs = prv[defItemName].type.slice();
@@ -286,21 +312,23 @@ const modifierOrAttrRefl = (isModifier, def) => {
         return _all;
     };
     const root = {
-        get: root_get,
-        has: root_has,
         type: Object.freeze({
             get: (name, isCheckInheritance) => {
-                return root.get(name, true, isCheckInheritance);
+                return root_get(name, null, isCheckInheritance, true);
             },
             has: (name, isCheckInheritance) => {
-                return root.has(name, true, isCheckInheritance);
+                return root_has(name, null, isCheckInheritance, true);
             },
             all: type_all,
             probe: type_probe
         }),
         members: {
-            get: root_get,
-            has: root_has,
+            get: (name, memberName, isCheckInheritance) => {
+                return root_get(name, memberName, isCheckInheritance, false);
+            },
+            has: (name, memberName, isCheckInheritance) => {
+                return root_has(name, memberName, isCheckInheritance, false);
+            }, 
             all: members_all,
             probe: members_probe,
         }
@@ -356,7 +384,33 @@ const modifierOrAttrRefl = (isModifier, def) => {
     root.members = Object.freeze(root.members);
     return Object.freeze(root);
 };
-const buildTypeInstance = (cfg, Type, params, obj) => {
+const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
+    // define parameters and context
+    let _flagName = '___flag___',
+        params = {
+            _flagName: _flagName
+        };
+    if (typeof _flag !== 'undefined' && _flag === _flagName) { // inheritance in play
+        params.isNeedProtected = true;
+        params.isTopLevelInstance = false;
+        params.staticInterface = _static;
+        params.args = args;
+    } else {
+        params.isNeedProtected = false;
+        params.isTopLevelInstance = true;
+        params.staticInterface = Type;
+        if (typeof _flag !== 'undefined') {
+            if (typeof _static !== 'undefined') {
+                params.args = [_flag, _static].concat(args); // one set
+            } else {
+                params.args = [_flag]; // no other args given
+            }
+        } else {
+            params.args = []; // no args
+        }
+    }
+
+    // singleton specific case
     if (cfg.singleton && params.isTopLevelInstance && Type._.singleInstance()) { return Type._.singleInstance(); }
 
     // define vars
@@ -558,7 +612,7 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
         // since these are of same object type, and since overwriting of this is allowed, add only at top level
         // and only missing ones
         if (params.isTopLevelInstance) {
-            exposed_obj = extend(exposed_obj, cfg.ex.instance, false); // don;t overwrite, since overriding defaults are allowed
+            exposed_obj = shallowCopy(exposed_obj, cfg.ex.instance, false); // don;t overwrite, since overriding defaults are allowed
         }
 
         // expose def of this level for upper level to access if not on top level
@@ -954,7 +1008,7 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
         _member.remove = (handler) => { _member_dispatcher.remove(name, handler); };
         _member.strip = (_exposed_obj) => {
             // returns the stripped version of the event without event raising ability
-            let strippedEvent = Object.freeze(extend({}, _member, true, ['strip']));
+            let strippedEvent = Object.freeze(shallowCopy({}, _member, true, ['strip']));
 
             // delete strip feature now, it is no longer needed
             delete _member.strip;
@@ -992,7 +1046,7 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
         }
 
         // collect attributes and modifiers - validate applied attributes as per attribute configuration - throw when failed
-        attributesAndModifiers(def, memberName);
+        attributesAndModifiers(def, Type._.def(), memberName, false);
 
         // validate feasibility of member definition - throw when failed
         if (!validateMemberDefinitionFeasibility(memberName, memberType, memberDef)) { return; } // skip defining this member
@@ -1037,19 +1091,19 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
             _attr('interface', interface_being_validated._.name);
 
             // collect attributes and modifiers - validate applied attributes as per attribute configuration - throw when failed
-            attributesAndModifiers(def, memberName);
+            attributesAndModifiers(def, Type._.def(), memberName, false);
         }
     };    
     const addDisposable = (disposableType, data) => {
         obj._.disposables.push({type: disposableType, data: data});
     }
-    const modifiers = modifierOrAttrRefl(true, def);
-    const attrs = modifierOrAttrRefl(false, def);
+    const modifiers = modifierOrAttrRefl(true, def, Type._.def());
+    const attrs = modifierOrAttrRefl(false, def, Type._.def());
     
     // construct base object from parent, if applicable
     if (cfg.inheritance) {
         if (params.isTopLevelInstance) {
-            if (modifiers.type.has('abstract')) { throw new _Exception('InvalidOperation', `Cannot create instance of an abstract type. (${def.name})`); }
+            if (modifiers.type.probe('abstract').current()) { throw new _Exception('InvalidOperation', `Cannot create instance of an abstract type. (${def.name})`); }
         }
 
         // create parent instance, if required, else use passed object as base object
@@ -1073,7 +1127,7 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
 
      // set object meta
      if (typeof obj._ === 'undefined') {
-        obj._ = extend({}, cfg.mex.instance, false); // these will always be same, since inheritance happen in same types, and these are defined at a type configuration level, so these will always be same and should behave just like the next set of definitions here
+        obj._ = shallowCopy({}, cfg.mex.instance, false); // these will always be same, since inheritance happen in same types, and these are defined at a type configuration level, so these will always be same and should behave just like the next set of definitions here
         if (cfg.mixins) {
             def.mixins = cfg.params.mixins; // mixin types that were applied to this type, will be deleted after apply
         }
@@ -1236,7 +1290,7 @@ const buildTypeInstance = (cfg, Type, params, obj) => {
 
     // add/update meta on top level instance
     if (params.isTopLevelInstance) {
-        if (cfg.singleton && attrs.type.has('singleton')) {
+        if (cfg.singleton && attrs.type.probe('singleton').current()) {
             Type._.singleInstance = () => { return exposed_obj; }; 
             Type._.singleInstance.clear = () => { 
                 Type._.singleInstance = () => { return null; };
@@ -1279,7 +1333,8 @@ const builder = (cfg) => {
     cfg.mex.type = ((cfg.mex && cfg.mex.type) ? cfg.mex.type : {})
     cfg.ex.instance = ((cfg.ex && cfg.ex.instance) ? cfg.ex.instance : {});
     cfg.ex.type = ((cfg.ex && cfg.ex.type) ? cfg.ex.type : {});
-    cfg.params.typeName = cfg.params.typeName || 'unknown';
+    cfg.params.typeName = cfg.params.typeName || '';
+    cfg.params.ns = '';
     cfg.params.inherits = cfg.params.inherits || null;
     cfg.params.mixins = [];
     cfg.params.interfaces = [];
@@ -1299,6 +1354,23 @@ const builder = (cfg) => {
         cfg.customAttrs = false;
     }
 
+    // type name and namespace validations
+    if (!cfg.params.typeName || cfg.params.typeName.indexOf('.') !== -1) { throw  `Type name is invalid. (${cfg.params.typeName})`; } // dots are not allowed in names
+    // peer ns attribute on type and if found merge it with name
+    let ns_attr = _attr.get('ns'),
+        ns = ns_attr ? ns_attr.args[0] : '';
+    switch(ns) {
+        case '(auto)':  // this is a placeholder that gets replaced by assembly builder with dynamic namespace based on folder structure, so if is it left, it is wrong
+            throw  `Namespace name is invalid. (${ns})`;
+        case '(root)':  // this is mark to instruct builder that register type at root namespace
+            break; // go on
+        default: // anything else
+            if (ns.startsWith('.') || ns.endsWith('.')) { throw  `Namespace name is invalid. (${ns})`; } // start and end dots are not allowed in namespace names
+            cfg.params.typeName = ns + '.' + cfg.params.typeName; // add namespace to name here onwards
+            cfg.params.ns = ns;
+            break;
+    }
+
     // extract mixins and interfaces
     if (cfg.params.mixinsAndInterfaces) {
         for(let item of cfg.params.mixinsAndInterfaces) {
@@ -1315,10 +1387,7 @@ const builder = (cfg) => {
     // object extensions
     let _oex = { // every object of every type will have this, that means all types are derived from this common object
     }; 
-    cfg.ex.instance = extend(cfg.ex.instance, _oex, false); // don't override, which means defaults overriding is allowed
-
-    // top level definitions
-    let _flagName = '___flag___';
+    cfg.ex.instance = shallowCopy(cfg.ex.instance, _oex, false); // don't override, which means defaults overriding is allowed
 
     // collect complete hierarchy defs while the type is building
     cfg.dump = []; // TODO: Check what is heppening with this, not implemented yet, idea is to collect all hierarchy and made it available at Type level for reflector
@@ -1327,42 +1396,14 @@ const builder = (cfg) => {
     let _Object = null;
     if (cfg.new) { // class, struct
         _Object = function(_flag, _static, ...args) {
-            // define parameters and context
-            let params = {
-                _flagName: _flagName
-            };
-            if (typeof _flag !== 'undefined' && _flag === _flagName) { // inheritance in play
-                params.isNeedProtected = true;
-                params.isTopLevelInstance = false;
-                params.staticInterface = _static;
-                params.args = args;
-            } else {
-                params.isNeedProtected = false;
-                params.isTopLevelInstance = true;
-                params.staticInterface = _Object;
-                if (typeof _flag !== 'undefined') {
-                    if (typeof _static !== 'undefined') {
-                        params.args = [_flag, _static].concat(args); // one set
-                    } else {
-                        params.args = [_flag]; // no other args given
-                    }
-                } else {
-                    params.args = []; // no args
-                }
-            }
-
-            // base object
-            let _this = {};
-
-            // build instance
-            return buildTypeInstance(cfg, _Object, params, _this);
+            return buildTypeInstance(cfg, _Object, {}, _flag, _static, ...args);
         };
     } else { // mixin, interface, enum
         _Object = cfg.params.factory;
     }
 
     // extend type itself
-    _Object = extend(_Object, cfg.ex.type, false); // don't overwrite while adding type extensions, this means defaults override is allowed
+    _Object = shallowCopy(_Object, cfg.ex.type, false); // don't overwrite while adding type extensions, this means defaults override is allowed
 
     // type def
     let typeDef = { 
@@ -1381,14 +1422,11 @@ const builder = (cfg) => {
             return _Object._.inherits ? _Object._.inherits._.def() : null;
         }
     };
-    const modifiers = modifierOrAttrRefl(true, typeDef);
-    const attrs = modifierOrAttrRefl(false, typeDef);
-
-    // type level attributes pick here
-    attributesAndModifiers(typeDef, cfg.params.typeName);
+    const modifiers = modifierOrAttrRefl(true, null, typeDef);
+    const attrs = modifierOrAttrRefl(false, null, typeDef);
 
     // set type meta
-    _Object._ = extend({}, cfg.mex.type, true);
+    _Object._ = shallowCopy({}, cfg.mex.type, true);
     _Object._.name = cfg.params.typeName;
     _Object._.type = cfg.types.type;
     _Object._.id = guid();
@@ -1397,8 +1435,8 @@ const builder = (cfg) => {
     _Object._.inherits = null;
     if (cfg.inheritance) {
         _Object._.inherits = cfg.params.inherits || null;
-        _Object._.isAbstract = () => { return modifiers.type.has('abstract'); };
-        _Object._.isSealed = () => { return modifiers.type.has('sealed'); };
+        _Object._.isAbstract = () => { return modifiers.type.probe('abstract').current() ? true : false; };
+        _Object._.isSealed = () => { return modifiers.type.probe('sealed').current() ? true : false; };
         _Object._.isDerivedFrom = (name) => { 
             if (name._ && name._.name) { name = name._.name; }
             if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
@@ -1416,18 +1454,19 @@ const builder = (cfg) => {
 
         // warn for type deprecate at the time of inheritance
         if (_Object._.inherits) {
-            let deprecateMessage = _Object._.inherits._.isDeprecated();
-            if (deprecateMessage) {
+            let the_attr = attrs.type.probe('deprecate').anywhere();
+            if (the_attr) {
+                let deprecateMessage = the_attr.args[0] || `Type is marked as deprecated. (${_Object._.name})`;
                 console.log(deprecateMessage); // eslint-disable-line no-console
-            }
+            }            
         }
     }
     if (cfg.static) {
-        _Object._.isStatic = () => { return modifiers.type.has('static'); };
+        _Object._.isStatic = () => { return modifiers.type.probe('static').current() ? true : false; };
         _Object._.props = {}; // static property values host
     }
     if (cfg.singleton) {
-        _Object._.isSingleton = () => { return attrs.type.has('singleton'); };
+        _Object._.isSingleton = () => { return attrs.type.probe('singleton').current() ? true : false; };
         _Object._.singleInstance = () => { return null; };
         _Object._.singleInstance.clear = _noop;
     }
@@ -1464,19 +1503,19 @@ const builder = (cfg) => {
         };                
     }
     _Object._.isDeprecated = () => { 
-        let the_attr = attrs.type.get('deprecate');
-        if (the_attr) {
-            return the_attr.args[0] || `Type is marked as deprecated. (${_Object._.name})`;
-        } else {
-            return false;
-        }
+        return attrs.type.probe('deprecate').current() ? true : false;
     };
     _Object._.def = () => { return typeDef; };
     _Object._.modifiers = modifiers;
     _Object._.attrs = attrs;
 
+    // type level attributes pick here
+    attributesAndModifiers(null, typeDef, null, true);
+
     // register type with namespace
-    _NSRegister(_Object);
+    if (ns) { // if actual namespace or '(root)' is there, then go and register
+        _NSRegister(_Object);
+    }
 
     // freeze object meta
     _Object._ = Object.freeze(_Object._);

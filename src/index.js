@@ -75,60 +75,52 @@
     };
 
     // members
-    <!-- inject: ./aop/aspect.js -->    // OK
-    <!-- inject: ./aop/aspects.js -->   // OK
+    <!-- inject: ./misc/noop.js -->     // OK
+    <!-- inject: ./helpers/general.js -->   // OK
+    <!-- inject: ./error/exception.js -->   // OK
+    <!-- inject: ./helpers/dispatcher.js -->    // OK
 
-    <!-- inject: ./attributes/attr.js -->   // OK
-    <!-- inject: ./attributes/attribute.js -->  // OK
     <!-- inject: ./attributes/getAttr.js -->    // OK
-
-    <!-- inject: ./bundle/cli.js -->    // OK
     <!-- inject: ./bundle/getAssembly.js -->    // OK
     <!-- inject: ./bundle/getResource.js -->    // OK
     <!-- inject: ./bundle/getType.js -->    // OK
-    <!-- inject: ./bundle/assembly.js -->   // OK
-    <!-- inject: ./bundle/namespace.js -->  // OK
-    <!-- inject: ./bundle/resource.js -->   // OK
-
-    <!-- inject: ./di/container.js -->  // OK
-    <!-- inject: ./di/include.js -->    // OK
-
-    <!-- inject: ./dispose/dispose.js -->   // OK
-    <!-- inject: ./dispose/using.js -->     // OK
-
-    <!-- inject: ./error/args.js -->    // OK
-    <!-- inject: ./error/exception.js -->   // OK
-
-    <!-- inject: ./events/on.js --> // OK
-    <!-- inject: ./events/post.js --> // OK
-
-    <!-- inject: ./helpers/builder.js -->   // OK
-    <!-- inject: ./helpers/dispatcher.js -->    // OK
-    <!-- inject: ./helpers/general.js -->   // OK
-
-    <!-- inject: ./inheritance/class.js -->  // OK
+    <!-- inject: ./inheritance/typeOf.js -->    // OK
     <!-- inject: ./inheritance/getTypeOf.js -->     // OK 
     <!-- inject: ./inheritance/isDerivedFrom.js --> // OK
     <!-- inject: ./inheritance/isInstanceOf.js -->  // OK
-    <!-- inject: ./inheritance/struct.js -->    // OK
-    <!-- inject: ./inheritance/typeOf.js -->    // OK
-
     <!-- inject: ./interface/as.js -->  // OK
-    <!-- inject: ./interface/interface.js -->   // OK
     <!-- inject: ./interface/is.js -->  // OK
     <!-- inject: ./interface/isComplies.js -->  // OK
     <!-- inject: ./interface/isImplements.js -->    // OK
-
-    <!-- inject: ./misc/enum.js --> // OK
-    <!-- inject: ./misc/noop.js -->     // OK
-    <!-- inject: ./misc/telemetry.js -->    // OK
-
     <!-- inject: ./mixin/isMixed.js --> // OK
+
+    <!-- inject: ./di/include.js -->    // OK
+    <!-- inject: ./dispose/dispose.js -->   // OK
+    <!-- inject: ./dispose/using.js -->     // OK
+    <!-- inject: ./error/args.js -->    // OK
+    <!-- inject: ./attributes/attr.js -->   // OK
+
+    <!-- inject: ./helpers/builder.js -->   // OK
+    <!-- inject: ./inheritance/class.js -->  // OK
+    <!-- inject: ./interface/interface.js -->   // OK
+    <!-- inject: ./inheritance/struct.js -->    // OK
+    <!-- inject: ./misc/enum.js --> // OK
     <!-- inject: ./mixin/mixin.js -->
 
+    <!-- inject: ./events/on.js --> // OK
+    <!-- inject: ./events/post.js --> // OK
+    <!-- inject: ./bundle/cli.js -->    // OK
+    <!-- inject: ./bundle/assembly.js -->   // OK
+    <!-- inject: ./bundle/namespace.js -->  // OK
+    <!-- inject: ./bundle/resource.js -->   // OK
+    <!-- inject: ./di/container.js -->  // OK
+    <!-- inject: ./misc/telemetry.js -->    // OK
+    <!-- inject: ./aop/aspects.js -->   // OK
+    <!-- inject: ./serialization/serializer.js -->  // OK
     <!-- inject: ./reflection/reflector.js -->    
 
-    <!-- inject: ./serialization/serializer.js -->  // OK
+    <!-- inject: ./aop/aspect.js -->    // OK
+    <!-- inject: ./attributes/attribute.js -->  // OK
 
     // freeze members
     flair.members = Object.freeze(flair.members);

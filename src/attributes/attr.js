@@ -11,7 +11,7 @@
  * @returns void
  */ 
 const _$$ = (name, ...args) => {
-    if (!name || ['string', 'class'].indexOf(_typeOf(name) === -1)) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+    if (!name || ['string', 'class'].indexOf(_typeOf(name)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
     if (name && typeof name !== 'string' && !_isDerivedFrom(name, 'Attribute')) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
 
     let AttrType = null,
@@ -40,55 +40,6 @@ const _$$ = (name, ...args) => {
 
     // store
     _attr._.bucket.push({name: name, cfg: cfg, isCustom: (attrInstance !== null), attr: attrInstance, args: args});
-};
-const _attr = (name, ...args) => {
-    return _$$(name, ...args);
-};
-_attr._ = Object.freeze({
-    bucket: [],
-    inbuilt: Object.freeze({ 
-        static: new _attrConfig(true, '((class || struct) && !$abstract) || (((class || struct) && (prop || func)) && !($abstract || $virtual || $override))'),
-    
-        abstract: new _attrConfig(true, '((class || struct) && !$sealed && !$static) || (((class || struct) && (prop || func || event)) && !($override || $sealed || $static))'),
-        virtual: new _attrConfig(true, '(class || struct) && (prop || func || construct || dispose || event) && !($abstract || $override || $sealed || $static)'),
-        override: new _attrConfig(true, '(class || struct) && (prop || func || construct || dispose || event) && ((@virtual || @abstract) && !(virtual || abstract)) && !($sealed || $static))'),
-        sealed: new _attrConfig(true, '(class || ((class && (prop || func || event)) && override)'), 
-    
-        private: new _attrConfig(true, '(class || struct) && (prop || func || event) && !($protected || @private || $static)'),
-        protected: new _attrConfig(true, '(class || struct) && (prop || func || event) && !($private|| $static)'),
-        readonly: new _attrConfig(true, '(class || struct) && prop && !abstract'),
-        async: new _attrConfig(true, '(class || struct) && func'),
-    
-        enumerate: new _attrConfig('(class || struct) && prop || func || event'),
-        dispose: new _attrConfig('class && prop'),
-        post: new _attrConfig('(class || struct || mixin) && event'),
-        on: new _attrConfig('class && func && !(event || $async || $args || $inject || $static)'),
-        timer: new _attrConfig('class && func && !(event || $async || $args || $inject || @timer || $static)'),
-        type: new _attrConfig('(class || struct || mixin) && prop'),
-        args: new _attrConfig('(class || struct || mixin) && (func || construct) && !$on'),
-        inject: new _attrConfig('class && (prop || func || construct) && !(static || session || state)'),
-        singleton: new _attrConfig('(class && !(prop || func || event) && !($abstract || $static)'),
-        serialize: new _attrConfig('((class || struct) || ((class || struct) && prop)) && !($abstract || $static)'),
-        deprecate: new _attrConfig('!construct && !dispose'),
-        session: new _attrConfig('(class && prop) && !($static || $state || $readonly || $abstract || $virtual)'),
-        state: new _attrConfig('(class && prop) && !($static || $session || $readonly || $abstract || $virtual)'),
-        conditional: new _attrConfig('(class || struct || mixin) && (prop || func || event)'),
-        noserialize: new _attrConfig('(class || struct || mixin) && prop'),
-    
-        mixin: new _attrConfig('class && (prop || func || event)'),
-        interface: new _attrConfig('class && (prop || func || event)')
-    })
-});
-_attr.collect = () => {
-    let attrs = _attr._.bucket.slice();
-    _attr.clear();
-    return attrs;
-}
-_attr.has = (name) => {
-    return (_attr._.bucket.findIndex(item => item.name === name) !== -1);
-};
-_attr.clear = () => {
-    _attr._.bucket.length = 0; // remove all
 };
 
 /**
@@ -151,6 +102,62 @@ const _attrConfig = function(isModifier, constraints) {
 
     // return
     return _this;
+};
+
+const _attr = (name, ...args) => {
+    return _$$(name, ...args);
+};
+_attr._ = Object.freeze({
+    bucket: [],
+    inbuilt: Object.freeze({ 
+        static: new _attrConfig(true, '((class || struct) && !$abstract) || (((class || struct) && (prop || func)) && !($abstract || $virtual || $override))'),
+    
+        abstract: new _attrConfig(true, '((class || struct) && !$sealed && !$static) || (((class || struct) && (prop || func || event)) && !($override || $sealed || $static))'),
+        virtual: new _attrConfig(true, '(class || struct) && (prop || func || construct || dispose || event) && !($abstract || $override || $sealed || $static)'),
+        override: new _attrConfig(true, '(class || struct) && (prop || func || construct || dispose || event) && ((@virtual || @abstract) && !(virtual || abstract)) && !($sealed || $static))'),
+        sealed: new _attrConfig(true, '(class || ((class && (prop || func || event)) && override))'), 
+    
+        private: new _attrConfig(true, '(class || struct) && (prop || func || event) && !($protected || @private || $static)'),
+        protected: new _attrConfig(true, '(class || struct) && (prop || func || event) && !($private|| $static)'),
+        readonly: new _attrConfig(true, '(class || struct) && prop && !abstract'),
+        async: new _attrConfig(true, '(class || struct) && func'),
+    
+        enumerate: new _attrConfig('(class || struct) && prop || func || event'),
+        dispose: new _attrConfig('class && prop'),
+        post: new _attrConfig('(class || struct || mixin) && event'),
+        on: new _attrConfig('class && func && !(event || $async || $args || $inject || $static)'),
+        timer: new _attrConfig('class && func && !(event || $async || $args || $inject || @timer || $static)'),
+        type: new _attrConfig('(class || struct || mixin) && prop'),
+        args: new _attrConfig('(class || struct || mixin) && (func || construct) && !$on'),
+        inject: new _attrConfig('class && (prop || func || construct) && !(static || session || state)'),
+        singleton: new _attrConfig('(class && !(prop || func || event) && !($abstract || $static)'),
+        serialize: new _attrConfig('((class || struct) || ((class || struct) && prop)) && !($abstract || $static)'),
+        deprecate: new _attrConfig('!construct && !dispose'),
+        session: new _attrConfig('(class && prop) && !($static || $state || $readonly || $abstract || $virtual)'),
+        state: new _attrConfig('(class && prop) && !($static || $session || $readonly || $abstract || $virtual)'),
+        conditional: new _attrConfig('(class || struct || mixin) && (prop || func || event)'),
+        noserialize: new _attrConfig('(class || struct || mixin) && prop'),
+        ns: new _attrConfig('(class || struct || mixin || interface || enum) && !(prop || func || event || construct || dispose)'),
+    
+        mixin: new _attrConfig('class && (prop || func || event)'),
+        interface: new _attrConfig('class && (prop || func || event)')
+    })
+});
+_attr.collect = () => {
+    let attrs = _attr._.bucket.slice();
+    _attr.clear();
+    return attrs;
+}
+_attr.has = (name) => {
+    return (_attr._.bucket.findIndex(item => item.name === name) !== -1);
+};
+_attr.get = (name) => {
+    let idx = _attr._.bucket.findIndex(item => item.name === name);
+    if (idx !== -1) { return _attr._.bucket[idx]; }
+    return null;
+};
+_attr.clear = () => {
+    _attr._.bucket.length = 0; // remove all
 };
 
 // attach to flair (NOTE: _attr is for internal use only, so collect/clear etc. are not exposed out)
