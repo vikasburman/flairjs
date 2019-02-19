@@ -14,6 +14,7 @@
  *      copyright: string - copyright message
  *      license: - string - license
  *      types: - array - list of all type names that reside in this assembly
+ *      resources: - array - list of all resource names that reside in this assembly
  *      assets: - array - list of all assets that are available outside this assembly but deployed together
  *      settings: - assembly settings
  * typeName: string - qualified type name for which assembly object is needed
@@ -22,6 +23,7 @@ let asmFiles = {}, asmTypes = {};
 const _Assembly = {
     // register one or more assemblies as per given Assembly Definition Objects
     register: (...ados) => {
+        // TODO: ignoge if an ado is already registered and if this is the coming from assembly itself - json string, mark it as loaded as well
         if (!ados) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (ados)'); }
 
         ados.forEach(ado => {
@@ -60,6 +62,7 @@ const _Assembly = {
 const __Assembly = function (ado) {
     if (typeof ado !== 'object') { throw _Exception.InvalidArgument('ado'); }
     if (_typeOf(ado.types) !== 'array' || 
+        _typeOf(ado.resources) !== 'array' ||
         _typeOf(ado.assets) !== 'array' ||
         typeof ado.name !== 'string' ||
         typeof ado.file !== 'string' || ado.file === '') {
@@ -76,6 +79,7 @@ const __Assembly = function (ado) {
         copyright: ado.copyright || '',
         license: ado.license || '',
         types: Object.freeze(ado.types.slice()),
+        resources: Object.freeze(ado.types.slice()),
         settings: Object.freeze(ado.settings || {}),
         assets: Object.freeze(ado.assets.slice()),
         hasAssets: (ado.assets.length > 0),
