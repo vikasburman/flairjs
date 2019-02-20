@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.15.175
- *  Wed, 20 Feb 2019 01:59:19 GMT
+ *  Version: 0.15.201
+ *  Wed, 20 Feb 2019 03:35:57 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -92,7 +92,7 @@
     
     // attach to flair
     a2f('noop', _noop);
-         // OK
+       
     const guid = () => {
         return '_xxxxxxxx_xxxx_4xxx_yxxx_xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
             var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
@@ -253,7 +253,7 @@
             return extract(obj);
         }
     };
-       // OK
+      
     
     /**
      * @name Exception
@@ -306,7 +306,7 @@
     
     // attach to flair
     a2f('Exception', _Exception);
-       // OK
+      
     const Dispatcher = function() {
         let events = {};
     
@@ -348,7 +348,7 @@
         };
     };
     
-        // OK
+       
 
     /**
      * @name getAttr
@@ -388,7 +388,7 @@
     
     // attach to flair
     a2f('getAttr', _getAttr);
-        // OK
+       
     /**
      * @name getAssembly
      * @description Gets the assembly information of a given object/type
@@ -408,7 +408,7 @@
     
     // attach to flair
     a2f('getAssembly', _getAssembly);
-        // OK
+       
     /**
      * @name Resource
      * @description Resource registration and locator functionality.
@@ -442,7 +442,7 @@
     a2f('Resource', _Resource, () => {
         resources_registry = {};
     });
-        // OK
+       
     /**
      * @name getResource
      * @description Gets the registered resource
@@ -458,7 +458,7 @@
     };
     
     // attach to flair
-    a2f('getResource', _getResource);    // OK
+    a2f('getResource', _getResource);  
     /**
      * @name getType
      * @description Gets the flair Type of a registered type definition
@@ -475,7 +475,7 @@
     
     // attach to flair
     a2f('getType', _getType);
-        // OK
+       
     /**
      * @name typeOf
      * @description Finds the type of given object in flair type system
@@ -519,7 +519,7 @@
     };
     
     // attach to flair
-    a2f('typeOf', _typeOf);    // OK
+    a2f('typeOf', _typeOf);   
     /**
      * @name getTypeOf
      * @description Gets the underlying type which was used to construct this object
@@ -535,7 +535,7 @@
     
     // attach to flair
     a2f('getTypeOf', _getTypeOf);
-         // OK 
+        
     /**
      * @name isDerivedFrom
      * @description Checks if given flair class type is derived from given class type, directly or indirectly
@@ -556,7 +556,7 @@
     
     // attach to flair
     a2f('isDerivedFrom', _isDerivedFrom);
-     // OK
+     
     /**
      * @name isInstanceOf
      * @description Checks if given flair class/struct instance is an instance of given class/struct type or
@@ -599,7 +599,7 @@
     
     // attach to flair
     a2f('isInstanceOf', _isInstanceOf);
-      // OK
+      
     /**
      * @name as
      * @description Checks if given object can be consumed as an instance of given type
@@ -627,7 +627,7 @@
     
     // attach to flair
     a2f('as', _as);
-      // OK
+     
     /**
      * @name is
      * @description Checks if given object is of a given type
@@ -696,7 +696,7 @@
     
     // attach to flair
     a2f('is', _is);
-      // OK
+     
     /**
      * @name isComplies
      * @description Checks if given object complies to given flair interface
@@ -725,7 +725,7 @@
     
     // attach to flair
     a2f('isComplies', _isComplies);
-      // OK
+      
     /**
      * @name isImplements
      * @description Checks if given flair class/struct instance or class/struct implements given interface
@@ -746,7 +746,7 @@
     
     // attach to flair
     a2f('isImplements', _isImplements);
-        // OK
+       
     /**
      * @name isMixed
      * @description Checks if given flair class/struct instance or class/struct has mixed with given mixin
@@ -767,7 +767,7 @@
     
     // attach to flair
     a2f('isMixed', _isMixed);
-     // OK
+     
 
     /**
      * @name include
@@ -958,7 +958,7 @@
     a2f('include', _include, () => {
         incCycle.length = 0;
     });
-        // OK
+      
     /**
      * @name dispose
      * @description Call dispose of given flair object
@@ -982,7 +982,7 @@
     };
     
     // attach to flair
-    a2f('dispose', _dispose);   // OK
+    a2f('dispose', _dispose);  
     /**
      * @name using
      * @description Ensures the dispose of the given object instance is called, even if there was an error 
@@ -1025,7 +1025,7 @@
     };
     
     // attach to flair
-    a2f('using', _using);     // OK
+    a2f('using', _using);   
     /**
      * @name Args
      * @description Lightweight args pattern processing that returns a validator function to validate arguments against given arg patterns
@@ -1116,7 +1116,7 @@
     
     // attach to flair
     a2f('Args', _Args);
-        // OK
+       
     /**
      * @name attr / $$
      * @description Decorator function to apply attributes on type and member definitions
@@ -1282,7 +1282,7 @@
     // attach to flair (NOTE: _attr is for internal use only, so collect/clear etc. are not exposed out)
     a2f('attr', _$$);
     a2f('$$', _$$);
-       // OK
+      
 
     const attributesAndModifiers = (def, typeDef, memberName, isTypeLevel) => {
         let appliedAttrs = _attr.collect(), // [{name, cfg, attr, args}]
@@ -2814,7 +2814,7 @@
             return Object.freeze(_Object);
         }
     };
-       // OK
+      
     /**
      * @name Class
      * @description Constructs a Class type.
@@ -2889,7 +2889,7 @@
     };
     
     // attach to flair
-    a2f('Class', _Class);  // OK
+    a2f('Class', _Class);  
     /**
      * @name Interface
      * @description Constructs a Interface type
@@ -2934,7 +2934,7 @@
     
     // attach to flair
     a2f('Interface', _Interface);
-       // OK
+      
     /**
      * @name Struct
      * @description Constructs a Struct type
@@ -2991,7 +2991,7 @@
     
     // attach to flair
     a2f('Struct', _Struct);
-        // OK
+      
     /**
      * @name Enum
      * @description Constructs a Enum type
@@ -3034,7 +3034,7 @@
     
     // attach to flair
     a2f('Enum', _Enum);
-     // OK
+     
     /**
      * @name Mixin
      * @description Constructs a Mixin type
@@ -3105,7 +3105,7 @@
     a2f('on', _on, () => {
         _dispatcher.clear();
     });
-     // OK
+     
     /**
      * @name post
      * @description Dispatch an event for any flair component to react.
@@ -3126,7 +3126,7 @@
     
     // attach to flair
     a2f('post', _post);
-     // OK
+     
     /**
      * @name cli
      * @description Command Line Interface setup for server use
@@ -3140,7 +3140,7 @@
     // attach to flair
     a2f('cli', _cli);
     
-        // OK
+       
     /**
      * @name Assembly
      * @description Assembly registration and locator functionality.
@@ -3249,7 +3249,7 @@
     a2f('Assembly', _Assembly, () => {
         asmFiles = {}; asmTypes = {};
     });
-       // OK
+      
     /**
      * @name Namespace
      * @description Namespace registration and type locator functionality.
@@ -3287,7 +3287,7 @@
         // clear registry
         ns_types = {};
     });
-      // OK
+      
     /**
      * @name Container
      * @description Dependency injection container system
@@ -3385,7 +3385,7 @@
     // attach to flair
     a2f('Container', _Container, () => {
         container_registry = {};
-    });  // OK
+    });  
     /**
      * @name telemetry
      * @description Telemetry enable/disable/filter/collect
@@ -3472,7 +3472,7 @@
     a2f('telemetry', _telemetry, () => {
         telemetry_buffer.length = 0;
     });
-        // OK
+        
     /**
      * @name Aspects
      * @description Aspect orientation support.
@@ -3652,7 +3652,7 @@
     a2f('Aspects', _Aspects, () => {
         allAspects.length = 0;
     });
-       // OK
+       
     /**
      * @name Serializer
      * @description Serializer/Deserialize object instances
@@ -3754,7 +3754,7 @@
     // attach to flair
     a2f('Serializer', _Serializer);
     
-      // OK
+     
     /**
      * @name Reflector
      * @description Reflection of flair types and objects.

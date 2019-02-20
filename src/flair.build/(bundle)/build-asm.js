@@ -20,6 +20,7 @@ let uglifyConfig,
     isFull = false,
     isMinify = false,
     isGzip = false,
+    isGzipAssets = false,
     eslint, 
     skipRegistrationsFor = [
         'flair',
@@ -42,15 +43,15 @@ let getFolders = (root, excludeRoot) => {
 let delAll = (root) => {
   del.sync([root + '/**', '!' + root]);
 };
-const copyDeps = (deps, done) => {
+const copyDeps = (isPost, deps, done) => {
     if (deps.length > 0) {
-        logger(`      deps: ${deps.length}`);
+        logger(`\n      deps: ${deps.length} ` + (isPost ? '(post)' : '(pre)'));
     }
     const processNext = (items) => {
         if (items.length !== 0) {
             let item = items.shift(); // {src, dest}
-            logger(`            - ${item.dest}\n`);
-            if (item.src.startsWith('http')) {
+            logger(`            - ${item.dest}`);
+            if (!isPost && item.src.startsWith('http')) { // http is supported only in case of pre deps
                 let httpOrhttps = null,
                     body = '';
                 if (item.src.startsWith('https')) {
@@ -91,8 +92,8 @@ const replaceAll = (string, find, replace) => {
     return string.replace(new RegExp(escapeRegExp(find), 'g'), replace);
 };
 const injector = (basepath, content) => {
-    // Unescaped \s*([\w@_\-.\\\/]+)\s*
-    const FILENAME_PATTERN = '\\s*([\\w@_\\-.\\\\/]+)\\s*';
+    // Unescaped \s*([\(\)\w@_\-.\\\/]+)\s*
+    const FILENAME_PATTERN = '\\s*([\\(\\)\\w@_\\-.\\\\/]+)\\s*';
     const FILENAME_MARKER = '<filename>';
     const DEFAULT_PATTERN = '<!--\\s*inject:<filename>-->';
   
@@ -144,7 +145,7 @@ const logger = (msg) => {
 };
 
 // do
-const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, done) => {
+const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, gZipAssetFileTypes, done) => {
     const appendToFile = (asm, text, isAppend = true) => {
         if (isAppend) {
             fsx.writeFileSync(asm, text, {flag: 'a'});
@@ -250,9 +251,27 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, done)
             if (stat === 'file') { 
                 // add to ado
                 appendToADO(ado, asmName, 'assets', './' + filename);
+
+                // gzip, if need be
+                let fileext = path.extname(filename),
+                    isgZipped = false,
+                    ast_file = '',
+                    ast_gz = '',
+                    stat_normal = fsx.statSync(filename);
+                if (isGzipAssets && gZipAssetFileTypes.indexOf(fileext) !== -1) {
+                    ast_file = filepath;
+                    ast_gz = filepath.replace(assets_src, assets_dest) + '.gz';
+                    fsx.writeFileSync(ast_gz, gz.gzipSync(fsx.readFileSync(ast_file, 'utf8'), gzConfig));
+                    isgZipped = true;
+                }
             
                 // log
-                logger('            - ./' + path.join(assets_dest.replace(destRoot, './') + '/' + filename)); // eslint-disable-line no-console
+                if (isgZipped) {
+                    let stat_gz = fsx.statSync(ast_gz);
+                    logger('            - ./' + path.join(assets_dest.replace(destRoot, './') + '/' + filename) + ' (' + Math.round(stat_normal.size / 1024) + 'kb, ' +  Math.round(stat_gz.size / 1024) + 'kb gzipped)'); // eslint-disable-line no-console
+                } else {
+                    logger('            - ./' + path.join(assets_dest.replace(destRoot, './') + '/' + filename) + ' (' + Math.round(stat_normal.size / 1024) + 'kb)'); // eslint-disable-line no-console
+                }
             }
             return true;
         }, function (err) { throw err; });
@@ -464,6 +483,7 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, done)
             // process each assembly folder
             for(let nsName of nsfolders) {
                 if (nsName.startsWith('_')) { continue; } // skip
+                if (['(assets)', '(bundle)'].indexOf(nsName) !== -1) { continue; } // skip special folders at namespace level
                 
                 // process types and resources under this namespace
                 let ext = '',
@@ -499,7 +519,7 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, done)
             }
 
             // copy assets of assemble
-            let assets_folder = path.join(src, asmName, '_assets'),
+            let assets_folder = path.join(src, asmName, '(assets)'),
                 assets_folder_dest = path.join(dest, asmName);
             copyAssets(ado, asmName, assets_folder, assets_folder_dest);
 
@@ -587,21 +607,34 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, done)
  *              isFull: true/false   - is full build to be done
  *              minify: true/false   - is minify to be run
  *              gzip: true/false     - is gzip to be run
+ *              gzipAssets: true/false     - is assets are to be gzipped
  *              gzConfig: path of gz config JSON file as in: https://nodejs.org/api/zlib.html#zlib_class_options AND https://www.zlib.net/manual.html
  *              uglifyConfig: path of uglify config JSON file as in: https://github.com/mishoo/UglifyJS2#minify-options
  *              eslintConfig: path of eslint config JSON file, having structure as in: https://eslint.org/docs/user-guide/configuring AND https://eslint.org/docs/developer-guide/nodejs-api#cliengine
  *              depsConfig: path of dependencies update config JSON file, having structure as:
  *                  {
- *                      update: true/false - if run dependency update
- *                      deps: [] - each item in here should have structure as: { src, dest }
- *                                  NOTE:
- *                                      src: can be a web url or a local file path
- *                                      dest: local file path
+ *                      pre: {
+ *                          update: true/false - if run dependency update, prior to build operation
+ *                          deps: [] - each item in here should have structure as: { src, dest }
+ *                                      NOTE:
+ *                                          src: can be a web url or a local file path (generally a web url to download an external dependency to embed)
+ *                                          dest: local file path (generally an embedded dependency)
+ *                      },
+ *                      post: {
+ *                          update: true/false - if run dependency update, after build operation
+ *                          deps: [] - each item in here should have structure as: { src, dest }
+ *                                      NOTE:
+ *                                          src:  local file path (generally the built files)
+ *                                          dest: local file path (generally copied to some other local folder)
+ *                      }
  *                  }
- *                  NOTE: Having update set to true, before the start of assembly building, all local copies of external dependencies 
- *                        will be refreshed as per src/dest settings here.
+ *                  NOTE: Having update set to true in pre, before the start of assembly building, all local copies of external dependencies 
+ *                        will be refreshed as per src/dest settings here. And in post, will update other local copies
  *              packageJSON: path of packageJSON file of the project
  *                  it picks project name, version and copyright information etc. from here to place on assembly
+ *              gZipAssetFileTypes: an array of file extensions with a "."  to define for which extensions assets are to be gzipped
+ *                  NOTE: define this only when you want to add to inbuilt defaults which are: 
+ *                        ['.txt', '.xml', '.js', '.md', '.json', '.css', '.html', '.svg', 'jpg', 'jpeg', 'gif', 'png'];
  *              utf8EncResFileTypes: an array of file extensions with a "."  to define for which extensions utf8 encoding needs to be 
  *                  done when bundling them inside assembly as resource
  *                  NOTE: define this only when you want to add to inbuilt defaults which are: 
@@ -644,10 +677,10 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, done)
  *                                      serialization
  *                              > the reason former approach is chosen, is because it shows up all namespaces neatly under
  *                                <assembly folder>
- *                          (root)              - root namespace folder, is a special folder, that contains special members
- *                                                which are placed on root only. Should be avoided, as this is for flair's own
- *                                                system types
- *                          _assets    - assets folder
+ *                          (root)     - root namespace folder, is a special folder, that contains special members
+ *                                       which are placed on root only. Should be avoided, as this is for flair's own
+ *                                       system types
+ *                          (assets)   - assets folder
  *                                  > this special folder can be used to place all external assets like images, css, js, third-party
  *                                    libraries, fonts, etc.
  *                                  > it can have any structure underneath
@@ -656,7 +689,12 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, done)
  *                                      <assembly folder>.js        - the assembly file
  *                                      <assembly folder>.min.js    - the assembly file (minified)
  *                                      <assembly folder>/          - the assembly's assets folder content here under (this is created only if assets are defined)
- *                                  > note, '_assets' folder itself is not copied, but all contents underneath are copied
+ *                                  > note, '(assets)' folder itself is not copied, but all contents underneath are copied
+ *                          (bundle)   - bundled files' folder
+ *                                  > this special folder can be used to place all files that are being bundled via injections inside index.js file
+ *                                  > it can have any structure underneath
+ *                                  > all files and folder under it, are skipped, unless they are referred via 
+ *                                    <!-- inject: <file> --> pattern in any type or in index.js file
  * 
  *                          UNDER EACH NAMESPACED FOLDER:
  *                              Each namespace folder can take any structure and files can be placed in any which way
@@ -729,6 +767,7 @@ module.exports = function(options, cb) {
     options.isFull = options.isFull || false;
     options.minify = options.minify || false;
     options.gzip = options.gzip || false;    
+    options.gzipAssets = options.gzipAssets || false;    
     options.src = options.src || path.join(options.rootPath, 'src');
     options.dest = options.dest || path.join(options.rootPath, 'dist');
     options.processAsGroups = options.processAsGroups || false; // if true, it will treat first level folders under src as groups and will process each folder as group, otherwise it will treat all folders under src as individual assemblies
@@ -737,6 +776,7 @@ module.exports = function(options, cb) {
     options.eslintConfig = options.eslintConfig || path.join(options.rootPath, 'build/config/.eslint.json');
     options.depsConfig = options.depsConfig || path.join(options.rootPath, 'build/config/.deps.json');
     options.packageJSON = options.packageJSON || path.join(options.rootPath, 'package.json');
+    options.gZipAssetFileTypes = ['.txt', '.xml', '.js', '.md', '.json', '.css', '.html', '.svg', 'jpg', 'jpeg', 'gif', 'png'].concat(options.gZipAssetFileTypes || []);
     options.utf8EncResFileTypes = ['.txt', '.xml', '.js', '.md', '.json', '.css', '.html', '.svg'].concat(options.utf8EncResFileTypes || []);
     options.cb = options.cb || cb;
 
@@ -750,6 +790,7 @@ module.exports = function(options, cb) {
     isFull = options.isFull;
     isMinify = options.minify;
     isGzip = isMinify && options.gzip;
+    isGzipAssets = isGzip && options.gzipAssets;
 
     // log for check
     logger('\nflairBuild: start\n');                                               // eslint-disable-line no-console
@@ -759,11 +800,19 @@ module.exports = function(options, cb) {
     logger(`      dest: ${options.dest.replace(options.rootPath, '.')}`);          // eslint-disable-line no-console
     logger(`      deps: ${options.depsConfig.replace(options.rootPath, '.')}`);    // eslint-disable-line no-console
     logger(`    verify: ${options.eslintConfig.replace(options.rootPath, '.')}`);  // eslint-disable-line no-console
-    logger(`    minify: ${options.uglifyConfig.replace(options.rootPath, '.')}\n`);  // eslint-disable-line no-console
+    logger(`    minify: ${options.uglifyConfig.replace(options.rootPath, '.')}`);  // eslint-disable-line no-console
 
     // get engines
     eslint = new CLIEngine(eslintConfig);
     eslintFormatter = eslint.getFormatter();
+
+    // after build
+    let afterBuild = () => {
+        logger('\nflairBuild: end\n'); // eslint-disable-line no-console
+        if (typeof cb === 'function') {
+            cb();
+        }
+    };
 
     // after copy process
     let afterCopy = () => {
@@ -778,20 +827,21 @@ module.exports = function(options, cb) {
         // bump version number
         let oldVer = packageJSON.version;
         let newVer = bump(options.packageJSON);
-        logger(`   version: ${oldVer} -> ${newVer}`);    // eslint-disable-line no-console
+        logger(`\n   version: ${oldVer} -> ${newVer}`);    // eslint-disable-line no-console
 
         // build
-        doTask(srcList, options.rootPath, options.src, options.dest, options.utf8EncResFileTypes, () => {
-            logger('\nflairBuild: end\n'); // eslint-disable-line no-console
-            if (typeof cb === 'function') {
-                cb();
+        doTask(srcList, options.rootPath, options.src, options.dest, options.utf8EncResFileTypes, options.gZipAssetFileTypes, () => {
+            if (depsConfig.post.update && isFull) {
+                copyDeps(true, depsConfig.post.deps, afterBuild)
+            } else {
+                afterBuild();
             }
         });
     };
 
     // update dependencies in source folder, if configured
-    if (depsConfig.update && isFull) {
-        copyDeps(depsConfig.deps, afterCopy)
+    if (depsConfig.pre.update && isFull) {
+        copyDeps(false, depsConfig.pre.deps, afterCopy)
     } else {
         afterCopy();
     }

@@ -2,15 +2,20 @@
  * @preserve
  * FlairJS
  * True Object Oriented JavaScript
- * Version 0.15.30
- * Mon, 18 Feb 2019 21:37:05 GMT
+ * 
+ * Assembly: flair
+ *     File: ./flair.js
+ *  Version: 0.15.201
+ *  Wed, 20 Feb 2019 03:35:57 GMT
+ * 
  * (c) 2017-2019 Vikas Burman
- * MIT
- * https://flairjs.com
+ * Licensed under MIT
  */
-
-// eslint-disable-next-line for-direction
-(function(root, factory) { // eslint-disable-line getter-return
+/**
+ * @name flair
+ * @description Initializer
+ */
+(function(root, factory) {
     'use strict';
 
     if (typeof define === 'function' && define.amd) { // AMD support
@@ -59,12 +64,12 @@
 
     // flair
     flair.info = Object.freeze({
-        name: 'FlairJS',
-        version: '0.15.30',
-        copyright: '(c) 2017-2019 Vikas Burman',
-        license: 'MIT',
-        link: 'https://flairjs.com',
-        lupdate: new Date('Mon, 18 Feb 2019 21:37:05 GMT')
+        name: '<title>',
+        version: '<version>',
+        copyright: '<copyright>',
+        license: '<license>',
+        link: '<link>',
+        lupdate: new Date('<datetime>')
     });
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -87,7 +92,7 @@
     
     // attach to flair
     a2f('noop', _noop);
-         // OK
+       
     const guid = () => {
         return '_xxxxxxxx_xxxx_4xxx_yxxx_xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
             var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
@@ -248,21 +253,7 @@
             return extract(obj);
         }
     };
-    const b64EncodeUnicode = (str) => { // eslint-disable-line no-unused-vars
-        // first we use encodeURIComponent to get percent-encoded UTF-8,
-        // then we convert the percent encodings into raw bytes which
-        // can be fed into btoa.
-        return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
-            function toSolidBytes(match, p1) {
-                return String.fromCharCode('0x' + p1);
-        }));
-    };
-    const b64DecodeUnicode = (str) => {
-        // Going backwards: from bytestream, to percent-encoding, to original string.
-        return decodeURIComponent(atob(str).split('').map(function(c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-    };   // OK
+      
     
     /**
      * @name Exception
@@ -315,7 +306,7 @@
     
     // attach to flair
     a2f('Exception', _Exception);
-       // OK
+      
     const Dispatcher = function() {
         let events = {};
     
@@ -357,7 +348,7 @@
         };
     };
     
-        // OK
+       
 
     /**
      * @name getAttr
@@ -397,7 +388,7 @@
     
     // attach to flair
     a2f('getAttr', _getAttr);
-        // OK
+       
     /**
      * @name getAssembly
      * @description Gets the assembly information of a given object/type
@@ -417,7 +408,41 @@
     
     // attach to flair
     a2f('getAssembly', _getAssembly);
-        // OK
+       
+    /**
+     * @name Resource
+     * @description Resource registration and locator functionality.
+     * @example
+     *  .register(name, locale, encodingType, file, data)               // - void
+     *  .get(name)                                                      // - resource object
+     * @params
+     *  name: string - qualified name of resource
+     *  locale: string - locale of the resource or empty, if no locale is associated
+     *  encodingType: string - type of encoding applied to resource data
+     *  file: string - resource file name and path
+     *  data: string - base 64 encoded (or binary) data of resource
+     *  typeName: string - qualified type name for which assembly object is needed
+     */ 
+    let resources_registry = {};
+    const _Resource = {
+        // register resource
+        register: (name, locale, encodingType, file, data) => {
+            if (resources_registry[name]) { throw new _Exception('AlreadyRegistered', 'Resource is already registered'); }
+            let Resource = _getType('Resource');
+            resources_registry[name] = new Resource(name, locale, encodingType, file, data);
+        },
+    
+        // get registered resource
+        get: (name) => {
+            return resources_registry[name] || null;
+        }
+    };
+    
+    // attach to flair
+    a2f('Resource', _Resource, () => {
+        resources_registry = {};
+    });
+       
     /**
      * @name getResource
      * @description Gets the registered resource
@@ -433,7 +458,7 @@
     };
     
     // attach to flair
-    a2f('getResource', _getResource);    // OK
+    a2f('getResource', _getResource);  
     /**
      * @name getType
      * @description Gets the flair Type of a registered type definition
@@ -450,7 +475,7 @@
     
     // attach to flair
     a2f('getType', _getType);
-        // OK
+       
     /**
      * @name typeOf
      * @description Finds the type of given object in flair type system
@@ -494,7 +519,7 @@
     };
     
     // attach to flair
-    a2f('typeOf', _typeOf);    // OK
+    a2f('typeOf', _typeOf);   
     /**
      * @name getTypeOf
      * @description Gets the underlying type which was used to construct this object
@@ -510,7 +535,7 @@
     
     // attach to flair
     a2f('getTypeOf', _getTypeOf);
-         // OK 
+        
     /**
      * @name isDerivedFrom
      * @description Checks if given flair class type is derived from given class type, directly or indirectly
@@ -531,7 +556,7 @@
     
     // attach to flair
     a2f('isDerivedFrom', _isDerivedFrom);
-     // OK
+     
     /**
      * @name isInstanceOf
      * @description Checks if given flair class/struct instance is an instance of given class/struct type or
@@ -574,7 +599,7 @@
     
     // attach to flair
     a2f('isInstanceOf', _isInstanceOf);
-      // OK
+      
     /**
      * @name as
      * @description Checks if given object can be consumed as an instance of given type
@@ -602,7 +627,7 @@
     
     // attach to flair
     a2f('as', _as);
-      // OK
+     
     /**
      * @name is
      * @description Checks if given object is of a given type
@@ -671,7 +696,7 @@
     
     // attach to flair
     a2f('is', _is);
-      // OK
+     
     /**
      * @name isComplies
      * @description Checks if given object complies to given flair interface
@@ -700,7 +725,7 @@
     
     // attach to flair
     a2f('isComplies', _isComplies);
-      // OK
+      
     /**
      * @name isImplements
      * @description Checks if given flair class/struct instance or class/struct implements given interface
@@ -721,7 +746,7 @@
     
     // attach to flair
     a2f('isImplements', _isImplements);
-        // OK
+       
     /**
      * @name isMixed
      * @description Checks if given flair class/struct instance or class/struct has mixed with given mixin
@@ -742,7 +767,7 @@
     
     // attach to flair
     a2f('isMixed', _isMixed);
-     // OK
+     
 
     /**
      * @name include
@@ -933,7 +958,7 @@
     a2f('include', _include, () => {
         incCycle.length = 0;
     });
-        // OK
+      
     /**
      * @name dispose
      * @description Call dispose of given flair object
@@ -957,7 +982,7 @@
     };
     
     // attach to flair
-    a2f('dispose', _dispose);   // OK
+    a2f('dispose', _dispose);  
     /**
      * @name using
      * @description Ensures the dispose of the given object instance is called, even if there was an error 
@@ -1000,7 +1025,7 @@
     };
     
     // attach to flair
-    a2f('using', _using);     // OK
+    a2f('using', _using);   
     /**
      * @name Args
      * @description Lightweight args pattern processing that returns a validator function to validate arguments against given arg patterns
@@ -1091,7 +1116,7 @@
     
     // attach to flair
     a2f('Args', _Args);
-        // OK
+       
     /**
      * @name attr / $$
      * @description Decorator function to apply attributes on type and member definitions
@@ -1257,7 +1282,7 @@
     // attach to flair (NOTE: _attr is for internal use only, so collect/clear etc. are not exposed out)
     a2f('attr', _$$);
     a2f('$$', _$$);
-       // OK
+      
 
     const attributesAndModifiers = (def, typeDef, memberName, isTypeLevel) => {
         let appliedAttrs = _attr.collect(), // [{name, cfg, attr, args}]
@@ -2622,11 +2647,12 @@
             ns = ns_attr ? ns_attr.args[0] : '';
         switch(ns) {
             case '(auto)':  // this is a placeholder that gets replaced by assembly builder with dynamic namespace based on folder structure, so if is it left, it is wrong
-                throw  `Namespace name is invalid. (${ns})`;
+                throw  `Namespace '(auto)' should be used only when bundling the type in an assembly. (${ns})`;
             case '(root)':  // this is mark to instruct builder that register type at root namespace
                 break; // go on
             default: // anything else
-                if (ns.startsWith('.') || ns.endsWith('.')) { throw  `Namespace name is invalid. (${ns})`; } // start and end dots are not allowed in namespace names
+                // namespace name must not contain any special characters and must not start or end with .
+                if (ns.startsWith('.') || ns.endsWith('.') || /[~`!#$%\^&*+=\-\[\]\\';,/{}|\\":<>\?]/g.test(ns)) { throw  `Namespace name is invalid. (${ns})`; } // eslint-disable-line no-useless-escape
                 cfg.params.typeName = ns + '.' + cfg.params.typeName; // add namespace to name here onwards
                 cfg.params.ns = ns;
                 break;
@@ -2788,7 +2814,7 @@
             return Object.freeze(_Object);
         }
     };
-       // OK
+      
     /**
      * @name Class
      * @description Constructs a Class type.
@@ -2863,7 +2889,7 @@
     };
     
     // attach to flair
-    a2f('Class', _Class);  // OK
+    a2f('Class', _Class);  
     /**
      * @name Interface
      * @description Constructs a Interface type
@@ -2908,7 +2934,7 @@
     
     // attach to flair
     a2f('Interface', _Interface);
-       // OK
+      
     /**
      * @name Struct
      * @description Constructs a Struct type
@@ -2965,7 +2991,7 @@
     
     // attach to flair
     a2f('Struct', _Struct);
-        // OK
+      
     /**
      * @name Enum
      * @description Constructs a Enum type
@@ -3008,7 +3034,7 @@
     
     // attach to flair
     a2f('Enum', _Enum);
-     // OK
+     
     /**
      * @name Mixin
      * @description Constructs a Mixin type
@@ -3069,7 +3095,7 @@
      * @returns void
      */ 
     const _dispatcher = new Dispatcher();
-    const dispatch = _dispatcher.dispatch;  // this can be used in any other member to dispatch any event
+    const _dispatchEvent = _dispatcher.dispatch;  // this can be used via dispatch member to dispatch any event
     const _on = (event, handler, isRemove) => {
         if (isRemove) { _dispatcher.remove(event, handler); return; }
         _dispatcher.add(event, handler);
@@ -3079,10 +3105,10 @@
     a2f('on', _on, () => {
         _dispatcher.clear();
     });
-     // OK
+     
     /**
      * @name post
-     * @description Post an event for any flair component to react.
+     * @description Dispatch an event for any flair component to react.
      *              This together with 'on' makes a local pub/sub system which is capable to react to external
      *              events when they are posted via 'post' here and raise to external world which can be hooked to 'on'
      * @example
@@ -3095,12 +3121,12 @@
      * @returns void
      */ 
     const _post = (event, args) => {
-        dispatch(event, args);
+        _dispatchEvent(event, args);
     };
     
     // attach to flair
     a2f('post', _post);
-     // OK
+     
     /**
      * @name cli
      * @description Command Line Interface setup for server use
@@ -3114,7 +3140,7 @@
     // attach to flair
     a2f('cli', _cli);
     
-        // OK
+       
     /**
      * @name Assembly
      * @description Assembly registration and locator functionality.
@@ -3131,6 +3157,7 @@
      *      copyright: string - copyright message
      *      license: - string - license
      *      types: - array - list of all type names that reside in this assembly
+     *      resources: - array - list of all resource names that reside in this assembly
      *      assets: - array - list of all assets that are available outside this assembly but deployed together
      *      settings: - assembly settings
      * typeName: string - qualified type name for which assembly object is needed
@@ -3139,6 +3166,7 @@
     const _Assembly = {
         // register one or more assemblies as per given Assembly Definition Objects
         register: (...ados) => {
+            // TODO: ignoge if an ado is already registered and if this is the coming from assembly itself - json string, mark it as loaded as well
             if (!ados) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (ados)'); }
     
             ados.forEach(ado => {
@@ -3177,6 +3205,7 @@
     const __Assembly = function (ado) {
         if (typeof ado !== 'object') { throw _Exception.InvalidArgument('ado'); }
         if (_typeOf(ado.types) !== 'array' || 
+            _typeOf(ado.resources) !== 'array' ||
             _typeOf(ado.assets) !== 'array' ||
             typeof ado.name !== 'string' ||
             typeof ado.file !== 'string' || ado.file === '') {
@@ -3193,6 +3222,7 @@
             copyright: ado.copyright || '',
             license: ado.license || '',
             types: Object.freeze(ado.types.slice()),
+            resources: Object.freeze(ado.types.slice()),
             settings: Object.freeze(ado.settings || {}),
             assets: Object.freeze(ado.assets.slice()),
             hasAssets: (ado.assets.length > 0),
@@ -3219,7 +3249,7 @@
     a2f('Assembly', _Assembly, () => {
         asmFiles = {}; asmTypes = {};
     });
-       // OK
+      
     /**
      * @name Namespace
      * @description Namespace registration and type locator functionality.
@@ -3257,109 +3287,7 @@
         // clear registry
         ns_types = {};
     });
-      // OK
-    /**
-     * @name Resource
-     * @description Resource registration and locator functionality.
-     * @example
-     *  .register(name, locale, encodingType, file, data)               // - void
-     *  .get(name)                                                      // - resource object
-     * @params
-     *  name: string - qualified name of resource
-     *  locale: string - locale of the resource or empty, if no locale is associated
-     *  encodingType: string - type of encoding applied to resource data
-     *  file: string - resource file name and path
-     *  data: string - base 64 encoded (or binary) data of resource
-     *  typeName: string - qualified type name for which assembly object is needed
-     */ 
-    let resources_registry = {};
-    const _Resource = {
-        // register resource
-        register: (name, locale, encodingType, file, data) => {
-            if (resources_registry[name]) { throw new _Exception('AlreadyRegistered', 'Resource is already registered'); }
-            resources_registry[name] = new __Resource(name, locale, encodingType, file, data);
-        },
-    
-        // get registered resource
-        get: (name) => {
-            return resources_registry[name] || null;
-        }
-    };
-    
-    _$$('sealed');
-    _$$('ns', '(root)');
-    const __Resource = _Class('Resource', function() {
-         this.construct = (name, locale, encodingType, file, data) => {
-            let resData = data; // data is base64 encoded string, added by build engine
-            let resType = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
-    
-            // decode
-            if (encodingType.indexOf('utf8;') !== -1) {
-                if (isServer) {
-                    let buff = new Buffer(resData).toString('base64');
-                    resData = buff.toString('utf8');
-                } else { // client
-                    resData = b64DecodeUnicode(resData); 
-                }
-            } else { // binary
-                if (isServer) {
-                    resData = new Buffer(resData).toString('base64');
-                } else { // client
-                    // no change, leave it as is
-                }
-            }
-    
-            // store
-            this.locale = locale;
-            this.encodingType = encodingType;
-            this.file = file;
-            this.type = resType;
-            this.data = resData;
-        };
-    
-       /** 
-        *  @name name: string - name of the resource
-        */
-        _$$('readonly');
-        this.name = '';
-    
-       /** 
-        *  @name locale: string - locale of the resource
-        */
-       _$$('readonly');
-       this.locale = '';
-    
-    
-       /** 
-        *  @name locale: string - locale of the resource
-        */
-       _$$('readonly');
-       this.locale = '';   
-    
-       /** 
-        *  @name encodingType: string - resource encoding type
-        */
-        _$$('readonly');
-        this.encodingType = '';
-       
-       /** 
-        *  @name type: string - resource type
-        */
-        _$$('readonly');
-        this.type = '';
-    
-       /** 
-        *  @name data: string - resource data
-        */
-       _$$('readonly');
-       this.data = '';
-    });
-    
-    // attach to flair
-    a2f('Resource', _Resource, () => {
-        resources_registry = {};
-    });
-       // OK
+      
     /**
      * @name Container
      * @description Dependency injection container system
@@ -3457,7 +3385,7 @@
     // attach to flair
     a2f('Container', _Container, () => {
         container_registry = {};
-    });  // OK
+    });  
     /**
      * @name telemetry
      * @description Telemetry enable/disable/filter/collect
@@ -3498,7 +3426,7 @@
                         }
     
                         // emit
-                        dispatch('telemetry', item);
+                        _post('telemetry', item);
                     }
                 };
             }
@@ -3544,7 +3472,7 @@
     a2f('telemetry', _telemetry, () => {
         telemetry_buffer.length = 0;
     });
-        // OK
+        
     /**
      * @name Aspects
      * @description Aspect orientation support.
@@ -3724,7 +3652,7 @@
     a2f('Aspects', _Aspects, () => {
         allAspects.length = 0;
     });
-       // OK
+       
     /**
      * @name Serializer
      * @description Serializer/Deserialize object instances
@@ -3826,7 +3754,7 @@
     // attach to flair
     a2f('Serializer', _Serializer);
     
-      // OK
+     
     /**
      * @name Reflector
      * @description Reflection of flair types and objects.
@@ -4273,176 +4201,272 @@
     // attach to flair
     a2f('Reflector', _Reflector);    
 
-    /**
-     * @name Aspect
-     * @description Aspect base class.
-     */
-    _$$('abstract');
-    _$$('ns', '(root)');
-    _Class('Aspect', function() {
-        /** 
-         * @name before
-         * @description Before advise
-         * @example
-         *  before(ctx)
-         * @arguments
-         * ctx: object - context object that is shared across all weavings
-         *  typeName()      - gives the name of the type
-         *  funcName()      - gives the name of the function
-         *  error(err)      - store new error to context, or just call error() to get last error
-         *  result(value)   - store new result to context, or just call result() to get last stored result
-         *  args()          - get original args passed to main call
-         *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
-         */  
-        _$$('virtual');
-        this.before = this.noop;
-    
-        /** 
-         * @name around
-         * @description Around advise
-         * @example
-         *  around(ctx, fn)
-         * @arguments
-         * ctx: object - context object that is shared across all weavings
-         *  typeName()      - gives the name of the type
-         *  funcName()      - gives the name of the function
-         *  error(err)      - store new error to context, or just call error() to get last error
-         *  result(value)   - store new result to context, or just call result() to get last stored result
-         *  args()          - get original args passed to main call
-         *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
-         * fn: function - function which is wrapped, it should be called in between pre and post actions
-         */  
-        _$$('virtual');
-        this.around = this.noop;
-    
-        /** 
-         * @name after
-         * @description After advise
-         * @example
-         *  after(ctx)
-         * @arguments
-         * ctx: object - context object that is shared across all weavings
-         *  typeName()      - gives the name of the type
-         *  funcName()      - gives the name of the function
-         *  error(err)      - store new error to context, or just call error() to get last error
-         *  result(value)   - store new result to context, or just call result() to get last stored result
-         *  args()          - get original args passed to main call
-         *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
-         */  
-        _$$('virtual');
-        this.after = this.noop;
-    });
-        // OK
-    /**
-     * @name Attribute
-     * @description Attribute base class.
-     */
-    _$$('abstract');
-    _$$('ns', '(root)');
-    _Class('Attribute', function() {
-        this.construct = (args) => {
-            this.args = args;
-        };
-    
-       /** 
-        *  @name args: array - arguments as defined where attribute is applied e.g., ('text', 012, false, Reference)
-        */
-        _$$('readonly');
-        this.args = [];
-    
-       /** 
-        *  @name constraints: string - An expression that defined the constraints of applying this attribute 
-        *                     using NAMES, PREFIXES, SUFFIXES and logical Javascript operator
-        * 
-        *                  NAMES can be: 
-        *                      type names: class, struct, enum, interface, mixin
-        *                      type member names: prop, func, construct, dispose, event
-        *                      inbuilt modifier names: static, abstract, sealed, virtual, override, private, protected, readonly, async, etc.
-        *                      inbuilt attribute names: promise, singleton, serialize, deprecate, session, state, conditional, noserialize, etc.
-        *                      custom attribute names: any registered custom attribute name
-        *                      type names itself: e.g., Aspect, Attribute, etc. (any registered type name is fine)
-        *                          SUFFIX: A typename must have a suffix (^) e.g., Aspect^, Attribute^, etc. Otherwise this name will be treated as custom attribute name
-        *                  
-        *                  PREFIXES can be:
-        *                      No Prefix: means it must match or be present at the level where it is being defined
-        *                      @: means it must be inherited from or present at up in hierarchy chain
-        *                      $: means it either must ne present at the level where it is being defined or must be present up in hierarchy chain
-        *                  <name> 
-        *                  @<name>
-        *                  $<name>
-        * 
-        *                  BOOLEAN Not (!) can also be used to negate:
-        *                  !<name>
-        *                  !@<name>
-        *                  !$<name>
-        *                  
-        *                  NOTE: Constraints are processed as logical boolean expressions and 
-        *                        can be grouped, ANDed or ORed as:
-        * 
-        *                        AND: <name1> && <name2> && ...
-        *                        OR: <name1> || <name2>
-        *                        GROUPING: ((<name1> || <name2>) && (<name1> || <name2>))
-        *                                  (((<name1> || <name2>) && (<name1> || <name2>)) || <name3>)
-        * 
-        **/
-        this.constraints = '';
-    
-        /** 
-         * @name decorateProperty
-         * @description Property decorator
-         * @example
-         *  decorateProperty(typeName, memberName, member)
-         * @arguments
-         *  typeName: string - typeName
-         *  memberName: string - member name
-         *  member - object - having get: getter function and set: setter function
-         *          both getter and setter can be applied attribute functionality on
-         * @returns
-         *  object - having decorated { get: fn, set: fn }
-         *           Note: decorated get must call member's get
-         *                 decorated set must accept value argument and pass it to member's set with or without processing
-         */  
-        _$$('virtual');
-        this.decorateProperty = this.noop;
-    
-        /** 
-         * @name decorateFunction
-         * @description Function decorator
-         * @example
-         *  decorateFunction(typeName, memberName, member)
-         * @arguments
-         *  typeName: string - typeName
-         *  memberName: string - member name
-         *  member - function - function to decorate
-         * @returns
-         *  function - decorated function
-         *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
-         */  
-        _$$('virtual');
-        this.decorateFunction = this.noop;    
-    
-        /** 
-         * @name decorateEvent
-         * @description Event decorator
-         * @example
-         *  decorateEvent(typeName, memberName, member)
-         * @arguments
-         *  typeName: string - typeName
-         *  memberName: string - member name
-         *  member - function - event argument processor function
-         * @returns
-         *  function - decorated function
-         *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
-         */  
-        _$$('virtual');
-        this.decorateEvent = this.noop;
-    });
-    
-      // OK
-
     // freeze members
     flair.members = Object.freeze(flair.members);
 
     // return
     return Object.freeze(flair);
 });    
+(() => {
+   const { $$, attr, Class, Struct, Enum, Interface, Mixin, Exception, Args } = flair; // eslint-disable-line no-unused-vars
+   const { Aspects, Assembly, Resource, Namespace, Container, Reflector, Serializer } = flair;   // eslint-disable-line no-unused-vars
+   const { getAttr, getAssembly, getResource, getTypeOf } = flair;                     // eslint-disable-line no-unused-vars
+   const { getType, typeOf, as, is, isDerivedFrom, isInstanceOf, isComplies, isImplements, isMixed } = flair;  // eslint-disable-line no-unused-vars
+   const { include, dispose, using, on, dispatch } = flair;                            // eslint-disable-line no-unused-vars
+   const { noop, telemetry } = flair;                                                  // eslint-disable-line no-unused-vars
+   const { isServer } = flair.options.env;                                             // eslint-disable-line no-unused-vars
+
+/**
+ * @name Aspect
+ * @description Aspect base class.
+ */
+$$('abstract');
+$$('ns', '(root)');
+Class('Aspect', function() {
+    /** 
+     * @name before
+     * @description Before advise
+     * @example
+     *  before(ctx)
+     * @arguments
+     * ctx: object - context object that is shared across all weavings
+     *  typeName()      - gives the name of the type
+     *  funcName()      - gives the name of the function
+     *  error(err)      - store new error to context, or just call error() to get last error
+     *  result(value)   - store new result to context, or just call result() to get last stored result
+     *  args()          - get original args passed to main call
+     *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
+     */  
+    $$('virtual');
+    this.before = this.noop;
+
+    /** 
+     * @name around
+     * @description Around advise
+     * @example
+     *  around(ctx, fn)
+     * @arguments
+     * ctx: object - context object that is shared across all weavings
+     *  typeName()      - gives the name of the type
+     *  funcName()      - gives the name of the function
+     *  error(err)      - store new error to context, or just call error() to get last error
+     *  result(value)   - store new result to context, or just call result() to get last stored result
+     *  args()          - get original args passed to main call
+     *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
+     * fn: function - function which is wrapped, it should be called in between pre and post actions
+     */  
+    $$('virtual');
+    this.around = this.noop;
+
+    /** 
+     * @name after
+     * @description After advise
+     * @example
+     *  after(ctx)
+     * @arguments
+     * ctx: object - context object that is shared across all weavings
+     *  typeName()      - gives the name of the type
+     *  funcName()      - gives the name of the function
+     *  error(err)      - store new error to context, or just call error() to get last error
+     *  result(value)   - store new result to context, or just call result() to get last stored result
+     *  args()          - get original args passed to main call
+     *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
+     */  
+    $$('virtual');
+    this.after = this.noop;
+});
+/**
+ * @name Attribute
+ * @description Attribute base class.
+ */
+$$('abstract');
+$$('ns', '(root)');
+Class('Attribute', function() {
+    this.construct = (args) => {
+        this.args = args;
+    };
+
+   /** 
+    *  @name args: array - arguments as defined where attribute is applied e.g., ('text', 012, false, Reference)
+    */
+    $$('readonly');
+    this.args = [];
+
+   /** 
+    *  @name constraints: string - An expression that defined the constraints of applying this attribute 
+    *                     using NAMES, PREFIXES, SUFFIXES and logical Javascript operator
+    * 
+    *                  NAMES can be: 
+    *                      type names: class, struct, enum, interface, mixin
+    *                      type member names: prop, func, construct, dispose, event
+    *                      inbuilt modifier names: static, abstract, sealed, virtual, override, private, protected, readonly, async, etc.
+    *                      inbuilt attribute names: promise, singleton, serialize, deprecate, session, state, conditional, noserialize, etc.
+    *                      custom attribute names: any registered custom attribute name
+    *                      type names itself: e.g., Aspect, Attribute, etc. (any registered type name is fine)
+    *                          SUFFIX: A typename must have a suffix (^) e.g., Aspect^, Attribute^, etc. Otherwise this name will be treated as custom attribute name
+    *                  
+    *                  PREFIXES can be:
+    *                      No Prefix: means it must match or be present at the level where it is being defined
+    *                      @: means it must be inherited from or present at up in hierarchy chain
+    *                      $: means it either must ne present at the level where it is being defined or must be present up in hierarchy chain
+    *                  <name> 
+    *                  @<name>
+    *                  $<name>
+    * 
+    *                  BOOLEAN Not (!) can also be used to negate:
+    *                  !<name>
+    *                  !@<name>
+    *                  !$<name>
+    *                  
+    *                  NOTE: Constraints are processed as logical boolean expressions and 
+    *                        can be grouped, ANDed or ORed as:
+    * 
+    *                        AND: <name1> && <name2> && ...
+    *                        OR: <name1> || <name2>
+    *                        GROUPING: ((<name1> || <name2>) && (<name1> || <name2>))
+    *                                  (((<name1> || <name2>) && (<name1> || <name2>)) || <name3>)
+    * 
+    **/
+    this.constraints = '';
+
+    /** 
+     * @name decorateProperty
+     * @description Property decorator
+     * @example
+     *  decorateProperty(typeName, memberName, member)
+     * @arguments
+     *  typeName: string - typeName
+     *  memberName: string - member name
+     *  member - object - having get: getter function and set: setter function
+     *          both getter and setter can be applied attribute functionality on
+     * @returns
+     *  object - having decorated { get: fn, set: fn }
+     *           Note: decorated get must call member's get
+     *                 decorated set must accept value argument and pass it to member's set with or without processing
+     */  
+    $$('virtual');
+    this.decorateProperty = this.noop;
+
+    /** 
+     * @name decorateFunction
+     * @description Function decorator
+     * @example
+     *  decorateFunction(typeName, memberName, member)
+     * @arguments
+     *  typeName: string - typeName
+     *  memberName: string - member name
+     *  member - function - function to decorate
+     * @returns
+     *  function - decorated function
+     *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
+     */  
+    $$('virtual');
+    this.decorateFunction = this.noop;    
+
+    /** 
+     * @name decorateEvent
+     * @description Event decorator
+     * @example
+     *  decorateEvent(typeName, memberName, member)
+     * @arguments
+     *  typeName: string - typeName
+     *  memberName: string - member name
+     *  member - function - event argument processor function
+     * @returns
+     *  function - decorated function
+     *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
+     */  
+    $$('virtual');
+    this.decorateEvent = this.noop;
+});
+
+/**
+ * @name Resource
+ * @description Resource wrapper class.
+ */
+$$('sealed');
+$$('ns', '(root)');
+Class('Resource', function() {
+    const b64EncodeUnicode = (str) => { // eslint-disable-line no-unused-vars
+        // first we use encodeURIComponent to get percent-encoded UTF-8,
+        // then we convert the percent encodings into raw bytes which
+        // can be fed into btoa.
+        return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+            function toSolidBytes(match, p1) {
+                return String.fromCharCode('0x' + p1);
+        }));
+    };
+    const b64DecodeUnicode = (str) => {
+        // Going backwards: from bytestream, to percent-encoding, to original string.
+        return decodeURIComponent(atob(str).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+    };    
+
+    this.construct = (name, locale, encodingType, file, data) => {
+        let resData = data; // data is base64 encoded string, added by build engine
+        let resType = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
+
+        // decode
+        if (encodingType.indexOf('utf8;') !== -1) {
+            if (isServer) {
+                let buff = new Buffer(resData).toString('base64');
+                resData = buff.toString('utf8');
+            } else { // client
+                resData = b64DecodeUnicode(resData); 
+            }
+        } else { // binary
+            if (isServer) {
+                resData = new Buffer(resData).toString('base64');
+            } else { // client
+                // no change, leave it as is
+            }
+        }
+
+        // store
+        this.locale = locale;
+        this.encodingType = encodingType;
+        this.file = file;
+        this.type = resType;
+        this.data = resData;
+    };
+
+   /** 
+    *  @name name: string - name of the resource
+    */
+    $$('readonly');
+    this.name = '';
+
+   /** 
+    *  @name locale: string - locale of the resource
+    */
+   $$('readonly');
+   this.locale = '';
+
+
+   /** 
+    *  @name locale: string - locale of the resource
+    */
+   $$('readonly');
+   this.locale = '';   
+
+   /** 
+    *  @name encodingType: string - resource encoding type
+    */
+    $$('readonly');
+    this.encodingType = '';
+   
+   /** 
+    *  @name type: string - resource type
+    */
+    $$('readonly');
+    this.type = '';
+
+   /** 
+    *  @name data: string - resource data
+    */
+   $$('readonly');
+   this.data = '';
+});
+
+})();

@@ -4,4 +4,4 @@
  */
 
  // members
-<!-- inject: ./_members/build-asm.js -->
+<!-- inject: ./(bundle)/build-asm.js -->
