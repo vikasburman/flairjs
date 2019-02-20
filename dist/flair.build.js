@@ -1,28 +1,44 @@
 /**
  * @preserve
- * <title> - Assembly Builder
- * <desc>
- * Version <version>
- * <datetime>
- * <copyright>
- * <license>
- * <link>
+ * FlairJS
+ * True Object Oriented JavaScript
+ * 
+ * Assembly: flair.build
+ *     File: ./flair.build.js
+ *  Version: 0.15.140
+ *  Wed, 20 Feb 2019 00:01:18 GMT
+ * 
+ * (c) 2017-2019 Vikas Burman
+ * Licensed under MIT
+ */
+/**
+ * @name flairBuild
+ * @description Build Engine
  */
 
- // eslint-disable-next-line for-direction
-const rrd = require('recursive-readdir-sync');  // eslint-disable-line getter-return
+ // members
+/**
+ * @name flair Build
+ * @description Build engine
+ */
+const rrd = require('recursive-readdir-sync'); 
 const copyDir = require('copy-dir');
 const path = require('path');
 const fsx = require('fs-extra');
 const del = require('del');
-const CLIEngine = new require("eslint").CLIEngine
+const CLIEngine = new require('eslint').CLIEngine
 const uglifyjs = require('uglify-js-harmony');
 
 let uglifyConfig, 
     eslintConfig,
     depsConfig,
     packageJSON, 
+    suppressLogging = false,
     eslint, 
+    skipRegistrationsFor = [
+        'flair',
+        'flair.build'
+    ],
     eslintFormatter = null;
 
 let getFolders = (root, excludeRoot) => {
@@ -41,9 +57,13 @@ let delAll = (root) => {
   del.sync([root + '/**', '!' + root]);
 };
 const copyDeps = (deps, done) => {
+    if (deps.length > 0) {
+        logger(`      deps: ${deps.length}`);
+    }
     const processNext = (items) => {
         if (items.length !== 0) {
             let item = items.shift(); // {src, dest}
+            logger(`            - ${item.dest}\n`);
             if (item.src.startsWith('http')) {
                 let httpOrhttps = null,
                     body = '';
@@ -78,12 +98,6 @@ const copyDeps = (deps, done) => {
 
     processNext(deps.slice());
 };
-const guid = () => { 
-    return '_xxxxxxxx_xxxx_4xxx_yxxx_xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });        
-};
 const escapeRegExp = (string) => {
     return string.replace(/([.*+?\^=!:${}()|\[\]\/\\])/g, '\\$1'); // eslint-disable-line no-useless-escape
 };
@@ -107,7 +121,7 @@ const injector = (basepath, content) => {
         fileName = currMatch[3];
 
         var injectContent = whitespace + textBefore +
-                            fsx.readFileSync(basepath + '/' + fileName, 'utf8').split(/\r?\n/)
+                            fsx.readFileSync(path.join(basepath, fileName), 'utf8').split(/\r?\n/)
                             .map((line, i) => {
                                 return (i > 0) ? whitespace + line : line
                             }).join('\n');
@@ -116,11 +130,35 @@ const injector = (basepath, content) => {
     
     return content;
 };
-
+const bump = (packageFile) => {
+    // bump version
+    let ver = packageJSON.version.split('.');
+    ver[0] = parseInt(ver[0]);
+    ver[1] = parseInt(ver[1]);
+    ver[2] = parseInt(ver[2]);
+    if (ver[2] >= 99999) {
+        ver[2] = 0
+        if (ver[1] >= 999) {
+            ver[1] = 0
+            ver[0] += 1
+        } else {
+            ver[1] += 1
+        }
+    } else {
+        ver[2] += 1
+    }
+    let newVer = ver[0].toString() + '.' + ver[1].toString() + '.' + ver[2].toString();
+    packageJSON.version = newVer;
+    fsx.writeFileSync(packageFile, JSON.stringify(packageJSON, null, 4), 'utf8');
+    return newVer;
+};
+const logger = (msg) => {
+    if (suppressLogging) { return; }
+    console.log(msg);   // eslint-disable-line no-console
+};
 
 // do
-const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
-   // append text to file
+const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, done) => {
     const appendToFile = (asm, text, isAppend = true) => {
         if (isAppend) {
             fsx.writeFileSync(asm, text, {flag: 'a'});
@@ -128,27 +166,52 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
             fsx.writeFileSync(asm, text);
         }
     };  
-
-    // append assembly header
     const appendHeader = (asm, asmName) => {
         let header = 
         `/**\n`+
+        ` * @preserve\n` +
         ` * ${packageJSON.title}\n` +
         ` * ${packageJSON.description}\n` +
         ` * \n` +
         ` * Assembly: ${asmName}\n` +
-        ` *     File: ${asm}\n` +
+        ` *     File: ${asm.replace(destRoot, '.')}\n` +
         ` *  Version: ${packageJSON.version}\n` +
         ` *  ${new Date().toUTCString()}\n` +
         ` * \n` +
         ` * ${packageJSON.copyright}\n` +
-        ` * ${packageJSON.license}\n` +
+        ` * Licensed under ${packageJSON.license}\n` +
         ` */\n`;
         appendToFile(asm, header);
     };
-
-   // append ADO
+    const appendClosureHeader = (asm, settingsJson) => {
+        let closureHeader = 
+        `(() => {\n` + 
+        `   const { $$, attr, Class, Struct, Enum, Interface, Mixin, Exception, Args } = flair; // eslint-disable-line no-unused-vars\n` +
+        `   const { Aspects, Assembly, Resource, Namespace, Container, Reflector, Serializer } = flair;   // eslint-disable-line no-unused-vars\n` +
+        `   const { getAttr, getAssembly, getResource, getTypeOf } = flair;                     // eslint-disable-line no-unused-vars\n` +
+        `   const { getType, typeOf, as, is, isDerivedFrom, isInstanceOf, isComplies, isImplements, isMixed } = flair;  // eslint-disable-line no-unused-vars\n` +
+        `   const { include, dispose, using, on, dispatch } = flair;                            // eslint-disable-line no-unused-vars\n` +
+        `   const { noop, telemetry } = flair;                                                  // eslint-disable-line no-unused-vars\n` +
+        `   const { isServer } = flair.options.env;                                             // eslint-disable-line no-unused-vars\n` +
+        `\n`; 
+        if (settingsJson) { // settings is a closure variable of each assembly separately
+            closureHeader += 
+        `   const settings = JSON.parse('${settingsJson}'); // eslint-disable-line no-unused-vars\n`;
+        } else {
+        `   const settings = {}; // eslint-disable-line no-unused-vars\n`;
+        }
+        appendToFile(asm, closureHeader);
+    };
+    const appendClosureFooter = (asm) => {
+        let closureFooter = 
+        `\n` + 
+        `})();\n`;
+        appendToFile(asm, closureFooter);
+    };    
     const appendADO = (ados, asm, asmName) => { // eslint-disable-line no-unused-vars
+        // skip for special cases:
+        if (skipRegistrationsFor.indexOf(asmName) !== -1) { return; }
+
         // each ADO object has:
         //      "name": "", 
         //      "file": "",
@@ -159,28 +222,38 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
         //      "types": ["", "", ...],
         //      "resources": ["", "", ...],
         //      "assets": ["", "", ...],
-        //      "settings: {}"
         let ADO = {
             name: asmName,
-            file: asm.replace('.js', '{.min}.js'),
+            file: asm.replace('.js', '{.min}.js').replace(destRoot, '.'),
             desc: packageJSON.description,
             version: packageJSON.version,
             copyright: packageJSON.copyright,
             license: packageJSON.license,
             types: [],
             resources: [],
-            assets: [],
-            settings: {}
+            assets: []
         };
         ados.push(ADO);
         return ADO;
     };
+    const appendToADO = (ado, asmName, prop, value) => {
+        // skip for special cases:
+        if (skipRegistrationsFor.indexOf(asmName) !== -1) { return; }
 
-    // copy assets
-    const copyAssets = (ado, assets_src, assets_dest) => {
+        if (['types', 'resources', 'assets'].indexOf(prop) !== -1) {
+            // validate for duplicate
+            if (ado[prop].indexOf(value) !== -1) { throw `Member is already added/associated with assembly. (${value})`; }
+
+            ado[prop].push(value); 
+        } else {
+            ado[prop] = value; 
+        }
+    };
+    const copyAssets = (ado, asmName, assets_src, assets_dest) => {
         if (!fsx.existsSync(assets_src)) { 
-            console.log('  assets: (not found)');
             return; 
+        } else {
+            logger(`    assets: ${assets_src.replace(srcRoot, '.')}`); // eslint-disable-line no-console
         }
 
         // ensure dest folder exists
@@ -190,41 +263,34 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
         copyDir.sync(assets_src, assets_dest, function(stat, filepath, filename){
             if (stat === 'file') { 
                 // add to ado
-                ado.assets.push(filepath); 
+                appendToADO(ado, asmName, 'assets', './' + filename);
             
                 // log
-                console.log('  asset: ' + filepath); // eslint-disable-line no-console
+                logger('            - ./' + path.join(assets_dest.replace(destRoot, './') + '/' + filename)); // eslint-disable-line no-console
             }
             return true;
         }, function (err) { throw err; });
-
-        // TODO: destFile.replace(dest, '.')
     };
-
-    const appendSettings = (ado, file) => {
+    const readSettings = (asmName, file) => {
         if (fsx.existsSync(file)) {
             // log
-            console.log(' settings: ' + file); // eslint-disable-line no-console
+            logger('  settings: ' + file.replace(srcRoot, '.')); // eslint-disable-line no-console
 
-            // register with ado
-            ado.settings = JSON.parse(fsx.readFileSync(file));
-        } else {
-            // log
-            console.log(' settings: (not found)'); // eslint-disable-line no-console
+            // return for embedding in assembly itself
+            return JSON.stringify(JSON.parse(fsx.readFileSync(file)));
         }
+        return '';
     };
-
-    // append resource
-    const appendResource = (ado, asm, file, qualifiedName) => {
+    const appendToResourceList = (reslist, ado, asmName, asm, file, qualifiedName) => {
+        reslist.push({ado: ado, asmName: asmName, asm: asm, file: file, qualifiedName: qualifiedName});
+    };
+    const appendResource = (ado, asmName, asm, file, qualifiedName) => {
         let content = '',
             encodingType = '',
             ext = path.extname(file).toLowerCase();
 
-        // validate for duplicate
-        if (ado.resources.indexOf(qualifiedName) !== -1) { throw `Resource is already added to assembly. (${qualifiedName})`; }
-
         // add to ado
-        ado.resources.push(qualifiedName);
+        appendToADO(ado, asmName, 'resources', qualifiedName);
 
         // read file
         if (utf8EncResFileTypes.indexOf(ext) === -1) { // utf8 encoding resFileTypes must contain extension names with a .
@@ -238,27 +304,35 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
         encodingType += 'base64;';
 
         // add to file
-        let dump = `;flair.Resource.register("${qualifiedName}", "${encodingType}", "${file}", "${content}");`;
+        let dump = `flair.Resource.register("${qualifiedName}", "${encodingType}", "${file.replace(destRoot, '.')}", "${content}");\n`;
         appendToFile(asm, dump);
 
         // log
-        console.log('    res: ' + qualifiedName + ' (' +  file + ')'); // eslint-disable-line no-console
+        logger('            - ' + qualifiedName + ' (' +  file.replace(srcRoot, '.') + ')'); // eslint-disable-line no-console
     };
+    const appendResources = (reslist) => {
+        if (reslist.length > 0) {
+            logger(` resources: ${reslist.length}`); // eslint-disable-line no-console
 
-    // append type
-    const appendType = (ado, asm, file, basepath, nsName, typeName, qualifiedName) => {
-        // validate for duplicate
-        if (ado.types.indexOf(qualifiedName) !== -1) { throw `Type is already added to assembly. (${qualifiedName})`; }
-
+            // append
+            for(let item of reslist) {
+                appendResource(item.ado, item.asmName, item.asm, item.file, item.qualifiedName);
+            }
+        }
+    };
+    const appendToTypeList = (typelist, ado, asmName, asm, file, basepath, nsName, typeName, qualifiedName) => {
+        typelist.push({ado: ado, asmName: asmName, asm: asm, file: file, basepath: basepath, nsName: nsName, typeName: typeName, qualifiedName: qualifiedName});
+    };
+    const appendType = (ado, asmName, asm, file, basepath, nsName, typeName, qualifiedName) => {
         // add to ado
-        ado.types.push(qualifiedName);
+        appendToADO(ado, asmName, 'types', qualifiedName);
 
         // copy file content
         let content = fsx.readFileSync(file, 'utf8');
 
         // find and replace namespace name if set for auto
-        content = replaceAll(content, `$$('ns', '(auto)');`, `$$('ns', '${nsName}');`);
-        content = replaceAll(content, `$$("ns", "(auto)");`, `$$("ns", "${nsName}");`);
+        content = replaceAll(content, `$$('ns', '(auto)');`, `$$$('ns', '${nsName}');`); // replace all is eating up one '$', soo added 3, 2 left after that issues
+        content = replaceAll(content, `$$("ns", "(auto)");`, `$$$("ns", "${nsName}");`); // replace all is eating up one '$', soo added 3, 2 left after that issues
 
         // find and replace typename name if set for auto
         content = replaceAll(content, `Class('(auto)'`, `Class('${typeName}'`);
@@ -283,16 +357,34 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
         appendToFile(asm, content);
 
         // log
-        console.log('   type: ' + qualifiedName + ' (' + file + ')'); // eslint-disable-line no-console
+        logger('            - ' + qualifiedName + ' (' + file.replace(srcRoot, '.') + ')'); // eslint-disable-line no-console
     };
+    const appendTypes = (typelist, asm, asmName, src) => {
+        if (typelist.length > 0) {
+            logger(`     types: ${typelist.length}`); // eslint-disable-line no-console
 
-    // append self registration
-    const appendSelfRegistration = (ado, asm) => {
-            let dump = `;flair.Assembly.register("${JSON.stringify(ado)}");`;
-            appendToFile(asm, dump);
+            // append closure header with settings
+            let asm_setting = path.join(src, asmName, 'settings.json');
+            appendClosureHeader(asm, readSettings(asmName, asm_setting));
+
+            // append
+            for(let item of typelist) {
+                appendType(item.ado, item.asmName, item.asm, item.file, item.basepath, item.nsName, item.typeName, item.qualifiedName);
+            }
+
+            // append closure footer
+            appendClosureFooter(asm);
+        }
     };
+    const appendSelfRegistration = (ado, asm, asmName) => {
+        // skip for special cases:
+        if (skipRegistrationsFor.indexOf(asmName) !== -1) { return; }
 
-    // append main file
+        logger('   selfreg: yes'); // eslint-disable-line no-console
+
+        let dump = `flair.Assembly.register('${JSON.stringify(ado)}');\n`;
+        appendToFile(asm, dump);
+    };
     const appendMain = (asm, file, basepath) => { // eslint-disable-line no-unused-vars
         // pick file, if exists
         if (fsx.existsSync(file)) {
@@ -306,46 +398,45 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
             appendToFile(asm, content);
 
             // log
-            console.log('   index: (' + file + ')'); // eslint-disable-line no-console
-        } else {
-            // log
-            console.log('   index: (not found)'); // eslint-disable-line no-console
+            logger('     index: ' + file.replace(srcRoot, '.')); // eslint-disable-line no-console
         }
     };
-
-    // process injections
     const processInjections = (basepath, content) => {
         return injector(basepath, content);
     };
-
-     // run lint
     const runLint = (asm) => {
         let lintReport = eslint.executeOnFiles([asm]);
         if (lintReport.errorCount > 0 || lintReport.warningCount > 0) {
-            console.log(eslintFormatter(lintReport.results)); // eslint-disable-line no-console
+            logger(eslintFormatter(lintReport.results)); // eslint-disable-line no-console
             if (lintReport.errorCount > 0) {
                 throw `${lintReport.errorCount} Linting errors found.`;
             }
         }
     };
-
-    // minify code
-    const minifyFile = (asm_min) => {
+    const minifyFile = (asm, asm_min) => {
         let result = uglifyjs.minify([asm], uglifyConfig);
         if (result.error) {
             throw `Error minifying ${asm}. \n\n ${result.error}`;
         }
         fsx.writeFileSync(asm_min, result.code);
     };
-
-    // create preamble
     const createPreamble = (adosJSON, preamble) => {
-        fsx.writeFileSync(preamble, JSON.stringify(adosJSON));
+        if (adosJSON.length === 0) {
+            return;
+        } else {
+            logger(`\n  preamble: ${preamble.replace(destRoot, '.')}`);  // eslint-disable-line no-console
+            let ados = JSON.stringify(adosJSON);
+            let dump = `(() => { let ados = JSON.parse('${ados}');flair.Assembly.register(ados);})();`;
+            fsx.writeFileSync(preamble, dump);
+        }
     };
-
 
     // process group folder
     const process = (src, dest) => {
+        if (src.replace(srcRoot, '.') !== '.') { // groups are being processed
+            logger(`\n     group: ${src.replace(srcRoot, '.')} (start)`);  // eslint-disable-line no-console
+        }
+
         // ados.json for this root
         let adosJSON =  [],
             preamble = path.join(dest, 'preamble.js');
@@ -358,15 +449,22 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
             if (asmName.startsWith('_')) { continue; } // skip
 
             // log
-            console.log('\nasm: ' + asmName); // eslint-disable-line no-console
+            logger('\n       asm: ' + asmName); // eslint-disable-line no-console
 
             // assembly file at dest
             // NOTE: name of the folder is the name of the assembly itself
-            let asm = path.join(dest, asmName + '.js');
+            let asm = path.join(dest, asmName + '.js'),
+                reslist = [],
+                typelist = [];
             fsx.ensureFileSync(asm);
             
             // add assembly header
             appendHeader(asm, asmName);
+
+            // append asm initializer
+            let asm_main = path.join(src, asmName, 'index.js'),
+                basepath = path.join(src, asmName);
+            appendMain(asm, asm_main, basepath);
 
             // append ado object
             let ado = appendADO(adosJSON, asm, asmName);
@@ -393,18 +491,18 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
                     } else if (file.endsWith('.res.js')) { // js as a resource
                         typeName = path.basename(file).replace('.res.js', '');
                         if (typeName.indexOf('.') !== -1) { throw `Resource name cannot contain dots. (${typeName})`; }
-                        qualifiedName = nsName + '.' + typeName;
-                        appendResource(ado, asm, file, qualifiedName);
+                        qualifiedName = (nsName !== '(root)' ? nsName + '.' : '') + typeName;
+                        appendToResourceList(reslist, ado, asmName, asm, file, qualifiedName);
                     } else if (file.endsWith('.js')) { // type
                         typeName = path.basename(file).replace('.js', '');
                         if (typeName.indexOf('.') !== -1) { throw `Type name cannot contain dots. (${typeName})`;}
-                        qualifiedName = nsName + '.' + typeName;
-                        appendType(ado, asm, file, basepath, nsName, typeName, qualifiedName);
+                        qualifiedName = (nsName !== '(root)' ? nsName + '.' : '')  + typeName;
+                        appendToTypeList(typelist, ado, asmName, asm, file, basepath, nsName, typeName, qualifiedName);
                     } else if (file.endsWith('.res' + ext)) { // resource
                         typeName = path.basename(file).replace('.res' + ext, '');
                         if (typeName.indexOf('.') !== -1) { throw `Resource name cannot contain dots. (${typeName})`; }
-                        qualifiedName = nsName + '.' + typeName;
-                        appendResource(ado, asm, file, qualifiedName);
+                        qualifiedName = (nsName !== '(root)' ? nsName + '.' : '')  + typeName;
+                        appendToResourceList(reslist, ado, asmName, asm, file, qualifiedName);
                     } else { // unknown 
                         continue; // ignore
                     }
@@ -414,19 +512,16 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
             // copy assets of assemble
             let assets_folder = path.join(src, asmName, '_assets'),
                 assets_folder_dest = path.join(dest, asmName);
-            copyAssets(ado, assets_folder, assets_folder_dest);
+            copyAssets(ado, asmName, assets_folder, assets_folder_dest);
 
-            // append settings to ADO
-            let asm_setting = path.join(src, asmName, 'settings.json');
-            appendSettings(ado, asm_setting);
+            // append types
+            appendTypes(typelist, asm, asmName, src);
+
+            // append resources
+            appendResources(reslist);
 
             // append assembly self-registration 
-            appendSelfRegistration(ado, asm)
-
-            // append asm initializer
-            let asm_main = path.join(src, asmName, 'index.js'),
-                basepath = path.join(src, asmName);
-            appendMain(asm, asm_main, basepath);
+            appendSelfRegistration(ado, asm, asmName)
 
             // lint
             runLint(asm);
@@ -438,11 +533,15 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
             // done, print stats
             let stat = fsx.statSync(asm),
                 stat_min = fsx.statSync(asm_min)
-            console.log('==> ' + path.basename(asm) + ' (' + Math.round(stat.size / 1024) + 'kb, ' + Math.round(stat_min.size / 1024) + 'kb minified)\n'); // eslint-disable-line no-console
+            logger('       ==>: ' + asm.replace(destRoot, '.') + ' (' + Math.round(stat.size / 1024) + 'kb, ' + Math.round(stat_min.size / 1024) + 'kb minified)'); // eslint-disable-line no-console
         }
 
         // write preamble file for the group folder
         createPreamble(adosJSON, preamble);
+
+        if (src.replace(srcRoot, '.') !== '.') { // groups are being processed
+            logger(`\n     group: ${src.replace(srcRoot, '.')} (end)`);  // eslint-disable-line no-console
+        }
     };
 
     // delete all dest files
@@ -485,7 +584,7 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
  *                          under each group
  *                  Note: In both cases, if folder name starts with '_', it is skipped
  *              uglifyConfig: path of uglify config JSON file as in: https://github.com/mishoo/UglifyJS2#minify-options
- *              eslintConfig: path of eslint config JSON file, having structure as in: https://eslint.org/docs/user-guide/configuring
+ *              eslintConfig: path of eslint config JSON file, having structure as in: https://eslint.org/docs/user-guide/configuring AND https://eslint.org/docs/developer-guide/nodejs-api#cliengine
  *              depsConfig: path of dependencies update config JSON file, having structure as:
  *                  {
  *                      update: true/false - if run dependency update
@@ -523,7 +622,7 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
  *                                  > assembly gets registered with flair, if not already registered via "preamble"
  *                                    (flair is always global, on server and on client)
  *                                  > if "flair" object is not available as global, it throws error
- *                          settings.json       - assembly's settings file, get embedded in assembly definition file
+ *                          settings.json       - assembly's settings file, get embedded in assembly itself and is available as settings variable
  *                          <namespace folder>  - any other namespace folder is processed next
  *                              > this means, all folder under <assembly folder> are treated as namespace folders
  *                                with certain exclusions as:
@@ -601,7 +700,7 @@ const doTask = (srcList, srcRoot, destRoot, utf8EncResFileTypes, done) => {
  *                          If flair.js is not already loaded, it will throw an error or if loaded, it will register itself
  *                          with flair.
  *                          
- *                          At every root level a <root folder name>.preamble.js file is created that contains all meta
+ *                          At every root level a 'preamble.js' file is created that contains all meta
  *                          information about each assembly with assembly registration code.
  *                          
  *                          For seamless use of assemblies, instead of loading each assembly separately, only this preamble file
@@ -620,6 +719,7 @@ module.exports = function(options, cb) {
     
     // build options
     options = options || {};
+    options.suppressLogging = options.suppressLogging || false;
     options.rootPath = options.rootPath || process.cwd();
     options.src = options.src || path.join(options.rootPath, 'src');
     options.dest = options.dest || path.join(options.rootPath, 'dist');
@@ -636,6 +736,17 @@ module.exports = function(options, cb) {
     eslintConfig = JSON.parse(fsx.readFileSync(options.eslintConfig, 'utf8'));
     depsConfig = JSON.parse(fsx.readFileSync(options.depsConfig, 'utf8'));
     packageJSON = JSON.parse(fsx.readFileSync(options.packageJSON, 'utf8'));
+    suppressLogging = options.suppressLogging;
+
+    // log for check
+    logger('\nflairBuild: start\n');                                               // eslint-disable-line no-console
+    logger(`   grouped: ${options.processAsGroups ? 'yes': 'no'}`);                // eslint-disable-line no-console
+    logger(`      root: ${options.rootPath}`);                                     // eslint-disable-line no-console
+    logger(`       src: ${options.src.replace(options.rootPath, '.')}`);           // eslint-disable-line no-console
+    logger(`      dest: ${options.dest.replace(options.rootPath, '.')}`);          // eslint-disable-line no-console
+    logger(`      deps: ${options.depsConfig.replace(options.rootPath, '.')}`);    // eslint-disable-line no-console
+    logger(`    verify: ${options.eslintConfig.replace(options.rootPath, '.')}`);  // eslint-disable-line no-console
+    logger(`    minify: ${options.uglifyConfig.replace(options.rootPath, '.')}\n`);  // eslint-disable-line no-console
 
     // get engines
     eslint = new CLIEngine(eslintConfig);
@@ -651,8 +762,18 @@ module.exports = function(options, cb) {
             srcList.push(options.src);  // this itself is a group folder
         }
 
+        // bump version number
+        let oldVer = packageJSON.version;
+        let newVer = bump(options.packageJSON);
+        logger(`   version: ${oldVer} -> ${newVer}`);    // eslint-disable-line no-console
+
         // build
-        doTask(srcList, options.src, options.dest, options.utf8EncResFileTypes, cb);
+        doTask(srcList, options.rootPath, options.src, options.dest, options.utf8EncResFileTypes, () => {
+            logger('\nflairBuild: end\n'); // eslint-disable-line no-console
+            if (typeof cb === 'function') {
+                cb();
+            }
+        });
     };
 
     // update dependencies in source folder, if configured

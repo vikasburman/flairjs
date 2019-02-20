@@ -38,7 +38,7 @@ const _telemetry = {
                     }
 
                     // emit
-                    dispatch('telemetry', item);
+                    _post('telemetry', item);
                 }
             };
         }

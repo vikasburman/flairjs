@@ -2,9 +2,9 @@
  * @name Attribute
  * @description Attribute base class.
  */
-_$$('abstract');
-_$$('ns', '(root)');
-_Class('Attribute', function() {
+$$('abstract');
+$$('ns', '(auto)');
+Class('(auto)', function() {
     this.construct = (args) => {
         this.args = args;
     };
@@ -12,7 +12,7 @@ _Class('Attribute', function() {
    /** 
     *  @name args: array - arguments as defined where attribute is applied e.g., ('text', 012, false, Reference)
     */
-    _$$('readonly');
+    $$('readonly');
     this.args = [];
 
    /** 
@@ -67,7 +67,7 @@ _Class('Attribute', function() {
      *           Note: decorated get must call member's get
      *                 decorated set must accept value argument and pass it to member's set with or without processing
      */  
-    _$$('virtual');
+    $$('virtual');
     this.decorateProperty = this.noop;
 
     /** 
@@ -83,7 +83,7 @@ _Class('Attribute', function() {
      *  function - decorated function
      *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
      */  
-    _$$('virtual');
+    $$('virtual');
     this.decorateFunction = this.noop;    
 
     /** 
@@ -99,7 +99,7 @@ _Class('Attribute', function() {
      *  function - decorated function
      *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
      */  
-    _$$('virtual');
+    $$('virtual');
     this.decorateEvent = this.noop;
 });
 

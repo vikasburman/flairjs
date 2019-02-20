@@ -2,9 +2,9 @@
  * @name Aspect
  * @description Aspect base class.
  */
-_$$('abstract');
-_$$('ns', '(root)');
-_Class('Aspect', function() {
+$$('abstract');
+$$('ns', '(auto)');
+Class('(auto)', function() {
     /** 
      * @name before
      * @description Before advise
@@ -19,7 +19,7 @@ _Class('Aspect', function() {
      *  args()          - get original args passed to main call
      *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
      */  
-    _$$('virtual');
+    $$('virtual');
     this.before = this.noop;
 
     /** 
@@ -37,7 +37,7 @@ _Class('Aspect', function() {
      *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
      * fn: function - function which is wrapped, it should be called in between pre and post actions
      */  
-    _$$('virtual');
+    $$('virtual');
     this.around = this.noop;
 
     /** 
@@ -54,6 +54,6 @@ _Class('Aspect', function() {
      *  args()          - get original args passed to main call
      *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
      */  
-    _$$('virtual');
+    $$('virtual');
     this.after = this.noop;
 });

@@ -7,17 +7,17 @@
         }
     },
     "parser": "babel-eslint",
-    "env": {
-        "es6": true,
-        "browser": true,
-        "node": true
-    },
-    "globals": {
-        "global": true,
-        "window": true,
-        "flair": true,
-        "define": true     
-    },
+    "envs": [
+        "browser",
+        "es6",
+        "node"
+    ],
+    "globals": [
+        "global",
+        "window",
+        "flair",
+        "define"
+    ],
     "rules": {
         "accessor-pairs": "off",
         "array-bracket-newline": "off",
@@ -48,14 +48,14 @@
         "dot-notation": "off",
         "eol-last": "off",
         "eqeqeq": "off",
-        "for-direction": "error",
+        "for-direction": "off",
         "func-call-spacing": "off",
         "func-name-matching": "off",
         "func-names": "off",
         "func-style": "off",
         "function-paren-newline": "off",
         "generator-star-spacing": "off",
-        "getter-return": "error",
+        "getter-return": "off",
         "global-require": "off",
         "guard-for-in": "off",
         "handle-callback-err": "off",

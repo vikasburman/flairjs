@@ -1,6 +1,6 @@
 /**
  * @name post
- * @description Post an event for any flair component to react.
+ * @description Dispatch an event for any flair component to react.
  *              This together with 'on' makes a local pub/sub system which is capable to react to external
  *              events when they are posted via 'post' here and raise to external world which can be hooked to 'on'
  * @example
@@ -13,7 +13,7 @@
  * @returns void
  */ 
 const _post = (event, args) => {
-    dispatch(event, args);
+    _dispatchEvent(event, args);
 };
 
 // attach to flair

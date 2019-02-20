@@ -11,7 +11,7 @@
  * @returns void
  */ 
 const _dispatcher = new Dispatcher();
-const dispatch = _dispatcher.dispatch;  // this can be used in any other member to dispatch any event
+const _dispatchEvent = _dispatcher.dispatch;  // this can be used via dispatch member to dispatch any event
 const _on = (event, handler, isRemove) => {
     if (isRemove) { _dispatcher.remove(event, handler); return; }
     _dispatcher.add(event, handler);

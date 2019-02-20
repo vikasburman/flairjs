@@ -1,10 +1,5 @@
 const gulp = require('gulp');
 
-// task: bump
-gulp.task('bump', (done) => {
-    require('./build/tasks/bump.js').bump(done);
-});
-
 // task: build
 gulp.task('build', (done) => {
     require('./build/tasks/build.js').build(done);
@@ -21,7 +16,7 @@ gulp.task('package', (done) => {
 });
 
 // task: release
-gulp.task('release', ['bump', 'build', 'test', 'package'], () => {
+gulp.task('release', ['build', 'test', 'package'], () => {
 });
 
 // task: default
