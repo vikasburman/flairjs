@@ -240,7 +240,7 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, gZipA
         if (!fsx.existsSync(assets_src)) { 
             return; 
         } else {
-            logger(`    assets: ${assets_src.replace(srcRoot, '.')}`); // eslint-disable-line no-console
+            logger(`    assets: ${assets_src.replace(srcRoot, '.')}`);
         }
 
         // ensure dest folder exists
@@ -268,9 +268,9 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, gZipA
                 // log
                 if (isgZipped) {
                     let stat_gz = fsx.statSync(ast_gz);
-                    logger('            - ./' + path.join(assets_dest.replace(destRoot, './') + '/' + filename) + ' (' + Math.round(stat_normal.size / 1024) + 'kb, ' +  Math.round(stat_gz.size / 1024) + 'kb gzipped)'); // eslint-disable-line no-console
+                    logger('            - ./' + path.join(assets_dest.replace(destRoot, './') + '/' + filename) + ' (' + Math.round(stat_normal.size / 1024) + 'kb, ' +  Math.round(stat_gz.size / 1024) + 'kb gzipped)'); 
                 } else {
-                    logger('            - ./' + path.join(assets_dest.replace(destRoot, './') + '/' + filename) + ' (' + Math.round(stat_normal.size / 1024) + 'kb)'); // eslint-disable-line no-console
+                    logger('            - ./' + path.join(assets_dest.replace(destRoot, './') + '/' + filename) + ' (' + Math.round(stat_normal.size / 1024) + 'kb)'); 
                 }
             }
             return true;
@@ -279,7 +279,7 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, gZipA
     const readSettings = (asmName, file) => {
         if (fsx.existsSync(file)) {
             // log
-            logger('  settings: ' + file.replace(srcRoot, '.')); // eslint-disable-line no-console
+            logger('  settings: ' + file.replace(srcRoot, '.'));
 
             // return for embedding in assembly itself
             return JSON.stringify(JSON.parse(fsx.readFileSync(file)));
@@ -313,11 +313,11 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, gZipA
         appendToFile(asm, dump);
 
         // log
-        logger('            - ' + qualifiedName + ' (' +  file.replace(srcRoot, '.') + ')'); // eslint-disable-line no-console
+        logger('            - ' + qualifiedName + ' (' +  file.replace(srcRoot, '.') + ')'); 
     };
     const appendResources = (reslist) => {
         if (reslist.length > 0) {
-            logger(` resources: ${reslist.length}`); // eslint-disable-line no-console
+            logger(` resources: ${reslist.length}`); 
 
             // append
             for(let item of reslist) {
@@ -362,11 +362,11 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, gZipA
         appendToFile(asm, content);
 
         // log
-        logger('            - ' + qualifiedName + ' (' + file.replace(srcRoot, '.') + ')'); // eslint-disable-line no-console
+        logger('            - ' + qualifiedName + ' (' + file.replace(srcRoot, '.') + ')'); 
     };
     const appendTypes = (typelist, asm, asmName, src) => {
         if (typelist.length > 0) {
-            logger(`     types: ${typelist.length}`); // eslint-disable-line no-console
+            logger(`     types: ${typelist.length}`); 
 
             // append closure header with settings
             let asm_setting = path.join(src, asmName, 'settings.json');
@@ -385,7 +385,7 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, gZipA
         // skip for special cases:
         if (skipRegistrationsFor.indexOf(asmName) !== -1) { return; }
 
-        logger('   selfreg: yes'); // eslint-disable-line no-console
+        logger('   selfreg: yes'); 
 
         let dump = `flair.Assembly.register('${JSON.stringify(ado)}');\n`;
         appendToFile(asm, dump);
@@ -403,7 +403,7 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, gZipA
             appendToFile(asm, content);
 
             // log
-            logger('     index: ' + file.replace(srcRoot, '.')); // eslint-disable-line no-console
+            logger('     index: ' + file.replace(srcRoot, '.')); 
         }
     };
     const processInjections = (basepath, content) => {
@@ -412,7 +412,7 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, gZipA
     const runLint = (asm) => {
         let lintReport = eslint.executeOnFiles([asm]);
         if (lintReport.errorCount > 0 || lintReport.warningCount > 0) {
-            logger(eslintFormatter(lintReport.results)); // eslint-disable-line no-console
+            logger(eslintFormatter(lintReport.results)); 
             if (lintReport.errorCount > 0) {
                 throw `${lintReport.errorCount} Linting errors found.`;
             }
@@ -432,7 +432,7 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, gZipA
         if (adosJSON.length === 0) {
             return;
         } else {
-            logger(`\n  preamble: ${preamble.replace(destRoot, '.')}`);  // eslint-disable-line no-console
+            logger(`\n  preamble: ${preamble.replace(destRoot, '.')}`);  
             let ados = JSON.stringify(adosJSON);
             let dump = `(() => { let ados = JSON.parse('${ados}');flair.Assembly.register(ados);})();`;
             fsx.writeFileSync(preamble, dump);
@@ -442,7 +442,7 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, gZipA
     // process group folder
     const process = (src, dest) => {
         if (src.replace(srcRoot, '.') !== '.') { // groups are being processed
-            logger(`\n     group: ${src.replace(srcRoot, '.')} (start)`);  // eslint-disable-line no-console
+            logger(`\n     group: ${src.replace(srcRoot, '.')} (start)`);  
         }
 
         // ados.json for this root
@@ -457,7 +457,7 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, gZipA
             if (asmName.startsWith('_')) { continue; } // skip
 
             // log
-            logger('\n       asm: ' + asmName); // eslint-disable-line no-console
+            logger('\n       asm: ' + asmName); 
 
             // assembly file at dest
             // NOTE: name of the folder is the name of the assembly itself
@@ -483,7 +483,7 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, gZipA
             // process each assembly folder
             for(let nsName of nsfolders) {
                 if (nsName.startsWith('_')) { continue; } // skip
-                if (['(assets)', '(bundle)'].indexOf(nsName) !== -1) { continue; } // skip special folders at namespace level
+                if (['-assets', '-bundle'].indexOf(nsName) !== -1) { continue; } // skip special folders at namespace level
                 
                 // process types and resources under this namespace
                 let ext = '',
@@ -519,7 +519,7 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, gZipA
             }
 
             // copy assets of assemble
-            let assets_folder = path.join(src, asmName, '(assets)'),
+            let assets_folder = path.join(src, asmName, '-assets'),
                 assets_folder_dest = path.join(dest, asmName);
             copyAssets(ado, asmName, assets_folder, assets_folder_dest);
 
@@ -548,12 +548,12 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, gZipA
                 stat_gz = isGzip ? fsx.statSync(asm_min_gz) : null;
             if (isMinify) {
                 if (isGzip) {
-                    logger('       ==>: ' + asm.replace(destRoot, '.') + ' (' + Math.round(stat.size / 1024) + 'kb, ' + Math.round(stat_min.size / 1024) + 'kb minified, ' + + Math.round(stat_gz.size / 1024) +'kb gzipped)'); // eslint-disable-line no-console
+                    logger('       ==>: ' + asm.replace(destRoot, '.') + ' (' + Math.round(stat.size / 1024) + 'kb, ' + Math.round(stat_min.size / 1024) + 'kb minified, ' + + Math.round(stat_gz.size / 1024) +'kb gzipped)'); 
                 } else {
-                    logger('       ==>: ' + asm.replace(destRoot, '.') + ' (' + Math.round(stat.size / 1024) + 'kb, ' + Math.round(stat_min.size / 1024) + 'kb minified)'); // eslint-disable-line no-console
+                    logger('       ==>: ' + asm.replace(destRoot, '.') + ' (' + Math.round(stat.size / 1024) + 'kb, ' + Math.round(stat_min.size / 1024) + 'kb minified)'); 
                 }
             } else {
-                logger('       ==>: ' + asm.replace(destRoot, '.') + ' (' + Math.round(stat.size / 1024) + 'kb)'); // eslint-disable-line no-console
+                logger('       ==>: ' + asm.replace(destRoot, '.') + ' (' + Math.round(stat.size / 1024) + 'kb)'); 
             }
         }
 
@@ -561,7 +561,7 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, gZipA
         createPreamble(adosJSON, preamble);
 
         if (src.replace(srcRoot, '.') !== '.') { // groups are being processed
-            logger(`\n     group: ${src.replace(srcRoot, '.')} (end)`);  // eslint-disable-line no-console
+            logger(`\n     group: ${src.replace(srcRoot, '.')} (end)`);  
         }
     };
 
@@ -680,7 +680,7 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, gZipA
  *                          (root)     - root namespace folder, is a special folder, that contains special members
  *                                       which are placed on root only. Should be avoided, as this is for flair's own
  *                                       system types
- *                          (assets)   - assets folder
+ *                          -assets   - assets folder
  *                                  > this special folder can be used to place all external assets like images, css, js, third-party
  *                                    libraries, fonts, etc.
  *                                  > it can have any structure underneath
@@ -689,8 +689,8 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, gZipA
  *                                      <assembly folder>.js        - the assembly file
  *                                      <assembly folder>.min.js    - the assembly file (minified)
  *                                      <assembly folder>/          - the assembly's assets folder content here under (this is created only if assets are defined)
- *                                  > note, '(assets)' folder itself is not copied, but all contents underneath are copied
- *                          (bundle)   - bundled files' folder
+ *                                  > note, '-assets' folder itself is not copied, but all contents underneath are copied
+ *                          -bundle   - bundled files' folder
  *                                  > this special folder can be used to place all files that are being bundled via injections inside index.js file
  *                                  > it can have any structure underneath
  *                                  > all files and folder under it, are skipped, unless they are referred via 
@@ -762,6 +762,7 @@ module.exports = function(options, cb) {
     
     // build options
     options = options || {};
+    options.engine = options.engine || '';
     options.suppressLogging = options.suppressLogging || false;
     options.rootPath = options.rootPath || process.cwd();
     options.isFull = options.isFull || false;
@@ -793,14 +794,16 @@ module.exports = function(options, cb) {
     isGzipAssets = isGzip && options.gzipAssets;
 
     // log for check
-    logger('\nflairBuild: start\n');                                               // eslint-disable-line no-console
-    logger(`   grouped: ${options.processAsGroups ? 'yes': 'no'}`);                // eslint-disable-line no-console
-    logger(`      root: ${options.rootPath}`);                                     // eslint-disable-line no-console
-    logger(`       src: ${options.src.replace(options.rootPath, '.')}`);           // eslint-disable-line no-console
-    logger(`      dest: ${options.dest.replace(options.rootPath, '.')}`);          // eslint-disable-line no-console
-    logger(`      deps: ${options.depsConfig.replace(options.rootPath, '.')}`);    // eslint-disable-line no-console
-    logger(`    verify: ${options.eslintConfig.replace(options.rootPath, '.')}`);  // eslint-disable-line no-console
-    logger(`    minify: ${options.uglifyConfig.replace(options.rootPath, '.')}`);  // eslint-disable-line no-console
+    logger('\nflairBuild: start\n');                                               
+    logger(`    engine: ${options.engine}`);                                       
+    logger(`   grouped: ${options.processAsGroups ? 'yes': 'no'}`);                
+    logger(`      root: ${options.rootPath}`);                                     
+    logger(`       src: ${options.src.replace(options.rootPath, '.')}`);           
+    logger(`      dest: ${options.dest.replace(options.rootPath, '.')}`);          
+    logger(`      deps: ${options.depsConfig.replace(options.rootPath, '.')}`);    
+    logger(`    verify: ${options.eslintConfig.replace(options.rootPath, '.')}`);  
+    logger(`    minify: ${options.uglifyConfig.replace(options.rootPath, '.')}`);  
+    logger(`      gzip: ${options.gzConfig.replace(options.rootPath, '.')}`);       
 
     // get engines
     eslint = new CLIEngine(eslintConfig);
@@ -808,7 +811,7 @@ module.exports = function(options, cb) {
 
     // after build
     let afterBuild = () => {
-        logger('\nflairBuild: end\n'); // eslint-disable-line no-console
+        logger('\nflairBuild: end\n'); 
         if (typeof cb === 'function') {
             cb();
         }
@@ -825,9 +828,8 @@ module.exports = function(options, cb) {
         }
 
         // bump version number
-        let oldVer = packageJSON.version;
         let newVer = bump(options.packageJSON);
-        logger(`\n   version: ${oldVer} -> ${newVer}`);    // eslint-disable-line no-console
+        logger(`\n   version: ${newVer}`);   
 
         // build
         doTask(srcList, options.rootPath, options.src, options.dest, options.utf8EncResFileTypes, options.gZipAssetFileTypes, () => {

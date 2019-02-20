@@ -1,6 +1,5 @@
 const path = require('path');
 const rootPath = process.cwd();
-const flairBuild = require(path.join(rootPath, 'src/flair.build/(bundle)/build-asm.js'));
 
 // do
 const doTask = (done, isFull) => {
@@ -17,7 +16,17 @@ const doTask = (done, isFull) => {
     options.cb = done;
 
     // run
-    flairBuild(options);
+    let argsString = '';
+    let idx = process.argv.findIndex((item) => { return (item.startsWith('--flairBuild') ? true : false); });
+    if (idx !== -1) { argsString = process.argv[idx].substr(2).split('=')[1]; }
+    if (argsString) {
+        const flairBuild = require(path.join(rootPath, argsString));
+        options.engine = argsString;
+        flairBuild(options);
+    } else {
+        console.log('**** Build failed: flairBuild engine is not configured. Configure using --flairBuild=<path to flair.build.js file>')
+        if (typeof done === 'function') { done(); }
+    }
 };
 
 exports.build = function(cb, isFull) {
