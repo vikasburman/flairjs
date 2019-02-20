@@ -3,9 +3,13 @@ const rootPath = process.cwd();
 const flairBuild = require(path.join(rootPath, 'src/flair.build/_members/build-asm.js'));
 
 // do
-const doTask = (done) => {
+const doTask = (done, isFull) => {
     // configure
     let options = {};
+    options.rootPath = rootPath;
+    options.isFull = isFull;
+    options.minify = isFull;
+    options.gzip = isFull;
     options.rootPath = rootPath;
     options.suppressLogging = false;
     options.processAsGroups = false; // if true, it will treat first level folders under src as groups and will process each folder as group, otherwise it will treat all folders under src as individual assemblies
@@ -15,6 +19,6 @@ const doTask = (done) => {
     flairBuild(options);
 };
 
-exports.build = function(cb) {
-    doTask(cb);
+exports.build = function(cb, isFull) {
+    doTask(cb, isFull);
 };

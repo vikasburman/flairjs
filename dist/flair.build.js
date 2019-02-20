@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.build
  *     File: ./flair.build.js
- *  Version: 0.15.140
- *  Wed, 20 Feb 2019 00:01:18 GMT
+ *  Version: 0.15.175
+ *  Wed, 20 Feb 2019 01:59:21 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -28,12 +28,17 @@ const fsx = require('fs-extra');
 const del = require('del');
 const CLIEngine = new require('eslint').CLIEngine
 const uglifyjs = require('uglify-js-harmony');
+const gz = require('zlib');
 
 let uglifyConfig, 
     eslintConfig,
+    gzConfig,
     depsConfig,
     packageJSON, 
     suppressLogging = false,
+    isFull = false,
+    isMinify = false,
+    isGzip = false,
     eslint, 
     skipRegistrationsFor = [
         'flair',
@@ -413,12 +418,15 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, done)
             }
         }
     };
-    const minifyFile = (asm, asm_min) => {
+    const minifyFile = (asm, asm_min, asm_gz) => {
         let result = uglifyjs.minify([asm], uglifyConfig);
         if (result.error) {
             throw `Error minifying ${asm}. \n\n ${result.error}`;
         }
         fsx.writeFileSync(asm_min, result.code);
+        if (isGzip) {
+            fsx.writeFileSync(asm_gz, gz.gzipSync(result.code, gzConfig));
+        }
     };
     const createPreamble = (adosJSON, preamble) => {
         if (adosJSON.length === 0) {
@@ -528,12 +536,24 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, done)
 
             // minify
             let asm_min = asm.replace('.js', '.min.js');
-            minifyFile(asm, asm_min);
+            let asm_min_gz = asm_min + '.gz';
+            if(isMinify) {
+                minifyFile(asm, asm_min, asm_min_gz);
+            }
 
             // done, print stats
             let stat = fsx.statSync(asm),
-                stat_min = fsx.statSync(asm_min)
-            logger('       ==>: ' + asm.replace(destRoot, '.') + ' (' + Math.round(stat.size / 1024) + 'kb, ' + Math.round(stat_min.size / 1024) + 'kb minified)'); // eslint-disable-line no-console
+                stat_min = isMinify ? fsx.statSync(asm_min) : null,
+                stat_gz = isGzip ? fsx.statSync(asm_min_gz) : null;
+            if (isMinify) {
+                if (isGzip) {
+                    logger('       ==>: ' + asm.replace(destRoot, '.') + ' (' + Math.round(stat.size / 1024) + 'kb, ' + Math.round(stat_min.size / 1024) + 'kb minified, ' + + Math.round(stat_gz.size / 1024) +'kb gzipped)'); // eslint-disable-line no-console
+                } else {
+                    logger('       ==>: ' + asm.replace(destRoot, '.') + ' (' + Math.round(stat.size / 1024) + 'kb, ' + Math.round(stat_min.size / 1024) + 'kb minified)'); // eslint-disable-line no-console
+                }
+            } else {
+                logger('       ==>: ' + asm.replace(destRoot, '.') + ' (' + Math.round(stat.size / 1024) + 'kb)'); // eslint-disable-line no-console
+            }
         }
 
         // write preamble file for the group folder
@@ -566,7 +586,6 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, done)
     }
 };
 
-
 /**
  * @name build
  * @description Builds flair assemblies as per given configuration
@@ -583,6 +602,11 @@ const doTask = (srcList, rootPath, srcRoot, destRoot, utf8EncResFileTypes, done)
  *                          In this case, dest will have same folder groups created and group specific assemblies will be placed
  *                          under each group
  *                  Note: In both cases, if folder name starts with '_', it is skipped
+ *              suppressLogging: true/false  - if build time log is to be shown on terminal
+ *              isFull: true/false   - is full build to be done
+ *              minify: true/false   - is minify to be run
+ *              gzip: true/false     - is gzip to be run
+ *              gzConfig: path of gz config JSON file as in: https://nodejs.org/api/zlib.html#zlib_class_options AND https://www.zlib.net/manual.html
  *              uglifyConfig: path of uglify config JSON file as in: https://github.com/mishoo/UglifyJS2#minify-options
  *              eslintConfig: path of eslint config JSON file, having structure as in: https://eslint.org/docs/user-guide/configuring AND https://eslint.org/docs/developer-guide/nodejs-api#cliengine
  *              depsConfig: path of dependencies update config JSON file, having structure as:
@@ -721,9 +745,13 @@ module.exports = function(options, cb) {
     options = options || {};
     options.suppressLogging = options.suppressLogging || false;
     options.rootPath = options.rootPath || process.cwd();
+    options.isFull = options.isFull || false;
+    options.minify = options.minify || false;
+    options.gzip = options.gzip || false;    
     options.src = options.src || path.join(options.rootPath, 'src');
     options.dest = options.dest || path.join(options.rootPath, 'dist');
     options.processAsGroups = options.processAsGroups || false; // if true, it will treat first level folders under src as groups and will process each folder as group, otherwise it will treat all folders under src as individual assemblies
+    options.gzConfig = options.gzConfig || path.join(options.rootPath, 'build/config/.gz.json');
     options.uglifyConfig = options.uglifyConfig || path.join(options.rootPath, 'build/config/.uglify.json');
     options.eslintConfig = options.eslintConfig || path.join(options.rootPath, 'build/config/.eslint.json');
     options.depsConfig = options.depsConfig || path.join(options.rootPath, 'build/config/.deps.json');
@@ -734,9 +762,13 @@ module.exports = function(options, cb) {
     // get files
     uglifyConfig = JSON.parse(fsx.readFileSync(options.uglifyConfig, 'utf8'));
     eslintConfig = JSON.parse(fsx.readFileSync(options.eslintConfig, 'utf8'));
+    gzConfig = JSON.parse(fsx.readFileSync(options.gzConfig, 'utf8'));
     depsConfig = JSON.parse(fsx.readFileSync(options.depsConfig, 'utf8'));
     packageJSON = JSON.parse(fsx.readFileSync(options.packageJSON, 'utf8'));
     suppressLogging = options.suppressLogging;
+    isFull = options.isFull;
+    isMinify = options.minify;
+    isGzip = isMinify && options.gzip;
 
     // log for check
     logger('\nflairBuild: start\n');                                               // eslint-disable-line no-console
@@ -777,7 +809,7 @@ module.exports = function(options, cb) {
     };
 
     // update dependencies in source folder, if configured
-    if (depsConfig.update) {
+    if (depsConfig.update && isFull) {
         copyDeps(depsConfig.deps, afterCopy)
     } else {
         afterCopy();

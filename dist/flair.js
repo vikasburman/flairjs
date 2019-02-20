@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.15.140
- *  Wed, 20 Feb 2019 00:01:16 GMT
+ *  Version: 0.15.175
+ *  Wed, 20 Feb 2019 01:59:19 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -2647,11 +2647,12 @@
             ns = ns_attr ? ns_attr.args[0] : '';
         switch(ns) {
             case '(auto)':  // this is a placeholder that gets replaced by assembly builder with dynamic namespace based on folder structure, so if is it left, it is wrong
-                throw  `Namespace name is invalid. (${ns})`;
+                throw  `Namespace '(auto)' should be used only when bundling the type in an assembly. (${ns})`;
             case '(root)':  // this is mark to instruct builder that register type at root namespace
                 break; // go on
             default: // anything else
-                if (ns.startsWith('.') || ns.endsWith('.')) { throw  `Namespace name is invalid. (${ns})`; } // start and end dots are not allowed in namespace names
+                // namespace name must not contain any special characters and must not start or end with .
+                if (ns.startsWith('.') || ns.endsWith('.') || /[~`!#$%\^&*+=\-\[\]\\';,/{}|\\":<>\?]/g.test(ns)) { throw  `Namespace name is invalid. (${ns})`; } // eslint-disable-line no-useless-escape
                 cfg.params.typeName = ns + '.' + cfg.params.typeName; // add namespace to name here onwards
                 cfg.params.ns = ns;
                 break;
@@ -3286,9 +3287,7 @@
         // clear registry
         ns_types = {};
     });
-    
-    
-    // TODO: don't allow '(auto)' or '(root)' names, actually don;t allow any names with special characters  // OK
+      // OK
     /**
      * @name Container
      * @description Dependency injection container system

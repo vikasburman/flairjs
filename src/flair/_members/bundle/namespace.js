@@ -35,6 +35,3 @@ a2f('Namespace', _Namespace, () => {
     // clear registry
     ns_types = {};
 });
-
-
-// TODO: don't allow '(auto)' or '(root)' names, actually don;t allow any names with special characters

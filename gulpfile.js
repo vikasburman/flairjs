@@ -1,5 +1,10 @@
 const gulp = require('gulp');
 
+// task: build-full
+gulp.task('build-full', (done) => {
+    require('./build/tasks/build.js').build(done, true);
+});
+
 // task: build
 gulp.task('build', (done) => {
     require('./build/tasks/build.js').build(done);
@@ -16,9 +21,5 @@ gulp.task('package', (done) => {
 });
 
 // task: release
-gulp.task('release', ['build', 'test', 'package'], () => {
-});
-
-// task: default
-gulp.task('default', ['build', 'test'], () => {
+gulp.task('release', ['build-full', 'test', 'package'], () => {
 });

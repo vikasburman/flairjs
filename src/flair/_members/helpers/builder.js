@@ -1361,11 +1361,12 @@ const builder = (cfg) => {
         ns = ns_attr ? ns_attr.args[0] : '';
     switch(ns) {
         case '(auto)':  // this is a placeholder that gets replaced by assembly builder with dynamic namespace based on folder structure, so if is it left, it is wrong
-            throw  `Namespace name is invalid. (${ns})`;
+            throw  `Namespace '(auto)' should be used only when bundling the type in an assembly. (${ns})`;
         case '(root)':  // this is mark to instruct builder that register type at root namespace
             break; // go on
         default: // anything else
-            if (ns.startsWith('.') || ns.endsWith('.')) { throw  `Namespace name is invalid. (${ns})`; } // start and end dots are not allowed in namespace names
+            // namespace name must not contain any special characters and must not start or end with .
+            if (ns.startsWith('.') || ns.endsWith('.') || /[~`!#$%\^&*+=\-\[\]\\';,/{}|\\":<>\?]/g.test(ns)) { throw  `Namespace name is invalid. (${ns})`; } // eslint-disable-line no-useless-escape
             cfg.params.typeName = ns + '.' + cfg.params.typeName; // add namespace to name here onwards
             cfg.params.ns = ns;
             break;

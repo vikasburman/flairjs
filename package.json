@@ -3,7 +3,7 @@
     "title": "FlairJS",
     "description": "True Object Oriented JavaScript",
     "copyright": "(c) 2017-2019 Vikas Burman",
-    "version": "0.15.140",
+    "version": "0.15.175",
     "author": "Vikas Burman <vikasburman@gmail.com>",
     "keywords": [
         "javascript",
@@ -24,11 +24,13 @@
     "main": "./flair.min.js",
     "scripts": {
         "build": "gulp build",
+        "build-full": "gulp build-full",
         "test": "gulp test --flairSymbols=TEST",
         "test-client": "open ./test/jasmine/SpecRunner.html",
         "release": "gulp release",
         "package": "gulp package",
-        "start": "http-server ./docs/ | open http://127.0.0.1:8080/v1/examples/"
+        "start": "http-server ./docs/ | open http://127.0.0.1:8080/v1/examples/ &",
+        "stop": "pkill -f http-server"
     },
     "devDependencies": {
         "babel-eslint": "^10.0.1",
