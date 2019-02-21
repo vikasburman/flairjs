@@ -10,27 +10,27 @@
     "skipBumpVersion": false,
     "suppressLogging": false,
 
-    "lint": false,
+    "lint": true,
     "lintConfig": "./gulp/config/lint.json",
     "lintTypes": ["js", "css", "html"],
 
-    "minify": false,
+    "minify": true,
     "minifyConfig": "./gulp/config/minify.json",
     "minifyTypes": ["js", "css", "html"],
 
-    "gzip": false,
+    "gzip": true,
     "gzipConfig": "./gulp/config/gzip.json",
     "gzipTypes": ["js", "css", "html", "txt", "xml", "md", "json", "svg", "jpg", "jpeg", "gif", "png"],
 
-    "lintAssets": false,
-    "minifyAssets": false,
-    "gzipAssets": false,
+    "lintAssets": true,
+    "minifyAssets": true,
+    "gzipAssets": true,
     
-    "lintResources": false,
-    "minifyResources": false,
+    "lintResources": true,
+    "minifyResources": true,
     "utf8EncodeResourceTypes": ["txt", "xml", "js", "md", "json", "css", "html", "svg"],
 
     "depsConfig": "./gulp/config/deps.json",
     "preBuildDeps": false,
-    "postBuildDeps": false
+    "postBuildDeps": true
 }

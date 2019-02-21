@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.build
  *     File: ./flair.build.js
- *  Version: 0.15.342
- *  Thu, 21 Feb 2019 05:25:58 GMT
+ *  Version: 0.15.483
+ *  Thu, 21 Feb 2019 21:35:17 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -48,6 +48,9 @@ const escapeRegExp = (string) => {
 const replaceAll = (string, find, replace) => {
     return string.replace(new RegExp(escapeRegExp(find), 'g'), replace);
 };
+process.on('unhandledRejection', (reason) => { // to handle special scenarios
+    console.log(reason); // eslint-disable-line no-console
+});
 
 const bump = (options) => {
     if (options.skipBumpVersion) { return; }
@@ -188,6 +191,13 @@ const build = (options, done) => {
             logger(0, 'index', options.current.asmMain); 
         }
     };
+    const initAsm = () => {
+        if (fsx.existsSync(options.current.asm)) { 
+            options.current.asmLupdate = fsx.statSync(options.current.asm).mtime; 
+            fsx.removeSync(options.current.asm);
+        }
+        fsx.ensureFileSync(options.current.asm);
+    };
     const appendADO = () => {
         // each ADO object has:
         //      "name": "", 
@@ -215,116 +225,235 @@ const build = (options, done) => {
             options.current.adosJSON.push(options.current.ado);
         }
     };
+
     const lintJS = (file) => {
-        // TODO
+        return new Promise((resolve, reject) => {
+            let lintReport = options.lintJS.executeOnFiles([file]);
+            if (lintReport.errorCount > 0 || lintReport.warningCount > 0) {
+                console.log(options.eslintFormatter(lintReport.results)); // eslint-disable-line no-console
+                reject(`Lint for ${file} failed.`); 
+            }
+            resolve();
+        });
     };
-    const lintCSS = (file) => {
-        // TODO
+    const lintCSS = (file) => { // eslint-disable-line no-unused-vars
+        return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
+            options.lintCSS({
+                files: [file],
+                config: options.lintConfig.css
+            }).then((result) => {
+                if (result.errored) { 
+                    console.log(result.output); // eslint-disable-line no-console
+                    reject(`Lint for ${file} failed.`); 
+                } else {
+                    resolve();
+                }
+            }).catch(reject);
+        });
     };
-    const lintHTML = (file) => {
-        // TODO
+    const lintHTML = (file) => { 
+        return new Promise((resolve, reject) => {
+            let content = fsx.readFileSync(file, 'utf8');
+            options.lintHTML(content, options.lintConfig.html).then((errors) => {
+                if (errors && errors.length > 0) {
+                    // HACK: some rules after being set to false are still showing up in errors,
+                    // filter them
+                    let finalErrors = [];
+                    errors.forEach(item => {
+                        let rule = item.rule || item.data.name;
+                        if (typeof options.lintConfig.html[rule] !== undefined && options.lintConfig.html[rule] === false) { return; }
+                        finalErrors.push(item);
+                    });
+                    if (finalErrors.length > 0) {
+                        console.log(finalErrors); // eslint-disable-line no-console
+                        reject(`Lint for ${file} failed.`); 
+                    } else {
+                        resolve();
+                    }
+                } else {
+                    resolve();
+                }
+            }).catch(reject);
+        });
     };
-    const minifyJS = (content) => {
-        // TODO
-        return content;
+    const minifyJS = (file) => {
+        return new Promise((resolve, reject) => {
+            let result = options.minifyJS([file], options.minifyConfig.js);
+            if (result.error) { 
+                console.log(result.error); // eslint-disable-line no-console
+                reject(`Minify for ${file} failed.`); 
+            } else {
+                resolve(result.code);
+            }
+        });
     };
-    const minifyCSS = (content) => {
-        // TODO
-        return content;
+    const minifyCSS = (file) => {
+        return new Promise((resolve, reject) => {        
+            let content = fsx.readFileSync(file, 'utf8');
+            let result = new options.minifyCSS(options.minifyConfig.css).minify(content);
+            if (result.errors.length > 0) { 
+                console.log(result.errors); // eslint-disable-line no-console
+                reject(`Minify for ${file} failed.`); 
+            } else {
+                resolve(result.styles); 
+            }
+        });
     };
-    const minifyHTML = (content) => {
-        // TODO
-        return content;
+    const minifyHTML = (file) => {
+        return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars           
+            let content = fsx.readFileSync(file, 'utf8');
+            let result = options.minifyHTML(content, options.minifyConfig.html);
+            resolve(result);
+        });
     };
     const lintFile = (src) => {
-        let ext = path.extname(src).substr(1);
-        if (options.lintTypes.indexOf(ext) !== -1) {
-            switch(ext) {
-                case 'js': content = lintJS(src); break;
-                case 'css': content = lintCSS(src); break;
-                case 'html': content = lintHTML(src); break;
+        return new Promise((resolve, reject) => { 
+            // run lint only if either fullBuild OR this file is changed since last build
+            if (!options.fullBuild && options.current.asmLupdate) {
+                let srcLupdate = fsx.statSync(src).mtime;
+                if (srcLupdate < options.current.asmLupdate) { resolve(); return; }
             }
-        }
+
+            let ext = path.extname(src).substr(1);
+            if (options.lintTypes.indexOf(ext) !== -1) {
+                switch(ext) {
+                    case 'js': lintJS(src).then(resolve).catch(reject); break;
+                    case 'css': lintCSS(src).then(resolve).catch(reject); break;
+                    case 'html': lintHTML(src).then(resolve).catch(reject); break;
+                    default: resolve(); break;
+                }
+            } else {
+                resolve();
+            }
+        });
     };
     const minifyFile = (src) => {
-        let content = fsx.readFileSync(src, 'utf8'),
-            ext = path.extname(src).substr(1),
-            dest = src.replace('.' + ext, '.min.' + ext);
-        if (options.minifyTypes.indexOf(ext) !== -1) {
-            let minified = false;
-            switch(ext) {
-                case 'js': content = minifyJS(content); minified = true; break;
-                case 'css': content = minifyCSS(content); minified = true; break;
-                case 'html': content = minifyHTML(content); minified = true; break;
+        return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
+            let ext = path.extname(src).substr(1),
+                dest = src.replace('.' + ext, '.min.' + ext);
+            if (options.minifyTypes.indexOf(ext) !== -1) {
+                let p = null;
+                switch(ext) {
+                    case 'js': p = minifyJS(src); break;
+                    case 'css': p = minifyCSS(src); break;
+                    case 'html': p = minifyHTML(src);  break;
+                }
+                if (p === null) {
+                    resolve('');
+                } else {
+                    p.then((content) => {
+                        fsx.writeFileSync(dest, content, 'utf8');
+                        resolve(content);
+                    }).catch(reject);
+                }
+            } else {
+                resolve('');
             }
-            if (minified) {
-                fsx.writeFileSync(dest, content, 'utf8');
-            }
-        }
+        });
     };
     const gzipFile = (src) => {
-        let content = fsx.readFileSync(src, 'utf8'),
-            ext = path.extname(src).substr(1),
-            dest = src + '.gz';
-        if (options.gzipTypes.indexOf(ext) !== -1) {
-            gzConfig = options.gzipConfig[ext] || options.gzipConfig.all; // pick ext specific configuration or generic (all)
-            fsx.writeFileSync(dest, options.zlib.gzipSync(content, gzConfig));
-        }
+        return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
+            let content = fsx.readFileSync(src, 'utf8'),
+                ext = path.extname(src).substr(1),
+                dest = src + '.gz';
+            if (options.gzipTypes.indexOf(ext) !== -1) {
+                let gzConfig = options.gzipConfig[ext] || options.gzipConfig.all; // pick ext specific configuration or generic (all)
+                fsx.writeFileSync(dest, options.zlib.gzipSync(content, gzConfig));
+            }
+            resolve();
+        });
     };
-    const processAssets = () => {
-        if (options.current.ado.assets.length === 0) { return; }
 
-        logger(0, 'assets', options.current.ado.assets.length);
+    const processAssets = (done, justNames1) => {
+        justNames1 = justNames1 || [];
+        if (options.current.ado.assets.length === 0) { 
+            options.current.ado.assets = justNames1;
+            done(); return; 
+        }
+        let astFile = options.current.ado.assets.splice(0, 1)[0]; // pick from top
+        justNames1.push(astFile.dest);
 
-        // process assets
-        let justNames = [];
-        for(let astFile of options.current.ado.assets) {
-            justNames.push(astFile.dest);
+        // process only if full build OR asset is changed
+        if (!options.fullBuild && fsx.existsSync(astFile.dest)) {
+            let srcLupdate = fsx.statSync(astFile.src).mtime.toString(),
+                destLupdate = fsx.statSync(astFile.dest).mtime.toString();
+            if (srcLupdate === destLupdate) { processAssets(done, justNames1); return; }
+        }
+        if (!options.current.isAssetsHeadingPrinted) { logger(0, 'assets', ''); options.current.isAssetsHeadingPrinted = true; }
 
-            fsx.ensureDirSync(path.dirname(astFile.dest)); // ensure dest folder exists
-            fsx.copyFileSync(astFile.src, astFile.dest);
-            astFile.stat = astFile.dest.replace(options.current.dest, '.') + 
-            ' (' + Math.round(fsx.statSync(astFile.dest).size / 1024) + 'kb';
+        fsx.ensureDirSync(path.dirname(astFile.dest)); // ensure dest folder exists
+        fsx.copyFileSync(astFile.src, astFile.dest);
+        astFile.stat = astFile.dest.replace(options.current.dest, '.') + 
+        ' (' + Math.round(fsx.statSync(astFile.dest).size / 1024) + 'kb';
 
-            // lint
-            if (options.lintAssets) {
-                lintFile(astFile.dest);
-            }
-
-            // minify
-            let minFile = astFile.dest.replace('.' + astFile.ext, '.min.' + astFile.ext);
-            if (options.minify) {
-                minifyFile(astFile.dest);
-                if (fsx.existsSync(minFile)) {
-                    astFile.stat += ', ' + Math.round(fsx.statSync(minFile).size / 1024) + 'kb minified';
-                }
-            }
-
-            // gzip
-            if (options.gzip) {
-                let gzFile = '';
-                if (options.minify && fsx.existsSync(minFile)) {
-                    gzFile = minFile + '.gz';
-                    gzipFile(minFile);
-                } else {
-                    gzFile = astFile.dest + '.gz';
-                    gzipFile(astFile.dest);
-                }
-                if (fsx.existsSync(gzFile)) {
-                    astFile.stat += ', ' + Math.round(fsx.statSync(gzFile).size / 1024) + 'kb gzipped';
-                }
-            }
+        let minFile = '';
+        const afterGzip = () => {
             astFile.stat += ')';
 
             logger(1, '', astFile.stat);
             delete astFile.stat;
-        }
-        options.current.ado.assets = justNames; // update assets list
-    };
-    const appendTypes = () => {
-        if (options.current.ado.types.length === 0) { return; }
 
-        logger(0, 'types', options.current.ado.types.length);
+            processAssets(done, justNames1); // pick next
+        };
+        const afterMinify = () => {
+            // gzip
+            let gzFile = '';
+            if (options.gzip) {
+                if (options.minify && fsx.existsSync(minFile)) {
+                    gzFile = minFile + '.gz';
+                    gzipFile(minFile).then(() => {
+                        if (fsx.existsSync(gzFile)) {
+                            astFile.stat += ', ' + Math.round(fsx.statSync(gzFile).size / 1024) + 'kb gzipped';
+                        }
+                        afterGzip();
+                    }).catch((err) => { throw err; })
+                } else {
+                    gzFile = astFile.dest + '.gz';
+                    gzipFile(astFile.dest).then(() => {
+                        if (fsx.existsSync(gzFile)) {
+                            astFile.stat += ', ' + Math.round(fsx.statSync(gzFile).size / 1024) + 'kb gzipped';
+                        }
+                        afterGzip();
+                    }).catch((err) => { throw err; });
+                }
+            } else { // delete old existing
+                if (!options.fullBuild) { 
+                    gzFile = minFile + '.gz';
+                    if (fsx.existsSync(gzFile)) { 
+                        fsx.removeSync(gzFile); 
+                    } else {
+                        gzFile = astFile.dest + '.gz';
+                        if (fsx.existsSync(gzFile)) { fsx.removeSync(gzFile); }
+                    }
+                }
+                afterGzip();
+            }
+        };
+        const afterLint = () => {
+            // minify
+            minFile = astFile.dest.replace('.' + astFile.ext, '.min.' + astFile.ext);
+            if (options.minify) {
+                minifyFile(astFile.dest).then(() => {
+                    if (fsx.existsSync(minFile)) {
+                        astFile.stat += ', ' + Math.round(fsx.statSync(minFile).size / 1024) + 'kb minified';
+                    }
+                    afterMinify();
+                }).catch((err) => { throw err; });
+            } else { // delete old existing
+                if (!options.fullBuild && fsx.existsSync(minFile)) { fsx.removeSync(minFile); }
+                afterMinify();
+            }
+        };
+
+        // lint
+        if (options.lintAssets) {
+            lintFile(astFile.dest).then(afterLint).catch((err) => { throw err; });
+        } else {
+            afterLint();
+        }
+    };
+    const appendTypes = (done) => {
+        if (options.current.ado.types.length === 0) { done(); return; }
 
         // append closure header with settings
         let settings = '';
@@ -349,6 +478,8 @@ const build = (options, done) => {
         `   const settings = {}; // eslint-disable-line no-unused-vars\n`;
         }
         appendToFile(closureHeader);
+
+        logger(0, 'types', '');
 
         // append types
         let justNames = [];
@@ -392,44 +523,33 @@ const build = (options, done) => {
         `\n` + 
         `})();\n`;
         appendToFile(closureFooter);
+        
+        // done
+        done();
     };
-    const appendResources = () => {
-        if (options.current.ado.resources.length === 0) { return; }
+    const appendResources = (done, justNames2) => {
+        justNames2 = justNames2 || [];
+        if (options.current.ado.resources.length === 0) { 
+            options.current.ado.resources = justNames2;
+            done(); return; 
+        }
+        let nsFile = options.current.ado.resources.splice(0, 1)[0]; // pick from top
+        justNames2.push(nsFile.qualifiedName);
+        if (justNames2.length === 1) { logger(0, 'resources', ''); }
 
-        logger(0, 'resources', options.current.ado.resources.length);        
+        logger(1, '', nsFile.qualifiedName + ' (./' + nsFile.file + ')'); 
 
-        // append
-        let justNames = [];
-        for(let nsFile of options.current.ado.resources) {
-            justNames.push(nsFile.qualifiedName);
-            logger(1, '', nsFile.qualifiedName + ' (./' + nsFile.file + ')'); 
-
-            // lint resource
-            if (options.lintResources) {
-                lintFile(nsFile.file);
-            }
-
-            // read file
-            let encodingType = '',
-                content = '';
-            if (options.utf8EncodeResourceTypes.indexOf(nsFile.ext) !== -1) {
-                content = fsx.readFileSync(nsFile.file, 'utf8');
-                encodingType = 'utf8;';
-            } else { // no encoding
-                content = fsx.readFileSync(nsFile.file);
-            }
-
-            // minify resource
-            if (options.minifyResources) {
-                if (minifyTypes.indexOf(nsFile.ext) !== -1) {
-                    if (options.minifyTypes.indexOf(nsFile.ext) !== -1) {
-                        switch (nsFile.ext) {
-                            case 'js': content = minifyJS(content); break;
-                            case 'css': content = minifyCSS(content); break;
-                            case 'html': content = minifyHTML(content); break;
-                        }
-                    }
+        const afterMinify = (content) => {
+            let encodingType = '';
+            if (!content) {
+                if (options.utf8EncodeResourceTypes.indexOf(nsFile.ext) !== -1) {
+                    content = fsx.readFileSync(nsFile.file, 'utf8');
+                    encodingType = 'utf8;';
+                } else { // no encoding
+                    content = fsx.readFileSync(nsFile.file);
                 }
+            } else {
+                encodingType = 'utf8;';
             }
 
             // base64 encoding before adding to file
@@ -439,8 +559,42 @@ const build = (options, done) => {
             // embed resource
             let dump = `flair.Resource.register("${nsFile.qualifiedName}", "${encodingType}", "${'./' + nsFile.file}", "${content}");\n`;
             appendToFile(dump);
+
+            appendResources(done, justNames2); // pick next
+        };
+        const afterLint = () => {
+            // minify/read resource
+            if (options.minifyResources) {
+                if (options.minifyTypes.indexOf(nsFile.ext) !== -1) {
+                    if (options.minifyTypes.indexOf(nsFile.ext) !== -1) {
+                        let p = null;
+                        switch (nsFile.ext) {
+                            case 'js': p = minifyJS(nsFile.file); break;
+                            case 'css': p = minifyCSS(nsFile.file); break;
+                            case 'html': p = minifyHTML(nsFile.file); break;
+                        }
+                        if (p === null) {
+                            afterMinify();
+                        } else {
+                            p.then(afterMinify).catch((err) => { throw err; });
+                        }
+                    } else {
+                        afterMinify();
+                    }
+                } else {
+                    afterMinify();
+                }
+            } else {
+                afterMinify();
+            }
+        };
+
+        // lint resource
+        if (options.lintResources) {
+            lintFile(nsFile.file).then(afterLint).catch((err) => { throw err; });
+        } else {
+            afterLint();
         }
-        options.current.ado.resources = justNames;
     };
     const appendSelfRegistration = () => {
         if (options.skipRegistrationsFor.indexOf(options.current.asmName) !== -1) { return; } // skip for special cases
@@ -449,30 +603,47 @@ const build = (options, done) => {
         let dump = `flair.Assembly.register('${JSON.stringify(options.current.ado)}');\n`;
         appendToFile(dump);
     };
-    const pack = () => {
-        options.current.stat = options.current.asm.replace(options.current.dest, '.') + 
-                               ' (' + Math.round(fsx.statSync(options.current.asm).size / 1024) + 'kb';
+    const pack = (done) => {
+        options.current.stat = options.current.asm.replace(options.current.dest, '.') + ' (' + Math.round(fsx.statSync(options.current.asm).size / 1024) + 'kb';
+
+        let minFile = '';
+        const afterGzip = () => {
+            options.current.stat += ')';
+            done();
+        };
+        const afterMinify = () => {
+            // gzip
+            let gzFile = minFile + '.gz';
+            if (options.gzip) {
+                gzipFile(minFile).then(() => {
+                    options.current.stat += ', ' + Math.round(fsx.statSync(gzFile).size / 1024) + 'kb gzipped';
+                    afterGzip();
+                }).catch((err) => { throw err; });
+            } else { // delete old existing
+                if (!options.fullBuild && fsx.existsSync(gzFile)) { fsx.removeSync(gzFile); }
+                afterGzip();
+            }
+        };
+        const afterLint = () => {
+            // minify
+            minFile = options.current.asm.replace('.js', '.min.js');
+            if (options.minify) {
+                minifyFile(options.current.asm).then(() => {
+                    options.current.stat += ', ' + Math.round(fsx.statSync(minFile).size / 1024) + 'kb minified';
+                    afterMinify();
+                }).catch((err) => { throw err; });
+            } else { // delete old existing
+                if (!options.fullBuild && fsx.existsSync(minFile)) { fsx.removeSync(minFile); }
+                afterMinify();
+            }
+        };
 
         // lint
         if (options.lint) {
-            lintFile(options.current.asm);
+            lintFile(options.current.asm).then(afterLint).catch((err) => { throw err; });
+        } else {
+            afterLint();
         }
-
-        // minify
-        let minFile = options.current.asm.replace('.js', '.min.js');
-        if (options.minify) {
-            minifyFile(options.current.asm);
-            options.current.stat += ', ' + Math.round(fsx.statSync(minFile).size / 1024) + 'kb minified';
-        }
-
-        // gzip
-        let gzFile = minFile + '.gz';
-        if (options.gzip) {
-            gzipFile(minFile);
-            options.current.stat += ', ' + Math.round(fsx.statSync(gzFile).size / 1024) + 'kb gzipped';
-        }
-
-        options.current.stat += ')';
     };
     const createPreamble = () => {
         if (options.current.adosJSON.length === 0) { return; }
@@ -482,155 +653,161 @@ const build = (options, done) => {
         let dump = `(() => { let ados = JSON.parse('${ados}');flair.Assembly.register(ados);})();`;
         fsx.writeFileSync(options.current.preamble, dump);
     };
+    const collectTypesAndResources = () => {
+        let files = rrd(options.current.nsPath);
+        for (let file of files) { 
+            if (file.indexOf('/_') !== -1) { continue; } // either a folder or file name starts with '_'. skip it
+
+            let nsFile = {
+                nsPath: options.current.nsPath,
+                nsName: options.current.nsName,
+                ext: path.extname(file).toLowerCase().substr(1),
+                file: file
+            };
+            if (file.endsWith('.spec.js')) { continue; // ignore specs
+            } else if (file.endsWith('.res.js')) { // js as a resource
+                nsFile.typeName = path.basename(file).replace('.res.js', '');
+                nsFile.type = 'res';
+            } else if (file.endsWith('.js')) { // type
+                nsFile.typeName = path.basename(file).replace('.js', '');
+                nsFile.type = 'type';
+            } else if (file.endsWith('.res.' + nsFile.ext)) { // resource
+                nsFile.typeName = path.basename(file).replace('.res.' + nsFile.ext, '');
+                nsFile.type = 'res';
+            }
+            if (nsFile.type) {
+                if (nsFile.typeName.indexOf('.') !== -1) { throw `Type/Resource names cannot contain dots. (${nsFile.typeName})`; }
+                nsFile.qualifiedName = (options.current.nsName !== '(root)' ? options.current.nsName + '.' : '')  + nsFile.typeName;
+                if (nsFile.type === 'res') {
+                    options.current.ado.resources.push(nsFile);
+                } else {
+                    options.current.ado.types.push(nsFile);
+                }
+            }
+        }
+    };
+    const collectAssets = () => {
+        options.current.astSrc = './' + path.join(options.current.asmPath, '-assets');
+        options.current.astDest = './' + path.join(options.current.dest, options.current.asmName);
+        if (fsx.existsSync(options.current.astSrc)) {
+            let assets = rrd(options.current.astSrc);
+            for (let asset of assets) {
+                if (asset.indexOf('/_') !== -1) { continue; } // either a folder or file name starts with '_'. skip it
+                let astFile = {
+                    ext: path.extname(asset).toLowerCase().substr(1),
+                    src: './' + asset,
+                    dest: './' + path.join(options.current.astDest, asset.replace(options.current.astSrc.replace('./', ''), ''))
+                };
+                options.current.ado.assets.push(astFile);
+                
+            }
+        }
+        delete options.current.astSrc;
+        delete options.current.astDest;
+    };
   
+    const processNamespaces = (done) => {
+        if (options.current.namespaces.length === 0) { 
+            delete options.current.nsName;
+            delete options.current.nsPath;
+            done(); return; 
+        }
+        let nsFolder = options.current.namespaces.splice(0, 1)[0]; // pick from top
+        if (nsFolder.startsWith('_')) { processNamespaces(done); return; } // ignore if starts with '_'
+        if (['-assets', '-bundle'].indexOf(nsFolder) !== -1) { processNamespaces(done); return; } // skip special folders at namespace level
 
-    // const runLint = (asm) => {
-    //     let lintReport = eslint.executeOnFiles([asm]);
-    //     if (lintReport.errorCount > 0 || lintReport.warningCount > 0) {
-    //         logger(eslintFormatter(lintReport.results)); 
-    //         if (lintReport.errorCount > 0) {
-    //             throw `${lintReport.errorCount} Linting errors found.`;
-    //         }
-    //     }
-    // };
-    // const minifyFile = (asm, asm_min, asm_gz) => {
-    //     let result = uglifyjs.minify([asm], uglifyConfig);
-    //     if (result.error) {
-    //         throw `Error minifying ${asm}. \n\n ${result.error}`;
-    //     }
-    //     fsx.writeFileSync(asm_min, result.code);
-    //     if (isGzip) {
-    //         fsx.writeFileSync(asm_gz, gz.gzipSync(result.code, gzConfig));
-    //     }
-    // };
-    
+        options.current.nsName = nsFolder;
+        options.current.nsPath = './' + path.join(options.current.asmPath, options.current.nsName);
 
-    // delete all dest files
-    delAll(options.dest);
-    logger(0, 'clean', 'done');
+        // collect types and resources 
+        collectTypesAndResources();
 
-    // current item data
-    options.current = {};
+        // pick next
+        processNamespaces(done); 
+    };
+    const processAssemblies = (done) => {
+        if (options.current.assemblies.length === 0) { 
+            done(); return; 
+        }
+        let asmFolder = options.current.assemblies.splice(0, 1)[0]; // pick from top
+        if (asmFolder.startsWith('_')) { processAssemblies(done); return; } // ignore if starts with '_'
 
-    // process each group folder
-    for(let source of options.sources) {
-        if (source.startsWith('_')) { continue; } // ignore if starts with '_'
+        // start assembly
+        logger(0, 'asm', asmFolder, true); 
+
+        options.current.asmName = asmFolder;
+        options.current.asmPath = './' + path.join(options.current.src, options.current.asmName);
+        options.current.asm = './' + path.join(options.current.dest, options.current.asmName + '.js');
+        options.current.asmMain = './' + path.join(options.current.src, options.current.asmName, 'index.js');
+        options.current.asmSettings = './' + path.join(options.current.src, options.current.asmName, 'settings.json');
+
+        // initialize
+        initAsm();
+        appendADO();
+        appendHeader();
+        appendMain(); // (index.js)
+
+        // process all namespaces under this assembly to 
+        let nsFolders = getFolders(options.current.asmPath, true);
+        options.current.namespaces = nsFolders;
+        processNamespaces(() => { 
+            // collect all assets
+            collectAssets();
+
+            // process assets
+            processAssets(() => {
+                // append types, resources and self-registration
+                appendTypes(() => {
+                    appendResources(() => {
+                        appendSelfRegistration();
+
+                        // lint, minify and gzip assembly
+                        pack(() => {
+                            logger(0, '==>', options.current.stat); 
+        
+                            processAssemblies(done); // pick next
+                        });
+                    });
+                });
+            });
+        });
+    };
+    const processSources = (done) => {
+        // pick source
+        if (options.sources.length === 0) { done(); return; }
+        let source = options.sources.splice(0, 1)[0]; // pick from top
+        if (source.startsWith('_')) { processSources(done); return; } // ignore if starts with '_'
 
         // start group
         logger(0, 'group', `${source.replace(source, '.')} (start)`, true);  
+        options.current = {};
         options.current.src = source;
         options.current.dest = source.replace(options.current.src, options.dest);
         options.current.adosJSON = [];
         options.current.preamble = path.join(options.current.dest, 'preamble.js');
-            
+
         // process all assemblies under this group
         let folders = getFolders(options.current.src, true);
-        for(let folder of folders) {
-            if (folder.startsWith('_')) { continue; } // skip
+        options.current.assemblies = folders;
+        processAssemblies(() => {
+            // create group preamble
+            createPreamble();
 
-            // start assembly
-            logger(0, 'asm', folder, true); 
+            // done
+            logger(0, 'group', `${source.replace(source, '.')} (end)`, true);  
+            options.current = {};
+            processSources(done);
+        });
+    };
 
-            options.current.asmName = folder;
-            options.current.asmPath = './' + path.join(options.current.src, options.current.asmName);
-            options.current.asm = './' + path.join(options.current.dest, options.current.asmName + '.js');
-            options.current.asmMain = './' + path.join(options.current.src, options.current.asmName, 'index.js');
-            options.current.asmSettings = './' + path.join(options.current.src, options.current.asmName, 'settings.json');
-
-            // initialize
-            fsx.ensureFileSync(options.current.asm);
-            appendADO();
-            appendHeader();
-            appendMain(); // (index.js)
-
-            // process all namespaces under this assembly to 
-            let nsFolders = getFolders(options.current.asmPath, true);
-            for(let nsFolder of nsFolders) {
-                if (nsFolder.startsWith('_')) { continue; } // skip
-                if (['-assets', '-bundle'].indexOf(nsFolder) !== -1) { continue; } // skip special folders at namespace level
-
-                options.current.nsName = nsFolder;
-                options.current.nsPath = './' + path.join(options.current.asmPath, options.current.nsName);
-    
-                // collect types and resources 
-                let files = rrd(options.current.nsPath);
-                for (let file of files) { 
-                    if (file.indexOf('/_') !== -1) { continue; } // either a folder or file name starts with '_'. skip it
-
-                    let nsFile = {
-                        nsPath: options.current.nsPath,
-                        nsName: options.current.nsName,
-                        ext: path.extname(file).toLowerCase().substr(1),
-                        file: file
-                    };
-                    if (file.endsWith('.spec.js')) { continue; // ignore specs
-                    } else if (file.endsWith('.res.js')) { // js as a resource
-                        nsFile.typeName = path.basename(file).replace('.res.js', '');
-                        nsFile.type = 'res';
-                    } else if (file.endsWith('.js')) { // type
-                        nsFile.typeName = path.basename(file).replace('.js', '');
-                        nsFile.type = 'type';
-                    } else if (file.endsWith('.res.' + nsFile.ext)) { // resource
-                        nsFile.typeName = path.basename(file).replace('.res.' + nsFile.ext, '');
-                        nsFile.type = 'res';
-                    }
-                    if (nsFile.type) {
-                        if (nsFile.typeName.indexOf('.') !== -1) { throw `Type/Resource names cannot contain dots. (${nsFile.typeName})`; }
-                        nsFile.qualifiedName = (options.current.nsName !== '(root)' ? options.current.nsName + '.' : '')  + nsFile.typeName;
-                        if (nsFile.type === 'res') {
-                            options.current.ado.resources.push(nsFile);
-                        } else {
-                            options.current.ado.types.push(nsFile);
-                        }
-                    }
-                }
-            }
-            delete options.current.nsName;
-            delete options.current.nsPath;
-
-            // collect all assets
-            options.current.astSrc = './' + path.join(options.current.asmPath, '-assets');
-            options.current.astDest = './' + path.join(options.current.dest, options.current.asmName);
-            if (fsx.existsSync(options.current.astSrc)) {
-                let assets = rrd(options.current.astSrc);
-                for (let asset of assets) {
-                    if (asset.indexOf('/_') !== -1) { continue; } // either a folder or file name starts with '_'. skip it
-                    let astFile = {
-                        ext: path.extname(asset).toLowerCase().substr(1),
-                        src: './' + asset,
-                        dest: './' + path.join(options.current.astDest, asset.replace(options.current.astSrc.replace('./', ''), ''))
-                    };
-                    options.current.ado.assets.push(astFile);
-                    
-                }
-            }
-            delete options.current.astSrc;
-            delete options.current.astDest;
-
-            // process assets
-            processAssets();
-              
-            // append types, resources and self-registration
-            appendTypes();
-            appendResources();
-            appendSelfRegistration();
-
-            // lint, minify and gzip assembly
-            pack();
-
-            logger(0, '==>', options.current.stat, false, true);
-        }
-
-        // create group preamble
-        createPreamble();
-
-        // done
-        logger(0, 'group', `${source.replace(source, '.')} (end)`, true);  
-        options.current = {};
+    // delete all dest files
+    if (options.fullBuild) {
+        delAll(options.dest);
+        logger(0, 'clean', 'done');
     }
 
-    // done
-    done();
+    // begin
+    processSources(done);
 };
 
 /**
@@ -655,26 +832,24 @@ const build = (options, done) => {
  *              lint: true/false - if lint operation is to be executed
  *              lintConfig: lint configuration options file path, having structure
  *              {
- *                  "js": {
+ *                  "js": { NOTE: Option configuration comes from: https://eslint.org/docs/user-guide/configuring AND https://eslint.org/docs/developer-guide/nodejs-api#cliengine
  *                  },
- *                  "css": {
+ *                  "css": { NOTE: Option configuration comes from: https://github.com/stylelint/stylelint/blob/0e378a7d31dcda0932f20ebfe61ff919ed1ddc42/docs/user-guide/configuration.md
  *                  },
- *                  "html": {
+ *                  "html": { NOTE: Option configuration comes from: https://www.npmjs.com/package/htmllint AND https://github.com/htmllint/htmllint/wiki/Options
  *                  }
  *              }
- *                  NOTE: Option configuration comes from: https://eslint.org/docs/user-guide/configuring AND https://eslint.org/docs/developer-guide/nodejs-api#cliengine
  *              lintTypes: - what all types to run linting on - ["js", "css", "html"]
  *              minify: true/false   - is minify to be run
  *              minifyConfig - minify configuration options file path having structure
  *              {
- *                  "js": {
+ *                  "js": { NOTE: Option configuration comes from: https://github.com/mishoo/UglifyJS2#minify-options
  *                  },
- *                  "css": {
+ *                  "css": { NOTE: Option configuration comes from: https://www.npmjs.com/package/clean-css
  *                  },
- *                  "html": {
+ *                  "html": { NOTE: Option configuration comes from: https://www.npmjs.com/package/html-minifier
  *                  }
  *              }
- *                  NOTE: Option configuration comes from: https://github.com/mishoo/UglifyJS2#minify-options
  *              minifyTypes: - what all types to run minification on - ["js", "css", "html"]
  *              gzip: true/false     - is gzip to be run
  *              gzipConfig - gzip configuration options file path having structure
@@ -873,8 +1048,7 @@ module.exports = function(options, cb) {
         options.gzipAssets = options.gzip && options.gzipAssets;
     } else { // quick build - suppress few things
         options.lintResources = options.lint && options.lintResources;
-        options.skipBumpVersion = true;
-        options.suppressLogging = true;
+        options.lintTypes = ['js']; // for quick builds run lint only for JS files
         options.minify = false;
         options.gzip = false;
         options.minifyAssets = false;
@@ -915,27 +1089,27 @@ module.exports = function(options, cb) {
     if (options.lint && options.lintConfig) {
         if (options.lintTypes.indexOf('js') !== -1) { // JS lint
             const CLIEngine = new require('eslint').CLIEngine            
-            options.eslint = new CLIEngine(options.lintConfig.js);
-            options.eslintFormatter = options.eslint.getFormatter();
+            options.lintJS = new CLIEngine(options.lintConfig.js);
+            options.eslintFormatter = options.lintJS.getFormatter();
         }
         if (options.lintTypes.indexOf('css') !== -1) { // CSS lint
-            // TODO
+            options.lintCSS = require('stylelint').lint;
         }
         if (options.lintTypes.indexOf('html') !== -1) { // HTML lint
-            // TODO
+            options.lintHTML = require('htmllint');
         }
     }
 
     // minify
     if (options.minify && options.minifyConfig) {
-        if (options.minifyTypes.indexOf('js') !== -1) { // JS lint
-            options.uglify = require('uglify-js-harmony')
+        if (options.minifyTypes.indexOf('js') !== -1) { // JS minifier
+            options.minifyJS = require('uglify-js-harmony').minify;
         }
-        if (options.minifyTypes.indexOf('css') !== -1) { // CSS lint
-            // TODO
+        if (options.minifyTypes.indexOf('css') !== -1) { // CSS minifier
+            options.minifyCSS = require('clean-css');
         }
-        if (options.minifyTypes.indexOf('html') !== -1) { // HTML lint
-            // TODO
+        if (options.minifyTypes.indexOf('html') !== -1) { // HTML minifier
+            options.minifyHTML = require('html-minifier').minify;
         }        
     }
 

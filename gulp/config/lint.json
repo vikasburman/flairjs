@@ -289,6 +289,19 @@
     },
 
     "css": {
+        "rules": {}
+    },
 
+    "html": {
+        "doctype-html5": true,
+        "indent-style": false,
+        "class-style": "none",
+        "link-req-noopener": false,
+        "id-class-no-ad": false,
+        "tag-bans": false,
+        "img-req-alt": false,
+        "id-style": false,
+        "attr-bans": false,
+        "line-no-trailing-whitespace": false
     }
 }

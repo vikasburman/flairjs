@@ -20,10 +20,16 @@
     },
 
     "css": {
-
+        "level": 2
     },
 
     "html": {
-        
+        "collapseBooleanAttributes": true,
+        "collapseWhitespace": true,
+        "conservativeCollapse": true,
+        "decodeEntities": true,
+        "removeComments": true,
+        "minifyCSS": true,
+        "minifyJS": true
     }
 }
