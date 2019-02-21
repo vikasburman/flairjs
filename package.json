@@ -3,7 +3,7 @@
     "title": "FlairJS",
     "description": "True Object Oriented JavaScript",
     "copyright": "(c) 2017-2019 Vikas Burman",
-    "version": "0.15.210",
+    "version": "0.15.342",
     "author": "Vikas Burman <vikasburman@gmail.com>",
     "keywords": [
         "javascript",
@@ -23,12 +23,12 @@
     },
     "main": "./flair.min.js",
     "scripts": {
-        "build": "gulp build --flairBuild=src/flair.build/-bundle/build-asm.js",
-        "build-full": "gulp build-full --flairBuild=src/flair.build/-bundle/build-asm.js",
-        "test": "gulp test --flairSymbols=TEST",
+        "build": "gulp build --options ./gulp/config/build.json",
+        "build-full": "gulp build --full --options ./gulp/config/build.json",
+        "test": "gulp test --TEST --options ./gulp/config/test.json",
         "test-client": "open ./test/jasmine/SpecRunner.html",
+        "package": "gulp package --options ./gulp/config/pack.json",
         "release": "gulp release",
-        "package": "gulp package",
         "start": "http-server ./docs/ | open http://127.0.0.1:8080/v1/examples/ &",
         "stop": "pkill -f http-server"
     },
@@ -39,13 +39,13 @@
         "eslint": "^3.19.0",
         "fs-extra": "^7.0.1",
         "gulp": "^3.9.1",
-        "gulp-jasmine": "^2.4.2",
         "http-server": "^0.11.1",
-        "jasmine": "^3.3.1",
-        "jasmine-ajax": "^3.4.0",
+        "minimist": "^1.2.0",
         "open": "^0.0.5",
         "recursive-readdir-sync": "^1.0.6",
         "uglify-js-harmony": "^2.7.7"
     },
-    "dependencies": {}
+    "dependencies": {
+        "jasmine": "^3.3.1"
+    }
 }

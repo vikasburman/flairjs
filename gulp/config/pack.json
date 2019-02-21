@@ -1,0 +1,11 @@
+{
+    "npm": {
+        "dest": "./package",
+        "files": [
+            { "src": "./dist" },
+            { "src": "./package.json"},
+            { "src": "./LICENSE" },
+            { "src": "./README.md" }       
+        ]
+    }
+}

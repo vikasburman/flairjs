@@ -1,6 +1,0 @@
-{
-    "verbose": false,
-    "includeStackTrace": false,
-    "timeout": 5000,
-    "errorOnFail": false
-}

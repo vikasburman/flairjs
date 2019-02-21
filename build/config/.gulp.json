@@ -1,5 +1,0 @@
-{
-    "specs": [
-        "./specs/**/*.spec.js"
-    ]
-}

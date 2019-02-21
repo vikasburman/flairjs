@@ -1,23 +1,4 @@
 /**
- * @preserve
- * FlairJS
- * True Object Oriented JavaScript
- * 
- * Assembly: flair.build
- *     File: ./flair.build.js
- *  Version: 0.15.342
- *  Thu, 21 Feb 2019 05:25:58 GMT
- * 
- * (c) 2017-2019 Vikas Burman
- * Licensed under MIT
- */
-/**
- * @name flairBuild
- * @description Build Engine
- */
-
- // members
-/**
  * @name flair Build
  * @description Build engine
  */
