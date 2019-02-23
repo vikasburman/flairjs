@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.build
  *     File: ./flair.build.js
- *  Version: 0.15.483
- *  Thu, 21 Feb 2019 21:35:17 GMT
+ *  Version: 0.15.489
+ *  Sat, 23 Feb 2019 17:56:22 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -463,13 +463,14 @@ const build = (options, done) => {
         }
         let closureHeader = 
         `(() => {\n` + 
-        `   const { $$, attr, Class, Struct, Enum, Interface, Mixin, Exception, Args } = flair; // eslint-disable-line no-unused-vars\n` +
-        `   const { Aspects, Assembly, Resource, Namespace, Container, Reflector, Serializer } = flair;   // eslint-disable-line no-unused-vars\n` +
-        `   const { getAttr, getAssembly, getResource, getTypeOf } = flair;                     // eslint-disable-line no-unused-vars\n` +
+        `   'use strict';\n\n` +
+        `   const { $$, attr, Class, Struct, Enum, Interface, Mixin, Exception, Args } = flair;                         // eslint-disable-line no-unused-vars\n` +
+        `   const { Aspects, Assembly, Resource, Namespace, Container, Reflector, Serializer } = flair;                 // eslint-disable-line no-unused-vars\n` +
+        `   const { getAttr, getAssembly, getResource, getTypeOf } = flair;                                             // eslint-disable-line no-unused-vars\n` +
         `   const { getType, typeOf, as, is, isDerivedFrom, isInstanceOf, isComplies, isImplements, isMixed } = flair;  // eslint-disable-line no-unused-vars\n` +
-        `   const { include, dispose, using, on, dispatch } = flair;                            // eslint-disable-line no-unused-vars\n` +
-        `   const { noop, telemetry } = flair;                                                  // eslint-disable-line no-unused-vars\n` +
-        `   const { isServer } = flair.options.env;                                             // eslint-disable-line no-unused-vars\n` +
+        `   const { include, dispose, using, on, dispatch } = flair;                                                    // eslint-disable-line no-unused-vars\n` +
+        `   const { noop, telemetry } = flair;                                                                          // eslint-disable-line no-unused-vars\n` +
+        `   const { isServer } = flair.options.env;                                                                     // eslint-disable-line no-unused-vars\n` +
         `\n`; 
         if (settings) { // settings is a closure variable of each assembly separately
             closureHeader += 
@@ -687,7 +688,7 @@ const build = (options, done) => {
         }
     };
     const collectAssets = () => {
-        options.current.astSrc = './' + path.join(options.current.asmPath, '-assets');
+        options.current.astSrc = './' + path.join(options.current.asmPath, '(assets)');
         options.current.astDest = './' + path.join(options.current.dest, options.current.asmName);
         if (fsx.existsSync(options.current.astSrc)) {
             let assets = rrd(options.current.astSrc);
@@ -714,7 +715,7 @@ const build = (options, done) => {
         }
         let nsFolder = options.current.namespaces.splice(0, 1)[0]; // pick from top
         if (nsFolder.startsWith('_')) { processNamespaces(done); return; } // ignore if starts with '_'
-        if (['-assets', '-bundle'].indexOf(nsFolder) !== -1) { processNamespaces(done); return; } // skip special folders at namespace level
+        if (['(assets)', '(bundle)'].indexOf(nsFolder) !== -1) { processNamespaces(done); return; } // skip special folders at namespace level
 
         options.current.nsName = nsFolder;
         options.current.nsPath = './' + path.join(options.current.asmPath, options.current.nsName);
@@ -924,7 +925,7 @@ const build = (options, done) => {
  *                          (root)     - root namespace folder, is a special folder, that contains special members
  *                                       which are placed on root only. Should be avoided, as this is for flair's own
  *                                       system types
- *                          -assets   - assets folder
+ *                          (assets)   - assets folder
  *                                  > this special folder can be used to place all external assets like images, css, js, third-party
  *                                    libraries, fonts, etc.
  *                                  > it can have any structure underneath
@@ -933,8 +934,8 @@ const build = (options, done) => {
  *                                      <assembly folder>.js        - the assembly file
  *                                      <assembly folder>.min.js    - the assembly file (minified)
  *                                      <assembly folder>/          - the assembly's assets folder content here under (this is created only if assets are defined)
- *                                  > note, '-assets' folder itself is not copied, but all contents underneath are copied
- *                          -bundle   - bundled files' folder
+ *                                  > note, '(assets)' folder itself is not copied, but all contents underneath are copied
+ *                          (bundle)   - bundled files' folder
  *                                  > this special folder can be used to place all files that are being bundled via injections inside index.js file
  *                                  > it can have any structure underneath
  *                                  > all files and folder under it, are skipped, unless they are referred via 

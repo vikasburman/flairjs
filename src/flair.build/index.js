@@ -4,4 +4,4 @@
  */
 
  // members
-<!-- inject: ./-bundle/flairBuild.js -->
+<!-- inject: ./(bundle)/flairBuild.js -->
