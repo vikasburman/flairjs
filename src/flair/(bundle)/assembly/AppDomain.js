@@ -49,7 +49,41 @@ const AppDomain = function(name) {
     };
     this.createDomain = (name) => { // eslint-disable-line no-unused-vars
         // TODO: worker thread and web worker usage
-        // store in secondaryDomains and return newly created one
+        // store in secondaryDomains and return newly created proxy of that domain
+        // AppDomainProxy() will have:
+        //  createContext - to create a new context in that secondary domain which returns AssemblyLoadContextProxy()
+        //      it will have:
+        //          name
+        //          domain - proxy
+        //          isUnloaded
+        //          unload
+        //          allTypes
+        //          loadAssembly
+        //          allAssemblies
+        //          allResources
+        //          createInstance(qualifiedTypeName, ...args) - new async method to create a proxy for an object that is created in that remote domain
+        //                  this internally send a message to create a new instance of given type remotely
+        //                  that instance is kept via guid of the instance in a list there
+        //                  and guid is returned
+        //                  then a Proxy() is created here - which passes all method and function calls as a message for this guid
+        //                  to remote instance and if call fails, it fails, else it runs as a normal object
+        //                  a proxy is actually a Proxy() that
+        //          dispose(instance) - async method to dispose remote instance and remove it from list there
+        //  context - default context proxy -- will have same methods as above
+        //  unload - to unload this domain there and here the proxy
+        //  isUnloaded 
+        //  name
+        //  getAdo
+        //  allAdos
+        //  allTypes
+        //  loadScripts(...files) - new async method that loads these given files in this AppDomain
+        //
+        //  NOTE: those methods of AppDomain and AssemblyLoadContext which return non-primitive data are not available in proxy
+        //  Any action oriented calls are proxied via channel
+        //  Internally both Proxy will talk across domains via AppDomainSharedChannel() which passes raw messages
+        //  
+        //  
+        // execute() == this will async execute a method on seondary domain
     };
    
     // assembly load context
