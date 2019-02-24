@@ -13,7 +13,7 @@ const Assembly = function (ado, alc) {
     this.license = ado.license;
     this.lupdate = ado.lupdate;
     this.builder = ado.builder.name;
-    this.flairVersion: ado.builder.version;
+    this.flairVersion = ado.builder.version;
     this.format = Object.freeze({
         name: ado.builder.format,
         version: ado.builder.formatVersion,

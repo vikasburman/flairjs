@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.15.539
- *  Sun, 24 Feb 2019 04:57:01 GMT
+ *  Version: 0.15.541
+ *  Sun, 24 Feb 2019 05:05:05 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -69,10 +69,10 @@
     // flair
     flair.info = Object.freeze({
         name: 'flair',
-        version: '0.15.539',
+        version: '0.15.541',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 24 Feb 2019 04:57:01 GMT')
+        lupdate: new Date('Sun, 24 Feb 2019 05:05:05 GMT')
     });
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -528,7 +528,7 @@
         this.license = ado.license;
         this.lupdate = ado.lupdate;
         this.builder = ado.builder.name;
-        this.flairVersion: ado.builder.version;
+        this.flairVersion = ado.builder.version;
         this.format = Object.freeze({
             name: ado.builder.format,
             version: ado.builder.formatVersion,
@@ -4592,4 +4592,3 @@ Class('Attribute', function() {
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
 })();
-(() => { flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","version":"0.15.539","lupdate":"Sun, 24 Feb 2019 04:57:01 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute"],"resources":[],"assets":["./flair/new-age.css"]}');})();

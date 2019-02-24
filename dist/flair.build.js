@@ -1,4 +1,23 @@
 /**
+ * @preserve
+ * FlairJS
+ * True Object Oriented JavaScript
+ * 
+ * Assembly: flair.build
+ *     File: ./flair.build.js
+ *  Version: 0.15.541
+ *  Sun, 24 Feb 2019 05:05:07 GMT
+ * 
+ * (c) 2017-2019 Vikas Burman
+ * Licensed under MIT
+ */
+/**
+ * @name flairBuild
+ * @description Build Engine
+ */
+
+ // members
+/**
  * @name flair Build
  * @description Build engine
  */
@@ -8,8 +27,8 @@ const path = require('path');
 const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
-    name: '<<name>>',
-    version: '<<version>>',
+    name: 'flair.build',
+    version: '0.15.541',
     format: 'fasm',
     formatVersion: '1',
     contains: [
