@@ -1,15 +1,15 @@
 /**
  * @name getResource
- * @description Gets the registered resource
+ * @description Gets the registered resource rom default assembly load context of default appdomain
  * @example
- *  getResource(name)
+ *  getResource(qualifiedName)
  * @params
- *  name: string - qualified resource name
+ *  qualifiedName: string - qualified resource name
  * @returns object - resource object
  */ 
-const _getResource = (name) => { 
-    if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
-    return _Resource.get(name);
+const _getResource = (qualifiedName) => { 
+    if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (qualifiedName)'); }
+    return _AppDomain.context.getResource(qualifiedName);
 };
 
 // attach to flair

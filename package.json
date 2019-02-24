@@ -3,7 +3,7 @@
     "title": "FlairJS",
     "description": "True Object Oriented JavaScript",
     "copyright": "(c) 2017-2019 Vikas Burman",
-    "version": "0.15.489",
+    "version": "0.15.539",
     "author": "Vikas Burman <vikasburman@gmail.com>",
     "keywords": [
         "javascript",
@@ -30,10 +30,10 @@
         "package": "gulp package --options ./gulp/config/pack.json",
         "release": "gulp release",
         "start": "http-server ./docs/ | open http://127.0.0.1:8080/v1/examples/ &",
-        "stop": "pkill -f http-server"
+        "stop": "pkill -f http-server",
+        "fiddle": "gulp fiddle --TEST"
     },
     "devDependencies": {
-        "babel-eslint": "^10.0.1",
         "clean-css": "^4.2.1",
         "copy-dir": "^0.4.0",
         "del": "^3.0.0",

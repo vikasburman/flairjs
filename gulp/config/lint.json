@@ -7,15 +7,16 @@
                 "impliedStrict": true           
             }
         },
-        "parser": "babel-eslint",
         "envs": [
             "browser",
             "es6",
-            "node"
+            "node",
+            "worker"
         ],
         "globals": [
             "global",
             "window",
+            "WorkerGlobalScope",
             "flair",
             "define"
         ],

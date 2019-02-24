@@ -16,7 +16,7 @@
  */ 
 const _getAttr = (obj, name, attrName) => {
     if (!_is(obj, 'flair')) { throw new _Exception.InvalidArgument('obj'); }
-    let isType = (['class', 'struct', 'interface', 'mixin', 'enum'].indexOf(_typeOf(obj) !== -1));
+    let isType = (flairTypes.indexOf(_typeOf(obj) !== -1));
     if (isType && name) { attrName = name; name = ''; }
     if (!isType && name === 'construct') { name = '_construct'; }
     let result = [],

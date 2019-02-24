@@ -23,7 +23,7 @@ const which = (def, isFile) => {
             } else {
                 item = items[1].trim();
             }
-            if (item === 'x') { item = ''; } // special case to explicitely mark absence of a type
+            if (item === 'x') { item = ''; } // special case to explicitly mark absence of a type
             return item;
         }            
     }
@@ -156,5 +156,28 @@ const sieve = (obj, props, isFreeze, add) => {
         return result;
     } else {
         return extract(obj);
+    }
+};
+const b64EncodeUnicode = (str) => { // eslint-disable-line no-unused-vars
+    // first we use encodeURIComponent to get percent-encoded UTF-8,
+    // then we convert the percent encodings into raw bytes which
+    // can be fed into btoa.
+    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+        function toSolidBytes(match, p1) {
+            return String.fromCharCode('0x' + p1);
+    }));
+};
+const b64DecodeUnicode = (str) => {
+    // Going backwards: from bytestream, to percent-encoding, to original string.
+    return decodeURIComponent(atob(str).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+}; 
+const uncacheModule = (module) => {
+    if (isServer) {
+        delete require.cache[require.resolve(module)]
+        return require(module)
+    } else { // eslint-disable-line no-empty
+        // TODO:
     }
 };

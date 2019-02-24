@@ -20,11 +20,13 @@
 
     // locals
     let isServer = new Function("try {return this===global;}catch(e){return false;}")(),
-        _global = (isServer ? global : window),
+        isWorker = isServer ? (!require('worker_threads').isMainThread) : (typeof WorkerGlobalScope !== undefined ? true : false),
+        _global = (isServer ? global : (isWorker ? WorkerGlobalScope : window)),
         flair = {},
         sym = [],
         disposers = [],
         options = {},
+        flairTypes = ['class', 'enum', 'interface', 'mixin', 'struct'],
         argsString = '';
 
     // read symbols from environment
@@ -32,7 +34,7 @@
         let idx = process.argv.findIndex((item) => { return (item.startsWith('--flairSymbols') ? true : false); });
         if (idx !== -1) { argsString = process.argv[idx].substr(2).split('=')[1]; }
     } else {
-        argsString = (typeof window.flairSymbols !== 'undefined') ? window.flairSymbols : '';
+        argsString = (typeof _global.flairSymbols !== 'undefined') ? _global.flairSymbols : '';
     }
     if (argsString) { sym = argsString.split(',').map(item => item.trim()); }
 
@@ -43,7 +45,9 @@
         isTesting: (sym.indexOf('TEST') !== -1),
         isServer: isServer,
         isClient: !isServer,
-        isCordova: (!isServer && !!window.cordova),
+        isWorker : isWorker,
+        isMain: !isWorker,
+        isCordova: (!isServer && !!_global.cordova),
         isNodeWebkit: (isServer && process.versions['node-webkit']),
         isProd: (sym.indexOf('DEBUG') === -1 && sym.indexOf('PROD') !== -1),
         isDebug: (sym.indexOf('DEBUG') !== -1)
@@ -51,12 +55,11 @@
 
     // flair
     flair.info = Object.freeze({
-        name: '<title>',
-        version: '<version>',
-        copyright: '<copyright>',
-        license: '<license>',
-        link: '<link>',
-        lupdate: new Date('<datetime>')
+        name: '<<name>>',
+        version: '<<version>>',
+        copyright: '<<copyright>>',
+        license: '<<license>>',
+        lupdate: new Date('<<lupdate>>')
     });
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -70,11 +73,15 @@
     <!-- inject: ./(bundle)/misc/noop.js -->   
     <!-- inject: ./(bundle)/helpers/general.js -->  
     <!-- inject: ./(bundle)/error/exception.js -->  
-    <!-- inject: ./(bundle)/helpers/dispatcher.js -->   
+    <!-- inject: ./(bundle)/events/dispatcher.js -->
+
+    <!-- inject: ./(bundle)/bundle/AssemblyLoadContext.js -->  
+    <!-- inject: ./(bundle)/bundle/Assembly.js -->  
+    <!-- inject: ./(bundle)/bundle/Resource.js -->  
+    <!-- inject: ./(bundle)/bundle/AppDomain.js -->  
 
     <!-- inject: ./(bundle)/attributes/getAttr.js -->   
     <!-- inject: ./(bundle)/bundle/getAssembly.js -->   
-    <!-- inject: ./(bundle)/bundle/Resource.js -->   
     <!-- inject: ./(bundle)/bundle/getResource.js -->  
     <!-- inject: ./(bundle)/bundle/getType.js -->   
     <!-- inject: ./(bundle)/inheritance/typeOf.js -->   
@@ -103,8 +110,6 @@
     <!-- inject: ./(bundle)/events/on.js --> 
     <!-- inject: ./(bundle)/events/post.js --> 
     <!-- inject: ./(bundle)/bundle/cli.js -->   
-    <!-- inject: ./(bundle)/bundle/assembly.js -->  
-    <!-- inject: ./(bundle)/bundle/namespace.js -->  
     <!-- inject: ./(bundle)/di/container.js -->  
     <!-- inject: ./(bundle)/misc/telemetry.js -->    
     <!-- inject: ./(bundle)/aop/aspects.js -->   

@@ -15,7 +15,7 @@ const attributesAndModifiers = (def, typeDef, memberName, isTypeLevel) => {
     // validator
     const validator = (appliedAttr) => {
         let result = false,
-            _supportedTypes = ['class', 'struct', 'enum', 'interface', 'mixin'],
+            _supportedTypes = flairTypes,
             _supportedMemberTypes = ['prop', 'func', 'construct', 'dispose', 'event'],
             _supportedModifiers = ['static', 'abstract', 'sealed', 'virtual', 'override', 'private', 'protected', 'readonly', 'async'],
             _list = [], // { withWhat, matchType, original, name, value }
@@ -1393,6 +1393,12 @@ const builder = (cfg) => {
     // collect complete hierarchy defs while the type is building
     cfg.dump = []; // TODO: Check what is heppening with this, not implemented yet, idea is to collect all hierarchy and made it available at Type level for reflector
 
+    // pick current context in which this type is being registered
+    let currentContext = _AppDomain.context.current();
+
+    // pick current assembly in which this type was bundled
+    let currentAssembly = currentContext.currentAssemblyBeingLoaded() || '';
+
     // base type definition
     let _Object = null;
     if (cfg.new) { // class, struct
@@ -1432,7 +1438,8 @@ const builder = (cfg) => {
     _Object._.type = cfg.types.type;
     _Object._.id = guid();
     _Object._.namespace = null;
-    _Object._.assembly = () => { return _Assembly.get(_Object._.name) || null; };
+    _Object._.assembly = () => { return currentContext.getAssembly(currentAssembly) || null; };
+    _Object._.context = currentContext;
     _Object._.inherits = null;
     if (cfg.inheritance) {
         _Object._.inherits = cfg.params.inherits || null;
@@ -1513,9 +1520,9 @@ const builder = (cfg) => {
     // type level attributes pick here
     attributesAndModifiers(null, typeDef, null, true);
 
-    // register type with namespace
+    // register type with current context of current appdomain
     if (ns) { // if actual namespace or '(root)' is there, then go and register
-        _NSRegister(_Object);
+        _Object._.namespace = _AppDomain.context.current().registerType(_Object);
     }
 
     // freeze object meta

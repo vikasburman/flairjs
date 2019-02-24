@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.15.489
- *  Sat, 23 Feb 2019 17:56:20 GMT
+ *  Version: 0.15.539
+ *  Sun, 24 Feb 2019 04:57:01 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -33,11 +33,13 @@
 
     // locals
     let isServer = new Function("try {return this===global;}catch(e){return false;}")(),
-        _global = (isServer ? global : window),
+        isWorker = isServer ? (!require('worker_threads').isMainThread) : (typeof WorkerGlobalScope !== undefined ? true : false),
+        _global = (isServer ? global : (isWorker ? WorkerGlobalScope : window)),
         flair = {},
         sym = [],
         disposers = [],
         options = {},
+        flairTypes = ['class', 'enum', 'interface', 'mixin', 'struct'],
         argsString = '';
 
     // read symbols from environment
@@ -45,7 +47,7 @@
         let idx = process.argv.findIndex((item) => { return (item.startsWith('--flairSymbols') ? true : false); });
         if (idx !== -1) { argsString = process.argv[idx].substr(2).split('=')[1]; }
     } else {
-        argsString = (typeof window.flairSymbols !== 'undefined') ? window.flairSymbols : '';
+        argsString = (typeof _global.flairSymbols !== 'undefined') ? _global.flairSymbols : '';
     }
     if (argsString) { sym = argsString.split(',').map(item => item.trim()); }
 
@@ -56,7 +58,9 @@
         isTesting: (sym.indexOf('TEST') !== -1),
         isServer: isServer,
         isClient: !isServer,
-        isCordova: (!isServer && !!window.cordova),
+        isWorker : isWorker,
+        isMain: !isWorker,
+        isCordova: (!isServer && !!_global.cordova),
         isNodeWebkit: (isServer && process.versions['node-webkit']),
         isProd: (sym.indexOf('DEBUG') === -1 && sym.indexOf('PROD') !== -1),
         isDebug: (sym.indexOf('DEBUG') !== -1)
@@ -64,12 +68,11 @@
 
     // flair
     flair.info = Object.freeze({
-        name: '<title>',
-        version: '<version>',
-        copyright: '<copyright>',
-        license: '<license>',
-        link: '<link>',
-        lupdate: new Date('<datetime>')
+        name: 'flair',
+        version: '0.15.539',
+        copyright: '(c) 2017-2019 Vikas Burman',
+        license: 'MIT',
+        lupdate: new Date('Sun, 24 Feb 2019 04:57:01 GMT')
     });
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -118,7 +121,7 @@
                 } else {
                     item = items[1].trim();
                 }
-                if (item === 'x') { item = ''; } // special case to explicitely mark absence of a type
+                if (item === 'x') { item = ''; } // special case to explicitly mark absence of a type
                 return item;
             }            
         }
@@ -253,6 +256,29 @@
             return extract(obj);
         }
     };
+    const b64EncodeUnicode = (str) => { // eslint-disable-line no-unused-vars
+        // first we use encodeURIComponent to get percent-encoded UTF-8,
+        // then we convert the percent encodings into raw bytes which
+        // can be fed into btoa.
+        return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+            function toSolidBytes(match, p1) {
+                return String.fromCharCode('0x' + p1);
+        }));
+    };
+    const b64DecodeUnicode = (str) => {
+        // Going backwards: from bytestream, to percent-encoding, to original string.
+        return decodeURIComponent(atob(str).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+    }; 
+    const uncacheModule = (module) => {
+        if (isServer) {
+            delete require.cache[require.resolve(module)]
+            return require(module)
+        } else { // eslint-disable-line no-empty
+            // TODO:
+        }
+    };
       
     
     /**
@@ -307,6 +333,10 @@
     // attach to flair
     a2f('Exception', _Exception);
       
+    /**
+     * @name Dispatcher
+     * @description Event dispatching. 
+     */ 
     const Dispatcher = function() {
         let events = {};
     
@@ -348,7 +378,359 @@
         };
     };
     
+    
+
+    /**
+     * @name AssemblyLoadContext
+     * @description The isolation boundary of type loading across assemblies. 
+     */
+    const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentContexts) {
+        let alcTypes = {},
+            alcResources = {},
+            asmFiles = {},
+            isUnloaded = false,
+            currentAssemblyBeingLoaded = '';
+    
+        // context
+        this.name = name;
+        this.domain = domain;
+        this.isUnloaded = () => { return isUnloaded; };
+        this.unload = () => {
+            alcTypes = {};
+            asmFiles = {};
+            alcResources = {};
+    
+            // mark unloaded
+            isUnloaded = true;
+        };
+        this.current = () => {
+            if (currentContexts.length === 0) {
+                return defaultLoadContext || this; // the first content created is the default context, so in first case, it will come as null, hence return this
+            } else { // return last added context
+                // when a context load any assembly, it pushes itself to this list, so
+                // that context become current context and all loading types will attach itself to this
+                // new context, and as soon as load is completed, it removes itself.
+                // Now, if for some reason, an assembly load operation itself (via some code in index.js)
+                // initiate another context load operation, that will push itself on top of this context and
+                // it will trickle back to this context when that secondary load is done
+                // so always return from here the last added context in list
+                return currentContexts[currentContexts.length - 1];
+            }
+        };
+    
+         // types
+        this.registerType = (Type) => {
+            // only valid types are allowed
+            if (flairTypes.indexOf(_typeOf(Type)) === -1) { throw new _Exception('InvalidArgument', `Type is not valid.`); }
+    
+            let name = Type._.name, // namespace name is already attached to it, and for all '(root)' 
+                                    // marked types' no namespace is added, so it will automatically go to root
+            ns = name.substr(0, name.lastIndexOf('.'));
+    
+            // check if already registered
+            if (alcTypes[name]) { throw `Type (${name}) is already registered.`; }
+    
+            // register
+            alcTypes[name] = Type;
+    
+            // return namespace where it gets registered
+            return ns;
+        };
+        this.getType = (qualifiedName) => {
+            if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${qualifiedName})`); }
+            return alcTypes[qualifiedName] || null;
+        };
+        this.allTypes = () => { return Object.keys(alcTypes); }
+    
+        // assembly
+        this.currentAssemblyBeingLoaded = (value) => {
+            if (typeof value !== 'undefined') { 
+                currentAssemblyBeingLoaded = which(value, true); // 
+            }
+            return currentAssemblyBeingLoaded;
+        }
+        this.loadAssembly = (file) => {
+            return new Promise((resolve, reject) => {
+                if (!asmFiles[file]) { // load only when it is not already loaded in this load context
+                    // set this context as current context, so all types being loaded in this assembly will get attached to this context;
+                    currentContexts.push(this);
+    
+                    // uncache module, so it's types get to register again with this new context
+                    uncacheModule(file);
+    
+                    // load module
+                    loadModule(file).then((resolved) => {
+                        // remove this from current context list
+                        currentContexts.pop();
+    
+                        // add to list
+                        asmFiles[file] = Object.freeze(new Assembly(this.domain.getADO(file), this));
+    
+                        // resolve
+                        resolved(resolved);
+                    }).catch((e) => {
+                        // remove this from current context list
+                        currentContexts.pop();
+    
+                        // reject
+                        reject(e);
+                    });
+                }
+            });        
+        };    
+        this.getAssembly = (file) => {
+            if (typeof file !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${file})`); }
+            return asmFiles[file] || null;
+        };
+        this.allAssemblies = () => { return Object.keys(asmFiles); }
+    
+        // resources
+        this.registerResource = (rdo) => {
+            if (typeof rdo.name !== 'string' || rdo.name === '' ||
+                typeof rdo.encodingType !== 'string' || rdo.encodingType === '' ||
+                typeof rdo.file !== 'string' || rdo.file === '' ||
+                typeof rdo.data !== 'string' || rdo.data === '') {
+                throw _Exception.InvalidArgument('rdo');
+            }
+    
+            // namespace name is already attached to it, and for all '(root)'    
+            // marked types' no namespace is added, so it will automatically go to root
+            let ns = rdo.name.substr(0, rdo.name.lastIndexOf('.'));
+    
+            // check if already registered
+            if (alcTypes[rdo.name]) { throw `Type (${name}) is already registered.`; }
+    
+            // register
+            alcResources[rdo.name] = Object.freeze(new Resource(rdo, ns, this));
+    
+            // return namespace where it gets registered
+            return ns;
+        };
+        this.getResource = (qualifiedName) => {
+            if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${qualifiedName})`); }
+            return alcResources[qualifiedName] || null;
+        };     
+        this.allResources = () => { return Object.keys(alcResources); }    
+    };
+      
+    /**
+     * @name Assembly
+     * @description Assembly object.
+     */ 
+    const Assembly = function (ado, alc) {
+        this.context = alc;
+    
+        this.name = ado.name;
+        this.file = ado.file;
+        this.desc = ado.desc;
+        this.version = ado.version;
+        this.copyright = ado.copyright;
+        this.license = ado.license;
+        this.lupdate = ado.lupdate;
+        this.builder = ado.builder.name;
+        this.flairVersion: ado.builder.version;
+        this.format = Object.freeze({
+            name: ado.builder.format,
+            version: ado.builder.formatVersion,
+            contains: ado.builder.contains.slice()
+        });
        
+        // types
+        this.types = () => { return ado.types.slice(); }
+        this.getType = (qualifiedName) => {
+            if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${qualifiedName})`); }
+            if (ado.types.indexOf(qualifiedName) === -1) { throw new _Exception('NotFound', `Type is not available in this assembly. (${qualifiedName})`); }
+            return this.context.getType(qualifiedName);
+        };
+    
+        // resources
+        this.resources = () => { return ado.resources.slice(); }
+        this.getResource = (qualifiedName) => {
+            if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${qualifiedName})`); }
+            if (ado.resources.indexOf(qualifiedName) === -1) { throw new _Exception('NotFound', `Resource is not available in this assembly. (${qualifiedName})`); }
+            return this.context.getResource(qualifiedName);
+        };
+    
+        // assets
+        this.assets = () => { return ado.assets.slice(); }
+        this.assetsRoot = this.file.replace('.js', '/');
+        this.getAsset = (file) => { 
+            if (typeof file !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${file})`); }
+            // file: will be in local context of assembly, e.g., <asmFolder>/(assets)/myCSS.css will be referred everywhere as './myCSS.css'
+            // passing ./myCSS.css to this method will return './<asmFolder>/myCSS.css'
+            let astFile = file.replace('./', this.assetsRoot);
+            if (ado.assets.indexOf(file) === -1) { throw new _Exception('NotFound', `Asset is not available for this assembly. (${astFile})`); }
+            return astFile;        
+        };
+    };
+      
+    /**
+     * @name Resource
+     * @description Resource object.
+     */ 
+    const Resource = function(rdo, ns, alc) {
+        this.context = alc;
+    
+        this.name = rdo.name;
+        this.ns = ns;
+        this.assembly = () => { return alc.getAssembly(which(rdo.asmFile, true)) || null; };
+        this.encodingType = rdo.encodingType;
+        this.file = rdo.file;
+        this.type = rdo.file.substr(rdo.file.lastIndexOf('.') + 1).toLowerCase();
+        this.data = rdo.data;
+    
+        // decode data (rdo.data is base64 encoded string, added by build engine)
+        if (rdo.encodingType.indexOf('utf8;') !== -1) {
+            if (isServer) {
+                let buff = new Buffer(rdo.data).toString('base64');
+                this.data = buff.toString('utf8');
+            } else { // client
+                this.data = b64DecodeUnicode(rdo.data); 
+            }
+        } else { // binary
+            if (isServer) {
+                this.data = new Buffer(rdo.data).toString('base64');
+            } // else no change on client
+        }
+    
+        // special case of JSON
+        if (this.type === 'json') {
+            this.data = Object.freeze(JSON.parse(this.data));
+        }
+    };
+      
+    /**
+     * @name AppDomain
+     * @description Thread level isolation.
+     * @example
+     *  
+     */
+    const AppDomain = function(name) {
+        let asmFiles = {},
+            asmTypes = {},
+            domains = [],
+            contexts = [],
+            currentContexts = [],
+            defaultLoadContext = null,
+            unloadDefaultContext = null,
+            isUnloaded = false;
+    
+        // default load context
+        defaultLoadContext = new AssemblyLoadContext('default', this, null, currentContexts),
+        unloadDefaultContext = defaultLoadContext.unload;
+        delete defaultLoadContext.unload; // default load context cannot be unloaded directly, unless app domain is unloaded
+        defaultLoadContext = Object.freeze(defaultLoadContext);
+    
+        // app domain
+        this.name = name;
+        this.isUnloaded = () => { return isUnloaded; };
+        this.unload = () => {
+            // unload all domains
+            domains.forEach((domain) => { domain.unload(); })
+    
+            // unload all contexts of this domain
+            contexts.forEach((context) => { context.unload(); })
+            unloadDefaultContext(); // unload default context
+    
+            // clear registry
+            asmFiles = {},
+            asmTypes = {};
+    
+            // unload this // TODO: clear worker too
+            if (isWorker) {
+                if (isServer) { // worker thread
+    
+                } else { // web worker
+    
+                }
+            }
+    
+            // mark unloaded
+            isUnloaded = true;
+        };
+        this.createDomain = (name) => { // eslint-disable-line no-unused-vars
+            // TODO: worker thread and web worker usage
+            // store in secondaryDomains and return newly created one
+        };
+       
+        // assembly load context
+        this.context = defaultLoadContext;
+        this.createContext = (name) => {
+            if(typeof name !== 'string' || name === 'default') { throw _Exception.invalidArguments(name); }
+            let alc = Object.freeze(new AssemblyLoadContext(name, this, currentContexts));
+            contexts.push(alc);
+            return alc;
+        };      
+    
+        // ados
+        this.registerAdo = (...ados) => {
+            // when call is coming from direct assembly loading
+            let isThrowOnDuplicate = true;
+            if (ados.length === 1 && typeof ados[0] === 'string') { 
+                let ado = JSON.parse(ados[0]);
+                ados = [ado];
+                isThrowOnDuplicate = false;   
+            }
+    
+            // register
+            ados.forEach(ado => {
+                if (_typeOf(ado.types) !== 'array' || 
+                    _typeOf(ado.resources) !== 'array' ||
+                    _typeOf(ado.assets) !== 'array' ||
+                    typeof ado.name !== 'string' ||
+                    typeof ado.file !== 'string' || ado.file === '') {
+                    throw _Exception.InvalidArgument('ado');
+                }
+    
+                ado.file = which(ado.file, true); // min/dev contextual pick
+                if (asmFiles[ado.file]) {
+                    if (isThrowOnDuplicate) { throw new _Exception('DuplicateName', `Assembly is already registered. (${ado.file})`); }
+                    return;
+                } else {
+                    // register
+                    asmFiles[ado.file] = Object.freeze(ado);
+    
+                    // flatten types
+                    ado.types.forEach(qualifiedName => {
+                        // qualified names across anywhere should be unique
+                        if (asmTypes[qualifiedName]) {
+                            throw new _Exception('DuplicateName', `Type is already registered. (${qualifiedName})`);
+                        } else {
+                            asmTypes[qualifiedName] = ado.file; // means this type can be loaded from this assembly 
+                        }
+                    });
+                }
+            });  
+    
+        };
+        this.getAdo = (file) => {
+            if (typeof file !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${file})`); }
+            return asmFiles[file] || null;
+        };
+        this.allAdos = () => { return Object.keys(asmFiles); }
+    
+        // type
+        this.resolve = (qualifiedName) => {
+            if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', 'Argument type if not valid. (qualifiedName)'); }
+            return asmTypes[qualifiedName] || null;        
+        };
+        this.allTypes = () => { return Object.keys(asmTypes); }
+    };
+    
+    // build default app domain
+    let defaultAppDomain = new AppDomain('default'),
+        unloadDefaultAppDomain = defaultAppDomain.unload;
+    delete defaultAppDomain.unload; // default app domain cannot be unloaded directly
+    
+    const _AppDomain = defaultAppDomain;
+    
+    // attach to flair
+    a2f('AppDomain', _AppDomain, () => {
+        unloadDefaultAppDomain(); // unload default app domain
+    });
+    
+    
+      
 
     /**
      * @name getAttr
@@ -368,7 +750,7 @@
      */ 
     const _getAttr = (obj, name, attrName) => {
         if (!_is(obj, 'flair')) { throw new _Exception.InvalidArgument('obj'); }
-        let isType = (['class', 'struct', 'interface', 'mixin', 'enum'].indexOf(_typeOf(obj) !== -1));
+        let isType = (flairTypes.indexOf(_typeOf(obj) !== -1));
         if (isType && name) { attrName = name; name = ''; }
         if (!isType && name === 'construct') { name = '_construct'; }
         let result = [],
@@ -391,86 +773,49 @@
        
     /**
      * @name getAssembly
-     * @description Gets the assembly information of a given object/type
+     * @description Gets the assembly of a given flair type
      * @example
-     *  _getAssembly(obj)
+     *  _getAssembly(Type)
      * @params
-     *  obj: instance/type/string - instance or flair type ir qualified type name whose assembly information is required
-     * @returns object - if type is available and registered, its assembly object is returned
+     *  Type: type - flair type whose assembly is required
+     * @returns object - assembly object which contains this type
      */ 
-    const _getAssembly = (obj) => { 
-        if (!obj) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
-        if (typeof obj === 'string') { return _Assembly.get(obj); }
-        else if (obj._ && typeof obj._.assembly === 'function') { return obj._.assembly(); }
-        else if (obj._ && obj._.Type) { return obj._.Type._.assembly(); }
-        return null;
+    const _getAssembly = (Type) => { 
+        if (!_is(Type, 'flair')) { throw new _Exception('InvalidArgument', 'Argument type is not valid. (Type)'); }
+        return Type._.assembly();
     };
     
     // attach to flair
     a2f('getAssembly', _getAssembly);
        
     /**
-     * @name Resource
-     * @description Resource registration and locator functionality.
-     * @example
-     *  .register(name, locale, encodingType, file, data)               // - void
-     *  .get(name)                                                      // - resource object
-     * @params
-     *  name: string - qualified name of resource
-     *  locale: string - locale of the resource or empty, if no locale is associated
-     *  encodingType: string - type of encoding applied to resource data
-     *  file: string - resource file name and path
-     *  data: string - base 64 encoded (or binary) data of resource
-     *  typeName: string - qualified type name for which assembly object is needed
-     */ 
-    let resources_registry = {};
-    const _Resource = {
-        // register resource
-        register: (name, locale, encodingType, file, data) => {
-            if (resources_registry[name]) { throw new _Exception('AlreadyRegistered', 'Resource is already registered'); }
-            let Resource = _getType('Resource');
-            resources_registry[name] = new Resource(name, locale, encodingType, file, data);
-        },
-    
-        // get registered resource
-        get: (name) => {
-            return resources_registry[name] || null;
-        }
-    };
-    
-    // attach to flair
-    a2f('Resource', _Resource, () => {
-        resources_registry = {};
-    });
-       
-    /**
      * @name getResource
-     * @description Gets the registered resource
+     * @description Gets the registered resource rom default assembly load context of default appdomain
      * @example
-     *  getResource(name)
+     *  getResource(qualifiedName)
      * @params
-     *  name: string - qualified resource name
+     *  qualifiedName: string - qualified resource name
      * @returns object - resource object
      */ 
-    const _getResource = (name) => { 
-        if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
-        return _Resource.get(name);
+    const _getResource = (qualifiedName) => { 
+        if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (qualifiedName)'); }
+        return _AppDomain.context.getResource(qualifiedName);
     };
     
     // attach to flair
     a2f('getResource', _getResource);  
     /**
      * @name getType
-     * @description Gets the flair Type of a registered type definition
+     * @description Gets the flair Type from default assembly load context of default appdomain
      * @example
-     *  getType(name)
+     *  getType(qualifiedName)
      * @params
-     *  name: string - qualified type name whose reference is needed
+     *  qualifiedName: string - qualified type name whose reference is needed
      * @returns object - if assembly which contains this type is loaded, it will return flair type object OR will return null
      */ 
-    const _getType = (name) => { 
-        if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
-        return _Namespace.getType(name);
+    const _getType = (qualifiedName) => { 
+        if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (qualifiedName)'); }
+        return _AppDomain.context.getType(qualifiedName);
     };
     
     // attach to flair
@@ -1301,7 +1646,7 @@
         // validator
         const validator = (appliedAttr) => {
             let result = false,
-                _supportedTypes = ['class', 'struct', 'enum', 'interface', 'mixin'],
+                _supportedTypes = flairTypes,
                 _supportedMemberTypes = ['prop', 'func', 'construct', 'dispose', 'event'],
                 _supportedModifiers = ['static', 'abstract', 'sealed', 'virtual', 'override', 'private', 'protected', 'readonly', 'async'],
                 _list = [], // { withWhat, matchType, original, name, value }
@@ -2679,6 +3024,12 @@
         // collect complete hierarchy defs while the type is building
         cfg.dump = []; // TODO: Check what is heppening with this, not implemented yet, idea is to collect all hierarchy and made it available at Type level for reflector
     
+        // pick current context in which this type is being registered
+        let currentContext = _AppDomain.context.current();
+    
+        // pick current assembly in which this type was bundled
+        let currentAssembly = currentContext.currentAssemblyBeingLoaded() || '';
+    
         // base type definition
         let _Object = null;
         if (cfg.new) { // class, struct
@@ -2718,7 +3069,8 @@
         _Object._.type = cfg.types.type;
         _Object._.id = guid();
         _Object._.namespace = null;
-        _Object._.assembly = () => { return _Assembly.get(_Object._.name) || null; };
+        _Object._.assembly = () => { return currentContext.getAssembly(currentAssembly) || null; };
+        _Object._.context = currentContext;
         _Object._.inherits = null;
         if (cfg.inheritance) {
             _Object._.inherits = cfg.params.inherits || null;
@@ -2799,9 +3151,9 @@
         // type level attributes pick here
         attributesAndModifiers(null, typeDef, null, true);
     
-        // register type with namespace
+        // register type with current context of current appdomain
         if (ns) { // if actual namespace or '(root)' is there, then go and register
-            _NSRegister(_Object);
+            _Object._.namespace = _AppDomain.context.current().registerType(_Object);
         }
     
         // freeze object meta
@@ -3141,153 +3493,6 @@
     a2f('cli', _cli);
     
        
-    /**
-     * @name Assembly
-     * @description Assembly registration and locator functionality.
-     * @example
-     *  .register(...ados)          // - void
-     *  .get(typeName)              // - assembly object or null
-     *  .all()                      // - array of all registered assemblies
-     * @params
-     *  ado: object - An ADO is an object that defines assembly definition as:
-     *      name: string - name
-     *      file: string - file name and path
-     *      desc: string - description
-     *      version: string - version
-     *      copyright: string - copyright message
-     *      license: - string - license
-     *      types: - array - list of all type names that reside in this assembly
-     *      resources: - array - list of all resource names that reside in this assembly
-     *      assets: - array - list of all assets that are available outside this assembly but deployed together
-     *      settings: - assembly settings
-     * typeName: string - qualified type name for which assembly object is needed
-     */ 
-    let asmFiles = {}, asmTypes = {};
-    const _Assembly = {
-        // register one or more assemblies as per given Assembly Definition Objects
-        register: (...ados) => {
-            // TODO: ignoge if an ado is already registered and if this is the coming from assembly itself - json string, mark it as loaded as well
-            if (!ados) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (ados)'); }
-    
-            ados.forEach(ado => {
-                let asm = new __Assembly(ado),
-                    asmFile = asm.file;
-                if (asmFiles[asmFile]) {
-                    throw new _Exception('DuplicateName', `Assembly is already registered. (${asmFile})`);
-                } else {
-                    // register
-                    asmFiles[asmFile] = asm;
-    
-                    // load types
-                    asm.types.forEach(type => {
-                        // qualified names across anywhere should be unique
-                        if (asmTypes[type]) {
-                            throw new _Exception('DuplicateName', `Type is already registered. (${type})`);
-                        } else {
-                            asmTypes[type] = asm; // means this type can be loaded from this assembly Assembly.get() give this only
-                        }
-                    });
-                }
-            });
-        },
-    
-        // returns assembly object that is associated with given flair type name
-        get: (typeName) => {
-            if (typeof typeName !== 'string') { throw new _Exception('InvalidArgument', 'Argument type if not valid. (typeName)'); }
-            return asmTypes[typeName] || null;
-        },
-    
-        // returns all registered assembly objects
-        all: () => {
-            return Object.values(asmFiles).slice();
-        }
-    };
-    const __Assembly = function (ado) {
-        if (typeof ado !== 'object') { throw _Exception.InvalidArgument('ado'); }
-        if (_typeOf(ado.types) !== 'array' || 
-            _typeOf(ado.resources) !== 'array' ||
-            _typeOf(ado.assets) !== 'array' ||
-            typeof ado.name !== 'string' ||
-            typeof ado.file !== 'string' || ado.file === '') {
-            throw _Exception.InvalidArgument('ado');
-        }
-        let isLoaded = false;
-        let _this = {
-            // pick all ado properties as is
-            ado: ado,
-            name: ado.name,
-            file: which(ado.file, true), // min/dev contextual pick
-            desc: ado.desc || '',
-            version: ado.version || '',
-            copyright: ado.copyright || '',
-            license: ado.license || '',
-            types: Object.freeze(ado.types.slice()),
-            resources: Object.freeze(ado.types.slice()),
-            settings: Object.freeze(ado.settings || {}),
-            assets: Object.freeze(ado.assets.slice()),
-            hasAssets: (ado.assets.length > 0),
-            
-            isLoaded: () => { return isLoaded; },
-            load: () => { 
-                return new Promise((resolve, reject) => {
-                    if (isLoaded) { resolve(); return; }
-                    loadModule(_this.file).then(() => { // since we want this js to be loaded and executed
-                        isLoaded = true;
-                        resolve();
-                    }).catch((e) => {
-                        reject(new _Exception('ModuleLoad', `Module load operation failed. (${_this.file})`, e));
-                    });
-                });
-            }
-        };
-    
-        // return
-        return Object.freeze(_this);
-    };
-    
-    // attach to flair
-    a2f('Assembly', _Assembly, () => {
-        asmFiles = {}; asmTypes = {};
-    });
-      
-    /**
-     * @name Namespace
-     * @description Namespace registration and type locator functionality.
-     * @example
-     *  .getType(qualifiedName)     // - flair type if registered or null
-     * @params
-     * qualifiedName: string - qualified type name which is to be looked for.
-     */ 
-    let ns_types = {};
-    const _Namespace = {
-        // get registered type
-        getType: (qualifiedName) => {
-            return ns_types[qualifiedName] || null;
-        }
-    };
-    const _NSRegister = (Type) => { // registration support -- needed by builder
-        let name = Type._.name, // namespace name is already attached to it, and for all '(root)' marked types' no namespace is added, so it will automatically go to root
-            ns = name.substr(0, name.lastIndexOf('.'));
-    
-        // only valid types are allowed
-        if (['class', 'enum', 'interface', 'mixin', 'struct'].indexOf(_typeOf(Type)) === -1) { throw new _Exception('InvalidArgument', `Type cannot be placed in a namespace. (${name})`); }
-    
-        // check if already registered
-        if (ns_types[name]) { throw `Type (${name}) is already registered.`; }
-    
-        // register
-        ns_types[name] = Type;
-    
-        // update
-        Type._.namespace = ns;
-    };
-    
-    // attach to flair
-    a2f('Namespace', _Namespace, () => {
-        // clear registry
-        ns_types = {};
-    });
-      
     /**
      * @name Container
      * @description Dependency injection container system
@@ -4208,17 +4413,18 @@
     return Object.freeze(flair);
 });    
 (() => {
-   'use strict';
+'use strict';
 
-   const { $$, attr, Class, Struct, Enum, Interface, Mixin, Exception, Args } = flair;                         // eslint-disable-line no-unused-vars
-   const { Aspects, Assembly, Resource, Namespace, Container, Reflector, Serializer } = flair;                 // eslint-disable-line no-unused-vars
-   const { getAttr, getAssembly, getResource, getTypeOf } = flair;                                             // eslint-disable-line no-unused-vars
-   const { getType, typeOf, as, is, isDerivedFrom, isInstanceOf, isComplies, isImplements, isMixed } = flair;  // eslint-disable-line no-unused-vars
-   const { include, dispose, using, on, dispatch } = flair;                                                    // eslint-disable-line no-unused-vars
-   const { noop, telemetry } = flair;                                                                          // eslint-disable-line no-unused-vars
-   const { isServer } = flair.options.env;                                                                     // eslint-disable-line no-unused-vars
+const { $$, attr, Class, Struct, Enum, Interface, Mixin, Exception, Args } = flair;                         // eslint-disable-line no-unused-vars
+const { Aspects, AppDomain, Container, Reflector, Serializer } = flair;                                     // eslint-disable-line no-unused-vars
+const { getAttr, getAssembly, getResource, getTypeOf } = flair;                                             // eslint-disable-line no-unused-vars
+const { getType, typeOf, as, is, isDerivedFrom, isInstanceOf, isComplies, isImplements, isMixed } = flair;  // eslint-disable-line no-unused-vars
+const { include, dispose, using, on, dispatch } = flair;                                                    // eslint-disable-line no-unused-vars
+const { noop, telemetry } = flair;                                                                          // eslint-disable-line no-unused-vars
+const { isServer, isWorker } = flair.options.env;                                                           // eslint-disable-line no-unused-vars
 
-   const settings = JSON.parse('undefined'); // eslint-disable-line no-unused-vars
+const settings = JSON.parse('{"js":{"parserOptions":{"ecmaVersion":6,"sourceType":"module","ecmaFeatures":{"impliedStrict":true}},"parser":"babel-eslint","envs":["browser","es6","node"],"globals":["global","window","flair","define"],"rules":{"accessor-pairs":"off","array-bracket-newline":"off","array-bracket-spacing":"off","array-callback-return":"off","array-element-newline":"off","arrow-body-style":"off","arrow-parens":"off","arrow-spacing":"off","block-scoped-var":"off","block-spacing":"off","brace-style":"off","callback-return":"off","camelcase":"off","capitalized-comments":"off","class-methods-use-this":"off","comma-dangle":"off","comma-spacing":"off","comma-style":"off","complexity":"off","computed-property-spacing":"off","consistent-return":"off","consistent-this":"off","constructor-super":"error","curly":"off","default-case":"off","dot-location":"off","dot-notation":"off","eol-last":"off","eqeqeq":"off","for-direction":"off","func-call-spacing":"off","func-name-matching":"off","func-names":"off","func-style":"off","function-paren-newline":"off","generator-star-spacing":"off","getter-return":"off","global-require":"off","guard-for-in":"off","handle-callback-err":"off","id-blacklist":"off","id-length":"off","id-match":"off","implicit-arrow-linebreak":"off","indent":"off","indent-legacy":"off","init-declarations":"off","jsx-quotes":"off","key-spacing":"off","keyword-spacing":"off","line-comment-position":"off","linebreak-style":"off","lines-around-comment":"off","lines-around-directive":"off","lines-between-class-members":"off","max-classes-per-file":"off","max-depth":"off","max-len":"off","max-lines":"off","max-lines-per-function":"off","max-nested-callbacks":"off","max-params":"off","max-statements":"off","max-statements-per-line":"off","multiline-comment-style":"off","multiline-ternary":"off","new-cap":"off","new-parens":"off","newline-after-var":"off","newline-before-return":"off","newline-per-chained-call":"off","no-alert":"off","no-array-constructor":"off","no-async-promise-executor":"off","no-await-in-loop":"off","no-bitwise":"off","no-buffer-constructor":"off","no-caller":"off","no-case-declarations":"error","no-catch-shadow":"off","no-class-assign":"error","no-compare-neg-zero":"error","no-cond-assign":"error","no-confusing-arrow":"off","no-console":"error","no-const-assign":"error","no-constant-condition":"error","no-continue":"off","no-control-regex":"error","no-debugger":"error","no-delete-var":"error","no-div-regex":"off","no-dupe-args":"error","no-dupe-class-members":"error","no-dupe-keys":"error","no-duplicate-case":"error","no-duplicate-imports":"off","no-else-return":"off","no-empty":"error","no-empty-character-class":"error","no-empty-function":"off","no-empty-pattern":"error","no-eq-null":"off","no-eval":"off","no-ex-assign":"error","no-extend-native":"off","no-extra-bind":"off","no-extra-boolean-cast":"error","no-extra-label":"off","no-extra-parens":"off","no-extra-semi":"error","no-fallthrough":"error","no-floating-decimal":"off","no-func-assign":"error","no-global-assign":"error","no-implicit-coercion":"off","no-implicit-globals":"off","no-implied-eval":"off","no-inline-comments":"off","no-inner-declarations":"error","no-invalid-regexp":"error","no-invalid-this":"off","no-irregular-whitespace":"error","no-iterator":"off","no-label-var":"off","no-labels":"off","no-lone-blocks":"off","no-lonely-if":"off","no-loop-func":"off","no-magic-numbers":"off","no-misleading-character-class":"off","no-mixed-operators":"off","no-mixed-requires":"off","no-mixed-spaces-and-tabs":"error","no-multi-assign":"off","no-multi-spaces":"off","no-multi-str":"off","no-multiple-empty-lines":"off","no-native-reassign":"off","no-negated-condition":"off","no-negated-in-lhs":"off","no-nested-ternary":"off","no-new":"off","no-new-func":"off","no-new-object":"off","no-new-require":"off","no-new-symbol":"error","no-new-wrappers":"off","no-obj-calls":"error","no-octal":"error","no-octal-escape":"off","no-param-reassign":"off","no-path-concat":"off","no-plusplus":"off","no-process-env":"off","no-process-exit":"off","no-proto":"off","no-prototype-builtins":"off","no-redeclare":"error","no-regex-spaces":"error","no-restricted-globals":"off","no-restricted-imports":"off","no-restricted-modules":"off","no-restricted-properties":"off","no-restricted-syntax":"off","no-return-assign":"off","no-return-await":"off","no-script-url":"off","no-self-assign":"error","no-self-compare":"off","no-sequences":"off","no-shadow":"off","no-shadow-restricted-names":"off","no-spaced-func":"off","no-sparse-arrays":"error","no-sync":"off","no-tabs":"off","no-template-curly-in-string":"off","no-ternary":"off","no-this-before-super":"error","no-throw-literal":"off","no-trailing-spaces":"off","no-undef":"error","no-undef-init":"off","no-undefined":"off","no-underscore-dangle":"off","no-unexpected-multiline":"error","no-unmodified-loop-condition":"off","no-unneeded-ternary":"off","no-unreachable":"error","no-unsafe-finally":"error","no-unsafe-negation":"error","no-unused-expressions":"off","no-unused-labels":"error","no-unused-vars":"error","no-use-before-define":"off","no-useless-call":"off","no-useless-catch":"off","no-useless-computed-key":"off","no-useless-concat":"off","no-useless-constructor":"off","no-useless-escape":"error","no-useless-rename":"off","no-useless-return":"off","no-var":"off","no-void":"off","no-warning-comments":"off","no-whitespace-before-property":"off","no-with":"off","nonblock-statement-body-position":"off","object-curly-newline":"off","object-curly-spacing":"off","object-property-newline":"off","object-shorthand":"off","one-var":"off","one-var-declaration-per-line":"off","operator-assignment":"off","operator-linebreak":"off","padded-blocks":"off","padding-line-between-statements":"off","prefer-arrow-callback":"off","prefer-const":"off","prefer-destructuring":"off","prefer-numeric-literals":"off","prefer-object-spread":"off","prefer-promise-reject-errors":"off","prefer-reflect":"off","prefer-rest-params":"off","prefer-spread":"off","prefer-template":"off","quote-props":"off","quotes":"off","radix":"off","require-atomic-updates":"off","require-await":"off","require-jsdoc":"off","require-unicode-regexp":"off","require-yield":"error","rest-spread-spacing":"off","semi":"off","semi-spacing":"off","semi-style":"off","sort-imports":"off","sort-keys":"off","sort-vars":"off","space-before-blocks":"off","space-before-function-paren":"off","space-in-parens":"off","space-infix-ops":"off","space-unary-ops":"off","spaced-comment":"off","strict":"off","switch-colon-spacing":"off","symbol-description":"off","template-curly-spacing":"off","template-tag-spacing":"off","unicode-bom":"off","use-isnan":"error","valid-jsdoc":"off","valid-typeof":"error","vars-on-top":"off","wrap-iife":"off","wrap-regex":"off","yield-star-spacing":"off","yoda":"off"}},"css":{}}'); // eslint-disable-line no-unused-vars
+flair.AppDomain.context.current().currentAssemblyBeingLoaded('./flair{.min}.js');
 /**
  * @name Aspect
  * @description Aspect base class.
@@ -4383,93 +4589,7 @@ Class('Attribute', function() {
     this.decorateEvent = this.noop;
 });
 
-/**
- * @name Resource
- * @description Resource wrapper class.
- */
-$$('sealed');
-$$('ns', '(root)');
-Class('Resource', function() {
-    const b64EncodeUnicode = (str) => { // eslint-disable-line no-unused-vars
-        // first we use encodeURIComponent to get percent-encoded UTF-8,
-        // then we convert the percent encodings into raw bytes which
-        // can be fed into btoa.
-        return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
-            function toSolidBytes(match, p1) {
-                return String.fromCharCode('0x' + p1);
-        }));
-    };
-    const b64DecodeUnicode = (str) => {
-        // Going backwards: from bytestream, to percent-encoding, to original string.
-        return decodeURIComponent(atob(str).split('').map(function(c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-    };    
-
-    this.construct = (name, locale, encodingType, file, data) => {
-        let resData = data; // data is base64 encoded string, added by build engine
-        let resType = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
-
-        // decode
-        if (encodingType.indexOf('utf8;') !== -1) {
-            if (isServer) {
-                let buff = new Buffer(resData).toString('base64');
-                resData = buff.toString('utf8');
-            } else { // client
-                resData = b64DecodeUnicode(resData); 
-            }
-        } else { // binary
-            if (isServer) {
-                resData = new Buffer(resData).toString('base64');
-            } else { // client
-                // no change, leave it as is
-            }
-        }
-
-        // store
-        this.locale = locale;
-        this.encodingType = encodingType;
-        this.file = file;
-        this.type = resType;
-        this.data = resData;
-    };
-
-   /** 
-    *  @name name: string - name of the resource
-    */
-    $$('readonly');
-    this.name = '';
-
-   /** 
-    *  @name locale: string - locale of the resource
-    */
-   $$('readonly');
-   this.locale = '';
-
-
-   /** 
-    *  @name locale: string - locale of the resource
-    */
-   $$('readonly');
-   this.locale = '';   
-
-   /** 
-    *  @name encodingType: string - resource encoding type
-    */
-    $$('readonly');
-    this.encodingType = '';
-   
-   /** 
-    *  @name type: string - resource type
-    */
-    $$('readonly');
-    this.type = '';
-
-   /** 
-    *  @name data: string - resource data
-    */
-   $$('readonly');
-   this.data = '';
-});
+flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
 })();
+(() => { flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","version":"0.15.539","lupdate":"Sun, 24 Feb 2019 04:57:01 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute"],"resources":[],"assets":["./flair/new-age.css"]}');})();

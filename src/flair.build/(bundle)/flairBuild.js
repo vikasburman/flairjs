@@ -7,6 +7,21 @@ const copyDir = require('copy-dir');
 const path = require('path');
 const fsx = require('fs-extra');
 const del = require('del');
+const buildInfo = {
+    name: '<<name>>',
+    version: '<<version>>',
+    format: 'fasm',
+    formatVersion: '1',
+    contains: [
+        'initializer',      // index.js is built
+        'types',            // types are embedded
+        'enclosureVars',    // flair variables are made available in a closure where types are bundled
+        'enclosedTypes',    // types are places in a closure
+        'resources',        // resources are bundled
+        'assets',           // assets are processed and their names are added in ado
+        'selfreg'           // selfreg code is bundled
+    ]
+};
 
 let getFolders = (root, excludeRoot) => {
   const _getFolders = () => {
@@ -168,6 +183,16 @@ const build = (options, done) => {
         if (fsx.existsSync(options.current.asmMain)) {
             let content = fsx.readFileSync(options.current.asmMain, 'utf8');
             content = injector(options.current.asmPath, content);
+
+            // replace ado specific information in this content
+            for(let prop in options.current.ado) {
+                if (options.current.ado.hasOwnProperty(prop)) {
+                    if (typeof options.current.ado[prop] === 'string') { // only string values of ado are looked at
+                        content = content.replace(`<<${prop}>>`, options.current.ado[prop]);
+                    }
+                }
+            }
+
             appendToFile(content); 
             logger(0, 'index', options.current.asmMain); 
         }
@@ -185,6 +210,8 @@ const build = (options, done) => {
         //      "file": "",
         //      "desc": "",
         //      "version": "",
+        //      "lupdate": "",
+        //      "builder": ""
         //      "copyright": "",
         //      "license": "",
         //      "types": ["", "", ...],
@@ -192,9 +219,11 @@ const build = (options, done) => {
         //      "assets": ["", "", ...],
         options.current.ado = {
             name: options.current.asmName,
-            file: options.current.asm.replace(options.current.dest, '.'),
+            file: options.current.asm.replace(options.current.dest, '.').replace('.js', '{.min}.js'),
             desc: options.packageJSON.description,
             version: options.packageJSON.version,
+            lupdate: new Date().toUTCString(),
+            builder: buildInfo,
             copyright: options.packageJSON.copyright,
             license: options.packageJSON.license,
             types: [],
@@ -352,7 +381,7 @@ const build = (options, done) => {
             done(); return; 
         }
         let astFile = options.current.ado.assets.splice(0, 1)[0]; // pick from top
-        justNames1.push(astFile.dest);
+        justNames1.push(astFile.dest.replace(options.current.dest, '.'));
 
         // process only if full build OR asset is changed
         if (!options.fullBuild && fsx.existsSync(astFile.dest)) {
@@ -444,24 +473,28 @@ const build = (options, done) => {
         }
         let closureHeader = 
         `(() => {\n` + 
-        `   'use strict';\n\n` +
-        `   const { $$, attr, Class, Struct, Enum, Interface, Mixin, Exception, Args } = flair;                         // eslint-disable-line no-unused-vars\n` +
-        `   const { Aspects, Assembly, Resource, Namespace, Container, Reflector, Serializer } = flair;                 // eslint-disable-line no-unused-vars\n` +
-        `   const { getAttr, getAssembly, getResource, getTypeOf } = flair;                                             // eslint-disable-line no-unused-vars\n` +
-        `   const { getType, typeOf, as, is, isDerivedFrom, isInstanceOf, isComplies, isImplements, isMixed } = flair;  // eslint-disable-line no-unused-vars\n` +
-        `   const { include, dispose, using, on, dispatch } = flair;                                                    // eslint-disable-line no-unused-vars\n` +
-        `   const { noop, telemetry } = flair;                                                                          // eslint-disable-line no-unused-vars\n` +
-        `   const { isServer } = flair.options.env;                                                                     // eslint-disable-line no-unused-vars\n` +
+        `'use strict';\n\n` +
+        `const { $$, attr, Class, Struct, Enum, Interface, Mixin, Exception, Args } = flair;                         // eslint-disable-line no-unused-vars\n` +
+        `const { Aspects, AppDomain, Container, Reflector, Serializer } = flair;                                     // eslint-disable-line no-unused-vars\n` +
+        `const { getAttr, getAssembly, getResource, getTypeOf } = flair;                                             // eslint-disable-line no-unused-vars\n` +
+        `const { getType, typeOf, as, is, isDerivedFrom, isInstanceOf, isComplies, isImplements, isMixed } = flair;  // eslint-disable-line no-unused-vars\n` +
+        `const { include, dispose, using, on, dispatch } = flair;                                                    // eslint-disable-line no-unused-vars\n` +
+        `const { noop, telemetry } = flair;                                                                          // eslint-disable-line no-unused-vars\n` +
+        `const { isServer, isWorker } = flair.options.env;                                                           // eslint-disable-line no-unused-vars\n` +
         `\n`; 
         if (settings) { // settings is a closure variable of each assembly separately
             closureHeader += 
-        `   const settings = JSON.parse('${options.current.settings}'); // eslint-disable-line no-unused-vars\n`;
+        `const settings = JSON.parse('${settings}'); // eslint-disable-line no-unused-vars\n`;
         } else {
-        `   const settings = {}; // eslint-disable-line no-unused-vars\n`;
+        `const settings = {}; // eslint-disable-line no-unused-vars\n`;
         }
         appendToFile(closureHeader);
 
         logger(0, 'types', '');
+
+        // activate current file name
+        let dump = `flair.AppDomain.context.current().currentAssemblyBeingLoaded('${options.current.ado.file}');\n`;
+        appendToFile(dump);
 
         // append types
         let justNames = [];
@@ -499,6 +532,10 @@ const build = (options, done) => {
             appendToFile(content);
         }
         options.current.ado.types = justNames; // update types list
+
+        // deactivate current file name
+        dump = `flair.AppDomain.context.current().currentAssemblyBeingLoaded('');\n`;
+        appendToFile(dump);
 
         // append closure footer
         let closureFooter = 
@@ -539,7 +576,15 @@ const build = (options, done) => {
             encodingType += 'base64;';
 
             // embed resource
-            let dump = `flair.Resource.register("${nsFile.qualifiedName}", "${encodingType}", "${'./' + nsFile.file}", "${content}");\n`;
+            let rdo = {
+                name: nsFile.qualifiedName,
+                encodingType: encodingType,
+                asmFile: options.current.ado.file,
+                file: './' + nsFile.file,
+                data: content
+            };
+
+            let dump = `(() => { let rdo = JSON.parse('${JSON.stringify(rdo)}'); flair.AppDomain.context.current().registerResource(rdo);})();\n`;
             appendToFile(dump);
 
             appendResources(done, justNames2); // pick next
@@ -582,7 +627,7 @@ const build = (options, done) => {
         if (options.skipRegistrationsFor.indexOf(options.current.asmName) !== -1) { return; } // skip for special cases
 
         logger(0, 'self-reg', 'yes'); 
-        let dump = `flair.Assembly.register('${JSON.stringify(options.current.ado)}');\n`;
+        let dump = `(() => { flair.AppDomain.registerAdo('${JSON.stringify(options.current.ado)}');})();\n`;
         appendToFile(dump);
     };
     const pack = (done) => {
@@ -632,7 +677,7 @@ const build = (options, done) => {
 
         logger(0, 'preamble', options.current.preamble.replace(options.current.dest.replace('./', ''), '.'));
         let ados = JSON.stringify(options.current.adosJSON);
-        let dump = `(() => { let ados = JSON.parse('${ados}');flair.Assembly.register(ados);})();`;
+        let dump = `(() => { let ados = JSON.parse('${ados}');flair.AppDomain.registerAdo(ados);})();`;
         fsx.writeFileSync(options.current.preamble, dump);
     };
     const collectTypesAndResources = () => {
@@ -1042,8 +1087,8 @@ module.exports = function(options, cb) {
 
     // exclude flair files from being registered
     options.skipRegistrationsFor = [
-        'flair',
-        'flair.build'
+        '1flair',
+        '1flair.build'
     ];
 
     // define logger

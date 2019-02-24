@@ -1,3 +1,7 @@
+/**
+ * @name Dispatcher
+ * @description Event dispatching. 
+ */ 
 const Dispatcher = function() {
     let events = {};
 

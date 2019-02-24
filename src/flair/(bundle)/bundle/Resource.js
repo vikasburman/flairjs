@@ -1,33 +1,34 @@
 /**
  * @name Resource
- * @description Resource registration and locator functionality.
- * @example
- *  .register(name, locale, encodingType, file, data)               // - void
- *  .get(name)                                                      // - resource object
- * @params
- *  name: string - qualified name of resource
- *  locale: string - locale of the resource or empty, if no locale is associated
- *  encodingType: string - type of encoding applied to resource data
- *  file: string - resource file name and path
- *  data: string - base 64 encoded (or binary) data of resource
- *  typeName: string - qualified type name for which assembly object is needed
+ * @description Resource object.
  */ 
-let resources_registry = {};
-const _Resource = {
-    // register resource
-    register: (name, locale, encodingType, file, data) => {
-        if (resources_registry[name]) { throw new _Exception('AlreadyRegistered', 'Resource is already registered'); }
-        let Resource = _getType('Resource');
-        resources_registry[name] = new Resource(name, locale, encodingType, file, data);
-    },
+const Resource = function(rdo, ns, alc) {
+    this.context = alc;
 
-    // get registered resource
-    get: (name) => {
-        return resources_registry[name] || null;
+    this.name = rdo.name;
+    this.ns = ns;
+    this.assembly = () => { return alc.getAssembly(which(rdo.asmFile, true)) || null; };
+    this.encodingType = rdo.encodingType;
+    this.file = rdo.file;
+    this.type = rdo.file.substr(rdo.file.lastIndexOf('.') + 1).toLowerCase();
+    this.data = rdo.data;
+
+    // decode data (rdo.data is base64 encoded string, added by build engine)
+    if (rdo.encodingType.indexOf('utf8;') !== -1) {
+        if (isServer) {
+            let buff = new Buffer(rdo.data).toString('base64');
+            this.data = buff.toString('utf8');
+        } else { // client
+            this.data = b64DecodeUnicode(rdo.data); 
+        }
+    } else { // binary
+        if (isServer) {
+            this.data = new Buffer(rdo.data).toString('base64');
+        } // else no change on client
+    }
+
+    // special case of JSON
+    if (this.type === 'json') {
+        this.data = Object.freeze(JSON.parse(this.data));
     }
 };
-
-// attach to flair
-a2f('Resource', _Resource, () => {
-    resources_registry = {};
-});

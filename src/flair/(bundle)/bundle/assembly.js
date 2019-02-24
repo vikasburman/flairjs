@@ -1,108 +1,50 @@
 /**
  * @name Assembly
- * @description Assembly registration and locator functionality.
- * @example
- *  .register(...ados)          // - void
- *  .get(typeName)              // - assembly object or null
- *  .all()                      // - array of all registered assemblies
- * @params
- *  ado: object - An ADO is an object that defines assembly definition as:
- *      name: string - name
- *      file: string - file name and path
- *      desc: string - description
- *      version: string - version
- *      copyright: string - copyright message
- *      license: - string - license
- *      types: - array - list of all type names that reside in this assembly
- *      resources: - array - list of all resource names that reside in this assembly
- *      assets: - array - list of all assets that are available outside this assembly but deployed together
- *      settings: - assembly settings
- * typeName: string - qualified type name for which assembly object is needed
+ * @description Assembly object.
  */ 
-let asmFiles = {}, asmTypes = {};
-const _Assembly = {
-    // register one or more assemblies as per given Assembly Definition Objects
-    register: (...ados) => {
-        // TODO: ignoge if an ado is already registered and if this is the coming from assembly itself - json string, mark it as loaded as well
-        if (!ados) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (ados)'); }
+const Assembly = function (ado, alc) {
+    this.context = alc;
 
-        ados.forEach(ado => {
-            let asm = new __Assembly(ado),
-                asmFile = asm.file;
-            if (asmFiles[asmFile]) {
-                throw new _Exception('DuplicateName', `Assembly is already registered. (${asmFile})`);
-            } else {
-                // register
-                asmFiles[asmFile] = asm;
-
-                // load types
-                asm.types.forEach(type => {
-                    // qualified names across anywhere should be unique
-                    if (asmTypes[type]) {
-                        throw new _Exception('DuplicateName', `Type is already registered. (${type})`);
-                    } else {
-                        asmTypes[type] = asm; // means this type can be loaded from this assembly Assembly.get() give this only
-                    }
-                });
-            }
-        });
-    },
-
-    // returns assembly object that is associated with given flair type name
-    get: (typeName) => {
-        if (typeof typeName !== 'string') { throw new _Exception('InvalidArgument', 'Argument type if not valid. (typeName)'); }
-        return asmTypes[typeName] || null;
-    },
-
-    // returns all registered assembly objects
-    all: () => {
-        return Object.values(asmFiles).slice();
-    }
-};
-const __Assembly = function (ado) {
-    if (typeof ado !== 'object') { throw _Exception.InvalidArgument('ado'); }
-    if (_typeOf(ado.types) !== 'array' || 
-        _typeOf(ado.resources) !== 'array' ||
-        _typeOf(ado.assets) !== 'array' ||
-        typeof ado.name !== 'string' ||
-        typeof ado.file !== 'string' || ado.file === '') {
-        throw _Exception.InvalidArgument('ado');
-    }
-    let isLoaded = false;
-    let _this = {
-        // pick all ado properties as is
-        ado: ado,
-        name: ado.name,
-        file: which(ado.file, true), // min/dev contextual pick
-        desc: ado.desc || '',
-        version: ado.version || '',
-        copyright: ado.copyright || '',
-        license: ado.license || '',
-        types: Object.freeze(ado.types.slice()),
-        resources: Object.freeze(ado.types.slice()),
-        settings: Object.freeze(ado.settings || {}),
-        assets: Object.freeze(ado.assets.slice()),
-        hasAssets: (ado.assets.length > 0),
-        
-        isLoaded: () => { return isLoaded; },
-        load: () => { 
-            return new Promise((resolve, reject) => {
-                if (isLoaded) { resolve(); return; }
-                loadModule(_this.file).then(() => { // since we want this js to be loaded and executed
-                    isLoaded = true;
-                    resolve();
-                }).catch((e) => {
-                    reject(new _Exception('ModuleLoad', `Module load operation failed. (${_this.file})`, e));
-                });
-            });
-        }
+    this.name = ado.name;
+    this.file = ado.file;
+    this.desc = ado.desc;
+    this.version = ado.version;
+    this.copyright = ado.copyright;
+    this.license = ado.license;
+    this.lupdate = ado.lupdate;
+    this.builder = ado.builder.name;
+    this.flairVersion: ado.builder.version;
+    this.format = Object.freeze({
+        name: ado.builder.format,
+        version: ado.builder.formatVersion,
+        contains: ado.builder.contains.slice()
+    });
+   
+    // types
+    this.types = () => { return ado.types.slice(); }
+    this.getType = (qualifiedName) => {
+        if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${qualifiedName})`); }
+        if (ado.types.indexOf(qualifiedName) === -1) { throw new _Exception('NotFound', `Type is not available in this assembly. (${qualifiedName})`); }
+        return this.context.getType(qualifiedName);
     };
 
-    // return
-    return Object.freeze(_this);
-};
+    // resources
+    this.resources = () => { return ado.resources.slice(); }
+    this.getResource = (qualifiedName) => {
+        if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${qualifiedName})`); }
+        if (ado.resources.indexOf(qualifiedName) === -1) { throw new _Exception('NotFound', `Resource is not available in this assembly. (${qualifiedName})`); }
+        return this.context.getResource(qualifiedName);
+    };
 
-// attach to flair
-a2f('Assembly', _Assembly, () => {
-    asmFiles = {}; asmTypes = {};
-});
+    // assets
+    this.assets = () => { return ado.assets.slice(); }
+    this.assetsRoot = this.file.replace('.js', '/');
+    this.getAsset = (file) => { 
+        if (typeof file !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${file})`); }
+        // file: will be in local context of assembly, e.g., <asmFolder>/(assets)/myCSS.css will be referred everywhere as './myCSS.css'
+        // passing ./myCSS.css to this method will return './<asmFolder>/myCSS.css'
+        let astFile = file.replace('./', this.assetsRoot);
+        if (ado.assets.indexOf(file) === -1) { throw new _Exception('NotFound', `Asset is not available for this assembly. (${astFile})`); }
+        return astFile;        
+    };
+};
