@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.build
  *     File: ./flair.build.js
- *  Version: 0.15.541
- *  Sun, 24 Feb 2019 05:05:07 GMT
+ *  Version: 0.15.560
+ *  Sun, 24 Feb 2019 17:47:14 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -28,7 +28,7 @@ const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
     name: 'flair.build',
-    version: '0.15.541',
+    version: '0.15.560',
     format: 'fasm',
     formatVersion: '1',
     contains: [
@@ -493,13 +493,23 @@ const build = (options, done) => {
         let closureHeader = 
         `(() => {\n` + 
         `'use strict';\n\n` +
-        `const { $$, attr, Class, Struct, Enum, Interface, Mixin, Exception, Args } = flair;                         // eslint-disable-line no-unused-vars\n` +
-        `const { Aspects, AppDomain, Container, Reflector, Serializer } = flair;                                     // eslint-disable-line no-unused-vars\n` +
-        `const { getAttr, getAssembly, getResource, getTypeOf } = flair;                                             // eslint-disable-line no-unused-vars\n` +
-        `const { getType, typeOf, as, is, isDerivedFrom, isInstanceOf, isComplies, isImplements, isMixed } = flair;  // eslint-disable-line no-unused-vars\n` +
-        `const { include, dispose, using, on, dispatch } = flair;                                                    // eslint-disable-line no-unused-vars\n` +
-        `const { noop, telemetry } = flair;                                                                          // eslint-disable-line no-unused-vars\n` +
-        `const { isServer, isWorker } = flair.options.env;                                                           // eslint-disable-line no-unused-vars\n` +
+        `/* eslint-disable no-unused-vars */\n` +
+        `const flair = (typeof global !== undefined ? require('flair') : (typeof WorkerGlobalScope !== undefined ? WorkerGlobalScope.flair : window.flair));\n` +
+        `const { Class, Struct, Enum, Interface, Mixin } = flair;\n` +
+        `const { Aspects } = flair;\n` +
+        `const { AppDomain } = flair;\n` +
+        `const { $$, attr } = flair;\n` +
+        `const { Container, include } = flair;\n` +
+        `const { Port } = flair;\n` +
+        `const { on, post, telemetry } = flair;\n` +
+        `const { Reflector } = flair;\n` +
+        `const { Serializer } = flair;\n` +
+        `const { as, is, isComplies, isDerivedFrom, isImplements, isInstanceOf, isMixed } = flair;\n` +
+        `const { getAssembly, getAttr, getContext, getResource, getType, getTypeOf, typeOf } = flair;\n` +
+        `const { dispose, using } = flair;\n` +
+        `const { args, Exception, noop  } = flair;\n` +
+        `const { isServer, isWorker } = flair.options.env;\n` +
+        `/* eslint-enable no-unused-vars */\n` +
         `\n`; 
         if (settings) { // settings is a closure variable of each assembly separately
             closureHeader += 

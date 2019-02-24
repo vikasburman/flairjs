@@ -12,7 +12,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
     // context
     this.name = name;
     this.domain = domain;
-    this.isUnloaded = () => { return isUnloaded; };
+    this.isUnloaded = () => { return isUnloaded || domain.isUnloaded(); };
     this.unload = () => {
         alcTypes = {};
         asmFiles = {};

@@ -438,81 +438,17 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             }
         },
         proxy = null,
+        _nim = () => { throw new _Exception('NotImplemented', 'Method is not implemented.'); },
+        _nip = { get: () => { throw new _Exception('NotImplemented', 'Property is not implemented.'); },
+                 set: () => { throw new _Exception('NotImplemented', 'Property is not implemented.'); }},
         isBuildingObj = false,
         _member_dispatcher = null,
-        _local_storage_not_supported_message = "Use of 'state' is not support on server. Using 'session' instead.";
+        _sessionStorage = _Port('sessionStorage'),
+        _localStorage = _Port('localStorage');
 
     // dump this def for builder to process at the end
     cfg.dump.push(def);
 
-    const _sessionStorage = {
-        key: (key) => {
-            if (isServer) {
-                return ((global.sessionStorage && global.sessionStorage[key]) ? true : false); // the way, on browser sessionStorage is different for each tab, here 'sessionStorage' property on global is different for each node instance in a cluster
-            } else { // client
-                return sessionStorage.key(key);
-            }
-        },
-        getItem: (key) => {
-            if (isServer) {
-                return ((global.sessionStorage && global.sessionStorage[key]) ? global.sessionStorage[key] : null);
-            } else {
-                return sessionStorage.getItem(key);
-            }
-        },
-        setItem: (key, value) => {
-            if (isServer) {
-                if (!global.sessionStorage) { global.sessionStorage = {}; }
-                global.sessionStorage[key] = value;
-                
-            } else {
-                sessionStorage.setItem(key, value);
-            }
-        },
-        removeItem: (key) => {
-            if (isServer) {
-                if (global.sessionStorage) { 
-                    delete global.sessionStorage[key];
-                }
-            } else {
-                sessionStorage.removeItem(key);
-            }
-        }
-    };
-    const _localStorage = {
-        key: (key) => {
-            if (isServer) {
-                console.log(_local_storage_not_supported_message); // eslint-disable-line no-console
-                return _sessionStorage.key(key);
-            } else { // client
-                return localStorage.key(key);
-            }
-        },
-        getItem: (key) => {
-            if (isServer) {
-                console.log(_local_storage_not_supported_message); // eslint-disable-line no-console
-                return _sessionStorage.getItem(key);
-            } else {
-                return localStorage.getItem(key);
-            }
-        },
-        setItem: (key, value) => {
-            if (isServer) {
-                console.log(_local_storage_not_supported_message); // eslint-disable-line no-console
-                return _sessionStorage.setItem(key, value);
-            } else {
-                localStorage.setItem(key, value);
-            }            
-        },
-        removeItem: (key) => {
-            if (isServer) {
-                console.log(_local_storage_not_supported_message); // eslint-disable-line no-console
-                return _sessionStorage.removeItem(key);
-            } else {
-                localStorage.removeItem(key);
-            }
-        }
-    };
     const applyCustomAttributes = (bindingHost, memberName, memberType, member) => {
         for(let appliedAttr of attrs.members.all(memberName).current()) {
             if (appliedAttr.isCustom) { // custom attribute instance
@@ -657,28 +593,30 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         return memberType;
     };
     const validateMemberDefinitionFeasibility = (memberName, memberType, memberDef) => {
-        let result = false;
-        // conditional check
+        let result = true;
+        // conditional check using AND - means, all specified conditions must be true to include this
         let the_attr = attrs.members.probe('conditional', memberName).current();
         if (the_attr) {
             let conditions = splitAndTrim(the_attr.args[0] || []);
             for (let condition of conditions) {
                 condition = condition.toLowerCase();
-                if (condition === 'test' && options.env.isTesting) { result = true; break; }
-                if (condition === 'server' && options.env.isServer) { result = true; break; }
-                if (condition === 'client' && options.env.isClient) { result = true; break; }
-                if (condition === 'debug' && options.env.isDebug) { result = true; break; }
-                if (condition === 'prod' && options.env.isProd) { result = true; break; }
-                if (condition === 'cordova' && options.env.isCordova) { result = true; break; }
-                if (condition === 'nodewebkit' && options.env.isNodeWebkit) { result = true; break; }
-                if (options.symbols.indexOf(condition) !== -1) { result = true; break; }
+                if (!(condition === 'test' && options.env.isTesting)) { result = false; break; }
+                if (!(condition === 'server' && options.env.isServer)) { result = false; break; }
+                if (!(condition === 'client' && options.env.isClient)) { result = false; break; }
+                if (!(condition === 'worker' && options.env.isWorker)) { result = false; break; }
+                if (!(condition === 'main' && options.env.isMain)) { result = false; break; }
+                if (!(condition === 'debug' && options.env.isDebug)) { result = false; break; }
+                if (!(condition === 'prod' && options.env.isProd)) { result = false; break; }
+                if (!(condition === 'cordova' && options.env.isCordova)) { result = false; break; }
+                if (!(condition === 'nodewebkit' && options.env.isNodeWebkit)) { result = false; break; }
+                if (!(options.symbols.indexOf(condition) !== -1)) { result = false; break; }
             }
             if (!result) { return result; } // don't go to define, yet leave meta as is, so at a later stage we know that this was conditional and yet not available, means condition failed
         }
         
         // abstract check
-        if (cfg.inheritance && attrs.members.probe('abstract', memberName).current() && (memberDef !== _noop || memberDef !== null) && (memberDef.get && memberDef.get !== _noop)) {
-            throw new _Exception('InvalidDefinition', `Abstract member must point to noop function or a null value. (${memberName})`);
+        if (cfg.inheritance && attrs.members.probe('abstract', memberName).current() && (memberDef !== _noop || memberDef !== _nim || memberDef !== _nip) && (memberDef.get && memberDef.get !== _noop)) {
+            throw new _Exception('InvalidDefinition', `Abstract member must point to this.noop, this.nip or this.nim calls. (${memberName})`);
         }
 
         // constructor arguments check for a static type
@@ -1115,6 +1053,9 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             if (Parent._.type !== Type._.type) {
                 throw new _Exception('InvalidOperation', `Cannot inherit from another type family. (${Parent._.type})`); 
             }
+            if (Parent._.context && Parent._.context.isUnloaded()) {
+                throw new _Exception('InvalidOperation', `Parent context is not active anymore. (${Parent._.name})`); 
+            }
 
             // construct base object (the inherited one)
             obj = new Parent(params._flagName, params.staticInterface, params.args); // obj reference is now parent of object
@@ -1122,6 +1063,11 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             // pick previous level def
             _previousDef = obj._.def;
             delete obj._.def;
+        } else {
+            // check for own context
+            if (Type._.context && Type._.context.isUnloaded()) {
+                throw new _Exception('InvalidOperation', `Type context is not active anymore. (${Type._.name})`); 
+            }
         }
     }
 
@@ -1164,6 +1110,8 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     proxy = new Proxy({}, {
         get: (_obj, name) => { 
             if (name === 'noop') { return _noop; }
+            if (name === 'nim') { return _nim; }
+            if (name === 'nip') { return _nip; }
             if (name === 'event') { // will help defining events like: this.myEvent = this.event(() => { });
                 let _fn = (fn) => {
                     if (typeof fn !== 'function') { throw new _Exception.InvalidArgument('fn'); }
@@ -1203,7 +1151,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                 }
             } else {
                 // a function or event is being redefined or noop is being redefined
-                if (typeof value === 'function' || name === 'noop' || name === 'event') { throw new _Exception('InvalidOperation', `Redefinition of members is not allowed. (${name})`); }
+                if (typeof value === 'function' || ['noop', 'event', 'nim', 'nip'].indexOf(name) !== -1) { throw new _Exception('InvalidOperation', `Redefinition of members is not allowed. (${name})`); }
 
                 // allow setting property values
                 obj[name] = value;
@@ -1533,5 +1481,20 @@ const builder = (cfg) => {
         return new _Object();
     } else { // return type
         return Object.freeze(_Object);
+    }
+};
+const builder_dispose = () => {
+    // all dispose time actions that builder need to do
+    
+    // clear sessionStorage
+    let externalHandler = _Port('sessionStorage');   
+    if (externalHandler) {
+        externalHandler.clear();
+    } else {
+        if (isServer) {
+            if (global.sessionStorage) { delete global.sessionStorage; }
+        } else {
+            sessionStorage.clear();
+        }
     }
 };

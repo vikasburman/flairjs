@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.15.541
- *  Sun, 24 Feb 2019 05:05:05 GMT
+ *  Version: 0.15.560
+ *  Sun, 24 Feb 2019 17:47:11 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -69,10 +69,10 @@
     // flair
     flair.info = Object.freeze({
         name: 'flair',
-        version: '0.15.541',
+        version: '0.15.560',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 24 Feb 2019 05:05:05 GMT')
+        lupdate: new Date('Sun, 24 Feb 2019 17:47:11 GMT')
     });
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -96,190 +96,6 @@
     // attach to flair
     a2f('noop', _noop);
        
-    const guid = () => {
-        return '_xxxxxxxx_xxxx_4xxx_yxxx_xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-        });
-    };
-    const which = (def, isFile) => {
-        if (isFile) { // debug/prod specific decision
-            // pick minified or dev version
-            if (def.indexOf('{.min}') !== -1) {
-                if (flair.options.env.isProd) {
-                    return def.replace('{.min}', '.min'); // a{.min}.js => a.min.js
-                } else {
-                    return def.replace('{.min}', ''); // a{.min}.js => a.js
-                }
-            }
-        } else { // server/client specific decision
-            if (def.indexOf('|') !== -1) { 
-                let items = def.split('|'),
-                    item = '';
-                if (flair.options.env.isServer) {
-                    item = items[0].trim();
-                } else {
-                    item = items[1].trim();
-                }
-                if (item === 'x') { item = ''; } // special case to explicitly mark absence of a type
-                return item;
-            }            
-        }
-        return def; // as is
-    };
-    const isArrow = (fn) => {
-        return (!(fn).hasOwnProperty('prototype'));
-    };
-    const findIndexByProp = (arr, propName, propValue) => {
-        return arr.findIndex((item) => {
-            return (item[propName] === propValue ? true : false);
-        });
-    };
-    const findItemByProp = (arr, propName, propValue) => {
-        let idx = arr.findIndex((item) => {
-            return (item[propName] === propValue ? true : false);
-        });
-        if (idx !== -1) { return arr[idx]; }
-        return null;
-    };
-    const splitAndTrim = (str) => {
-        return str.split(',').map((item) => { return item.trim(); });
-    };
-    const escapeRegExp = (string) => {
-        return string.replace(/([.*+?\^=!:${}()|\[\]\/\\])/g, '\\$1'); // eslint-disable-line no-useless-escape
-    };
-    const replaceAll = (string, find, replace) => {
-        return string.replace(new RegExp(escapeRegExp(find), 'g'), replace);
-    };
-    const shallowCopy = (target, source, overwrite, except) => {
-        if (!except) { except = []; }
-        for(let item in source) {
-            if (source.hasOwnProperty(item) && except.indexOf(item) === -1) { 
-                if (!overwrite) { if (item in target) { continue; }}
-                target[item] = source[item];
-            }
-        }
-        return target;
-    };
-    const loadFile = (file) => {
-        return new Promise((resolve, reject) => {
-            let ext = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
-            if (isServer) {
-                try {
-                    let httpOrhttps = null,
-                        body = '';
-                    if (file.startsWith('https')) {
-                        httpOrhttps = require('https');
-                    } else {
-                        httpOrhttps = require('http'); // for urls where it is not defined
-                    }
-                    httpOrhttps.get(file, (resp) => {
-                        resp.on('data', (chunk) => { body += chunk; });
-                        resp.on('end', () => { 
-                            if (ext === 'json') { 
-                                resolve(JSON.parse(body));
-                            } else {
-                                resolve(body);
-                            }
-                        });
-                    }).on('error', reject);
-                } catch(e) {
-                    reject(e);
-                }
-            } else { // client
-                fetch(file).then((response) => {
-                    if (response.status !== 200) {
-                        reject(response.status);
-                    } else {
-                        if (ext === 'json') { // special case of JSON
-                            response.json().then(resolve).catch(reject);
-                        } else {
-                            resolve(response.text());
-                        }
-                    }
-                }).catch(reject);
-            }
-        });
-    };
-    const loadModule = (module) => {
-        return new Promise((resolve, reject) => {
-            if (isServer) {
-                try {
-                    resolve(require(module));
-                } catch(e) {
-                    reject(e);
-                }
-            } else { // client
-                let ext = module.substr(module.lastIndexOf('.') + 1).toLowerCase();
-                try {
-                    if (typeof require !== 'undefined') { // if requirejs type library having require() is available to load modules / files on client
-                        require([module], resolve, reject);
-                    } else { // load it as file on browser
-                        let js = flair.options.env.global.document.createElement('script');
-                        if (ext === 'mjs') {
-                            js.type = 'module';
-                        } else {
-                            js.type = 'text/javascript';
-                        }
-                        js.name = module;
-                        js.src = module;
-                        js.onload = resolve;    // TODO: Check how we can pass the loaded 'exported' object of module to this resolve.
-                        js.onerror = reject;
-                        flair.options.env.global.document.head.appendChild(js);
-                    }
-                } catch(e) {
-                    reject(e);
-                }
-            }
-        });
-    };
-    const sieve = (obj, props, isFreeze, add) => {
-        let _props = props ? splitAndTrim(props) : Object.keys(obj); // if props are not give, pick all
-        const extract = (_obj) => {
-            let result = {};
-            if (_props.length > 0) { // copy defined
-                for(let prop of _props) { result[prop] = _obj[prop]; } 
-            } else { // copy all
-                for(let prop in obj) { 
-                    if (obj.hasOwnProperty(prop)) { result[prop] = obj[prop]; }
-                }            
-            }
-            if (add) { for(let prop in add) { result[prop] = add[prop]; } }
-            if (isFreeze) { result = Object.freeze(result); }
-            return result;
-        };
-        if (Array.isArray(obj)) {
-            let result = [];
-            for(let item of obj) { result.push(extract(item)); }
-            return result;
-        } else {
-            return extract(obj);
-        }
-    };
-    const b64EncodeUnicode = (str) => { // eslint-disable-line no-unused-vars
-        // first we use encodeURIComponent to get percent-encoded UTF-8,
-        // then we convert the percent encodings into raw bytes which
-        // can be fed into btoa.
-        return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
-            function toSolidBytes(match, p1) {
-                return String.fromCharCode('0x' + p1);
-        }));
-    };
-    const b64DecodeUnicode = (str) => {
-        // Going backwards: from bytestream, to percent-encoding, to original string.
-        return decodeURIComponent(atob(str).split('').map(function(c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-    }; 
-    const uncacheModule = (module) => {
-        if (isServer) {
-            delete require.cache[require.resolve(module)]
-            return require(module)
-        } else { // eslint-disable-line no-empty
-            // TODO:
-        }
-    };
-      
     
     /**
      * @name Exception
@@ -379,6 +195,218 @@
     };
     
     
+    /**
+     * @name Port
+     * @description Customize configurable functionality of the core. This gives a way to configure a different component to
+     *              handle some specific functionalities of the core, e.g., fetching a file on server, or loading a module on
+     *              client, or handling sessionStorage, to name a few.
+     *              Ports are defined by a component and handlers of required interface types can be supplied from outside
+     *              as per usage requirements
+     * @example
+     *  Port(name)                     // @returns handler/null - if connected returns handler else null
+     *  Port.define(name, type, intf)  // @returns void
+     *  Port.connect(name, handler)    // @returns void
+     *  Port.disconnect(name)          // @returns void
+     *  Port.disconnect.all()          // @returns void
+     *  Port.isDefined(name)           // @returns boolean - true/false
+     *  Port.isConnected(name)         // @returns boolean - true/false
+     * @params
+     *  name: string - name of the port
+     *  members: string - array of strings having member names that are checked for their presence
+     *  handler: function - a factory that return the actual handler to provide named functionality for current environment
+     *  inbuilt: function - an inbuilt factory implementation of the port functionality, if nothing is configured, this implementation will be returned
+     *          NOTE: Both factory and inbuilt are passed flair.options.env object to return most suited implementation of the port
+     * @returns handler/boolean/void - as specified above
+     */ 
+    let ports_registry = {};
+    const _Port = (name) => {
+        if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+        return (ports_registry[name] ? ports_registry[name].handler : ports_registry[name].inbuilt); // inbuilt could also be null if not inbuilt implementation is given
+    };
+    _Port.define = (name, members, inbuilt) => {
+        if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+        if (members && !Array.isArray(members)) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (members)'); }
+        if (ports_registry[name]) { throw new _Exception('Duplicate', `Port is already defined. (${name})`); }
+    
+        ports_registry[name] = {
+            type: (members ? 'object' : 'function'),
+            members: members || null,
+            handler: null,
+            inbuilt: (inbuilt ? inbuilt(options.env) : null)
+        };
+    };
+    _Port.connect = (name, handler) => {
+        if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }    
+        if (typeof handler !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (handler)'); } 
+        if (!ports_registry[name]) { throw new _Exception('NotFound', `Port is not defined. (${name})`); } 
+    
+        let actualHandler = handler(options.env); // let it return handler as per context
+        if (typeof actualHandler !== ports_registry[name].type) { throw new _Exception('InvalidType', `Handler type is invalid. (${name})`); } 
+        let members = ports_registry[name].members;
+        if (members) { 
+            for(let member of members) {
+                if (typeof actualHandler[member] === 'undefined') { throw new _Exception('InvalidType', `Handler interface is invalid. (${name})`); }
+            }
+        }
+        ports_registry[name].handler = actualHandler;
+    };
+    _Port.disconnect = (name) => {
+        if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }    
+        if (ports_registry[name]) {
+            ports_registry[name].handler = null;
+        }
+    };
+    _Port.isDefined = (name) => {
+        if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }    
+        return (ports_registry[name] ? true : false);
+    };
+    _Port.isConnected = (name) => {
+        return (ports_registry[name] && ports_registry[name].handler ? false : true);
+    };
+    
+    // attach to flair
+    a2f('Port', _Port, () => {
+        // disconnect all ports
+        for(let port in ports_registry) {
+            if (ports_registry.hasOnwProperty(port)) {
+                ports_registry[port].handler = null;
+            }
+        }
+    
+        // clear registry
+        ports_registry = {};
+    });
+    const guid = () => {
+        return '_xxxxxxxx_xxxx_4xxx_yxxx_xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    };
+    const which = (def, isFile) => {
+        if (isFile) { // debug/prod specific decision
+            // pick minified or dev version
+            if (def.indexOf('{.min}') !== -1) {
+                if (flair.options.env.isProd) {
+                    return def.replace('{.min}', '.min'); // a{.min}.js => a.min.js
+                } else {
+                    return def.replace('{.min}', ''); // a{.min}.js => a.js
+                }
+            }
+        } else { // server/client specific decision
+            if (def.indexOf('|') !== -1) { 
+                let items = def.split('|'),
+                    item = '';
+                if (flair.options.env.isServer) {
+                    item = items[0].trim();
+                } else {
+                    item = items[1].trim();
+                }
+                if (item === 'x') { item = ''; } // special case to explicitly mark absence of a type
+                return item;
+            }            
+        }
+        return def; // as is
+    };
+    const isArrow = (fn) => {
+        return (!(fn).hasOwnProperty('prototype'));
+    };
+    const findIndexByProp = (arr, propName, propValue) => {
+        return arr.findIndex((item) => {
+            return (item[propName] === propValue ? true : false);
+        });
+    };
+    const findItemByProp = (arr, propName, propValue) => {
+        let idx = arr.findIndex((item) => {
+            return (item[propName] === propValue ? true : false);
+        });
+        if (idx !== -1) { return arr[idx]; }
+        return null;
+    };
+    const splitAndTrim = (str) => {
+        return str.split(',').map((item) => { return item.trim(); });
+    };
+    const escapeRegExp = (string) => {
+        return string.replace(/([.*+?\^=!:${}()|\[\]\/\\])/g, '\\$1'); // eslint-disable-line no-useless-escape
+    };
+    const replaceAll = (string, find, replace) => {
+        return string.replace(new RegExp(escapeRegExp(find), 'g'), replace);
+    };
+    const shallowCopy = (target, source, overwrite, except) => {
+        if (!except) { except = []; }
+        for(let item in source) {
+            if (source.hasOwnProperty(item) && except.indexOf(item) === -1) { 
+                if (!overwrite) { if (item in target) { continue; }}
+                target[item] = source[item];
+            }
+        }
+        return target;
+    };
+    const loadFile = (file) => { // text based file loading operation - not a general purpose fetch of any url (it assumes it is a phycical file)
+        return new Promise((resolve, reject) => {
+            let loader = null;
+            if (isServer) {
+                loader = _Port('serverFile');
+            } else { // client
+                loader = _Port('clientFile');
+            }
+            loader(file).then(resolve).catch(reject);
+        });
+    };
+    const loadModule = (module) => {
+        return new Promise((resolve, reject) => {
+            if (isServer) {
+                _Port('serverModule').require(module).then(resolve).catch(reject);
+            } else { // client
+                _Port('clientModule').require(module).then(resolve).catch(reject);
+            }
+        });
+    };
+    const sieve = (obj, props, isFreeze, add) => {
+        let _props = props ? splitAndTrim(props) : Object.keys(obj); // if props are not give, pick all
+        const extract = (_obj) => {
+            let result = {};
+            if (_props.length > 0) { // copy defined
+                for(let prop of _props) { result[prop] = _obj[prop]; } 
+            } else { // copy all
+                for(let prop in obj) { 
+                    if (obj.hasOwnProperty(prop)) { result[prop] = obj[prop]; }
+                }            
+            }
+            if (add) { for(let prop in add) { result[prop] = add[prop]; } }
+            if (isFreeze) { result = Object.freeze(result); }
+            return result;
+        };
+        if (Array.isArray(obj)) {
+            let result = [];
+            for(let item of obj) { result.push(extract(item)); }
+            return result;
+        } else {
+            return extract(obj);
+        }
+    };
+    const b64EncodeUnicode = (str) => { // eslint-disable-line no-unused-vars
+        // first we use encodeURIComponent to get percent-encoded UTF-8,
+        // then we convert the percent encodings into raw bytes which
+        // can be fed into btoa.
+        return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+            function toSolidBytes(match, p1) {
+                return String.fromCharCode('0x' + p1);
+        }));
+    };
+    const b64DecodeUnicode = (str) => {
+        // Going backwards: from bytestream, to percent-encoding, to original string.
+        return decodeURIComponent(atob(str).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+    }; 
+    const uncacheModule = (module) => {
+        if (isServer) {
+            _Port('serverModule').undef(module);
+        } else { 
+            _Port('clientModule').undef(module);
+        }
+    };
+      
 
     /**
      * @name AssemblyLoadContext
@@ -394,7 +422,7 @@
         // context
         this.name = name;
         this.domain = domain;
-        this.isUnloaded = () => { return isUnloaded; };
+        this.isUnloaded = () => { return isUnloaded || domain.isUnloaded(); };
         this.unload = () => {
             alcTypes = {};
             asmFiles = {};
@@ -789,17 +817,35 @@
     a2f('getAssembly', _getAssembly);
        
     /**
+     * @name getContext
+     * @description Gets the assembly load context where a given flair type is loaded
+     * @example
+     *  _getContext(Type)
+     * @params
+     *  Type: type - flair type whose context is required
+     * @returns object - assembly load context object where this type is loaded
+     */ 
+    const _getContext = (Type) => { 
+        if (!_is(Type, 'flair')) { throw new _Exception('InvalidArgument', 'Argument type is not valid. (Type)'); }
+        return Type._.context;
+    };
+    
+    // attach to flair
+    a2f('getContext', _getContext);
+       
+    /**
      * @name getResource
      * @description Gets the registered resource rom default assembly load context of default appdomain
      * @example
      *  getResource(qualifiedName)
      * @params
      *  qualifiedName: string - qualified resource name
-     * @returns object - resource object
+     * @returns object - resource object's data
      */ 
     const _getResource = (qualifiedName) => { 
         if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (qualifiedName)'); }
-        return _AppDomain.context.getResource(qualifiedName);
+        let res = _AppDomain.context.getResource(qualifiedName) || null;
+        return (res ? res.data : null);
     };
     
     // attach to flair
@@ -1316,8 +1362,12 @@
      */ 
     const _dispose = (obj) => {
         if (typeof obj === 'boolean' && obj === true) { // special call to dispose flair
+            // dispose anything that builder engine might need to do
+            builder_dispose();
+    
+            // dispose each member
             disposers.forEach(disposer => { disposer(); });
-            disposers.length = 0;
+            disposers.length = 0;        
         } else { // regular call
             if (_typeOf(obj) !== 'instance') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
     
@@ -2069,81 +2119,17 @@
                 }
             },
             proxy = null,
+            _nim = () => { throw new _Exception('NotImplemented', 'Method is not implemented.'); },
+            _nip = { get: () => { throw new _Exception('NotImplemented', 'Property is not implemented.'); },
+                     set: () => { throw new _Exception('NotImplemented', 'Property is not implemented.'); }},
             isBuildingObj = false,
             _member_dispatcher = null,
-            _local_storage_not_supported_message = "Use of 'state' is not support on server. Using 'session' instead.";
+            _sessionStorage = _Port('sessionStorage'),
+            _localStorage = _Port('localStorage');
     
         // dump this def for builder to process at the end
         cfg.dump.push(def);
     
-        const _sessionStorage = {
-            key: (key) => {
-                if (isServer) {
-                    return ((global.sessionStorage && global.sessionStorage[key]) ? true : false); // the way, on browser sessionStorage is different for each tab, here 'sessionStorage' property on global is different for each node instance in a cluster
-                } else { // client
-                    return sessionStorage.key(key);
-                }
-            },
-            getItem: (key) => {
-                if (isServer) {
-                    return ((global.sessionStorage && global.sessionStorage[key]) ? global.sessionStorage[key] : null);
-                } else {
-                    return sessionStorage.getItem(key);
-                }
-            },
-            setItem: (key, value) => {
-                if (isServer) {
-                    if (!global.sessionStorage) { global.sessionStorage = {}; }
-                    global.sessionStorage[key] = value;
-                    
-                } else {
-                    sessionStorage.setItem(key, value);
-                }
-            },
-            removeItem: (key) => {
-                if (isServer) {
-                    if (global.sessionStorage) { 
-                        delete global.sessionStorage[key];
-                    }
-                } else {
-                    sessionStorage.removeItem(key);
-                }
-            }
-        };
-        const _localStorage = {
-            key: (key) => {
-                if (isServer) {
-                    console.log(_local_storage_not_supported_message); // eslint-disable-line no-console
-                    return _sessionStorage.key(key);
-                } else { // client
-                    return localStorage.key(key);
-                }
-            },
-            getItem: (key) => {
-                if (isServer) {
-                    console.log(_local_storage_not_supported_message); // eslint-disable-line no-console
-                    return _sessionStorage.getItem(key);
-                } else {
-                    return localStorage.getItem(key);
-                }
-            },
-            setItem: (key, value) => {
-                if (isServer) {
-                    console.log(_local_storage_not_supported_message); // eslint-disable-line no-console
-                    return _sessionStorage.setItem(key, value);
-                } else {
-                    localStorage.setItem(key, value);
-                }            
-            },
-            removeItem: (key) => {
-                if (isServer) {
-                    console.log(_local_storage_not_supported_message); // eslint-disable-line no-console
-                    return _sessionStorage.removeItem(key);
-                } else {
-                    localStorage.removeItem(key);
-                }
-            }
-        };
         const applyCustomAttributes = (bindingHost, memberName, memberType, member) => {
             for(let appliedAttr of attrs.members.all(memberName).current()) {
                 if (appliedAttr.isCustom) { // custom attribute instance
@@ -2288,28 +2274,30 @@
             return memberType;
         };
         const validateMemberDefinitionFeasibility = (memberName, memberType, memberDef) => {
-            let result = false;
-            // conditional check
+            let result = true;
+            // conditional check using AND - means, all specified conditions must be true to include this
             let the_attr = attrs.members.probe('conditional', memberName).current();
             if (the_attr) {
                 let conditions = splitAndTrim(the_attr.args[0] || []);
                 for (let condition of conditions) {
                     condition = condition.toLowerCase();
-                    if (condition === 'test' && options.env.isTesting) { result = true; break; }
-                    if (condition === 'server' && options.env.isServer) { result = true; break; }
-                    if (condition === 'client' && options.env.isClient) { result = true; break; }
-                    if (condition === 'debug' && options.env.isDebug) { result = true; break; }
-                    if (condition === 'prod' && options.env.isProd) { result = true; break; }
-                    if (condition === 'cordova' && options.env.isCordova) { result = true; break; }
-                    if (condition === 'nodewebkit' && options.env.isNodeWebkit) { result = true; break; }
-                    if (options.symbols.indexOf(condition) !== -1) { result = true; break; }
+                    if (!(condition === 'test' && options.env.isTesting)) { result = false; break; }
+                    if (!(condition === 'server' && options.env.isServer)) { result = false; break; }
+                    if (!(condition === 'client' && options.env.isClient)) { result = false; break; }
+                    if (!(condition === 'worker' && options.env.isWorker)) { result = false; break; }
+                    if (!(condition === 'main' && options.env.isMain)) { result = false; break; }
+                    if (!(condition === 'debug' && options.env.isDebug)) { result = false; break; }
+                    if (!(condition === 'prod' && options.env.isProd)) { result = false; break; }
+                    if (!(condition === 'cordova' && options.env.isCordova)) { result = false; break; }
+                    if (!(condition === 'nodewebkit' && options.env.isNodeWebkit)) { result = false; break; }
+                    if (!(options.symbols.indexOf(condition) !== -1)) { result = false; break; }
                 }
                 if (!result) { return result; } // don't go to define, yet leave meta as is, so at a later stage we know that this was conditional and yet not available, means condition failed
             }
             
             // abstract check
-            if (cfg.inheritance && attrs.members.probe('abstract', memberName).current() && (memberDef !== _noop || memberDef !== null) && (memberDef.get && memberDef.get !== _noop)) {
-                throw new _Exception('InvalidDefinition', `Abstract member must point to noop function or a null value. (${memberName})`);
+            if (cfg.inheritance && attrs.members.probe('abstract', memberName).current() && (memberDef !== _noop || memberDef !== _nim || memberDef !== _nip) && (memberDef.get && memberDef.get !== _noop)) {
+                throw new _Exception('InvalidDefinition', `Abstract member must point to this.noop, this.nip or this.nim calls. (${memberName})`);
             }
     
             // constructor arguments check for a static type
@@ -2746,6 +2734,9 @@
                 if (Parent._.type !== Type._.type) {
                     throw new _Exception('InvalidOperation', `Cannot inherit from another type family. (${Parent._.type})`); 
                 }
+                if (Parent._.context && Parent._.context.isUnloaded()) {
+                    throw new _Exception('InvalidOperation', `Parent context is not active anymore. (${Parent._.name})`); 
+                }
     
                 // construct base object (the inherited one)
                 obj = new Parent(params._flagName, params.staticInterface, params.args); // obj reference is now parent of object
@@ -2753,6 +2744,11 @@
                 // pick previous level def
                 _previousDef = obj._.def;
                 delete obj._.def;
+            } else {
+                // check for own context
+                if (Type._.context && Type._.context.isUnloaded()) {
+                    throw new _Exception('InvalidOperation', `Type context is not active anymore. (${Type._.name})`); 
+                }
             }
         }
     
@@ -2795,6 +2791,8 @@
         proxy = new Proxy({}, {
             get: (_obj, name) => { 
                 if (name === 'noop') { return _noop; }
+                if (name === 'nim') { return _nim; }
+                if (name === 'nip') { return _nip; }
                 if (name === 'event') { // will help defining events like: this.myEvent = this.event(() => { });
                     let _fn = (fn) => {
                         if (typeof fn !== 'function') { throw new _Exception.InvalidArgument('fn'); }
@@ -2834,7 +2832,7 @@
                     }
                 } else {
                     // a function or event is being redefined or noop is being redefined
-                    if (typeof value === 'function' || name === 'noop' || name === 'event') { throw new _Exception('InvalidOperation', `Redefinition of members is not allowed. (${name})`); }
+                    if (typeof value === 'function' || ['noop', 'event', 'nim', 'nip'].indexOf(name) !== -1) { throw new _Exception('InvalidOperation', `Redefinition of members is not allowed. (${name})`); }
     
                     // allow setting property values
                     obj[name] = value;
@@ -3164,6 +3162,21 @@
             return new _Object();
         } else { // return type
             return Object.freeze(_Object);
+        }
+    };
+    const builder_dispose = () => {
+        // all dispose time actions that builder need to do
+        
+        // clear sessionStorage
+        let externalHandler = _Port('sessionStorage');   
+        if (externalHandler) {
+            externalHandler.clear();
+        } else {
+            if (isServer) {
+                if (global.sessionStorage) { delete global.sessionStorage; }
+            } else {
+                sessionStorage.clear();
+            }
         }
     };
       
@@ -4405,6 +4418,185 @@
     
     // attach to flair
     a2f('Reflector', _Reflector);    
+    // define all ports with their inbuilt implementations as applicable
+    
+    // sessionStorage
+    const __sessionStorage = (env) => {
+        if (env.isServer) {
+            if (!env.global.sessionStorage) { 
+                // the way, on browser sessionStorage is different for each tab, 
+                // here 'sessionStorage' property on global is different for each node instance in a cluster
+                let nodeSessionStorage = function() {
+                    let keys = {};
+                    this.key = (key) => { 
+                        if (!key) { throw _Exception.invalidArgument('key'); }
+                        return (keys.key ? true : false); 
+                    };
+                    this.getItem = (key) => { 
+                        if (!key) { throw _Exception.invalidArgument('key'); }
+                        return keys.key || null 
+                    };
+                    this.setItem = (key, value) => { 
+                        if (!key) { throw _Exception.invalidArgument('key'); }
+                        if (typeof value === 'undefined') { throw _Exception.invalidArgument('value'); }
+                        keys[key] = value; 
+                    };
+                    this.removeItem = (key) => { 
+                        if (!key) { throw _Exception.invalidArgument('key'); }
+                        delete keys[key];
+                    };
+                    this.clear = () => { 
+                        keys = {};
+                    };                        
+                };
+                env.global.sessionStorage = new nodeSessionStorage();
+            }
+            return env.global.sessionStorage;
+        } else { // client
+            return env.global.sessionStorage;
+        }
+    };
+    _Port.define('sessionStorage', ['key', 'getItem', 'setItem', 'removeItem', 'clear'], __sessionStorage(flair.options.env));
+    
+    // localStorage
+    const __localStorage = (env) => {
+        if (env.isServer) {
+            console.log("Use of 'state' is not support on server. Using 'session' instead."); // eslint-disable-line no-console
+            return __sessionStorage(env);
+        } else { // client
+            return env.global.localStorage;
+        }
+    };
+    _Port.define('localStorage', ['key', 'getItem', 'setItem', 'removeItem', 'clear'], __localStorage(flair.options.env));
+    
+    // serverModule
+    const __serverModule = (env) => { // eslint-disable-line no-unused-vars
+        return {
+            require: (module) => {
+                return new Promise((resolve, reject) => {
+                    // both worker and normal scenarios, same loading technique
+                    try {
+                        resolve(require(module));
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            },
+            undef: (module) => {
+                delete require.cache[require.resolve(module)]
+            }
+        }
+    };
+    _Port.define('serverModule', ['require', 'undef'], __serverModule(flair.options.env));
+    
+    // clientModule
+    const __clientModule = (env) => {
+        return {
+            require: (module) => {
+                return new Promise((resolve, reject) => {
+                    let ext = module.substr(module.lastIndexOf('.') + 1).toLowerCase();
+                    try {
+                        if (typeof env.global.require !== 'undefined') { // if requirejs is available
+                            env.global.require([module], resolve, reject);
+                        } else { // load it as file on browser or in web worker
+                            if (env.isWorker) {
+                                try {
+                                    env.global.importScripts(module); // sync call
+                                    resolve(); // TODO: Check how we can pass the loaded 'exported' object of module to this resolve.
+                                } catch (e) {
+                                    reject(e);
+                                }
+                            } else { // browser
+                                let js = env.global.document.createElement('script');
+                                if (ext === 'mjs') {
+                                    js.type = 'module';
+                                } else {
+                                    js.type = 'text/javascript';
+                                }
+                                js.name = module;
+                                js.src = module;
+                                js.onload = () => { 
+                                    resolve(); // TODO: Check how we can pass the loaded 'exported' object of module to this resolve.
+                                };
+                                js.onerror = (e) => {
+                                    reject(e);
+                                };
+                                env.global.document.head.appendChild(js);
+                            }
+                        }
+                    } catch(e) {
+                        reject(e);
+                    }
+                });
+            },
+            undef: (module) => {
+                if (typeof env.global.requirejs !== 'undefined') { // if requirejs library is available
+                    env.global.requirejs.undef(module);
+                } // else no default way to uncache - for other environments, this port can be connected to an external handler
+            }
+        }
+    };
+    _Port.define('clientModule', ['require', 'undef'], __clientModule(flair.options.env));
+    
+    // serverFile
+    const __serverFile = (env) => { // eslint-disable-line no-unused-vars
+        return (file) => {
+            return new Promise((resolve, reject) => {
+                let ext = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
+                try {
+                    let httpOrhttps = null,
+                        body = '';
+                    if (file.startsWith('https')) {
+                        httpOrhttps = require('https');
+                    } else {
+                        httpOrhttps = require('http'); // for urls where it is not defined
+                    }
+                    httpOrhttps.get(file, (resp) => {
+                        resp.on('data', (chunk) => { body += chunk; });
+                        resp.on('end', () => { 
+                            let contentType = resp.headers['content-type'];
+                            if (ext === 'json' || /^application\/json/.test(contentType)) { // special case of JSON
+                                try {
+                                    let data = JSON.parse(body);
+                                    resolve(data);
+                                } catch (e) {
+                                    reject(e);
+                                }
+                            } else { // everything else is a text
+                                resolve(body);
+                            }
+                        });
+                    }).on('error', reject);
+                } catch(e) {
+                    reject(e);
+                }
+            });
+        };
+    };
+    _Port.define('serverFile', null, __serverFile(flair.options.env));
+    
+    // clientFile
+    const __clientFile = (env) => { // eslint-disable-line no-unused-vars
+        return (file) => {
+            return new Promise((resolve, reject) => {
+                let ext = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
+                fetch(file).then((response) => {
+                    if (response.status !== 200) {
+                        reject(response.status);
+                    } else {
+                        let contentType = response.headers['content-type'];
+                        if (ext === 'json' || /^application\/json/.test(contentType)) { // special case of JSON
+                            response.json().then(resolve).catch(reject);
+                        } else { // everything else is a text
+                            response.text().then(resolve).catch(reject);
+                        }
+                    }
+                }).catch(reject);
+            });
+        };
+    };
+    _Port.define('clientFile', null, __clientFile(flair.options.env));
+     
 
     // freeze members
     flair.members = Object.freeze(flair.members);
@@ -4415,13 +4607,23 @@
 (() => {
 'use strict';
 
-const { $$, attr, Class, Struct, Enum, Interface, Mixin, Exception, Args } = flair;                         // eslint-disable-line no-unused-vars
-const { Aspects, AppDomain, Container, Reflector, Serializer } = flair;                                     // eslint-disable-line no-unused-vars
-const { getAttr, getAssembly, getResource, getTypeOf } = flair;                                             // eslint-disable-line no-unused-vars
-const { getType, typeOf, as, is, isDerivedFrom, isInstanceOf, isComplies, isImplements, isMixed } = flair;  // eslint-disable-line no-unused-vars
-const { include, dispose, using, on, dispatch } = flair;                                                    // eslint-disable-line no-unused-vars
-const { noop, telemetry } = flair;                                                                          // eslint-disable-line no-unused-vars
-const { isServer, isWorker } = flair.options.env;                                                           // eslint-disable-line no-unused-vars
+/* eslint-disable no-unused-vars */
+const flair = (typeof global !== undefined ? require('flair') : (typeof WorkerGlobalScope !== undefined ? WorkerGlobalScope.flair : window.flair));
+const { Class, Struct, Enum, Interface, Mixin } = flair;
+const { Aspects } = flair;
+const { AppDomain } = flair;
+const { $$, attr } = flair;
+const { Container, include } = flair;
+const { Port } = flair;
+const { on, post, telemetry } = flair;
+const { Reflector } = flair;
+const { Serializer } = flair;
+const { as, is, isComplies, isDerivedFrom, isImplements, isInstanceOf, isMixed } = flair;
+const { getAssembly, getAttr, getContext, getResource, getType, getTypeOf, typeOf } = flair;
+const { dispose, using } = flair;
+const { args, Exception, noop  } = flair;
+const { isServer, isWorker } = flair.options.env;
+/* eslint-enable no-unused-vars */
 
 const settings = JSON.parse('{"js":{"parserOptions":{"ecmaVersion":6,"sourceType":"module","ecmaFeatures":{"impliedStrict":true}},"parser":"babel-eslint","envs":["browser","es6","node"],"globals":["global","window","flair","define"],"rules":{"accessor-pairs":"off","array-bracket-newline":"off","array-bracket-spacing":"off","array-callback-return":"off","array-element-newline":"off","arrow-body-style":"off","arrow-parens":"off","arrow-spacing":"off","block-scoped-var":"off","block-spacing":"off","brace-style":"off","callback-return":"off","camelcase":"off","capitalized-comments":"off","class-methods-use-this":"off","comma-dangle":"off","comma-spacing":"off","comma-style":"off","complexity":"off","computed-property-spacing":"off","consistent-return":"off","consistent-this":"off","constructor-super":"error","curly":"off","default-case":"off","dot-location":"off","dot-notation":"off","eol-last":"off","eqeqeq":"off","for-direction":"off","func-call-spacing":"off","func-name-matching":"off","func-names":"off","func-style":"off","function-paren-newline":"off","generator-star-spacing":"off","getter-return":"off","global-require":"off","guard-for-in":"off","handle-callback-err":"off","id-blacklist":"off","id-length":"off","id-match":"off","implicit-arrow-linebreak":"off","indent":"off","indent-legacy":"off","init-declarations":"off","jsx-quotes":"off","key-spacing":"off","keyword-spacing":"off","line-comment-position":"off","linebreak-style":"off","lines-around-comment":"off","lines-around-directive":"off","lines-between-class-members":"off","max-classes-per-file":"off","max-depth":"off","max-len":"off","max-lines":"off","max-lines-per-function":"off","max-nested-callbacks":"off","max-params":"off","max-statements":"off","max-statements-per-line":"off","multiline-comment-style":"off","multiline-ternary":"off","new-cap":"off","new-parens":"off","newline-after-var":"off","newline-before-return":"off","newline-per-chained-call":"off","no-alert":"off","no-array-constructor":"off","no-async-promise-executor":"off","no-await-in-loop":"off","no-bitwise":"off","no-buffer-constructor":"off","no-caller":"off","no-case-declarations":"error","no-catch-shadow":"off","no-class-assign":"error","no-compare-neg-zero":"error","no-cond-assign":"error","no-confusing-arrow":"off","no-console":"error","no-const-assign":"error","no-constant-condition":"error","no-continue":"off","no-control-regex":"error","no-debugger":"error","no-delete-var":"error","no-div-regex":"off","no-dupe-args":"error","no-dupe-class-members":"error","no-dupe-keys":"error","no-duplicate-case":"error","no-duplicate-imports":"off","no-else-return":"off","no-empty":"error","no-empty-character-class":"error","no-empty-function":"off","no-empty-pattern":"error","no-eq-null":"off","no-eval":"off","no-ex-assign":"error","no-extend-native":"off","no-extra-bind":"off","no-extra-boolean-cast":"error","no-extra-label":"off","no-extra-parens":"off","no-extra-semi":"error","no-fallthrough":"error","no-floating-decimal":"off","no-func-assign":"error","no-global-assign":"error","no-implicit-coercion":"off","no-implicit-globals":"off","no-implied-eval":"off","no-inline-comments":"off","no-inner-declarations":"error","no-invalid-regexp":"error","no-invalid-this":"off","no-irregular-whitespace":"error","no-iterator":"off","no-label-var":"off","no-labels":"off","no-lone-blocks":"off","no-lonely-if":"off","no-loop-func":"off","no-magic-numbers":"off","no-misleading-character-class":"off","no-mixed-operators":"off","no-mixed-requires":"off","no-mixed-spaces-and-tabs":"error","no-multi-assign":"off","no-multi-spaces":"off","no-multi-str":"off","no-multiple-empty-lines":"off","no-native-reassign":"off","no-negated-condition":"off","no-negated-in-lhs":"off","no-nested-ternary":"off","no-new":"off","no-new-func":"off","no-new-object":"off","no-new-require":"off","no-new-symbol":"error","no-new-wrappers":"off","no-obj-calls":"error","no-octal":"error","no-octal-escape":"off","no-param-reassign":"off","no-path-concat":"off","no-plusplus":"off","no-process-env":"off","no-process-exit":"off","no-proto":"off","no-prototype-builtins":"off","no-redeclare":"error","no-regex-spaces":"error","no-restricted-globals":"off","no-restricted-imports":"off","no-restricted-modules":"off","no-restricted-properties":"off","no-restricted-syntax":"off","no-return-assign":"off","no-return-await":"off","no-script-url":"off","no-self-assign":"error","no-self-compare":"off","no-sequences":"off","no-shadow":"off","no-shadow-restricted-names":"off","no-spaced-func":"off","no-sparse-arrays":"error","no-sync":"off","no-tabs":"off","no-template-curly-in-string":"off","no-ternary":"off","no-this-before-super":"error","no-throw-literal":"off","no-trailing-spaces":"off","no-undef":"error","no-undef-init":"off","no-undefined":"off","no-underscore-dangle":"off","no-unexpected-multiline":"error","no-unmodified-loop-condition":"off","no-unneeded-ternary":"off","no-unreachable":"error","no-unsafe-finally":"error","no-unsafe-negation":"error","no-unused-expressions":"off","no-unused-labels":"error","no-unused-vars":"error","no-use-before-define":"off","no-useless-call":"off","no-useless-catch":"off","no-useless-computed-key":"off","no-useless-concat":"off","no-useless-constructor":"off","no-useless-escape":"error","no-useless-rename":"off","no-useless-return":"off","no-var":"off","no-void":"off","no-warning-comments":"off","no-whitespace-before-property":"off","no-with":"off","nonblock-statement-body-position":"off","object-curly-newline":"off","object-curly-spacing":"off","object-property-newline":"off","object-shorthand":"off","one-var":"off","one-var-declaration-per-line":"off","operator-assignment":"off","operator-linebreak":"off","padded-blocks":"off","padding-line-between-statements":"off","prefer-arrow-callback":"off","prefer-const":"off","prefer-destructuring":"off","prefer-numeric-literals":"off","prefer-object-spread":"off","prefer-promise-reject-errors":"off","prefer-reflect":"off","prefer-rest-params":"off","prefer-spread":"off","prefer-template":"off","quote-props":"off","quotes":"off","radix":"off","require-atomic-updates":"off","require-await":"off","require-jsdoc":"off","require-unicode-regexp":"off","require-yield":"error","rest-spread-spacing":"off","semi":"off","semi-spacing":"off","semi-style":"off","sort-imports":"off","sort-keys":"off","sort-vars":"off","space-before-blocks":"off","space-before-function-paren":"off","space-in-parens":"off","space-infix-ops":"off","space-unary-ops":"off","spaced-comment":"off","strict":"off","switch-colon-spacing":"off","symbol-description":"off","template-curly-spacing":"off","template-tag-spacing":"off","unicode-bom":"off","use-isnan":"error","valid-jsdoc":"off","valid-typeof":"error","vars-on-top":"off","wrap-iife":"off","wrap-regex":"off","yield-star-spacing":"off","yoda":"off"}},"css":{}}'); // eslint-disable-line no-unused-vars
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('./flair{.min}.js');

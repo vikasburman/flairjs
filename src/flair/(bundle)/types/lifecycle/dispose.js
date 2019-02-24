@@ -10,8 +10,12 @@
  */ 
 const _dispose = (obj) => {
     if (typeof obj === 'boolean' && obj === true) { // special call to dispose flair
+        // dispose anything that builder engine might need to do
+        builder_dispose();
+
+        // dispose each member
         disposers.forEach(disposer => { disposer(); });
-        disposers.length = 0;
+        disposers.length = 0;        
     } else { // regular call
         if (_typeOf(obj) !== 'instance') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
 

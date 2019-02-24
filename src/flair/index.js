@@ -70,51 +70,54 @@
     };
 
     // members
-    <!-- inject: ./(bundle)/misc/noop.js -->   
-    <!-- inject: ./(bundle)/helpers/general.js -->  
-    <!-- inject: ./(bundle)/error/exception.js -->  
-    <!-- inject: ./(bundle)/events/dispatcher.js -->
+    <!-- inject: ./(bundle)/types/support/noop.js -->   
+    <!-- inject: ./(bundle)/types/support/Exception.js -->  
+    <!-- inject: ./(bundle)/types/support/Dispatcher.js -->
+    <!-- inject: ./(bundle)/port/port.js -->
+    <!-- inject: ./(bundle)/types/support/general.js -->  
 
-    <!-- inject: ./(bundle)/bundle/AssemblyLoadContext.js -->  
-    <!-- inject: ./(bundle)/bundle/Assembly.js -->  
-    <!-- inject: ./(bundle)/bundle/Resource.js -->  
-    <!-- inject: ./(bundle)/bundle/AppDomain.js -->  
+    <!-- inject: ./(bundle)/assembly/AssemblyLoadContext.js -->  
+    <!-- inject: ./(bundle)/assembly/Assembly.js -->  
+    <!-- inject: ./(bundle)/assembly/Resource.js -->  
+    <!-- inject: ./(bundle)/assembly/AppDomain.js -->  
 
-    <!-- inject: ./(bundle)/attributes/getAttr.js -->   
-    <!-- inject: ./(bundle)/bundle/getAssembly.js -->   
-    <!-- inject: ./(bundle)/bundle/getResource.js -->  
-    <!-- inject: ./(bundle)/bundle/getType.js -->   
-    <!-- inject: ./(bundle)/inheritance/typeOf.js -->   
-    <!-- inject: ./(bundle)/inheritance/getTypeOf.js -->    
-    <!-- inject: ./(bundle)/inheritance/isDerivedFrom.js --> 
-    <!-- inject: ./(bundle)/inheritance/isInstanceOf.js -->  
-    <!-- inject: ./(bundle)/interface/as.js --> 
-    <!-- inject: ./(bundle)/interface/is.js --> 
-    <!-- inject: ./(bundle)/interface/isComplies.js -->  
-    <!-- inject: ./(bundle)/interface/isImplements.js -->   
-    <!-- inject: ./(bundle)/mixin/isMixed.js --> 
+    <!-- inject: ./(bundle)/types/get/getAttr.js -->   
+    <!-- inject: ./(bundle)/types/get/getAssembly.js -->   
+    <!-- inject: ./(bundle)/types/get/getContext.js -->   
+    <!-- inject: ./(bundle)/types/get/getResource.js -->  
+    <!-- inject: ./(bundle)/types/get/getType.js -->   
+    <!-- inject: ./(bundle)/types/get/typeOf.js -->   
+    <!-- inject: ./(bundle)/types/get/getTypeOf.js -->    
+    <!-- inject: ./(bundle)/types/check/isDerivedFrom.js --> 
+    <!-- inject: ./(bundle)/types/check/isInstanceOf.js -->  
+    <!-- inject: ./(bundle)/types/check/as.js --> 
+    <!-- inject: ./(bundle)/types/check/is.js --> 
+    <!-- inject: ./(bundle)/types/check/isComplies.js -->  
+    <!-- inject: ./(bundle)/types/check/isImplements.js -->   
+    <!-- inject: ./(bundle)/types/check/isMixed.js --> 
 
     <!-- inject: ./(bundle)/di/include.js -->  
-    <!-- inject: ./(bundle)/dispose/dispose.js -->  
-    <!-- inject: ./(bundle)/dispose/using.js -->   
-    <!-- inject: ./(bundle)/error/args.js -->   
+    <!-- inject: ./(bundle)/types/lifecycle/dispose.js -->  
+    <!-- inject: ./(bundle)/types/lifecycle/using.js -->   
+    <!-- inject: ./(bundle)/types/support/args.js -->   
     <!-- inject: ./(bundle)/attributes/attr.js -->  
 
-    <!-- inject: ./(bundle)/helpers/builder.js -->  
-    <!-- inject: ./(bundle)/inheritance/class.js -->  
-    <!-- inject: ./(bundle)/interface/interface.js -->  
-    <!-- inject: ./(bundle)/inheritance/struct.js -->  
-    <!-- inject: ./(bundle)/misc/enum.js --> 
-    <!-- inject: ./(bundle)/mixin/mixin.js -->
+    <!-- inject: ./(bundle)/types/support/builder.js -->  
+    <!-- inject: ./(bundle)/types/class.js -->  
+    <!-- inject: ./(bundle)/types/interface.js -->  
+    <!-- inject: ./(bundle)/types/struct.js -->  
+    <!-- inject: ./(bundle)/types/enum.js --> 
+    <!-- inject: ./(bundle)/types/mixin.js -->
 
-    <!-- inject: ./(bundle)/events/on.js --> 
-    <!-- inject: ./(bundle)/events/post.js --> 
-    <!-- inject: ./(bundle)/bundle/cli.js -->   
+    <!-- inject: ./(bundle)/pubsub/on.js --> 
+    <!-- inject: ./(bundle)/pubsub/post.js --> 
+    <!-- inject: ./(bundle)/assembly/cli.js -->   
     <!-- inject: ./(bundle)/di/container.js -->  
-    <!-- inject: ./(bundle)/misc/telemetry.js -->    
+    <!-- inject: ./(bundle)/pubsub/telemetry.js -->    
     <!-- inject: ./(bundle)/aop/aspects.js -->   
     <!-- inject: ./(bundle)/serialization/serializer.js --> 
     <!-- inject: ./(bundle)/reflection/reflector.js -->    
+    <!-- inject: ./(bundle)/port/ports.js --> 
 
     // freeze members
     flair.members = Object.freeze(flair.members);

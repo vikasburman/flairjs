@@ -5,11 +5,12 @@
  *  getResource(qualifiedName)
  * @params
  *  qualifiedName: string - qualified resource name
- * @returns object - resource object
+ * @returns object - resource object's data
  */ 
 const _getResource = (qualifiedName) => { 
     if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (qualifiedName)'); }
-    return _AppDomain.context.getResource(qualifiedName);
+    let res = _AppDomain.context.getResource(qualifiedName) || null;
+    return (res ? res.data : null);
 };
 
 // attach to flair

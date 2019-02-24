@@ -63,75 +63,23 @@ const shallowCopy = (target, source, overwrite, except) => {
     }
     return target;
 };
-const loadFile = (file) => {
+const loadFile = (file) => { // text based file loading operation - not a general purpose fetch of any url (it assumes it is a phycical file)
     return new Promise((resolve, reject) => {
-        let ext = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
+        let loader = null;
         if (isServer) {
-            try {
-                let httpOrhttps = null,
-                    body = '';
-                if (file.startsWith('https')) {
-                    httpOrhttps = require('https');
-                } else {
-                    httpOrhttps = require('http'); // for urls where it is not defined
-                }
-                httpOrhttps.get(file, (resp) => {
-                    resp.on('data', (chunk) => { body += chunk; });
-                    resp.on('end', () => { 
-                        if (ext === 'json') { 
-                            resolve(JSON.parse(body));
-                        } else {
-                            resolve(body);
-                        }
-                    });
-                }).on('error', reject);
-            } catch(e) {
-                reject(e);
-            }
+            loader = _Port('serverFile');
         } else { // client
-            fetch(file).then((response) => {
-                if (response.status !== 200) {
-                    reject(response.status);
-                } else {
-                    if (ext === 'json') { // special case of JSON
-                        response.json().then(resolve).catch(reject);
-                    } else {
-                        resolve(response.text());
-                    }
-                }
-            }).catch(reject);
+            loader = _Port('clientFile');
         }
+        loader(file).then(resolve).catch(reject);
     });
 };
 const loadModule = (module) => {
     return new Promise((resolve, reject) => {
         if (isServer) {
-            try {
-                resolve(require(module));
-            } catch(e) {
-                reject(e);
-            }
+            _Port('serverModule').require(module).then(resolve).catch(reject);
         } else { // client
-            let ext = module.substr(module.lastIndexOf('.') + 1).toLowerCase();
-            try {
-                if (typeof require !== 'undefined') { // if requirejs type library having require() is available to load modules / files on client
-                    require([module], resolve, reject);
-                } else { // load it as file on browser
-                    let js = flair.options.env.global.document.createElement('script');
-                    if (ext === 'mjs') {
-                        js.type = 'module';
-                    } else {
-                        js.type = 'text/javascript';
-                    }
-                    js.name = module;
-                    js.src = module;
-                    js.onload = resolve;    // TODO: Check how we can pass the loaded 'exported' object of module to this resolve.
-                    js.onerror = reject;
-                    flair.options.env.global.document.head.appendChild(js);
-                }
-            } catch(e) {
-                reject(e);
-            }
+            _Port('clientModule').require(module).then(resolve).catch(reject);
         }
     });
 };
@@ -175,9 +123,8 @@ const b64DecodeUnicode = (str) => {
 }; 
 const uncacheModule = (module) => {
     if (isServer) {
-        delete require.cache[require.resolve(module)]
-        return require(module)
-    } else { // eslint-disable-line no-empty
-        // TODO:
+        _Port('serverModule').undef(module);
+    } else { 
+        _Port('clientModule').undef(module);
     }
 };
