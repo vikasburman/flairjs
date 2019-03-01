@@ -8,7 +8,7 @@
     if (typeof define === 'function' && define.amd) { // AMD support
         define(factory);
     } else if (typeof exports === 'object') { // CommonJS and Node.js module support
-        if (module !== undefined && module.exports) {
+        if (typeof module !== 'undefined' && module.exports) {
             exports = module.exports = factory(); // Node.js specific `module.exports`
         }
         module.exports = exports = factory(); // CommonJS        
@@ -20,7 +20,7 @@
 
     // locals
     let isServer = new Function("try {return this===global;}catch(e){return false;}")(),
-        isWorker = isServer ? (!require('worker_threads').isMainThread) : (typeof WorkerGlobalScope !== undefined ? true : false),
+        isWorker = isServer ? (!require('worker_threads').isMainThread) : (typeof WorkerGlobalScope !== 'undefined' ? true : false),
         _global = (isServer ? global : (isWorker ? WorkerGlobalScope : window)),
         flair = {},
         sym = [],
@@ -111,7 +111,6 @@
 
     <!-- inject: ./(bundle)/pubsub/on.js --> 
     <!-- inject: ./(bundle)/pubsub/post.js --> 
-    <!-- inject: ./(bundle)/assembly/cli.js -->   
     <!-- inject: ./(bundle)/di/container.js -->  
     <!-- inject: ./(bundle)/pubsub/telemetry.js -->    
     <!-- inject: ./(bundle)/aop/aspects.js -->   

@@ -38,7 +38,7 @@ const doTask = (done) => {
     let options = argv.options || '',
         optionsJSON = null;
     if (!options) {
-        console.log('Package options definition is not configured. Use --options <options-file> to configure package script in package.json');
+        console.log('Package options definition is not configured. Use --options <options-file> to configure package script in package.json'); // eslint-disable-line no-console
         return;
     }
 

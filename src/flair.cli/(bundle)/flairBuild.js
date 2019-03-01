@@ -1,23 +1,4 @@
 /**
- * @preserve
- * FlairJS
- * True Object Oriented JavaScript
- * 
- * Assembly: flair.build
- *     File: ./flair.build.js
- *  Version: 0.15.560
- *  Sun, 24 Feb 2019 17:47:14 GMT
- * 
- * (c) 2017-2019 Vikas Burman
- * Licensed under MIT
- */
-/**
- * @name flairBuild
- * @description Build Engine
- */
-
- // members
-/**
  * @name flair Build
  * @description Build engine
  */
@@ -27,8 +8,8 @@ const path = require('path');
 const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
-    name: 'flair.build',
-    version: '0.15.560',
+    name: '<<name>>',
+    version: '<<version>>',
     format: 'fasm',
     formatVersion: '1',
     contains: [
@@ -290,7 +271,7 @@ const build = (options, done) => {
                     let finalErrors = [];
                     errors.forEach(item => {
                         let rule = item.rule || item.data.name;
-                        if (typeof options.lintConfig.html[rule] !== undefined && options.lintConfig.html[rule] === false) { return; }
+                        if (typeof options.lintConfig.html[rule] !== 'undefined' && options.lintConfig.html[rule] === false) { return; }
                         finalErrors.push(item);
                     });
                     if (finalErrors.length > 0) {
@@ -494,7 +475,7 @@ const build = (options, done) => {
         `(() => {\n` + 
         `'use strict';\n\n` +
         `/* eslint-disable no-unused-vars */\n` +
-        `const flair = (typeof global !== undefined ? require('flair') : (typeof WorkerGlobalScope !== undefined ? WorkerGlobalScope.flair : window.flair));\n` +
+        `const flair = (typeof global !== 'undefined' ? require('flair') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));\n` +
         `const { Class, Struct, Enum, Interface, Mixin } = flair;\n` +
         `const { Aspects } = flair;\n` +
         `const { AppDomain } = flair;\n` +
@@ -761,6 +742,25 @@ const build = (options, done) => {
         delete options.current.astSrc;
         delete options.current.astDest;
     };
+    const copyLibs = () => {
+        options.current.libsSrc = './' + path.join(options.current.asmPath, '(libs)');
+        options.current.libsDest = './' + path.join(options.current.dest, options.current.asmName);
+        if (fsx.existsSync(options.current.libsSrc)) {
+            logger(0, 'libs', options.current.libsSrc); 
+            let libs = rrd(options.current.libsSrc);
+            for (let lib of libs) {
+                if (lib.indexOf('/_') !== -1) { continue; } // either a folder or file name starts with '_'. skip it
+                let libFile = {
+                    ext: path.extname(lib).toLowerCase().substr(1),
+                    src: './' + lib,
+                    dest: './' + path.join(options.current.libsDest, lib.replace(options.current.libsSrc.replace('./', ''), ''))
+                };
+                fsx.copySync(libFile.src, libFile.dest, { errorOnExist: true })
+            }
+        }
+        delete options.current.libsSrc;
+        delete options.current.libsDest;
+    };    
   
     const processNamespaces = (done) => {
         if (options.current.namespaces.length === 0) { 
@@ -770,7 +770,7 @@ const build = (options, done) => {
         }
         let nsFolder = options.current.namespaces.splice(0, 1)[0]; // pick from top
         if (nsFolder.startsWith('_')) { processNamespaces(done); return; } // ignore if starts with '_'
-        if (['(assets)', '(bundle)'].indexOf(nsFolder) !== -1) { processNamespaces(done); return; } // skip special folders at namespace level
+        if (['(assets)', '(libs)', '(bundle)'].indexOf(nsFolder) !== -1) { processNamespaces(done); return; } // skip special folders at namespace level
 
         options.current.nsName = nsFolder;
         options.current.nsPath = './' + path.join(options.current.asmPath, options.current.nsName);
@@ -812,6 +812,9 @@ const build = (options, done) => {
 
             // process assets
             processAssets(() => {
+                // copy libs over assets
+                copyLibs();
+
                 // append types, resources and self-registration
                 appendTypes(() => {
                     appendResources(() => {
@@ -981,8 +984,7 @@ const build = (options, done) => {
  *                                       which are placed on root only. Should be avoided, as this is for flair's own
  *                                       system types
  *                          (assets)   - assets folder
- *                                  > this special folder can be used to place all external assets like images, css, js, third-party
- *                                    libraries, fonts, etc.
+ *                                  > this special folder can be used to place all external assets like images, css, js, fonts, etc.
  *                                  > it can have any structure underneath
  *                                  > all files and folder under it, are copied to destination under <assemnly folder> folder
  *                                  > which means, if an assembly has assets, in destination folder, it will look like:
@@ -990,6 +992,13 @@ const build = (options, done) => {
  *                                      <assembly folder>.min.js    - the assembly file (minified)
  *                                      <assembly folder>/          - the assembly's assets folder content here under (this is created only if assets are defined)
  *                                  > note, '(assets)' folder itself is not copied, but all contents underneath are copied
+ *                          (libs)   - libs folder
+ *                                  > this special folder can be used to place all external third-party libraries, etc.
+ *                                  > it can have any structure underneath
+ *                                  > all files and folder under it, are copied to destination under <assemnly folder> folder
+ *                                    it copies over content of (assets) folder, so overwrite may happen, it will warn.
+ *                                  > no processing of files happen whatsoever, files are copied as is
+ *                                  > note, '(libs)' folder itself is not copied, but all contents underneath are copied
  *                          (bundle)   - bundled files' folder
  *                                  > this special folder can be used to place all files that are being bundled via injections inside index.js file
  *                                  > it can have any structure underneath
@@ -1053,7 +1062,7 @@ const build = (options, done) => {
  *  cb: function - callback function
  * @returns type - flair type for the given object
  */ 
-module.exports = function(options, cb) {
+exports.flairBuild = function(options, cb) {
     // build options
     options = options || {};
     options.engine = options.engine || '';
@@ -1111,7 +1120,6 @@ module.exports = function(options, cb) {
         options.gzipAssets = false;
         options.minifyResources = false;
         options.preBuildDeps = false;
-        options.postBuildDeps = false;
     }
 
     // exclude flair files from being registered

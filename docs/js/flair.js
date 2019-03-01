@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.15.560
- *  Sun, 24 Feb 2019 17:47:11 GMT
+ *  Version: 0.15.583
+ *  Fri, 01 Mar 2019 16:43:15 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -21,7 +21,7 @@
     if (typeof define === 'function' && define.amd) { // AMD support
         define(factory);
     } else if (typeof exports === 'object') { // CommonJS and Node.js module support
-        if (module !== undefined && module.exports) {
+        if (typeof module !== 'undefined' && module.exports) {
             exports = module.exports = factory(); // Node.js specific `module.exports`
         }
         module.exports = exports = factory(); // CommonJS        
@@ -33,7 +33,7 @@
 
     // locals
     let isServer = new Function("try {return this===global;}catch(e){return false;}")(),
-        isWorker = isServer ? (!require('worker_threads').isMainThread) : (typeof WorkerGlobalScope !== undefined ? true : false),
+        isWorker = isServer ? (!require('worker_threads').isMainThread) : (typeof WorkerGlobalScope !== 'undefined' ? true : false),
         _global = (isServer ? global : (isWorker ? WorkerGlobalScope : window)),
         flair = {},
         sym = [],
@@ -69,10 +69,10 @@
     // flair
     flair.info = Object.freeze({
         name: 'flair',
-        version: '0.15.560',
+        version: '0.15.583',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 24 Feb 2019 17:47:11 GMT')
+        lupdate: new Date('Fri, 01 Mar 2019 16:43:15 GMT')
     });
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -232,7 +232,7 @@
             type: (members ? 'object' : 'function'),
             members: members || null,
             handler: null,
-            inbuilt: (inbuilt ? inbuilt(options.env) : null)
+            inbuilt: (typeof inbuilt !== 'undefined' ? inbuilt(options.env) : null)
         };
     };
     _Port.connect = (name, handler) => {
@@ -678,7 +678,41 @@
         };
         this.createDomain = (name) => { // eslint-disable-line no-unused-vars
             // TODO: worker thread and web worker usage
-            // store in secondaryDomains and return newly created one
+            // store in secondaryDomains and return newly created proxy of that domain
+            // AppDomainProxy() will have:
+            //  createContext - to create a new context in that secondary domain which returns AssemblyLoadContextProxy()
+            //      it will have:
+            //          name
+            //          domain - proxy
+            //          isUnloaded
+            //          unload
+            //          allTypes
+            //          loadAssembly
+            //          allAssemblies
+            //          allResources
+            //          createInstance(qualifiedTypeName, ...args) - new async method to create a proxy for an object that is created in that remote domain
+            //                  this internally send a message to create a new instance of given type remotely
+            //                  that instance is kept via guid of the instance in a list there
+            //                  and guid is returned
+            //                  then a Proxy() is created here - which passes all method and function calls as a message for this guid
+            //                  to remote instance and if call fails, it fails, else it runs as a normal object
+            //                  a proxy is actually a Proxy() that
+            //          dispose(instance) - async method to dispose remote instance and remove it from list there
+            //  context - default context proxy -- will have same methods as above
+            //  unload - to unload this domain there and here the proxy
+            //  isUnloaded 
+            //  name
+            //  getAdo
+            //  allAdos
+            //  allTypes
+            //  loadScripts(...files) - new async method that loads these given files in this AppDomain
+            //
+            //  NOTE: those methods of AppDomain and AssemblyLoadContext which return non-primitive data are not available in proxy
+            //  Any action oriented calls are proxied via channel
+            //  Internally both Proxy will talk across domains via AppDomainSharedChannel() which passes raw messages
+            //  
+            //  
+            // execute() == this will async execute a method on seondary domain
         };
        
         // assembly load context
@@ -3493,20 +3527,6 @@
     a2f('post', _post);
      
     /**
-     * @name cli
-     * @description Command Line Interface setup for server use
-     * @example
-     *  cli.build(options, cb)
-     */
-    const _cli = {
-        build: (isServer ? require('./flair.build.js') : null)
-    };
-    
-    // attach to flair
-    a2f('cli', _cli);
-    
-       
-    /**
      * @name Container
      * @description Dependency injection container system
      * @example
@@ -4420,7 +4440,7 @@
     a2f('Reflector', _Reflector);    
     // define all ports with their inbuilt implementations as applicable
     
-    // sessionStorage
+    // sessionStorage factory
     const __sessionStorage = (env) => {
         if (env.isServer) {
             if (!env.global.sessionStorage) { 
@@ -4456,9 +4476,9 @@
             return env.global.sessionStorage;
         }
     };
-    _Port.define('sessionStorage', ['key', 'getItem', 'setItem', 'removeItem', 'clear'], __sessionStorage(flair.options.env));
+    _Port.define('sessionStorage', ['key', 'getItem', 'setItem', 'removeItem', 'clear'], __sessionStorage);
     
-    // localStorage
+    // localStorage factory
     const __localStorage = (env) => {
         if (env.isServer) {
             console.log("Use of 'state' is not support on server. Using 'session' instead."); // eslint-disable-line no-console
@@ -4467,9 +4487,9 @@
             return env.global.localStorage;
         }
     };
-    _Port.define('localStorage', ['key', 'getItem', 'setItem', 'removeItem', 'clear'], __localStorage(flair.options.env));
+    _Port.define('localStorage', ['key', 'getItem', 'setItem', 'removeItem', 'clear'], __localStorage);
     
-    // serverModule
+    // serverModule factory
     const __serverModule = (env) => { // eslint-disable-line no-unused-vars
         return {
             require: (module) => {
@@ -4487,9 +4507,9 @@
             }
         }
     };
-    _Port.define('serverModule', ['require', 'undef'], __serverModule(flair.options.env));
+    _Port.define('serverModule', ['require', 'undef'], __serverModule);
     
-    // clientModule
+    // clientModule factory
     const __clientModule = (env) => {
         return {
             require: (module) => {
@@ -4536,9 +4556,9 @@
             }
         }
     };
-    _Port.define('clientModule', ['require', 'undef'], __clientModule(flair.options.env));
+    _Port.define('clientModule', ['require', 'undef'], __clientModule);
     
-    // serverFile
+    // serverFile factory
     const __serverFile = (env) => { // eslint-disable-line no-unused-vars
         return (file) => {
             return new Promise((resolve, reject) => {
@@ -4573,9 +4593,9 @@
             });
         };
     };
-    _Port.define('serverFile', null, __serverFile(flair.options.env));
+    _Port.define('serverFile', null, __serverFile);
     
-    // clientFile
+    // clientFile factory
     const __clientFile = (env) => { // eslint-disable-line no-unused-vars
         return (file) => {
             return new Promise((resolve, reject) => {
@@ -4595,7 +4615,7 @@
             });
         };
     };
-    _Port.define('clientFile', null, __clientFile(flair.options.env));
+    _Port.define('clientFile', null, __clientFile);
      
 
     // freeze members
@@ -4608,7 +4628,7 @@
 'use strict';
 
 /* eslint-disable no-unused-vars */
-const flair = (typeof global !== undefined ? require('flair') : (typeof WorkerGlobalScope !== undefined ? WorkerGlobalScope.flair : window.flair));
+const flair = (typeof global !== 'undefined' ? require('flair') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));
 const { Class, Struct, Enum, Interface, Mixin } = flair;
 const { Aspects } = flair;
 const { AppDomain } = flair;

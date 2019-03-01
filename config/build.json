@@ -1,5 +1,5 @@
 {
-    "engine": "./src/flair.build/(bundle)/flairBuild.js",
+    "engine": "./src/flair.cli/(bundle)/flairBuild.js",
     "package": "./package.json",
 
     "dest": "./dist",
@@ -11,15 +11,15 @@
     "suppressLogging": false,
 
     "lint": true,
-    "lintConfig": "./gulp/config/lint.json",
+    "lintConfig": "./config/lint.json",
     "lintTypes": ["js", "css", "html"],
 
     "minify": true,
-    "minifyConfig": "./gulp/config/minify.json",
+    "minifyConfig": "./config/minify.json",
     "minifyTypes": ["js", "css", "html"],
 
     "gzip": true,
-    "gzipConfig": "./gulp/config/gzip.json",
+    "gzipConfig": "./config/gzip.json",
     "gzipTypes": ["js", "css", "html", "txt", "xml", "md", "json", "svg", "jpg", "jpeg", "gif", "png"],
 
     "lintAssets": true,
@@ -30,7 +30,7 @@
     "minifyResources": true,
     "utf8EncodeResourceTypes": ["txt", "xml", "js", "md", "json", "css", "html", "svg"],
 
-    "depsConfig": "./gulp/config/deps.json",
+    "depsConfig": "./config/deps.json",
     "preBuildDeps": false,
     "postBuildDeps": true
 }

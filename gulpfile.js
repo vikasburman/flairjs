@@ -1,18 +1,19 @@
 const gulp = require('gulp');
+const gulpOptions = require('./config/gulp.json');
 
 // task: build
 gulp.task('build', (done) => {
-    require('./gulp/tasks/build.js').build(done);
+    require(gulpOptions.build).build(done);
 });
 
 // task: test
 gulp.task('test', (done) => {
-    require('./gulp/tasks/test.js').test(done);
+    require(gulpOptions.test).test(done);
 });
 
 // task: package
 gulp.task('package', (done) => {
-    require('./gulp/tasks/package.js').pack(done);
+    require(gulpOptions.package).pack(done);
 });
 
 // task: release

@@ -35,7 +35,7 @@ _Port.define = (name, members, inbuilt) => {
         type: (members ? 'object' : 'function'),
         members: members || null,
         handler: null,
-        inbuilt: (inbuilt ? inbuilt(options.env) : null)
+        inbuilt: (typeof inbuilt !== 'undefined' ? inbuilt(options.env) : null)
     };
 };
 _Port.connect = (name, handler) => {

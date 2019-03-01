@@ -1,6 +1,6 @@
 // define all ports with their inbuilt implementations as applicable
 
-// sessionStorage
+// sessionStorage factory
 const __sessionStorage = (env) => {
     if (env.isServer) {
         if (!env.global.sessionStorage) { 
@@ -36,9 +36,9 @@ const __sessionStorage = (env) => {
         return env.global.sessionStorage;
     }
 };
-_Port.define('sessionStorage', ['key', 'getItem', 'setItem', 'removeItem', 'clear'], __sessionStorage(flair.options.env));
+_Port.define('sessionStorage', ['key', 'getItem', 'setItem', 'removeItem', 'clear'], __sessionStorage);
 
-// localStorage
+// localStorage factory
 const __localStorage = (env) => {
     if (env.isServer) {
         console.log("Use of 'state' is not support on server. Using 'session' instead."); // eslint-disable-line no-console
@@ -47,9 +47,9 @@ const __localStorage = (env) => {
         return env.global.localStorage;
     }
 };
-_Port.define('localStorage', ['key', 'getItem', 'setItem', 'removeItem', 'clear'], __localStorage(flair.options.env));
+_Port.define('localStorage', ['key', 'getItem', 'setItem', 'removeItem', 'clear'], __localStorage);
 
-// serverModule
+// serverModule factory
 const __serverModule = (env) => { // eslint-disable-line no-unused-vars
     return {
         require: (module) => {
@@ -67,9 +67,9 @@ const __serverModule = (env) => { // eslint-disable-line no-unused-vars
         }
     }
 };
-_Port.define('serverModule', ['require', 'undef'], __serverModule(flair.options.env));
+_Port.define('serverModule', ['require', 'undef'], __serverModule);
 
-// clientModule
+// clientModule factory
 const __clientModule = (env) => {
     return {
         require: (module) => {
@@ -116,9 +116,9 @@ const __clientModule = (env) => {
         }
     }
 };
-_Port.define('clientModule', ['require', 'undef'], __clientModule(flair.options.env));
+_Port.define('clientModule', ['require', 'undef'], __clientModule);
 
-// serverFile
+// serverFile factory
 const __serverFile = (env) => { // eslint-disable-line no-unused-vars
     return (file) => {
         return new Promise((resolve, reject) => {
@@ -153,9 +153,9 @@ const __serverFile = (env) => { // eslint-disable-line no-unused-vars
         });
     };
 };
-_Port.define('serverFile', null, __serverFile(flair.options.env));
+_Port.define('serverFile', null, __serverFile);
 
-// clientFile
+// clientFile factory
 const __clientFile = (env) => { // eslint-disable-line no-unused-vars
     return (file) => {
         return new Promise((resolve, reject) => {
@@ -175,4 +175,4 @@ const __clientFile = (env) => { // eslint-disable-line no-unused-vars
         });
     };
 };
-_Port.define('clientFile', null, __clientFile(flair.options.env));
+_Port.define('clientFile', null, __clientFile);

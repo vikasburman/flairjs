@@ -9,7 +9,7 @@ const doTask = (done) => {
         forcedFullBuild = argv.full,
         optionsJSON = null;
     if (!options) {
-        console.log('Build options definition is not configured. Use --options <options-file> to configure build script in package.json');
+        console.log('Build options definition is not configured. Use --options <options-file> to configure build script in package.json'); // eslint-disable-line no-console
         return;
     }
 
@@ -18,12 +18,12 @@ const doTask = (done) => {
     if (forcedFullBuild) { optionsJSON.fullBuild = true; }
     let engine = path.resolve(optionsJSON.engine) || '';
     if (!engine || !fsx.existsSync(engine)) {
-        console.log('Build engine is either not configured or not found. Define correct path of flair.build.js at "engine" option in build options file.');
+        console.log('Build engine is either not configured or not found. Define correct path of flair.build.js at "engine" option in build options file.'); // eslint-disable-line no-console
         return;
     }
     
     // load and run engine
-    let flairBuild = require(engine);
+    let flairBuild = require(engine).flairBuild;
     flairBuild(optionsJSON, done);
 };
 
