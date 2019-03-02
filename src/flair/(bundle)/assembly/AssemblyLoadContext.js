@@ -73,13 +73,35 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${qualifiedName})`); }
         return alcTypes[qualifiedName] || null;
     };
+    this.ensureType = (qualifiedName) => {
+        return new Promise((resolve, reject) => {
+            let Type = this.getType(qualifiedName);
+            if (!Type) {
+                let asmFile = domain.resolve(qualifiedName);
+                if (asmFile) { 
+                    this.loadAssembly(asmFile).then(() => {
+                        Type = this.getType(qualifiedName);
+                        if (!Type) {
+                            reject();
+                        } else {
+                            resolve(Type);
+                        }
+                    }).catch(reject);
+                } else {
+                    reject();
+                }
+            } else {
+                resolve(Type);
+            }
+        });
+    };
     this.allTypes = () => { 
         if (this.isUnloaded()) { 
             throw 'Unloaded'; // TODO: fix
         }        
         return Object.keys(alcTypes); 
     }
-    this.execute = (info) => {
+    this.execute = (info, progressListener) => {
         return new Promise((resolve, reject) => {
             if (this.isUnloaded()) { 
                 reject('Unloaded'); // TODO: fix
@@ -92,34 +114,40 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
             info.args = info.args || [];
             if (!info.type || !info.func) { throw new _Exception.InvalidArgument('info'); }
 
-            let instance = null;
-            try {
-                // get type
-                let Type = this.getType(info.type);
-                
-                // create instance
-                if (info.typeArgs.length === 0) {
-                    instance = new Type();
-                } else {
-                    instance = new Type(...info.typeArgs);
+            // get type and run
+            this.ensureType(info.type).then((Type) => {
+                let instance = null;
+                try {
+                    // create instance
+                    if (info.typeArgs.length === 0) {
+                        instance = new Type();
+                    } else {
+                        instance = new Type(...info.typeArgs);
+                    }
+                } catch (err) {
+                    reject(err);
+                    return;
                 }
-            } catch (err) {
-                reject(err);
-            }
 
-            // run
-            let result = _using(instance, (obj) => {
-                if(info.args.length === 0) {
-                    return obj[info.func]();
-                } else {
-                    return obj[info.func](...info.args);
+                // listen to progress report, if need be
+                if (typeof progressListener === 'function' && _is(instance, 'IProgressReporter')) {
+                    instance.progress.add(progressListener);
                 }
-            });
-            if (result && typeof result.then === 'function') {
-                result.then(resolve).catch(reject);
-            } else {
-                return result;
-            }
+    
+                // run
+                let result = _using(instance, (obj) => {
+                    if(info.args.length === 0) {
+                        return obj[info.func]();
+                    } else {
+                        return obj[info.func](...info.args);
+                    }
+                });
+                if (result && typeof result.then === 'function') {
+                    result.then(resolve).catch(reject);
+                } else {
+                    resolve(result);
+                }
+            }).catch(reject);
         });
     };
 
@@ -216,5 +244,8 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
             throw 'Unloaded'; // TODO: fix
         }        
         return Object.keys(alcResources); 
-    }    
+    }   
+    
+    // busy state (just to be in sync with proxy)
+    this.isBusy = () => { return false; }
 };

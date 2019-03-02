@@ -2,14 +2,16 @@
  * @name SharedChannel
  * @description Shared channel that communicates between two threads.
  */
-const SharedChannel = function(onError) { 
+const SharedChannel = function(allADOs, onError) { 
     let openMessages = {}, // {id: messageId, promise: promise }
+        openMessagesCount = 0,
         channelPort = null,
         wk = null;     
 
     // NOTE: This function's script is loaded independently by worker thread constructor as text/code.
     const remoteMessageHandler = function() {
         let isServer = ('<<isServer>>' === 'true' ? true : false), // eslint-disable-line no-constant-condition
+            ados = JSON.parse('<<ados>>'),
             flair = null,
             port = null,
             AppDomain = null;
@@ -22,18 +24,31 @@ const SharedChannel = function(onError) {
                 port.postMessage({
                     data: {
                         id: e.data.id,
+                        isComplete: true,
                         isError: false,
                         error: null,
-                        result: data
+                        result: (e.data.returnsAsIs ? data : (data ? true : false))
                     }
                 }); 
             };
+            const postProgressToMain = (progressData) => {
+                port.postMessage({
+                    data: {
+                        id: e.data.id,
+                        isComplete: false,
+                        isError: false,
+                        error: null,
+                        result: progressData
+                    }
+                }); 
+            };            
             const postErrorToMain = (err) => {
                 port.postMessage({
                     data: {
                         id: e.data.id,
+                        isComplete: true,
                         isError: true,
-                        error: err,
+                        error: (err ? err.toString() : 'UnknownError'),
                         result: null
                     }
                 });  
@@ -42,15 +57,21 @@ const SharedChannel = function(onError) {
             // run
             switch(e.data.obj) {
                 case 'ad': AppDomain[funcName]; break;
-                case 'alc': AppDomain.context[funcName]; break;
+                case 'alc': AppDomain.contexts(e.data.name)[funcName]; break;
             }
             try {
+                // special case
+                if (e.data.obj === 'alc' && e.data.name === 'execute') {
+                    e.data.args.push((e) => { // progressListener
+                        postProgressToMain(e.args);
+                    });
+                }
                 let result = func(...e.data.args);
                 if (result && typeof result.then === 'function') {
                     result.then(postSuccessToMain).catch(postErrorToMain);
                 } else {
                     postSuccessToMain(result);
-                }                        
+                }
             } catch (err) {
                 postErrorToMain(err);
             }
@@ -58,7 +79,10 @@ const SharedChannel = function(onError) {
 
         // initialize environment
         if (isServer) {
+            // load flair
             flair = require('<<file>>');
+
+            // plumb to parent port for private port connection
             let parentPort = require('worker_threads').parentPort;
             port = parentPort;
             parentPort.once('message', (value) => {
@@ -66,34 +90,47 @@ const SharedChannel = function(onError) {
                 port.on('message', onMessageFromMain);
             });
         } else {
+            // load flair
             _global.importScripts('<<file>>');
             flair = _global.flair;
+
+            // plumb to private port 
             port = this;
             port.onmessage = onMessageFromMain;
         }
         AppDomain = flair.AppDomain;
+
+        // load all preambles which were registered on main app domain at the time of creating new app domain
+        if (ados.length !== 0) {
+            AppDomain.registerAdo(...ados);
+        }        
     };
     let remoteMessageHandlerScript = remoteMessageHandler.toString().replace('<<file>>', currentFile);
     remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<isServer>>', isServer.toString());
+    remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<ados>>', JSON.stringify(allADOs));
     remoteMessageHandlerScript = `(${remoteMessageHandlerScript})();`
     // NOTE: script/end
 
-    const postMessageToWorker = (objId, func, ...args) => { // async message sent to worker thread
+    const postMessageToWorker = (objId, name, returnsAsIs, func, args, progressListener) => { // async message sent to worker thread
         return new Promise((resolve, reject) => {
             // store message for post processing handling
             let messageId = guid();
             openMessages[messageId] = {
                 resolve: resolve,
-                reject: reject
+                reject: reject,
+                progressListener: progressListener
             };
+            openMessagesCount++;
             
             // post message to worker
             wk.postMessage({
                 data: {
                     id: messageId,
                     obj: objId,
+                    name: name,
+                    returnsAsIs: returnsAsIs,
                     func: func,
-                    args: args
+                    args: ((args && Array.isArray(args)) ? args : [])
                 }
             });
         });
@@ -101,14 +138,23 @@ const SharedChannel = function(onError) {
     const onMessageFromWorker = (e) => { // async response received from worker thread
         if (openMessages[e.data.id]) {
             // pick message
-            let p = openMessages[e.data.id].promise;
-            delete openMessages[e.data.id];
+            let msg = openMessages[e.data.id];
 
-            // resolve/reject
-            if (e.data.isError) {
-                p.reject(e.data.error);
-            } else {
-                p.resolve(e.data.result);
+            if (e.data.isComplete) { // done
+                delete openMessages[e.data.id];
+                openMessagesCount--;
+
+                // resolve/reject 
+                if (e.data.isError) {
+                    msg.reject(e.data.error);
+                } else {
+                    msg.resolve(e.data.result);
+                }
+            } else { // progress
+                if (typeof progressListener === 'function' && msg.progressListener) {
+                    // should match with Dispatcher's dispatch event style of passing data
+                    setTimeout(() => { msg.progressListener({ name: 'progress', args: e.data.result }); }, 0); // <-- event handler will receive this
+                }
             }
         } else { // unsolicited message
             onError(e.data); // TODO: fix - send proper error
@@ -151,4 +197,7 @@ const SharedChannel = function(onError) {
         }
         wk.terminate();
     };
+
+    // state of open messages
+    this.isBusy = () => { return openMessagesCount !== 0; }
 };

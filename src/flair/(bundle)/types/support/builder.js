@@ -1023,14 +1023,19 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     const validateMember = (memberName, memberType) => {
         // must exists check
         if (typeof exposed_obj[memberName] === 'undefined' || modifiers.members.type(memberName) !== memberType) {
-            throw new _Exception('NotImplemented', `Interface member is not implemented. (${memberName})`); 
-        } else {
-            // pick interface being validated at this time
-            _attr('interface', interface_being_validated._.name);
-
-            // collect attributes and modifiers - validate applied attributes as per attribute configuration - throw when failed
-            attributesAndModifiers(def, Type._.def(), memberName, false);
+            if (memberName === 'dispose' && (typeof exposed_obj.dispose === 'function' || 
+                                             typeof exposed_obj[_disposeName] === 'function' || 
+                                             typeof exposed_obj._.dispose === 'function')) {
+                // its ok, continue below
+            } else {
+                throw new _Exception('NotImplemented', `Interface member is not implemented. (${memberName})`); 
+            }
         }
+        // pick interface being validated at this time
+        _attr('interface', interface_being_validated._.name);
+
+        // collect attributes and modifiers - validate applied attributes as per attribute configuration - throw when failed
+        attributesAndModifiers(def, Type._.def(), memberName, false);
     };    
     const addDisposable = (disposableType, data) => {
         obj._.disposables.push({type: disposableType, data: data});

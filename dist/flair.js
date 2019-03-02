@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.15.622
- *  Sat, 02 Mar 2019 03:27:31 GMT
+ *  Version: 0.15.638
+ *  Sat, 02 Mar 2019 16:34:11 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -75,10 +75,10 @@
     flair.info = Object.freeze({
         name: 'flair',
         file: currentFile,
-        version: '0.15.622',
+        version: '0.15.638',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sat, 02 Mar 2019 03:27:31 GMT')
+        lupdate: new Date('Sat, 02 Mar 2019 16:34:11 GMT')
     });       
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -184,7 +184,8 @@
         this.dispatch = (event, args) => {
             if (events[event]) {
                 events[event].forEach(handler => {
-                    setTimeout(() => { handler({ name: event, args: args }); }, 0);
+                    // NOTE: any change here should also be done in SharedChannel where progress event is being routed across threads
+                    setTimeout(() => { handler({ name: event, args: args }); }, 0); // <-- event handler will receive this
                 });
             }
         };
@@ -489,13 +490,35 @@
             if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${qualifiedName})`); }
             return alcTypes[qualifiedName] || null;
         };
+        this.ensureType = (qualifiedName) => {
+            return new Promise((resolve, reject) => {
+                let Type = this.getType(qualifiedName);
+                if (!Type) {
+                    let asmFile = domain.resolve(qualifiedName);
+                    if (asmFile) { 
+                        this.loadAssembly(asmFile).then(() => {
+                            Type = this.getType(qualifiedName);
+                            if (!Type) {
+                                reject();
+                            } else {
+                                resolve(Type);
+                            }
+                        }).catch(reject);
+                    } else {
+                        reject();
+                    }
+                } else {
+                    resolve(Type);
+                }
+            });
+        };
         this.allTypes = () => { 
             if (this.isUnloaded()) { 
                 throw 'Unloaded'; // TODO: fix
             }        
             return Object.keys(alcTypes); 
         }
-        this.execute = (info) => {
+        this.execute = (info, progressListener) => {
             return new Promise((resolve, reject) => {
                 if (this.isUnloaded()) { 
                     reject('Unloaded'); // TODO: fix
@@ -508,34 +531,40 @@
                 info.args = info.args || [];
                 if (!info.type || !info.func) { throw new _Exception.InvalidArgument('info'); }
     
-                let instance = null;
-                try {
-                    // get type
-                    let Type = this.getType(info.type);
-                    
-                    // create instance
-                    if (info.typeArgs.length === 0) {
-                        instance = new Type();
-                    } else {
-                        instance = new Type(...info.typeArgs);
+                // get type and run
+                this.ensureType(info.type).then((Type) => {
+                    let instance = null;
+                    try {
+                        // create instance
+                        if (info.typeArgs.length === 0) {
+                            instance = new Type();
+                        } else {
+                            instance = new Type(...info.typeArgs);
+                        }
+                    } catch (err) {
+                        reject(err);
+                        return;
                     }
-                } catch (err) {
-                    reject(err);
-                }
     
-                // run
-                let result = _using(instance, (obj) => {
-                    if(info.args.length === 0) {
-                        return obj[info.func]();
-                    } else {
-                        return obj[info.func](...info.args);
+                    // listen to progress report, if need be
+                    if (typeof progressListener === 'function' && _is(instance, 'IProgressReporter')) {
+                        instance.progress.add(progressListener);
                     }
-                });
-                if (result && typeof result.then === 'function') {
-                    result.then(resolve).catch(reject);
-                } else {
-                    return result;
-                }
+        
+                    // run
+                    let result = _using(instance, (obj) => {
+                        if(info.args.length === 0) {
+                            return obj[info.func]();
+                        } else {
+                            return obj[info.func](...info.args);
+                        }
+                    });
+                    if (result && typeof result.then === 'function') {
+                        result.then(resolve).catch(reject);
+                    } else {
+                        resolve(result);
+                    }
+                }).catch(reject);
             });
         };
     
@@ -632,7 +661,10 @@
                 throw 'Unloaded'; // TODO: fix
             }        
             return Object.keys(alcResources); 
-        }    
+        }   
+        
+        // busy state (just to be in sync with proxy)
+        this.isBusy = () => { return false; }
     };
       
     /**
@@ -725,14 +757,16 @@
      * @name SharedChannel
      * @description Shared channel that communicates between two threads.
      */
-    const SharedChannel = function(onError) { 
+    const SharedChannel = function(allADOs, onError) { 
         let openMessages = {}, // {id: messageId, promise: promise }
+            openMessagesCount = 0,
             channelPort = null,
             wk = null;     
     
         // NOTE: This function's script is loaded independently by worker thread constructor as text/code.
         const remoteMessageHandler = function() {
             let isServer = ('<<isServer>>' === 'true' ? true : false), // eslint-disable-line no-constant-condition
+                ados = JSON.parse('<<ados>>'),
                 flair = null,
                 port = null,
                 AppDomain = null;
@@ -745,18 +779,31 @@
                     port.postMessage({
                         data: {
                             id: e.data.id,
+                            isComplete: true,
                             isError: false,
                             error: null,
-                            result: data
+                            result: (e.data.returnsAsIs ? data : (data ? true : false))
                         }
                     }); 
                 };
+                const postProgressToMain = (progressData) => {
+                    port.postMessage({
+                        data: {
+                            id: e.data.id,
+                            isComplete: false,
+                            isError: false,
+                            error: null,
+                            result: progressData
+                        }
+                    }); 
+                };            
                 const postErrorToMain = (err) => {
                     port.postMessage({
                         data: {
                             id: e.data.id,
+                            isComplete: true,
                             isError: true,
-                            error: err,
+                            error: (err ? err.toString() : 'UnknownError'),
                             result: null
                         }
                     });  
@@ -765,15 +812,21 @@
                 // run
                 switch(e.data.obj) {
                     case 'ad': AppDomain[funcName]; break;
-                    case 'alc': AppDomain.context[funcName]; break;
+                    case 'alc': AppDomain.contexts(e.data.name)[funcName]; break;
                 }
                 try {
+                    // special case
+                    if (e.data.obj === 'alc' && e.data.name === 'execute') {
+                        e.data.args.push((e) => { // progressListener
+                            postProgressToMain(e.args);
+                        });
+                    }
                     let result = func(...e.data.args);
                     if (result && typeof result.then === 'function') {
                         result.then(postSuccessToMain).catch(postErrorToMain);
                     } else {
                         postSuccessToMain(result);
-                    }                        
+                    }
                 } catch (err) {
                     postErrorToMain(err);
                 }
@@ -781,7 +834,10 @@
     
             // initialize environment
             if (isServer) {
+                // load flair
                 flair = require('./flair{.min}.js');
+    
+                // plumb to parent port for private port connection
                 let parentPort = require('worker_threads').parentPort;
                 port = parentPort;
                 parentPort.once('message', (value) => {
@@ -789,34 +845,47 @@
                     port.on('message', onMessageFromMain);
                 });
             } else {
+                // load flair
                 _global.importScripts('<<file>>');
                 flair = _global.flair;
+    
+                // plumb to private port 
                 port = this;
                 port.onmessage = onMessageFromMain;
             }
             AppDomain = flair.AppDomain;
+    
+            // load all preambles which were registered on main app domain at the time of creating new app domain
+            if (ados.length !== 0) {
+                AppDomain.registerAdo(...ados);
+            }        
         };
         let remoteMessageHandlerScript = remoteMessageHandler.toString().replace('<<file>>', currentFile);
         remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<isServer>>', isServer.toString());
+        remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<ados>>', JSON.stringify(allADOs));
         remoteMessageHandlerScript = `(${remoteMessageHandlerScript})();`
         // NOTE: script/end
     
-        const postMessageToWorker = (objId, func, ...args) => { // async message sent to worker thread
+        const postMessageToWorker = (objId, name, returnsAsIs, func, args, progressListener) => { // async message sent to worker thread
             return new Promise((resolve, reject) => {
                 // store message for post processing handling
                 let messageId = guid();
                 openMessages[messageId] = {
                     resolve: resolve,
-                    reject: reject
+                    reject: reject,
+                    progressListener: progressListener
                 };
+                openMessagesCount++;
                 
                 // post message to worker
                 wk.postMessage({
                     data: {
                         id: messageId,
                         obj: objId,
+                        name: name,
+                        returnsAsIs: returnsAsIs,
                         func: func,
-                        args: args
+                        args: ((args && Array.isArray(args)) ? args : [])
                     }
                 });
             });
@@ -824,14 +893,23 @@
         const onMessageFromWorker = (e) => { // async response received from worker thread
             if (openMessages[e.data.id]) {
                 // pick message
-                let p = openMessages[e.data.id].promise;
-                delete openMessages[e.data.id];
+                let msg = openMessages[e.data.id];
     
-                // resolve/reject
-                if (e.data.isError) {
-                    p.reject(e.data.error);
-                } else {
-                    p.resolve(e.data.result);
+                if (e.data.isComplete) { // done
+                    delete openMessages[e.data.id];
+                    openMessagesCount--;
+    
+                    // resolve/reject 
+                    if (e.data.isError) {
+                        msg.reject(e.data.error);
+                    } else {
+                        msg.resolve(e.data.result);
+                    }
+                } else { // progress
+                    if (typeof progressListener === 'function' && msg.progressListener) {
+                        // should match with Dispatcher's dispatch event style of passing data
+                        setTimeout(() => { msg.progressListener({ name: 'progress', args: e.data.result }); }, 0); // <-- event handler will receive this
+                    }
                 }
             } else { // unsolicited message
                 onError(e.data); // TODO: fix - send proper error
@@ -874,6 +952,9 @@
             }
             wk.terminate();
         };
+    
+        // state of open messages
+        this.isBusy = () => { return openMessagesCount !== 0; }
     };
       
     /**
@@ -882,11 +963,12 @@
      * @example
      *  
      */
-    const AppDomainProxy = function(name, domains) {
-        let isUnloaded = false;
+    const AppDomainProxy = function(name, domains, allADOs) {
+        let isUnloaded = false,
+            contextProxies = {};
     
         // shared communication channel between main and worker thread
-        let channel = new SharedChannel((err) => {  // eslint-disable-line no-unused-vars
+        let channel = new SharedChannel(allADOs, (err) => {  // eslint-disable-line no-unused-vars
             throw new _Exception('RemoteError', err); // TODO:
         });
     
@@ -903,8 +985,11 @@
                 // remove from domains list
                 delete domains[name];
     
+                // clear list
+                contextProxies = {};
+    
                 // unload
-                channel.remoteCall('ad', 'unload').finally(() => {
+                channel.remoteCall('ad', '', false, 'unload').finally(() => {
                     channel.close();
                 });
             }
@@ -912,13 +997,36 @@
     
         // assembly load context
         this.context = Object.freeze(new AssemblyLoadContextProxy('default', this, channel));
+        this.contexts = (name) => { return contextProxies[name] || null; }    
+        this.createContext = (name) => {
+            return new Promise((resolve, reject) => {
+                if(typeof name !== 'string' || name === 'default' || contextProxies[name]) { reject(_Exception.invalidArguments('name')); }
+                channel.remoteCall('ad', '', false, 'createContext', [name]).then((state) => {
+                    if (state) { // state is true, if context was created
+                        let alcp = Object.freeze(new AssemblyLoadContextProxy(name, this, channel));
+                        contextProxies[name] = alcp;
+                        resolve(alcp);
+                    } else {
+                        reject();
+                    }
+                }).catch(reject);
+            });
+        };
     
         // scripts
         this.loadScripts = (...scripts) => {
             if (this.isUnloaded()) { 
                 throw 'Unloaded'; // TODO: fix
             }
-            return channel.remoteCall('ad', 'loadScripts', ...scripts);
+            return channel.remoteCall('ad', '', false, 'loadScripts', scripts);
+        };
+    
+        // busy state
+        this.isBusy = () => { 
+            if (this.isUnloaded()) { 
+                throw 'Unloaded'; // TODO: fix
+            }        
+            return channel.isBusy(); 
         };
     };
       
@@ -927,17 +1035,28 @@
      * @description Proxy of the AssemblyLoadContext that is created inside other AppDomain.
      */
     const AssemblyLoadContextProxy = function(name, domainProxy, channel) {
+        let isUnloaded = false;
+    
         // context
         this.name = name;
         this.domain = domainProxy;
-        this.isUnloaded = () => { return domainProxy.isUnloaded(); };
+        this.isUnloaded = () => { return isUnloaded || domainProxy.isUnloaded(); };
+        this.unload = () => {
+            if (!isUnloaded) {
+                // mark unloaded
+                isUnloaded = true;
+    
+                // initiate remote unload
+                channel.remoteCall('alc', name, false, 'unload');
+            }
+        };
     
         // types
-        this.execute = (info) => {
+        this.execute = (info, progressListener) => {
             if (this.isUnloaded()) { 
                 throw 'Unloaded'; // TODO: fix
             }
-            return channel.remoteCall('alc', 'execute', info);
+            return channel.remoteCall('alc', name, true, 'execute', [info], progressListener);
         };
     
         // assembly
@@ -945,8 +1064,16 @@
             if (this.isUnloaded()) { 
                 throw 'Unloaded'; // TODO: fix
             }
-            return channel.remoteCall('alc', 'loadAssembly', file);
-        };    
+            return channel.remoteCall('alc', name, false, 'loadAssembly', [file]);
+        };  
+        
+        // busy state
+        this.isBusy = () => { 
+            if (this.isUnloaded()) { 
+                throw 'Unloaded'; // TODO: fix
+            }        
+            return channel.isBusy(); 
+        };
      };
       
     /**
@@ -961,6 +1088,7 @@
             domains = {},
             contexts = {},
             currentContexts = [],
+            allADOs = [],
             defaultLoadContext = null,
             unloadDefaultContext = null,
             isUnloaded = false;
@@ -1004,13 +1132,16 @@
                 asmTypes = {};
                 contexts = {};
                 domains = {};
+                allADOs = [];
             }
         };
         this.createDomain = (name) => {
-            if(typeof name !== 'string' || name === 'default' || domains[name]) { throw _Exception.invalidArguments('name'); }
-            let proxy = new AppDomainProxy(name, domains);
-            domains[name] = proxy;
-            return proxy;
+            return new Promise((resolve, reject) => {
+                if(typeof name !== 'string' || name === 'default' || domains[name]) { reject(_Exception.invalidArguments('name')); }
+                let proxy = Object.freeze(new AppDomainProxy(name, domains, allADOs));
+                domains[name] = proxy;
+                resolve(proxy);
+            });
         };
         this.domains = (name) => { return domains[name] || null; }
        
@@ -1018,10 +1149,12 @@
         this.context = defaultLoadContext;
         this.contexts = (name) => { return contexts[name] || null; }
         this.createContext = (name) => {
-            if(typeof name !== 'string' || name === 'default' || contexts[name]) { throw _Exception.invalidArguments('name'); }
-            let alc = Object.freeze(new AssemblyLoadContext(name, this, defaultLoadContext, currentContexts, contexts));
-            contexts[name] = alc;
-            return alc;
+            return new Promise((resolve, reject) => {
+                if(typeof name !== 'string' || name === 'default' || contexts[name]) { reject(_Exception.invalidArguments('name')); }
+                let alc = Object.freeze(new AssemblyLoadContext(name, this, defaultLoadContext, currentContexts, contexts));
+                contexts[name] = alc;
+                resolve(alc);
+            });
         };
     
         // ados
@@ -1064,6 +1197,8 @@
                 }
             });  
     
+            // store raw, for use when creating new app domain
+            allADOs.push(...ados);
         };
         this.getAdo = (file) => {
             if (typeof file !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${file})`); }
@@ -1074,7 +1209,7 @@
         // types
         this.resolve = (qualifiedName) => {
             if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', 'Argument type if not valid. (qualifiedName)'); }
-            return asmTypes[qualifiedName] || null;        
+            return asmTypes[qualifiedName] || null; // gives the assembly file name where this type reside     
         };
         this.allTypes = () => { return Object.keys(asmTypes); }
     
@@ -1090,6 +1225,9 @@
                 }
             });
         };
+    
+        // busy state (just to be in sync with proxy)
+        this.isBusy = () => { return false; }
     };
     
     // build default app domain
@@ -1103,8 +1241,6 @@
     a2f('AppDomain', _AppDomain, () => {
         unloadDefaultAppDomain(); // unload default app domain
     });
-    
-    
       
 
     /**
@@ -3058,14 +3194,19 @@
         const validateMember = (memberName, memberType) => {
             // must exists check
             if (typeof exposed_obj[memberName] === 'undefined' || modifiers.members.type(memberName) !== memberType) {
-                throw new _Exception('NotImplemented', `Interface member is not implemented. (${memberName})`); 
-            } else {
-                // pick interface being validated at this time
-                _attr('interface', interface_being_validated._.name);
-    
-                // collect attributes and modifiers - validate applied attributes as per attribute configuration - throw when failed
-                attributesAndModifiers(def, Type._.def(), memberName, false);
+                if (memberName === 'dispose' && (typeof exposed_obj.dispose === 'function' || 
+                                                 typeof exposed_obj[_disposeName] === 'function' || 
+                                                 typeof exposed_obj._.dispose === 'function')) {
+                    // its ok, continue below
+                } else {
+                    throw new _Exception('NotImplemented', `Interface member is not implemented. (${memberName})`); 
+                }
             }
+            // pick interface being validated at this time
+            _attr('interface', interface_being_validated._.name);
+    
+            // collect attributes and modifiers - validate applied attributes as per attribute configuration - throw when failed
+            attributesAndModifiers(def, Type._.def(), memberName, false);
         };    
         const addDisposable = (disposableType, data) => {
             obj._.disposables.push({type: disposableType, data: data});
@@ -4965,7 +5106,6 @@ const { args, Exception, noop  } = flair;
 const { isServer, isWorker } = flair.options.env;
 /* eslint-enable no-unused-vars */
 
-const settings = JSON.parse('{"js":{"parserOptions":{"ecmaVersion":6,"sourceType":"module","ecmaFeatures":{"impliedStrict":true}},"parser":"babel-eslint","envs":["browser","es6","node"],"globals":["global","window","flair","define"],"rules":{"accessor-pairs":"off","array-bracket-newline":"off","array-bracket-spacing":"off","array-callback-return":"off","array-element-newline":"off","arrow-body-style":"off","arrow-parens":"off","arrow-spacing":"off","block-scoped-var":"off","block-spacing":"off","brace-style":"off","callback-return":"off","camelcase":"off","capitalized-comments":"off","class-methods-use-this":"off","comma-dangle":"off","comma-spacing":"off","comma-style":"off","complexity":"off","computed-property-spacing":"off","consistent-return":"off","consistent-this":"off","constructor-super":"error","curly":"off","default-case":"off","dot-location":"off","dot-notation":"off","eol-last":"off","eqeqeq":"off","for-direction":"off","func-call-spacing":"off","func-name-matching":"off","func-names":"off","func-style":"off","function-paren-newline":"off","generator-star-spacing":"off","getter-return":"off","global-require":"off","guard-for-in":"off","handle-callback-err":"off","id-blacklist":"off","id-length":"off","id-match":"off","implicit-arrow-linebreak":"off","indent":"off","indent-legacy":"off","init-declarations":"off","jsx-quotes":"off","key-spacing":"off","keyword-spacing":"off","line-comment-position":"off","linebreak-style":"off","lines-around-comment":"off","lines-around-directive":"off","lines-between-class-members":"off","max-classes-per-file":"off","max-depth":"off","max-len":"off","max-lines":"off","max-lines-per-function":"off","max-nested-callbacks":"off","max-params":"off","max-statements":"off","max-statements-per-line":"off","multiline-comment-style":"off","multiline-ternary":"off","new-cap":"off","new-parens":"off","newline-after-var":"off","newline-before-return":"off","newline-per-chained-call":"off","no-alert":"off","no-array-constructor":"off","no-async-promise-executor":"off","no-await-in-loop":"off","no-bitwise":"off","no-buffer-constructor":"off","no-caller":"off","no-case-declarations":"error","no-catch-shadow":"off","no-class-assign":"error","no-compare-neg-zero":"error","no-cond-assign":"error","no-confusing-arrow":"off","no-console":"error","no-const-assign":"error","no-constant-condition":"error","no-continue":"off","no-control-regex":"error","no-debugger":"error","no-delete-var":"error","no-div-regex":"off","no-dupe-args":"error","no-dupe-class-members":"error","no-dupe-keys":"error","no-duplicate-case":"error","no-duplicate-imports":"off","no-else-return":"off","no-empty":"error","no-empty-character-class":"error","no-empty-function":"off","no-empty-pattern":"error","no-eq-null":"off","no-eval":"off","no-ex-assign":"error","no-extend-native":"off","no-extra-bind":"off","no-extra-boolean-cast":"error","no-extra-label":"off","no-extra-parens":"off","no-extra-semi":"error","no-fallthrough":"error","no-floating-decimal":"off","no-func-assign":"error","no-global-assign":"error","no-implicit-coercion":"off","no-implicit-globals":"off","no-implied-eval":"off","no-inline-comments":"off","no-inner-declarations":"error","no-invalid-regexp":"error","no-invalid-this":"off","no-irregular-whitespace":"error","no-iterator":"off","no-label-var":"off","no-labels":"off","no-lone-blocks":"off","no-lonely-if":"off","no-loop-func":"off","no-magic-numbers":"off","no-misleading-character-class":"off","no-mixed-operators":"off","no-mixed-requires":"off","no-mixed-spaces-and-tabs":"error","no-multi-assign":"off","no-multi-spaces":"off","no-multi-str":"off","no-multiple-empty-lines":"off","no-native-reassign":"off","no-negated-condition":"off","no-negated-in-lhs":"off","no-nested-ternary":"off","no-new":"off","no-new-func":"off","no-new-object":"off","no-new-require":"off","no-new-symbol":"error","no-new-wrappers":"off","no-obj-calls":"error","no-octal":"error","no-octal-escape":"off","no-param-reassign":"off","no-path-concat":"off","no-plusplus":"off","no-process-env":"off","no-process-exit":"off","no-proto":"off","no-prototype-builtins":"off","no-redeclare":"error","no-regex-spaces":"error","no-restricted-globals":"off","no-restricted-imports":"off","no-restricted-modules":"off","no-restricted-properties":"off","no-restricted-syntax":"off","no-return-assign":"off","no-return-await":"off","no-script-url":"off","no-self-assign":"error","no-self-compare":"off","no-sequences":"off","no-shadow":"off","no-shadow-restricted-names":"off","no-spaced-func":"off","no-sparse-arrays":"error","no-sync":"off","no-tabs":"off","no-template-curly-in-string":"off","no-ternary":"off","no-this-before-super":"error","no-throw-literal":"off","no-trailing-spaces":"off","no-undef":"error","no-undef-init":"off","no-undefined":"off","no-underscore-dangle":"off","no-unexpected-multiline":"error","no-unmodified-loop-condition":"off","no-unneeded-ternary":"off","no-unreachable":"error","no-unsafe-finally":"error","no-unsafe-negation":"error","no-unused-expressions":"off","no-unused-labels":"error","no-unused-vars":"error","no-use-before-define":"off","no-useless-call":"off","no-useless-catch":"off","no-useless-computed-key":"off","no-useless-concat":"off","no-useless-constructor":"off","no-useless-escape":"error","no-useless-rename":"off","no-useless-return":"off","no-var":"off","no-void":"off","no-warning-comments":"off","no-whitespace-before-property":"off","no-with":"off","nonblock-statement-body-position":"off","object-curly-newline":"off","object-curly-spacing":"off","object-property-newline":"off","object-shorthand":"off","one-var":"off","one-var-declaration-per-line":"off","operator-assignment":"off","operator-linebreak":"off","padded-blocks":"off","padding-line-between-statements":"off","prefer-arrow-callback":"off","prefer-const":"off","prefer-destructuring":"off","prefer-numeric-literals":"off","prefer-object-spread":"off","prefer-promise-reject-errors":"off","prefer-reflect":"off","prefer-rest-params":"off","prefer-spread":"off","prefer-template":"off","quote-props":"off","quotes":"off","radix":"off","require-atomic-updates":"off","require-await":"off","require-jsdoc":"off","require-unicode-regexp":"off","require-yield":"error","rest-spread-spacing":"off","semi":"off","semi-spacing":"off","semi-style":"off","sort-imports":"off","sort-keys":"off","sort-vars":"off","space-before-blocks":"off","space-before-function-paren":"off","space-in-parens":"off","space-infix-ops":"off","space-unary-ops":"off","spaced-comment":"off","strict":"off","switch-colon-spacing":"off","symbol-description":"off","template-curly-spacing":"off","template-tag-spacing":"off","unicode-bom":"off","use-isnan":"error","valid-jsdoc":"off","valid-typeof":"error","vars-on-top":"off","wrap-iife":"off","wrap-regex":"off","yield-star-spacing":"off","yoda":"off"}},"css":{}}'); // eslint-disable-line no-unused-vars
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('./flair{.min}.js');
 /**
  * @name Aspect
@@ -5131,6 +5271,28 @@ Class('Attribute', function() {
     this.decorateEvent = this.noop;
 });
 
+/**
+ * @name IDisposable
+ * @description IDisposable interface.
+ */
+$$('ns', '(root)');
+Interface('IDisposable', function() {
+    
+    // dispose
+    this.dispose = this.noop;
+    
+});
+/**
+ * @name IProgressReporter
+ * @description IProgressReporter interface.
+ */
+$$('ns', '(root)');
+Interface('IProgressReporter', function() {
+    
+    // progress report
+    this.progress = this.event(this.noop);
+    
+});
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
 })();

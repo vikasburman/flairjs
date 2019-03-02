@@ -10,6 +10,7 @@ const AppDomain = function(name) {
         domains = {},
         contexts = {},
         currentContexts = [],
+        allADOs = [],
         defaultLoadContext = null,
         unloadDefaultContext = null,
         isUnloaded = false;
@@ -53,13 +54,16 @@ const AppDomain = function(name) {
             asmTypes = {};
             contexts = {};
             domains = {};
+            allADOs = [];
         }
     };
     this.createDomain = (name) => {
-        if(typeof name !== 'string' || name === 'default' || domains[name]) { throw _Exception.invalidArguments('name'); }
-        let proxy = new AppDomainProxy(name, domains);
-        domains[name] = proxy;
-        return proxy;
+        return new Promise((resolve, reject) => {
+            if(typeof name !== 'string' || name === 'default' || domains[name]) { reject(_Exception.invalidArguments('name')); }
+            let proxy = Object.freeze(new AppDomainProxy(name, domains, allADOs));
+            domains[name] = proxy;
+            resolve(proxy);
+        });
     };
     this.domains = (name) => { return domains[name] || null; }
    
@@ -67,10 +71,12 @@ const AppDomain = function(name) {
     this.context = defaultLoadContext;
     this.contexts = (name) => { return contexts[name] || null; }
     this.createContext = (name) => {
-        if(typeof name !== 'string' || name === 'default' || contexts[name]) { throw _Exception.invalidArguments('name'); }
-        let alc = Object.freeze(new AssemblyLoadContext(name, this, defaultLoadContext, currentContexts, contexts));
-        contexts[name] = alc;
-        return alc;
+        return new Promise((resolve, reject) => {
+            if(typeof name !== 'string' || name === 'default' || contexts[name]) { reject(_Exception.invalidArguments('name')); }
+            let alc = Object.freeze(new AssemblyLoadContext(name, this, defaultLoadContext, currentContexts, contexts));
+            contexts[name] = alc;
+            resolve(alc);
+        });
     };
 
     // ados
@@ -113,6 +119,8 @@ const AppDomain = function(name) {
             }
         });  
 
+        // store raw, for use when creating new app domain
+        allADOs.push(...ados);
     };
     this.getAdo = (file) => {
         if (typeof file !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${file})`); }
@@ -123,7 +131,7 @@ const AppDomain = function(name) {
     // types
     this.resolve = (qualifiedName) => {
         if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', 'Argument type if not valid. (qualifiedName)'); }
-        return asmTypes[qualifiedName] || null;        
+        return asmTypes[qualifiedName] || null; // gives the assembly file name where this type reside     
     };
     this.allTypes = () => { return Object.keys(asmTypes); }
 
@@ -139,6 +147,9 @@ const AppDomain = function(name) {
             }
         });
     };
+
+    // busy state (just to be in sync with proxy)
+    this.isBusy = () => { return false; }
 };
 
 // build default app domain
@@ -152,5 +163,3 @@ const _AppDomain = defaultAppDomain;
 a2f('AppDomain', _AppDomain, () => {
     unloadDefaultAppDomain(); // unload default app domain
 });
-
-

@@ -27,7 +27,8 @@ const Dispatcher = function() {
     this.dispatch = (event, args) => {
         if (events[event]) {
             events[event].forEach(handler => {
-                setTimeout(() => { handler({ name: event, args: args }); }, 0);
+                // NOTE: any change here should also be done in SharedChannel where progress event is being routed across threads
+                setTimeout(() => { handler({ name: event, args: args }); }, 0); // <-- event handler will receive this
             });
         }
     };

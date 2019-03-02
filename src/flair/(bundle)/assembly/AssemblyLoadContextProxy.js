@@ -3,17 +3,28 @@
  * @description Proxy of the AssemblyLoadContext that is created inside other AppDomain.
  */
 const AssemblyLoadContextProxy = function(name, domainProxy, channel) {
+    let isUnloaded = false;
+
     // context
     this.name = name;
     this.domain = domainProxy;
-    this.isUnloaded = () => { return domainProxy.isUnloaded(); };
+    this.isUnloaded = () => { return isUnloaded || domainProxy.isUnloaded(); };
+    this.unload = () => {
+        if (!isUnloaded) {
+            // mark unloaded
+            isUnloaded = true;
+
+            // initiate remote unload
+            channel.remoteCall('alc', name, false, 'unload');
+        }
+    };
 
     // types
-    this.execute = (info) => {
+    this.execute = (info, progressListener) => {
         if (this.isUnloaded()) { 
             throw 'Unloaded'; // TODO: fix
         }
-        return channel.remoteCall('alc', 'execute', info);
+        return channel.remoteCall('alc', name, true, 'execute', [info], progressListener);
     };
 
     // assembly
@@ -21,6 +32,14 @@ const AssemblyLoadContextProxy = function(name, domainProxy, channel) {
         if (this.isUnloaded()) { 
             throw 'Unloaded'; // TODO: fix
         }
-        return channel.remoteCall('alc', 'loadAssembly', file);
-    };    
+        return channel.remoteCall('alc', name, false, 'loadAssembly', [file]);
+    };  
+    
+    // busy state
+    this.isBusy = () => { 
+        if (this.isUnloaded()) { 
+            throw 'Unloaded'; // TODO: fix
+        }        
+        return channel.isBusy(); 
+    };
  };

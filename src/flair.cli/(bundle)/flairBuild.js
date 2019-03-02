@@ -1125,7 +1125,7 @@ exports.flairBuild = function(options, cb) {
     // exclude flair files from being registered
     options.skipRegistrationsFor = [
         'flair',
-        'flair.build'
+        'flair.cli'
     ];
 
     // define logger

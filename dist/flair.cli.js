@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.15.622
- *  Sat, 02 Mar 2019 03:27:33 GMT
+ *  Version: 0.15.638
+ *  Sat, 02 Mar 2019 16:34:11 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -23,7 +23,7 @@ const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
     name: 'flair.cli',
-    version: '0.15.622',
+    version: '0.15.638',
     format: 'fasm',
     formatVersion: '1',
     contains: [
@@ -1139,7 +1139,7 @@ exports.flairBuild = function(options, cb) {
     // exclude flair files from being registered
     options.skipRegistrationsFor = [
         'flair',
-        'flair.build'
+        'flair.cli'
     ];
 
     // define logger
@@ -1222,4 +1222,3 @@ exports.flairBuild = function(options, cb) {
     });
 };
 
-(() => { flair.AppDomain.registerAdo('{"name":"flair.cli","file":"./flair.cli{.min}.js","desc":"True Object Oriented JavaScript","version":"0.15.622","lupdate":"Sat, 02 Mar 2019 03:27:33 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":[],"resources":[],"assets":[]}');})();
