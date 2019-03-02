@@ -5,7 +5,9 @@
 const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentContexts, contexts) {
     let alcTypes = {},
         alcResources = {},
+        instances = {},
         asmFiles = {},
+        namespaces = {},
         isUnloaded = false,
         currentAssemblyBeingLoaded = '';
 
@@ -21,10 +23,19 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
             // delete from domain registry
             delete contexts[name];
 
+            // dispose all active instances
+            for(let instance in instances) {
+                if (instance.hasOwnProperty(instance)) {
+                    _dispose(instances[instance]);
+                }
+            }
+
             // clear registries
             alcTypes = {};
             asmFiles = {};
             alcResources = {};
+            instances = {};
+            namespaces = {};
         }
     };
     this.current = () => {
@@ -55,13 +66,23 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
 
         let name = Type._.name, // namespace name is already attached to it, and for all '(root)' 
                                 // marked types' no namespace is added, so it will automatically go to root
-        ns = name.substr(0, name.lastIndexOf('.'));
+            ns = name.substr(0, name.lastIndexOf('.')),
+            onlyName = name.replace(ns + '.', '');
 
         // check if already registered
         if (alcTypes[name]) { throw `Type (${name}) is already registered.`; }
+        if (alcResources[name]) { throw `Already registered as resource. (${name})`; }
 
         // register
         alcTypes[name] = Type;
+
+        // register to namespace as well
+        if (ns) {
+            if (!namespaces[ns]) { namespaces[ns] = {}; }
+            namespaces[ns][onlyName] = Type;
+        } else { // root
+            namespaces[onlyName] = Type;
+        }
 
         // return namespace where it gets registered
         return ns;
@@ -102,6 +123,18 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         return Object.keys(alcTypes); 
     }
     this.execute = (info, progressListener) => {
+        // NOTE: The logic goes as:
+        // 1. instance of given type is created with given constructor arguments
+        // 2. if the type implements IProgressReporter and progressListener is passed,
+        //    it hooks progressListener to 'progress' event of instance.
+        // 3. given function is then executed with given arguments
+        // 4. if keepAlive is set to true, it keeps the instance for later use, using info.type as identifier
+        //    if in next run, keepAlive is found true, and instance was previously created, it uses same instance
+        //    if instance was kept because of previous call of keepAlive, but now in this call keepAlive is set to false
+        //    after this execution it is removed from internal stored instances list
+        //    if just the instance is to be removed and no func is to be called, set funcName to '' and keepAlive to false
+        //    and it will not call function but just remove stored instance
+
         return new Promise((resolve, reject) => {
             if (this.isUnloaded()) { 
                 reject('Unloaded'); // TODO: fix
@@ -112,43 +145,84 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
             info.typeArgs = info.typeArgs || [];
             info.func = info.func || '';
             info.args = info.args || [];
-            if (!info.type || !info.func) { throw new _Exception.InvalidArgument('info'); }
+            info.keepAlive = (typeof info.keepAlive !== 'undefined' ? info.keepAlive : false);
+            
+            const getInstance = () => {
+                return new Promise((resolve, reject) => {
+                    let instance = null;
+                    this.ensureType(info.type).then((Type) => {
+                        try {
+                            instance = new Type(...info.typeArgs);
 
-            // get type and run
-            this.ensureType(info.type).then((Type) => {
-                let instance = null;
-                try {
-                    // create instance
-                    if (info.typeArgs.length === 0) {
-                        instance = new Type();
-                    } else {
-                        instance = new Type(...info.typeArgs);
-                    }
-                } catch (err) {
-                    reject(err);
-                    return;
-                }
+                            // listen to progress report, if need be
+                            if (typeof progressListener === 'function' && _is(instance, 'IProgressReporter')) {
+                                instance.progress.add(progressListener);
+                            }
 
-                // listen to progress report, if need be
-                if (typeof progressListener === 'function' && _is(instance, 'IProgressReporter')) {
-                    instance.progress.add(progressListener);
-                }
-    
-                // run
-                let result = _using(instance, (obj) => {
-                    if(info.args.length === 0) {
-                        return obj[info.func]();
-                    } else {
-                        return obj[info.func](...info.args);
-                    }
+                            resolve(instance);
+                        } catch (err) {
+                            reject(err);
+                        }
+                    }).catch(reject);
                 });
-                if (result && typeof result.then === 'function') {
-                    result.then(resolve).catch(reject);
+            };
+            const runInstanceFunc = (instance) => {
+                return new Promise((resolve, reject) => {
+                    let result = null;
+                    result = instance[info.func](...info.args);
+                    if (result && typeof result.then === 'function') {
+                        result.then(resolve).catch(reject);
+                    } else {
+                        resolve(result);
+                    }                
+                });
+            };
+
+            // process
+            let instance = null;
+            if (info.keepAlive) {
+                if (instances[info.type]) {
+                    instance = instances[info.type];
+                    runInstanceFunc(instance).then(resolve).catch(reject);
                 } else {
-                    resolve(result);
+                    getInstance().then((obj) => {
+                        instance = obj;
+                        instances[info.type] = instance;
+                        runInstanceFunc(instance).then(resolve).catch(reject);
+                    }).catch(reject);
                 }
-            }).catch(reject);
+            } else {
+                if (instances[info.type]) {
+                    instance = instances[info.type];
+                    if (info.func) {
+                        runInstanceFunc(instance).then(resolve).catch(reject).finally(() => {
+                            _dispose(instance);
+                            delete instances[info.type];
+                        });
+                    } else { // special request of just removing the instance - by keeping func name as empty
+                        _dispose(instance);
+                        delete instances[info.type];
+                        resolve();
+                    }
+                } else {
+                    getInstance().then((obj) => {
+                        runInstanceFunc(obj).then(resolve).catch(reject).finally(() => {
+                            _dispose(obj);
+                        });
+                    }).catch(reject);                
+                }
+            }
         });
+    };
+
+    // namespace
+    this.namespace = (name) => { 
+        if (name && name === '(root)') { name = ''; }
+        if (name) {
+            return Object.freeze(namespaces[name]) || null; 
+        } else { // root
+            return Object.freeze(namespaces);
+        }
     };
 
     // assembly
@@ -221,13 +295,24 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
 
         // namespace name is already attached to it, and for all '(root)'    
         // marked types' no namespace is added, so it will automatically go to root
-        let ns = rdo.name.substr(0, rdo.name.lastIndexOf('.'));
+        let ns = rdo.name.substr(0, rdo.name.lastIndexOf('.')),
+            onlyName = rdo.name.replace(ns + '.', '');
 
         // check if already registered
-        if (alcTypes[rdo.name]) { throw `Type (${name}) is already registered.`; }
+        if (alcResources[rdo.name]) { throw `Resource (${rdo.name}) is already registered.`; }
+        if (alcTypes[rdo.name]) { throw `Already registered as Type. (${rdo.name})`; }
 
         // register
         alcResources[rdo.name] = Object.freeze(new Resource(rdo, ns, this));
+
+        // register to namespace as well
+        // register to namespace as well
+        if (ns) {
+            if (!namespaces[ns]) { namespaces[ns] = {}; }
+            namespaces[ns][onlyName] =  alcResources[rdo.name];
+        } else { // root
+            namespaces[onlyName] =  alcResources[rdo.name];
+        }        
 
         // return namespace where it gets registered
         return ns;
@@ -246,6 +331,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         return Object.keys(alcResources); 
     }   
     
-    // busy state (just to be in sync with proxy)
+    // state (just to be in sync with proxy)
     this.isBusy = () => { return false; }
+    this.hasActiveInstances = () => { return Object.keys(instances).length; }
 };

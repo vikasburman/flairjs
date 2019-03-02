@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.15.638
- *  Sat, 02 Mar 2019 16:34:11 GMT
+ *  Version: 0.15.655
+ *  Sat, 02 Mar 2019 23:35:03 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -65,6 +65,7 @@
         isClient: !isServer,
         isWorker : isWorker,
         isMain: !isWorker,
+        cores: ((isServer ? (require('os').cpus().length) : _global.navigator.hardwareConcurrency) || 4),
         isCordova: (!isServer && !!_global.cordova),
         isNodeWebkit: (isServer && process.versions['node-webkit']),
         isProd: (sym.indexOf('DEBUG') === -1 && sym.indexOf('PROD') !== -1),
@@ -75,10 +76,10 @@
     flair.info = Object.freeze({
         name: 'flair',
         file: currentFile,
-        version: '0.15.638',
+        version: '0.15.655',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sat, 02 Mar 2019 16:34:11 GMT')
+        lupdate: new Date('Sat, 02 Mar 2019 23:35:03 GMT')
     });       
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -422,7 +423,9 @@
     const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentContexts, contexts) {
         let alcTypes = {},
             alcResources = {},
+            instances = {},
             asmFiles = {},
+            namespaces = {},
             isUnloaded = false,
             currentAssemblyBeingLoaded = '';
     
@@ -438,10 +441,19 @@
                 // delete from domain registry
                 delete contexts[name];
     
+                // dispose all active instances
+                for(let instance in instances) {
+                    if (instance.hasOwnProperty(instance)) {
+                        _dispose(instances[instance]);
+                    }
+                }
+    
                 // clear registries
                 alcTypes = {};
                 asmFiles = {};
                 alcResources = {};
+                instances = {};
+                namespaces = {};
             }
         };
         this.current = () => {
@@ -472,13 +484,23 @@
     
             let name = Type._.name, // namespace name is already attached to it, and for all '(root)' 
                                     // marked types' no namespace is added, so it will automatically go to root
-            ns = name.substr(0, name.lastIndexOf('.'));
+                ns = name.substr(0, name.lastIndexOf('.')),
+                onlyName = name.replace(ns + '.', '');
     
             // check if already registered
             if (alcTypes[name]) { throw `Type (${name}) is already registered.`; }
+            if (alcResources[name]) { throw `Already registered as resource. (${name})`; }
     
             // register
             alcTypes[name] = Type;
+    
+            // register to namespace as well
+            if (ns) {
+                if (!namespaces[ns]) { namespaces[ns] = {}; }
+                namespaces[ns][onlyName] = Type;
+            } else { // root
+                namespaces[onlyName] = Type;
+            }
     
             // return namespace where it gets registered
             return ns;
@@ -519,6 +541,18 @@
             return Object.keys(alcTypes); 
         }
         this.execute = (info, progressListener) => {
+            // NOTE: The logic goes as:
+            // 1. instance of given type is created with given constructor arguments
+            // 2. if the type implements IProgressReporter and progressListener is passed,
+            //    it hooks progressListener to 'progress' event of instance.
+            // 3. given function is then executed with given arguments
+            // 4. if keepAlive is set to true, it keeps the instance for later use, using info.type as identifier
+            //    if in next run, keepAlive is found true, and instance was previously created, it uses same instance
+            //    if instance was kept because of previous call of keepAlive, but now in this call keepAlive is set to false
+            //    after this execution it is removed from internal stored instances list
+            //    if just the instance is to be removed and no func is to be called, set funcName to '' and keepAlive to false
+            //    and it will not call function but just remove stored instance
+    
             return new Promise((resolve, reject) => {
                 if (this.isUnloaded()) { 
                     reject('Unloaded'); // TODO: fix
@@ -529,43 +563,84 @@
                 info.typeArgs = info.typeArgs || [];
                 info.func = info.func || '';
                 info.args = info.args || [];
-                if (!info.type || !info.func) { throw new _Exception.InvalidArgument('info'); }
+                info.keepAlive = (typeof info.keepAlive !== 'undefined' ? info.keepAlive : false);
+                
+                const getInstance = () => {
+                    return new Promise((resolve, reject) => {
+                        let instance = null;
+                        this.ensureType(info.type).then((Type) => {
+                            try {
+                                instance = new Type(...info.typeArgs);
     
-                // get type and run
-                this.ensureType(info.type).then((Type) => {
-                    let instance = null;
-                    try {
-                        // create instance
-                        if (info.typeArgs.length === 0) {
-                            instance = new Type();
-                        } else {
-                            instance = new Type(...info.typeArgs);
-                        }
-                    } catch (err) {
-                        reject(err);
-                        return;
-                    }
+                                // listen to progress report, if need be
+                                if (typeof progressListener === 'function' && _is(instance, 'IProgressReporter')) {
+                                    instance.progress.add(progressListener);
+                                }
     
-                    // listen to progress report, if need be
-                    if (typeof progressListener === 'function' && _is(instance, 'IProgressReporter')) {
-                        instance.progress.add(progressListener);
-                    }
-        
-                    // run
-                    let result = _using(instance, (obj) => {
-                        if(info.args.length === 0) {
-                            return obj[info.func]();
-                        } else {
-                            return obj[info.func](...info.args);
-                        }
+                                resolve(instance);
+                            } catch (err) {
+                                reject(err);
+                            }
+                        }).catch(reject);
                     });
-                    if (result && typeof result.then === 'function') {
-                        result.then(resolve).catch(reject);
+                };
+                const runInstanceFunc = (instance) => {
+                    return new Promise((resolve, reject) => {
+                        let result = null;
+                        result = instance[info.func](...info.args);
+                        if (result && typeof result.then === 'function') {
+                            result.then(resolve).catch(reject);
+                        } else {
+                            resolve(result);
+                        }                
+                    });
+                };
+    
+                // process
+                let instance = null;
+                if (info.keepAlive) {
+                    if (instances[info.type]) {
+                        instance = instances[info.type];
+                        runInstanceFunc(instance).then(resolve).catch(reject);
                     } else {
-                        resolve(result);
+                        getInstance().then((obj) => {
+                            instance = obj;
+                            instances[info.type] = instance;
+                            runInstanceFunc(instance).then(resolve).catch(reject);
+                        }).catch(reject);
                     }
-                }).catch(reject);
+                } else {
+                    if (instances[info.type]) {
+                        instance = instances[info.type];
+                        if (info.func) {
+                            runInstanceFunc(instance).then(resolve).catch(reject).finally(() => {
+                                _dispose(instance);
+                                delete instances[info.type];
+                            });
+                        } else { // special request of just removing the instance - by keeping func name as empty
+                            _dispose(instance);
+                            delete instances[info.type];
+                            resolve();
+                        }
+                    } else {
+                        getInstance().then((obj) => {
+                            runInstanceFunc(obj).then(resolve).catch(reject).finally(() => {
+                                _dispose(obj);
+                            });
+                        }).catch(reject);                
+                    }
+                }
             });
+        };
+    
+        // namespace
+        this.namespace = (name) => { 
+            if (name && name === '(root)') { name = ''; }
+            if (name) {
+                return Object.freeze(namespaces[name]) || null; 
+            } else { // root
+                return Object.freeze(namespaces);
+            }
         };
     
         // assembly
@@ -638,13 +713,24 @@
     
             // namespace name is already attached to it, and for all '(root)'    
             // marked types' no namespace is added, so it will automatically go to root
-            let ns = rdo.name.substr(0, rdo.name.lastIndexOf('.'));
+            let ns = rdo.name.substr(0, rdo.name.lastIndexOf('.')),
+                onlyName = rdo.name.replace(ns + '.', '');
     
             // check if already registered
-            if (alcTypes[rdo.name]) { throw `Type (${name}) is already registered.`; }
+            if (alcResources[rdo.name]) { throw `Resource (${rdo.name}) is already registered.`; }
+            if (alcTypes[rdo.name]) { throw `Already registered as Type. (${rdo.name})`; }
     
             // register
             alcResources[rdo.name] = Object.freeze(new Resource(rdo, ns, this));
+    
+            // register to namespace as well
+            // register to namespace as well
+            if (ns) {
+                if (!namespaces[ns]) { namespaces[ns] = {}; }
+                namespaces[ns][onlyName] =  alcResources[rdo.name];
+            } else { // root
+                namespaces[onlyName] =  alcResources[rdo.name];
+            }        
     
             // return namespace where it gets registered
             return ns;
@@ -663,8 +749,9 @@
             return Object.keys(alcResources); 
         }   
         
-        // busy state (just to be in sync with proxy)
+        // state (just to be in sync with proxy)
         this.isBusy = () => { return false; }
+        this.hasActiveInstances = () => { return Object.keys(instances).length; }
     };
       
     /**
@@ -808,27 +895,29 @@
                         }
                     });  
                 };
+                const runFunction = () => {
+                    try {
+                        // special case
+                        if (e.data.obj === 'alc' && funcName === 'execute') {
+                            e.data.args.push((e) => { // progressListener
+                                postProgressToMain(e.args);
+                            });
+                        }
+                        let result = func(...e.data.args);
+                        if (result && typeof result.then === 'function') {
+                            result.then(postSuccessToMain).catch(postErrorToMain);
+                        } else {
+                            postSuccessToMain(result);
+                        }
+                    } catch (err) {
+                        postErrorToMain(err);
+                    }
+                };    
     
                 // run
                 switch(e.data.obj) {
-                    case 'ad': AppDomain[funcName]; break;
-                    case 'alc': AppDomain.contexts(e.data.name)[funcName]; break;
-                }
-                try {
-                    // special case
-                    if (e.data.obj === 'alc' && e.data.name === 'execute') {
-                        e.data.args.push((e) => { // progressListener
-                            postProgressToMain(e.args);
-                        });
-                    }
-                    let result = func(...e.data.args);
-                    if (result && typeof result.then === 'function') {
-                        result.then(postSuccessToMain).catch(postErrorToMain);
-                    } else {
-                        postSuccessToMain(result);
-                    }
-                } catch (err) {
-                    postErrorToMain(err);
+                    case 'ad': func = AppDomain[funcName]; runFunction(); break;
+                    case 'alc': func = AppDomain.contexts(e.data.name)[funcName]; runFunction(); break;
                 }
             };
     
@@ -953,8 +1042,8 @@
             wk.terminate();
         };
     
-        // state of open messages
-        this.isBusy = () => { return openMessagesCount !== 0; }
+        // state
+        this.isBusy = () => { return openMessagesCount; }
     };
       
     /**
@@ -1020,14 +1109,6 @@
             }
             return channel.remoteCall('ad', '', false, 'loadScripts', scripts);
         };
-    
-        // busy state
-        this.isBusy = () => { 
-            if (this.isUnloaded()) { 
-                throw 'Unloaded'; // TODO: fix
-            }        
-            return channel.isBusy(); 
-        };
     };
       
     /**
@@ -1067,12 +1148,15 @@
             return channel.remoteCall('alc', name, false, 'loadAssembly', [file]);
         };  
         
-        // busy state
+        // state
         this.isBusy = () => { 
             if (this.isUnloaded()) { 
                 throw 'Unloaded'; // TODO: fix
             }        
             return channel.isBusy(); 
+        };
+        this.hasActiveInstances = () => { 
+            channel.remoteCall('alc', name, false, 'hasActiveInstances');
         };
      };
       
@@ -1225,9 +1309,6 @@
                 }
             });
         };
-    
-        // busy state (just to be in sync with proxy)
-        this.isBusy = () => { return false; }
     };
     
     // build default app domain
@@ -2791,7 +2872,8 @@
             }
     
             // constructor arguments check for a static type
-            if (cfg.static && cfg.construct && memberName === _constructName && memberDef.length !== 0) {
+            the_attr = attrs.type.probe('static').current();
+            if (cfg.static && cfg.construct && memberName === _constructName && the_attr && memberDef.length !== 0) {
                 throw new _Exception('InvalidDefinition', `Static constructors cannot have arguments. (construct)`);
             }
     
@@ -2856,6 +2938,7 @@
             _getter = _noop,
             _setter = _noop,
             _isReadOnly = attrs.members.probe('readonly', memberName).anywhere(),
+            _isOverriding = (cfg.inheritance && attrs.members.probe('override', memberName).current()), 
             _isStatic = attrs.members.probe('static', memberName).anywhere(),
             _isSession = attrs.members.probe('session', memberName).anywhere(),
             _isState = attrs.members.probe('state', memberName).anywhere(),
@@ -2869,6 +2952,19 @@
             uniqueName = def.name + '_' + memberName,
             isStorageHost = false,
             _injections = [];     
+    
+            // handle abstract definition scenario
+            if (_isOverriding) {
+                if (memberDef.get === _noop || memberDef.get === _nip || memberDef.get === _nim) {
+                    if (memberDef.set === _noop || memberDef.set === _nip || memberDef.get === _nim) {
+                        memberDef = null; // treat it as a null valued property
+                    } else {
+                        memberDef.get = _noop; // since setter is defined but not getter - make getter as noop
+                    }
+                } else if (memberDef.set === _noop || memberDef.set === _nip || memberDef.get === _nim) {
+                    memberDef.set = _noop; // since getter is defined but not setter - make setter as noop
+                }
+            }
     
             // define or redefine
             if (memberDef.get || memberDef.set) { // normal property, cannot be static because static cannot have custom getter/setter
@@ -2969,6 +3065,10 @@
             // override, if required
             if (_isOverriding) {
                 base = obj[memberName].bind(bindingHost);
+                // handle abstract definition scenario
+                if (base === _noop || base === _nip || base === _nim) {
+                    base = _noop; // convert it into noop
+                }
             } else if (_isStatic) {
                 // shared (static) copy bound to staticInterface
                 // so with 'this' it will be able to access only static properties
@@ -3077,6 +3177,9 @@
             if (_isOverriding) {
                 // wrap for base call
                 base = obj[memberName]._.processor;
+                if (base === _noop || base === _nip || base === _nim) {
+                    base = _noop; // convert it into noop
+                }
             } 
        
             // define
@@ -5093,20 +5196,26 @@ const flair = (typeof global !== 'undefined' ? require('flair') : (typeof Worker
 const { Class, Struct, Enum, Interface, Mixin } = flair;
 const { Aspects } = flair;
 const { AppDomain } = flair;
+const __currentContextName = flair.AppDomain.context.current().name;
 const { $$, attr } = flair;
 const { Container, include } = flair;
 const { Port } = flair;
 const { on, post, telemetry } = flair;
 const { Reflector } = flair;
 const { Serializer } = flair;
+const { Tasks } = flair;
+const { TaskInfo } = flair.Tasks;
 const { as, is, isComplies, isDerivedFrom, isImplements, isInstanceOf, isMixed } = flair;
-const { getAssembly, getAttr, getContext, getResource, getType, getTypeOf, typeOf } = flair;
+const { getAssembly, getAttr, getContext, getResource, getType, ns, getTypeOf, typeOf } = flair;
 const { dispose, using } = flair;
 const { args, Exception, noop  } = flair;
-const { isServer, isWorker } = flair.options.env;
+const { env } = flair.options;
 /* eslint-enable no-unused-vars */
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('./flair{.min}.js');
+
+(() => { // ./src/flair/(root)/Aspect.js
+'use strict';
 /**
  * @name Aspect
  * @description Aspect base class.
@@ -5166,6 +5275,11 @@ Class('Aspect', function() {
     $$('virtual');
     this.after = this.noop;
 });
+
+})();
+
+(() => { // ./src/flair/(root)/Attribute.js
+'use strict';
 /**
  * @name Attribute
  * @description Attribute base class.
@@ -5271,6 +5385,11 @@ Class('Attribute', function() {
     this.decorateEvent = this.noop;
 });
 
+
+})();
+
+(() => { // ./src/flair/(root)/IDisposable.js
+'use strict';
 /**
  * @name IDisposable
  * @description IDisposable interface.
@@ -5282,6 +5401,11 @@ Interface('IDisposable', function() {
     this.dispose = this.noop;
     
 });
+
+})();
+
+(() => { // ./src/flair/(root)/IProgressReporter.js
+'use strict';
 /**
  * @name IProgressReporter
  * @description IProgressReporter interface.
@@ -5293,6 +5417,141 @@ Interface('IProgressReporter', function() {
     this.progress = this.event(this.noop);
     
 });
+
+})();
+
+(() => { // ./src/flair/(root)/Task.js
+'use strict';
+const { IProgressReporter, IDisposable } = ns('(root)');
+
+/**
+ * @name Task
+ * @description Task base class.
+ */
+$$('virtual');
+$$('ns', '(root)');
+Class('Task', [IProgressReporter, IDisposable], function() {
+    let isSetupDone = false,
+        isRunning = false;
+
+   /** 
+    * @name construct
+    * @description Task constructor
+    */        
+    this.construct = (...args) => {
+        this.args = args;
+
+        // set context and domain
+        this.context = AppDomain.contexts(__currentContextName);
+        this.domain = this.context.domain;
+    };
+
+   /** 
+    * @name dispose
+    * @description Task disposer
+    */  
+    $$('abstract');
+    this.dispose = this.nim;
+
+   /** 
+    *  @name args: array - for task setup
+    */
+    $$('protected');
+    this.args = [];
+
+   /** 
+    *  @name context: object - current assembly load context where this task is loaded
+    */
+   $$('protected');
+   this.context = null;
+
+   /** 
+    *  @name domain: object - current assembly domain where this task is executing
+    */
+   $$('protected');
+   this.domain = null;
+
+   /** 
+    * @name run
+    * @description Task executor
+    * @example
+    *  run()
+    * @arguments
+    *  args: array - array as passed to task constructor* 
+    * @returns
+    *  any - anything
+    */  
+    this.run = (...args) => {
+        return new Promise((resolve, reject) => {
+            if (!isRunning) {
+                // mark
+                isRunning = true;
+
+                const afterSetup = () => {
+                    isSetupDone = true;
+                    let result = this.onRun(...args);
+                    if (result && typeof result.then === 'function') {
+                        result.then(resolve).catch(reject).finally(() => {
+                            isRunning = false;
+                        });
+                    } else {
+                        isRunning = false;
+                        resolve(result);
+                    }
+                };
+                if (!isSetupDone) {
+                    this.setup().then(afterSetup).catch((err) => {
+                        isRunning = false;
+                        reject(err);
+                    });
+                } else {
+                    afterSetup();
+                }
+            } else {
+                reject('Already running'); // TODO: fix w real error
+            }
+        });
+    };
+   
+   /** 
+    * @name progress
+    * @description Progress event
+    * @example
+    *  progress()
+    */  
+    this.progress = this.event((data) => {
+        return { data: data };
+    });
+
+    /** 
+     * @name setup
+     * @description Task related setup, executed only once, before onRun is called
+     * @example
+     *  setup()
+     * @returns
+     *  promise
+     */  
+    $$('virtual');
+    $$('protected');
+    this.setup = this.noop;
+
+    /** 
+     * @name onRun
+     * @description Task run handler, can be sync or async (returns promise)
+     * @example
+     *  onRun(...args)
+     * @arguments
+     *  args: array - array as passed to task run
+     * @returns
+     *  any - anything
+     */  
+    $$('abstract');
+    $$('protected');
+    this.onRun = this.nim;
+});
+
+
+})();
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
 })();

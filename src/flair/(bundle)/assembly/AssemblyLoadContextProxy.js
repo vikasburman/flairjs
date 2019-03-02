@@ -35,11 +35,14 @@ const AssemblyLoadContextProxy = function(name, domainProxy, channel) {
         return channel.remoteCall('alc', name, false, 'loadAssembly', [file]);
     };  
     
-    // busy state
+    // state
     this.isBusy = () => { 
         if (this.isUnloaded()) { 
             throw 'Unloaded'; // TODO: fix
         }        
         return channel.isBusy(); 
+    };
+    this.hasActiveInstances = () => { 
+        channel.remoteCall('alc', name, false, 'hasActiveInstances');
     };
  };

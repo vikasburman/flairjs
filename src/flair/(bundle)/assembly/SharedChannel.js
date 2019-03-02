@@ -53,27 +53,29 @@ const SharedChannel = function(allADOs, onError) {
                     }
                 });  
             };
+            const runFunction = () => {
+                try {
+                    // special case
+                    if (e.data.obj === 'alc' && funcName === 'execute') {
+                        e.data.args.push((e) => { // progressListener
+                            postProgressToMain(e.args);
+                        });
+                    }
+                    let result = func(...e.data.args);
+                    if (result && typeof result.then === 'function') {
+                        result.then(postSuccessToMain).catch(postErrorToMain);
+                    } else {
+                        postSuccessToMain(result);
+                    }
+                } catch (err) {
+                    postErrorToMain(err);
+                }
+            };    
 
             // run
             switch(e.data.obj) {
-                case 'ad': AppDomain[funcName]; break;
-                case 'alc': AppDomain.contexts(e.data.name)[funcName]; break;
-            }
-            try {
-                // special case
-                if (e.data.obj === 'alc' && e.data.name === 'execute') {
-                    e.data.args.push((e) => { // progressListener
-                        postProgressToMain(e.args);
-                    });
-                }
-                let result = func(...e.data.args);
-                if (result && typeof result.then === 'function') {
-                    result.then(postSuccessToMain).catch(postErrorToMain);
-                } else {
-                    postSuccessToMain(result);
-                }
-            } catch (err) {
-                postErrorToMain(err);
+                case 'ad': func = AppDomain[funcName]; runFunction(); break;
+                case 'alc': func = AppDomain.contexts(e.data.name)[funcName]; runFunction(); break;
             }
         };
 
@@ -198,6 +200,6 @@ const SharedChannel = function(allADOs, onError) {
         wk.terminate();
     };
 
-    // state of open messages
-    this.isBusy = () => { return openMessagesCount !== 0; }
+    // state
+    this.isBusy = () => { return openMessagesCount; }
 };

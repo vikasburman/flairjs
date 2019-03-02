@@ -61,12 +61,4 @@ const AppDomainProxy = function(name, domains, allADOs) {
         }
         return channel.remoteCall('ad', '', false, 'loadScripts', scripts);
     };
-
-    // busy state
-    this.isBusy = () => { 
-        if (this.isUnloaded()) { 
-            throw 'Unloaded'; // TODO: fix
-        }        
-        return channel.isBusy(); 
-    };
 };

@@ -620,7 +620,8 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         }
 
         // constructor arguments check for a static type
-        if (cfg.static && cfg.construct && memberName === _constructName && memberDef.length !== 0) {
+        the_attr = attrs.type.probe('static').current();
+        if (cfg.static && cfg.construct && memberName === _constructName && the_attr && memberDef.length !== 0) {
             throw new _Exception('InvalidDefinition', `Static constructors cannot have arguments. (construct)`);
         }
 
@@ -685,6 +686,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         _getter = _noop,
         _setter = _noop,
         _isReadOnly = attrs.members.probe('readonly', memberName).anywhere(),
+        _isOverriding = (cfg.inheritance && attrs.members.probe('override', memberName).current()), 
         _isStatic = attrs.members.probe('static', memberName).anywhere(),
         _isSession = attrs.members.probe('session', memberName).anywhere(),
         _isState = attrs.members.probe('state', memberName).anywhere(),
@@ -698,6 +700,19 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         uniqueName = def.name + '_' + memberName,
         isStorageHost = false,
         _injections = [];     
+
+        // handle abstract definition scenario
+        if (_isOverriding) {
+            if (memberDef.get === _noop || memberDef.get === _nip || memberDef.get === _nim) {
+                if (memberDef.set === _noop || memberDef.set === _nip || memberDef.get === _nim) {
+                    memberDef = null; // treat it as a null valued property
+                } else {
+                    memberDef.get = _noop; // since setter is defined but not getter - make getter as noop
+                }
+            } else if (memberDef.set === _noop || memberDef.set === _nip || memberDef.get === _nim) {
+                memberDef.set = _noop; // since getter is defined but not setter - make setter as noop
+            }
+        }
 
         // define or redefine
         if (memberDef.get || memberDef.set) { // normal property, cannot be static because static cannot have custom getter/setter
@@ -798,6 +813,10 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         // override, if required
         if (_isOverriding) {
             base = obj[memberName].bind(bindingHost);
+            // handle abstract definition scenario
+            if (base === _noop || base === _nip || base === _nim) {
+                base = _noop; // convert it into noop
+            }
         } else if (_isStatic) {
             // shared (static) copy bound to staticInterface
             // so with 'this' it will be able to access only static properties
@@ -906,6 +925,9 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         if (_isOverriding) {
             // wrap for base call
             base = obj[memberName]._.processor;
+            if (base === _noop || base === _nip || base === _nim) {
+                base = _noop; // convert it into noop
+            }
         } 
    
         // define

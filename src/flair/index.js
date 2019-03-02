@@ -52,6 +52,7 @@
         isClient: !isServer,
         isWorker : isWorker,
         isMain: !isWorker,
+        cores: ((isServer ? (require('os').cpus().length) : _global.navigator.hardwareConcurrency) || 4),
         isCordova: (!isServer && !!_global.cordova),
         isNodeWebkit: (isServer && process.versions['node-webkit']),
         isProd: (sym.indexOf('DEBUG') === -1 && sym.indexOf('PROD') !== -1),

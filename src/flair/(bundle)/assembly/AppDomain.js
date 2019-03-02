@@ -147,9 +147,6 @@ const AppDomain = function(name) {
             }
         });
     };
-
-    // busy state (just to be in sync with proxy)
-    this.isBusy = () => { return false; }
 };
 
 // build default app domain

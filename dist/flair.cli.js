@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.15.638
- *  Sat, 02 Mar 2019 16:34:11 GMT
+ *  Version: 0.15.655
+ *  Sat, 02 Mar 2019 23:35:05 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -23,7 +23,7 @@ const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
     name: 'flair.cli',
-    version: '0.15.638',
+    version: '0.15.655',
     format: 'fasm',
     formatVersion: '1',
     contains: [
@@ -206,7 +206,7 @@ const build = (options, done) => {
                     }
                 }
             }
-
+            
             appendToFile(content); 
             logger(0, 'index', options.current.asmMain); 
         }
@@ -493,17 +493,20 @@ const build = (options, done) => {
         `const { Class, Struct, Enum, Interface, Mixin } = flair;\n` +
         `const { Aspects } = flair;\n` +
         `const { AppDomain } = flair;\n` +
+        `const __currentContextName = flair.AppDomain.context.current().name;\n` +
         `const { $$, attr } = flair;\n` +
         `const { Container, include } = flair;\n` +
         `const { Port } = flair;\n` +
         `const { on, post, telemetry } = flair;\n` +
         `const { Reflector } = flair;\n` +
         `const { Serializer } = flair;\n` +
+        `const { Tasks } = flair;\n` +
+        `const { TaskInfo } = flair.Tasks;\n` +
         `const { as, is, isComplies, isDerivedFrom, isImplements, isInstanceOf, isMixed } = flair;\n` +
-        `const { getAssembly, getAttr, getContext, getResource, getType, getTypeOf, typeOf } = flair;\n` +
+        `const { getAssembly, getAttr, getContext, getResource, getType, ns, getTypeOf, typeOf } = flair;\n` +
         `const { dispose, using } = flair;\n` +
         `const { args, Exception, noop  } = flair;\n` +
-        `const { isServer, isWorker } = flair.options.env;\n` +
+        `const { env } = flair.options;\n` +
         `/* eslint-enable no-unused-vars */\n` +
         `\n`; 
         if (settings) { // settings is a closure variable of each assembly separately
@@ -521,10 +524,12 @@ const build = (options, done) => {
         appendToFile(dump);
 
         // append types
-        let justNames = [];
+        let justNames = [],
+            thisFile = '';
         for(let nsFile of options.current.ado.types) {
             justNames.push(nsFile.qualifiedName);
-            logger(1, '', nsFile.qualifiedName + ' (./' + nsFile.file + ')'); 
+            thisFile = './' + nsFile.file;
+            logger(1, '', nsFile.qualifiedName + ' (' + thisFile + ')'); 
 
             // read file
             let content = fsx.readFileSync(nsFile.file, 'utf8');
@@ -551,6 +556,10 @@ const build = (options, done) => {
 
             // process file injections
             content = injector(nsFile.nsPath, content);            
+
+            // wrap type in its own closure, so it's own constants etc defind on top of file
+            // does not conflict with some other type's constants
+            content = `\n(() => { // ${thisFile}\n'use strict';\n${content}\n})();\n`;
 
             // append content to file
             appendToFile(content);
