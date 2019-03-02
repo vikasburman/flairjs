@@ -5,14 +5,21 @@
  * @example
  *  using(obj, fn)
  * @params
- *  obj: object - object that needs to be processed by processor function
+ *  obj: object/string - object that needs to be processed by processor function or qualified name for which object will be created
  *                If a disposer is not defined for the object, it will not do anything
  *  fn: function - processor function
  * @returns any - returns anything that is returned by processor function, it may also be a promise
  */ 
 const _using = (obj, fn) => {
-    if (_typeOf(obj) !== 'instance') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+    if (['instance', 'string'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
     if (_typeOf(fn) !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (fn)'); }
+
+    // create instance, if need be
+    if (typeof obj === 'string') { // qualifiedName
+        let Type = _getType(obj);
+        if (!Type) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+        obj = new Type(); // this does not support constructor args, for ease of use only.
+    }
 
     let result = null,
         isDone = false,

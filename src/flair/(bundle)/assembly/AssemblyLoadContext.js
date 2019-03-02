@@ -2,7 +2,7 @@
  * @name AssemblyLoadContext
  * @description The isolation boundary of type loading across assemblies. 
  */
-const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentContexts) {
+const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentContexts, contexts) {
     let alcTypes = {},
         alcResources = {},
         asmFiles = {},
@@ -14,14 +14,23 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
     this.domain = domain;
     this.isUnloaded = () => { return isUnloaded || domain.isUnloaded(); };
     this.unload = () => {
-        alcTypes = {};
-        asmFiles = {};
-        alcResources = {};
+        if (!isUnloaded) {
+            // mark unloaded
+            isUnloaded = true;
 
-        // mark unloaded
-        isUnloaded = true;
+            // delete from domain registry
+            delete contexts[name];
+
+            // clear registries
+            alcTypes = {};
+            asmFiles = {};
+            alcResources = {};
+        }
     };
     this.current = () => {
+        if (this.isUnloaded()) { 
+            throw 'Unloaded'; // TODO: fix
+        }        
         if (currentContexts.length === 0) {
             return defaultLoadContext || this; // the first content created is the default context, so in first case, it will come as null, hence return this
         } else { // return last added context
@@ -38,6 +47,9 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
 
      // types
     this.registerType = (Type) => {
+        if (this.isUnloaded()) { 
+            throw 'Unloaded'; // TODO: fix
+        }        
         // only valid types are allowed
         if (flairTypes.indexOf(_typeOf(Type)) === -1) { throw new _Exception('InvalidArgument', `Type is not valid.`); }
 
@@ -55,20 +67,77 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         return ns;
     };
     this.getType = (qualifiedName) => {
+        if (this.isUnloaded()) { 
+            throw 'Unloaded'; // TODO: fix
+        }        
         if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${qualifiedName})`); }
         return alcTypes[qualifiedName] || null;
     };
-    this.allTypes = () => { return Object.keys(alcTypes); }
+    this.allTypes = () => { 
+        if (this.isUnloaded()) { 
+            throw 'Unloaded'; // TODO: fix
+        }        
+        return Object.keys(alcTypes); 
+    }
+    this.execute = (info) => {
+        return new Promise((resolve, reject) => {
+            if (this.isUnloaded()) { 
+                reject('Unloaded'); // TODO: fix
+            }
+
+            // execution info
+            info.type = info.type || '';
+            info.typeArgs = info.typeArgs || [];
+            info.func = info.func || '';
+            info.args = info.args || [];
+            if (!info.type || !info.func) { throw new _Exception.InvalidArgument('info'); }
+
+            let instance = null;
+            try {
+                // get type
+                let Type = this.getType(info.type);
+                
+                // create instance
+                if (info.typeArgs.length === 0) {
+                    instance = new Type();
+                } else {
+                    instance = new Type(...info.typeArgs);
+                }
+            } catch (err) {
+                reject(err);
+            }
+
+            // run
+            let result = _using(instance, (obj) => {
+                if(info.args.length === 0) {
+                    return obj[info.func]();
+                } else {
+                    return obj[info.func](...info.args);
+                }
+            });
+            if (result && typeof result.then === 'function') {
+                result.then(resolve).catch(reject);
+            } else {
+                return result;
+            }
+        });
+    };
 
     // assembly
     this.currentAssemblyBeingLoaded = (value) => {
+        if (this.isUnloaded()) { 
+            throw 'Unloaded'; // TODO: fix
+        }        
         if (typeof value !== 'undefined') { 
-            currentAssemblyBeingLoaded = which(value, true); // 
+            currentAssemblyBeingLoaded = which(value, true);
         }
         return currentAssemblyBeingLoaded;
     }
     this.loadAssembly = (file) => {
         return new Promise((resolve, reject) => {
+            if (this.isUnloaded()) { 
+                reject('Unloaded'); // TODO: fix
+            }            
             if (!asmFiles[file]) { // load only when it is not already loaded in this load context
                 // set this context as current context, so all types being loaded in this assembly will get attached to this context;
                 currentContexts.push(this);
@@ -77,7 +146,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
                 uncacheModule(file);
 
                 // load module
-                loadModule(file).then((resolved) => {
+                loadModule(file).then(() => {
                     // remove this from current context list
                     currentContexts.pop();
 
@@ -85,7 +154,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
                     asmFiles[file] = Object.freeze(new Assembly(this.domain.getADO(file), this));
 
                     // resolve
-                    resolved(resolved);
+                    resolve();
                 }).catch((e) => {
                     // remove this from current context list
                     currentContexts.pop();
@@ -97,13 +166,24 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         });        
     };    
     this.getAssembly = (file) => {
+        if (this.isUnloaded()) { 
+            throw 'Unloaded'; // TODO: fix
+        }        
         if (typeof file !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${file})`); }
         return asmFiles[file] || null;
     };
-    this.allAssemblies = () => { return Object.keys(asmFiles); }
+    this.allAssemblies = () => { 
+        if (this.isUnloaded()) { 
+            throw 'Unloaded'; // TODO: fix
+        }
+        return Object.keys(asmFiles); 
+    }
 
     // resources
     this.registerResource = (rdo) => {
+        if (this.isUnloaded()) { 
+            throw 'Unloaded'; // TODO: fix
+        }        
         if (typeof rdo.name !== 'string' || rdo.name === '' ||
             typeof rdo.encodingType !== 'string' || rdo.encodingType === '' ||
             typeof rdo.file !== 'string' || rdo.file === '' ||
@@ -125,8 +205,16 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         return ns;
     };
     this.getResource = (qualifiedName) => {
+        if (this.isUnloaded()) { 
+            throw 'Unloaded'; // TODO: fix
+        }        
         if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${qualifiedName})`); }
         return alcResources[qualifiedName] || null;
     };     
-    this.allResources = () => { return Object.keys(alcResources); }    
+    this.allResources = () => { 
+        if (this.isUnloaded()) { 
+            throw 'Unloaded'; // TODO: fix
+        }        
+        return Object.keys(alcResources); 
+    }    
 };

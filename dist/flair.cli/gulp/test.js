@@ -20,8 +20,6 @@ const doTask = (done) => {
         const runner = optionsJSON.jasmine.specRunner;
         const open = require('open');
         open(runner);
-
-
     } else {
         const Jasmine = require('jasmine');
         const jasmine = new Jasmine();

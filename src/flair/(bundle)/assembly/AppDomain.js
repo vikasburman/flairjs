@@ -7,93 +7,71 @@
 const AppDomain = function(name) {
     let asmFiles = {},
         asmTypes = {},
-        domains = [],
-        contexts = [],
+        domains = {},
+        contexts = {},
         currentContexts = [],
         defaultLoadContext = null,
         unloadDefaultContext = null,
         isUnloaded = false;
 
     // default load context
-    defaultLoadContext = new AssemblyLoadContext('default', this, null, currentContexts),
+    defaultLoadContext = new AssemblyLoadContext('default', this, null, currentContexts, contexts),
     unloadDefaultContext = defaultLoadContext.unload;
     delete defaultLoadContext.unload; // default load context cannot be unloaded directly, unless app domain is unloaded
     defaultLoadContext = Object.freeze(defaultLoadContext);
+    contexts[defaultLoadContext.name] = defaultLoadContext;
 
     // app domain
+    domains[name] = this;
     this.name = name;
+    this.isRemote = false;
     this.isUnloaded = () => { return isUnloaded; };
     this.unload = () => {
-        // unload all domains
-        domains.forEach((domain) => { domain.unload(); })
+        if (!isUnloaded) {
+            // mark unloaded
+            isUnloaded = true;
 
-        // unload all contexts of this domain
-        contexts.forEach((context) => { context.unload(); })
-        unloadDefaultContext(); // unload default context
-
-        // clear registry
-        asmFiles = {},
-        asmTypes = {};
-
-        // unload this // TODO: clear worker too
-        if (isWorker) {
-            if (isServer) { // worker thread
-
-            } else { // web worker
-
+            // unload all contexts of this domain, including default one
+            for(let context in contexts) {
+                if (contexts.hasOwnProperty(context)) {
+                    if (typeof context.unload === 'function') {
+                        context.unload();
+                    }
+                }
             }
-        }
+            unloadDefaultContext();
 
-        // mark unloaded
-        isUnloaded = true;
+            // unload all domains, including this one
+            for(let domain in domains) {
+                if (domains.hasOwnProperty(domain) && domain !== this) {
+                    domain.unload();
+                }
+            }
+
+            // clear registries
+            asmFiles = {},
+            asmTypes = {};
+            contexts = {};
+            domains = {};
+        }
     };
-    this.createDomain = (name) => { // eslint-disable-line no-unused-vars
-        // TODO: worker thread and web worker usage
-        // store in secondaryDomains and return newly created proxy of that domain
-        // AppDomainProxy() will have:
-        //  createContext - to create a new context in that secondary domain which returns AssemblyLoadContextProxy()
-        //      it will have:
-        //          name
-        //          domain - proxy
-        //          isUnloaded
-        //          unload
-        //          allTypes
-        //          loadAssembly
-        //          allAssemblies
-        //          allResources
-        //          createInstance(qualifiedTypeName, ...args) - new async method to create a proxy for an object that is created in that remote domain
-        //                  this internally send a message to create a new instance of given type remotely
-        //                  that instance is kept via guid of the instance in a list there
-        //                  and guid is returned
-        //                  then a Proxy() is created here - which passes all method and function calls as a message for this guid
-        //                  to remote instance and if call fails, it fails, else it runs as a normal object
-        //                  a proxy is actually a Proxy() that
-        //          dispose(instance) - async method to dispose remote instance and remove it from list there
-        //  context - default context proxy -- will have same methods as above
-        //  unload - to unload this domain there and here the proxy
-        //  isUnloaded 
-        //  name
-        //  getAdo
-        //  allAdos
-        //  allTypes
-        //  loadScripts(...files) - new async method that loads these given files in this AppDomain
-        //
-        //  NOTE: those methods of AppDomain and AssemblyLoadContext which return non-primitive data are not available in proxy
-        //  Any action oriented calls are proxied via channel
-        //  Internally both Proxy will talk across domains via AppDomainSharedChannel() which passes raw messages
-        //  
-        //  
-        // execute() == this will async execute a method on seondary domain
+    this.createDomain = (name) => {
+        if(typeof name !== 'string' || name === 'default' || domains[name]) { throw _Exception.invalidArguments('name'); }
+        let proxy = new AppDomainProxy(name, domains);
+        domains[name] = proxy;
+        return proxy;
     };
+    this.domains = (name) => { return domains[name] || null; }
    
     // assembly load context
     this.context = defaultLoadContext;
+    this.contexts = (name) => { return contexts[name] || null; }
     this.createContext = (name) => {
-        if(typeof name !== 'string' || name === 'default') { throw _Exception.invalidArguments(name); }
-        let alc = Object.freeze(new AssemblyLoadContext(name, this, currentContexts));
-        contexts.push(alc);
+        if(typeof name !== 'string' || name === 'default' || contexts[name]) { throw _Exception.invalidArguments('name'); }
+        let alc = Object.freeze(new AssemblyLoadContext(name, this, defaultLoadContext, currentContexts, contexts));
+        contexts[name] = alc;
         return alc;
-    };      
+    };
 
     // ados
     this.registerAdo = (...ados) => {
@@ -142,12 +120,25 @@ const AppDomain = function(name) {
     };
     this.allAdos = () => { return Object.keys(asmFiles); }
 
-    // type
+    // types
     this.resolve = (qualifiedName) => {
         if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', 'Argument type if not valid. (qualifiedName)'); }
         return asmTypes[qualifiedName] || null;        
     };
     this.allTypes = () => { return Object.keys(asmTypes); }
+
+    // scripts
+    this.loadScripts = (...scripts) => {
+        return new Promise((resolve, reject) => {
+            try {
+                _include(scripts, () => {
+                    resolve(); // resolve without passing anything
+                });
+            } catch (e) {
+                reject(e);
+            }
+        });
+    };
 };
 
 // build default app domain

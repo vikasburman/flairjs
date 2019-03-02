@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.15.583
- *  Fri, 01 Mar 2019 16:43:15 GMT
+ *  Version: 0.15.622
+ *  Sat, 02 Mar 2019 03:27:31 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -36,6 +36,7 @@
         isWorker = isServer ? (!require('worker_threads').isMainThread) : (typeof WorkerGlobalScope !== 'undefined' ? true : false),
         _global = (isServer ? global : (isWorker ? WorkerGlobalScope : window)),
         flair = {},
+        currentFile = (isServer ? __filename : _global.document.currentScript.src),
         sym = [],
         disposers = [],
         options = {},
@@ -44,8 +45,12 @@
 
     // read symbols from environment
     if (isServer) {
-        let idx = process.argv.findIndex((item) => { return (item.startsWith('--flairSymbols') ? true : false); });
-        if (idx !== -1) { argsString = process.argv[idx].substr(2).split('=')[1]; }
+        let argv = process.argv;
+        if (isWorker) {
+            argv = require('worker_threads').workerData.argv;
+        }
+        let idx = argv.findIndex((item) => { return (item.startsWith('--flairSymbols') ? true : false); });
+        if (idx !== -1) { argsString = argv[idx].substr(2).split('=')[1]; }
     } else {
         argsString = (typeof _global.flairSymbols !== 'undefined') ? _global.flairSymbols : '';
     }
@@ -69,11 +74,12 @@
     // flair
     flair.info = Object.freeze({
         name: 'flair',
-        version: '0.15.583',
+        file: currentFile,
+        version: '0.15.622',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Fri, 01 Mar 2019 16:43:15 GMT')
-    });
+        lupdate: new Date('Sat, 02 Mar 2019 03:27:31 GMT')
+    });       
     flair.members = [];
     flair.options = Object.freeze(options);
     const a2f = (name, obj, disposer) => {
@@ -412,7 +418,7 @@
      * @name AssemblyLoadContext
      * @description The isolation boundary of type loading across assemblies. 
      */
-    const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentContexts) {
+    const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentContexts, contexts) {
         let alcTypes = {},
             alcResources = {},
             asmFiles = {},
@@ -424,14 +430,23 @@
         this.domain = domain;
         this.isUnloaded = () => { return isUnloaded || domain.isUnloaded(); };
         this.unload = () => {
-            alcTypes = {};
-            asmFiles = {};
-            alcResources = {};
+            if (!isUnloaded) {
+                // mark unloaded
+                isUnloaded = true;
     
-            // mark unloaded
-            isUnloaded = true;
+                // delete from domain registry
+                delete contexts[name];
+    
+                // clear registries
+                alcTypes = {};
+                asmFiles = {};
+                alcResources = {};
+            }
         };
         this.current = () => {
+            if (this.isUnloaded()) { 
+                throw 'Unloaded'; // TODO: fix
+            }        
             if (currentContexts.length === 0) {
                 return defaultLoadContext || this; // the first content created is the default context, so in first case, it will come as null, hence return this
             } else { // return last added context
@@ -448,6 +463,9 @@
     
          // types
         this.registerType = (Type) => {
+            if (this.isUnloaded()) { 
+                throw 'Unloaded'; // TODO: fix
+            }        
             // only valid types are allowed
             if (flairTypes.indexOf(_typeOf(Type)) === -1) { throw new _Exception('InvalidArgument', `Type is not valid.`); }
     
@@ -465,20 +483,77 @@
             return ns;
         };
         this.getType = (qualifiedName) => {
+            if (this.isUnloaded()) { 
+                throw 'Unloaded'; // TODO: fix
+            }        
             if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${qualifiedName})`); }
             return alcTypes[qualifiedName] || null;
         };
-        this.allTypes = () => { return Object.keys(alcTypes); }
+        this.allTypes = () => { 
+            if (this.isUnloaded()) { 
+                throw 'Unloaded'; // TODO: fix
+            }        
+            return Object.keys(alcTypes); 
+        }
+        this.execute = (info) => {
+            return new Promise((resolve, reject) => {
+                if (this.isUnloaded()) { 
+                    reject('Unloaded'); // TODO: fix
+                }
+    
+                // execution info
+                info.type = info.type || '';
+                info.typeArgs = info.typeArgs || [];
+                info.func = info.func || '';
+                info.args = info.args || [];
+                if (!info.type || !info.func) { throw new _Exception.InvalidArgument('info'); }
+    
+                let instance = null;
+                try {
+                    // get type
+                    let Type = this.getType(info.type);
+                    
+                    // create instance
+                    if (info.typeArgs.length === 0) {
+                        instance = new Type();
+                    } else {
+                        instance = new Type(...info.typeArgs);
+                    }
+                } catch (err) {
+                    reject(err);
+                }
+    
+                // run
+                let result = _using(instance, (obj) => {
+                    if(info.args.length === 0) {
+                        return obj[info.func]();
+                    } else {
+                        return obj[info.func](...info.args);
+                    }
+                });
+                if (result && typeof result.then === 'function') {
+                    result.then(resolve).catch(reject);
+                } else {
+                    return result;
+                }
+            });
+        };
     
         // assembly
         this.currentAssemblyBeingLoaded = (value) => {
+            if (this.isUnloaded()) { 
+                throw 'Unloaded'; // TODO: fix
+            }        
             if (typeof value !== 'undefined') { 
-                currentAssemblyBeingLoaded = which(value, true); // 
+                currentAssemblyBeingLoaded = which(value, true);
             }
             return currentAssemblyBeingLoaded;
         }
         this.loadAssembly = (file) => {
             return new Promise((resolve, reject) => {
+                if (this.isUnloaded()) { 
+                    reject('Unloaded'); // TODO: fix
+                }            
                 if (!asmFiles[file]) { // load only when it is not already loaded in this load context
                     // set this context as current context, so all types being loaded in this assembly will get attached to this context;
                     currentContexts.push(this);
@@ -487,7 +562,7 @@
                     uncacheModule(file);
     
                     // load module
-                    loadModule(file).then((resolved) => {
+                    loadModule(file).then(() => {
                         // remove this from current context list
                         currentContexts.pop();
     
@@ -495,7 +570,7 @@
                         asmFiles[file] = Object.freeze(new Assembly(this.domain.getADO(file), this));
     
                         // resolve
-                        resolved(resolved);
+                        resolve();
                     }).catch((e) => {
                         // remove this from current context list
                         currentContexts.pop();
@@ -507,13 +582,24 @@
             });        
         };    
         this.getAssembly = (file) => {
+            if (this.isUnloaded()) { 
+                throw 'Unloaded'; // TODO: fix
+            }        
             if (typeof file !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${file})`); }
             return asmFiles[file] || null;
         };
-        this.allAssemblies = () => { return Object.keys(asmFiles); }
+        this.allAssemblies = () => { 
+            if (this.isUnloaded()) { 
+                throw 'Unloaded'; // TODO: fix
+            }
+            return Object.keys(asmFiles); 
+        }
     
         // resources
         this.registerResource = (rdo) => {
+            if (this.isUnloaded()) { 
+                throw 'Unloaded'; // TODO: fix
+            }        
             if (typeof rdo.name !== 'string' || rdo.name === '' ||
                 typeof rdo.encodingType !== 'string' || rdo.encodingType === '' ||
                 typeof rdo.file !== 'string' || rdo.file === '' ||
@@ -535,10 +621,18 @@
             return ns;
         };
         this.getResource = (qualifiedName) => {
+            if (this.isUnloaded()) { 
+                throw 'Unloaded'; // TODO: fix
+            }        
             if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${qualifiedName})`); }
             return alcResources[qualifiedName] || null;
         };     
-        this.allResources = () => { return Object.keys(alcResources); }    
+        this.allResources = () => { 
+            if (this.isUnloaded()) { 
+                throw 'Unloaded'; // TODO: fix
+            }        
+            return Object.keys(alcResources); 
+        }    
     };
       
     /**
@@ -628,6 +722,234 @@
     };
       
     /**
+     * @name SharedChannel
+     * @description Shared channel that communicates between two threads.
+     */
+    const SharedChannel = function(onError) { 
+        let openMessages = {}, // {id: messageId, promise: promise }
+            channelPort = null,
+            wk = null;     
+    
+        // NOTE: This function's script is loaded independently by worker thread constructor as text/code.
+        const remoteMessageHandler = function() {
+            let isServer = ('<<isServer>>' === 'true' ? true : false), // eslint-disable-line no-constant-condition
+                flair = null,
+                port = null,
+                AppDomain = null;
+    
+            // build communication pipeline between main thread and worker thread
+            const onMessageFromMain = (e) => { // message received from main thread
+                let funcName = e.data.func,
+                    func = null;
+                const postSuccessToMain = (data) => {
+                    port.postMessage({
+                        data: {
+                            id: e.data.id,
+                            isError: false,
+                            error: null,
+                            result: data
+                        }
+                    }); 
+                };
+                const postErrorToMain = (err) => {
+                    port.postMessage({
+                        data: {
+                            id: e.data.id,
+                            isError: true,
+                            error: err,
+                            result: null
+                        }
+                    });  
+                };
+    
+                // run
+                switch(e.data.obj) {
+                    case 'ad': AppDomain[funcName]; break;
+                    case 'alc': AppDomain.context[funcName]; break;
+                }
+                try {
+                    let result = func(...e.data.args);
+                    if (result && typeof result.then === 'function') {
+                        result.then(postSuccessToMain).catch(postErrorToMain);
+                    } else {
+                        postSuccessToMain(result);
+                    }                        
+                } catch (err) {
+                    postErrorToMain(err);
+                }
+            };
+    
+            // initialize environment
+            if (isServer) {
+                flair = require('./flair{.min}.js');
+                let parentPort = require('worker_threads').parentPort;
+                port = parentPort;
+                parentPort.once('message', (value) => {
+                    port = value.privatePort;
+                    port.on('message', onMessageFromMain);
+                });
+            } else {
+                _global.importScripts('<<file>>');
+                flair = _global.flair;
+                port = this;
+                port.onmessage = onMessageFromMain;
+            }
+            AppDomain = flair.AppDomain;
+        };
+        let remoteMessageHandlerScript = remoteMessageHandler.toString().replace('<<file>>', currentFile);
+        remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<isServer>>', isServer.toString());
+        remoteMessageHandlerScript = `(${remoteMessageHandlerScript})();`
+        // NOTE: script/end
+    
+        const postMessageToWorker = (objId, func, ...args) => { // async message sent to worker thread
+            return new Promise((resolve, reject) => {
+                // store message for post processing handling
+                let messageId = guid();
+                openMessages[messageId] = {
+                    resolve: resolve,
+                    reject: reject
+                };
+                
+                // post message to worker
+                wk.postMessage({
+                    data: {
+                        id: messageId,
+                        obj: objId,
+                        func: func,
+                        args: args
+                    }
+                });
+            });
+        };
+        const onMessageFromWorker = (e) => { // async response received from worker thread
+            if (openMessages[e.data.id]) {
+                // pick message
+                let p = openMessages[e.data.id].promise;
+                delete openMessages[e.data.id];
+    
+                // resolve/reject
+                if (e.data.isError) {
+                    p.reject(e.data.error);
+                } else {
+                    p.resolve(e.data.result);
+                }
+            } else { // unsolicited message
+                onError(e.data); // TODO: fix - send proper error
+            }
+        };
+    
+        // create new worker
+        if (isServer) {
+            const { Worker, MessageChannel } = require('worker_threads');
+            wk = new Worker(remoteMessageHandlerScript, {
+                eval: true,
+                workerData: {
+                    argv: process.argv
+                }
+            });
+    
+            // create private channel
+            const subChannel = new MessageChannel();
+            wk.postMessage({ privatePort: subChannel.port1 }, [subChannel.port1])
+            subChannel.port2.on('error', onError);
+            subChannel.port2.on('message', onMessageFromWorker);
+        } else { // client
+            let blob = new Blob([remoteMessageHandlerScript]),
+                blobURL = _global.URL.createObjectURL(blob, {
+                    type: 'application/javascript; charset=utf-8'
+                });
+            wk = new _global.Worker(blobURL);
+            wk.onmessage = onMessageFromWorker;
+            wk.onerror = onError;
+        }
+    
+        // run something in worker thread
+        this.remoteCall = postMessageToWorker;
+    
+        // close channel
+        this.close = () => {
+            if (isServer) { 
+                channelPort.close(); 
+                wk.unref();
+            }
+            wk.terminate();
+        };
+    };
+      
+    /**
+     * @name AppDomainProxy
+     * @description Proxy to AppDomain that is created inside other worker.
+     * @example
+     *  
+     */
+    const AppDomainProxy = function(name, domains) {
+        let isUnloaded = false;
+    
+        // shared communication channel between main and worker thread
+        let channel = new SharedChannel((err) => {  // eslint-disable-line no-unused-vars
+            throw new _Exception('RemoteError', err); // TODO:
+        });
+    
+        // app domain
+        this.name = name;
+        this.isRemote = true;
+        this.isUnloaded = () => { return isUnloaded; };
+        this.unload = () => {
+            // this initiates unloading of secondary thread
+            if (!isUnloaded) {
+                // mark unloaded
+                isUnloaded = true;
+    
+                // remove from domains list
+                delete domains[name];
+    
+                // unload
+                channel.remoteCall('ad', 'unload').finally(() => {
+                    channel.close();
+                });
+            }
+        };
+    
+        // assembly load context
+        this.context = Object.freeze(new AssemblyLoadContextProxy('default', this, channel));
+    
+        // scripts
+        this.loadScripts = (...scripts) => {
+            if (this.isUnloaded()) { 
+                throw 'Unloaded'; // TODO: fix
+            }
+            return channel.remoteCall('ad', 'loadScripts', ...scripts);
+        };
+    };
+      
+    /**
+     * @name AssemblyLoadContextProxy
+     * @description Proxy of the AssemblyLoadContext that is created inside other AppDomain.
+     */
+    const AssemblyLoadContextProxy = function(name, domainProxy, channel) {
+        // context
+        this.name = name;
+        this.domain = domainProxy;
+        this.isUnloaded = () => { return domainProxy.isUnloaded(); };
+    
+        // types
+        this.execute = (info) => {
+            if (this.isUnloaded()) { 
+                throw 'Unloaded'; // TODO: fix
+            }
+            return channel.remoteCall('alc', 'execute', info);
+        };
+    
+        // assembly
+        this.loadAssembly = (file) => {
+            if (this.isUnloaded()) { 
+                throw 'Unloaded'; // TODO: fix
+            }
+            return channel.remoteCall('alc', 'loadAssembly', file);
+        };    
+     };
+      
+    /**
      * @name AppDomain
      * @description Thread level isolation.
      * @example
@@ -636,93 +958,71 @@
     const AppDomain = function(name) {
         let asmFiles = {},
             asmTypes = {},
-            domains = [],
-            contexts = [],
+            domains = {},
+            contexts = {},
             currentContexts = [],
             defaultLoadContext = null,
             unloadDefaultContext = null,
             isUnloaded = false;
     
         // default load context
-        defaultLoadContext = new AssemblyLoadContext('default', this, null, currentContexts),
+        defaultLoadContext = new AssemblyLoadContext('default', this, null, currentContexts, contexts),
         unloadDefaultContext = defaultLoadContext.unload;
         delete defaultLoadContext.unload; // default load context cannot be unloaded directly, unless app domain is unloaded
         defaultLoadContext = Object.freeze(defaultLoadContext);
+        contexts[defaultLoadContext.name] = defaultLoadContext;
     
         // app domain
+        domains[name] = this;
         this.name = name;
+        this.isRemote = false;
         this.isUnloaded = () => { return isUnloaded; };
         this.unload = () => {
-            // unload all domains
-            domains.forEach((domain) => { domain.unload(); })
+            if (!isUnloaded) {
+                // mark unloaded
+                isUnloaded = true;
     
-            // unload all contexts of this domain
-            contexts.forEach((context) => { context.unload(); })
-            unloadDefaultContext(); // unload default context
-    
-            // clear registry
-            asmFiles = {},
-            asmTypes = {};
-    
-            // unload this // TODO: clear worker too
-            if (isWorker) {
-                if (isServer) { // worker thread
-    
-                } else { // web worker
-    
+                // unload all contexts of this domain, including default one
+                for(let context in contexts) {
+                    if (contexts.hasOwnProperty(context)) {
+                        if (typeof context.unload === 'function') {
+                            context.unload();
+                        }
+                    }
                 }
-            }
+                unloadDefaultContext();
     
-            // mark unloaded
-            isUnloaded = true;
+                // unload all domains, including this one
+                for(let domain in domains) {
+                    if (domains.hasOwnProperty(domain) && domain !== this) {
+                        domain.unload();
+                    }
+                }
+    
+                // clear registries
+                asmFiles = {},
+                asmTypes = {};
+                contexts = {};
+                domains = {};
+            }
         };
-        this.createDomain = (name) => { // eslint-disable-line no-unused-vars
-            // TODO: worker thread and web worker usage
-            // store in secondaryDomains and return newly created proxy of that domain
-            // AppDomainProxy() will have:
-            //  createContext - to create a new context in that secondary domain which returns AssemblyLoadContextProxy()
-            //      it will have:
-            //          name
-            //          domain - proxy
-            //          isUnloaded
-            //          unload
-            //          allTypes
-            //          loadAssembly
-            //          allAssemblies
-            //          allResources
-            //          createInstance(qualifiedTypeName, ...args) - new async method to create a proxy for an object that is created in that remote domain
-            //                  this internally send a message to create a new instance of given type remotely
-            //                  that instance is kept via guid of the instance in a list there
-            //                  and guid is returned
-            //                  then a Proxy() is created here - which passes all method and function calls as a message for this guid
-            //                  to remote instance and if call fails, it fails, else it runs as a normal object
-            //                  a proxy is actually a Proxy() that
-            //          dispose(instance) - async method to dispose remote instance and remove it from list there
-            //  context - default context proxy -- will have same methods as above
-            //  unload - to unload this domain there and here the proxy
-            //  isUnloaded 
-            //  name
-            //  getAdo
-            //  allAdos
-            //  allTypes
-            //  loadScripts(...files) - new async method that loads these given files in this AppDomain
-            //
-            //  NOTE: those methods of AppDomain and AssemblyLoadContext which return non-primitive data are not available in proxy
-            //  Any action oriented calls are proxied via channel
-            //  Internally both Proxy will talk across domains via AppDomainSharedChannel() which passes raw messages
-            //  
-            //  
-            // execute() == this will async execute a method on seondary domain
+        this.createDomain = (name) => {
+            if(typeof name !== 'string' || name === 'default' || domains[name]) { throw _Exception.invalidArguments('name'); }
+            let proxy = new AppDomainProxy(name, domains);
+            domains[name] = proxy;
+            return proxy;
         };
+        this.domains = (name) => { return domains[name] || null; }
        
         // assembly load context
         this.context = defaultLoadContext;
+        this.contexts = (name) => { return contexts[name] || null; }
         this.createContext = (name) => {
-            if(typeof name !== 'string' || name === 'default') { throw _Exception.invalidArguments(name); }
-            let alc = Object.freeze(new AssemblyLoadContext(name, this, currentContexts));
-            contexts.push(alc);
+            if(typeof name !== 'string' || name === 'default' || contexts[name]) { throw _Exception.invalidArguments('name'); }
+            let alc = Object.freeze(new AssemblyLoadContext(name, this, defaultLoadContext, currentContexts, contexts));
+            contexts[name] = alc;
             return alc;
-        };      
+        };
     
         // ados
         this.registerAdo = (...ados) => {
@@ -771,12 +1071,25 @@
         };
         this.allAdos = () => { return Object.keys(asmFiles); }
     
-        // type
+        // types
         this.resolve = (qualifiedName) => {
             if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', 'Argument type if not valid. (qualifiedName)'); }
             return asmTypes[qualifiedName] || null;        
         };
         this.allTypes = () => { return Object.keys(asmTypes); }
+    
+        // scripts
+        this.loadScripts = (...scripts) => {
+            return new Promise((resolve, reject) => {
+                try {
+                    _include(scripts, () => {
+                        resolve(); // resolve without passing anything
+                    });
+                } catch (e) {
+                    reject(e);
+                }
+            });
+        };
     };
     
     // build default app domain
@@ -832,7 +1145,7 @@
     
     // attach to flair
     a2f('getAttr', _getAttr);
-       
+    
     /**
      * @name getAssembly
      * @description Gets the assembly of a given flair type
@@ -1419,14 +1732,21 @@
      * @example
      *  using(obj, fn)
      * @params
-     *  obj: object - object that needs to be processed by processor function
+     *  obj: object/string - object that needs to be processed by processor function or qualified name for which object will be created
      *                If a disposer is not defined for the object, it will not do anything
      *  fn: function - processor function
      * @returns any - returns anything that is returned by processor function, it may also be a promise
      */ 
     const _using = (obj, fn) => {
-        if (_typeOf(obj) !== 'instance') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+        if (['instance', 'string'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
         if (_typeOf(fn) !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (fn)'); }
+    
+        // create instance, if need be
+        if (typeof obj === 'string') { // qualifiedName
+            let Type = _getType(obj);
+            if (!Type) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+            obj = new Type(); // this does not support constructor args, for ease of use only.
+        }
     
         let result = null,
             isDone = false,

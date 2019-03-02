@@ -23,6 +23,7 @@
         isWorker = isServer ? (!require('worker_threads').isMainThread) : (typeof WorkerGlobalScope !== 'undefined' ? true : false),
         _global = (isServer ? global : (isWorker ? WorkerGlobalScope : window)),
         flair = {},
+        currentFile = (isServer ? __filename : _global.document.currentScript.src),
         sym = [],
         disposers = [],
         options = {},
@@ -31,8 +32,12 @@
 
     // read symbols from environment
     if (isServer) {
-        let idx = process.argv.findIndex((item) => { return (item.startsWith('--flairSymbols') ? true : false); });
-        if (idx !== -1) { argsString = process.argv[idx].substr(2).split('=')[1]; }
+        let argv = process.argv;
+        if (isWorker) {
+            argv = require('worker_threads').workerData.argv;
+        }
+        let idx = argv.findIndex((item) => { return (item.startsWith('--flairSymbols') ? true : false); });
+        if (idx !== -1) { argsString = argv[idx].substr(2).split('=')[1]; }
     } else {
         argsString = (typeof _global.flairSymbols !== 'undefined') ? _global.flairSymbols : '';
     }
@@ -56,11 +61,12 @@
     // flair
     flair.info = Object.freeze({
         name: '<<name>>',
+        file: currentFile,
         version: '<<version>>',
         copyright: '<<copyright>>',
         license: '<<license>>',
         lupdate: new Date('<<lupdate>>')
-    });
+    });       
     flair.members = [];
     flair.options = Object.freeze(options);
     const a2f = (name, obj, disposer) => {
@@ -79,9 +85,12 @@
     <!-- inject: ./(bundle)/assembly/AssemblyLoadContext.js -->  
     <!-- inject: ./(bundle)/assembly/Assembly.js -->  
     <!-- inject: ./(bundle)/assembly/Resource.js -->  
+    <!-- inject: ./(bundle)/assembly/SharedChannel.js -->  
+    <!-- inject: ./(bundle)/assembly/AppDomainProxy.js -->  
+    <!-- inject: ./(bundle)/assembly/AssemblyLoadContextProxy.js -->  
     <!-- inject: ./(bundle)/assembly/AppDomain.js -->  
 
-    <!-- inject: ./(bundle)/types/get/getAttr.js -->   
+    <!-- inject: ./(bundle)/types/get/getAttr.js -->
     <!-- inject: ./(bundle)/types/get/getAssembly.js -->   
     <!-- inject: ./(bundle)/types/get/getContext.js -->   
     <!-- inject: ./(bundle)/types/get/getResource.js -->  

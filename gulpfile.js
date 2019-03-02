@@ -26,7 +26,7 @@ gulp.task('fiddle', (done) => {
       } = require('worker_threads');
      
       console.log(process.argv);
-      let w = new Worker('console.log(require("worker_threads").workerData); console.log(require("worker_threads").isMainThread)', {eval: true, workerData: process.argv});
+      let w = new Worker('console.log(require("worker_threads").workerData); console.log(process.argv)', {eval: true, workerData: 'vikas', execArgv: ['TEST']});
       //console.log(isMainThread);
 
 });
