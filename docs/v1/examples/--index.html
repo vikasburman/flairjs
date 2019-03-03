@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>KitchenSink - FlairJS - True Object Oriented JavaScript</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+    </head>
+    <body>
+        <div id="main">
+            <div class="container">
+                <nav class="navbar fixed-top navbar-expand-lg navbar-light bg-light">
+                    <a class="navbar-brand" :href="flair.info.link" target="_blank">
+                            <img src="../../favicon.png" width="30" height="30" class="d-inline-block align-top" alt="">
+                            KitchenSink
+                    </a>
+                    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav">
+                            <li class="nav-item active">
+                            <a class="nav-link" href="#home">Home</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                Types
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                                <a class="dropdown-item" href="#assembly">Assembly</a>
+                                <a class="dropdown-item" href="#class">Class</a>
+                                <a class="dropdown-item" href="#enum">Enum</a>
+                                <a class="dropdown-item" href="#interface">Interface</a>
+                                <a class="dropdown-item" href="#mixin">Mixin</a>
+                                <a class="dropdown-item" href="#namespace">Namespace</a>
+                                <a class="dropdown-item" href="#proc">Proc</a>
+                                <a class="dropdown-item" href="#resource">Resource</a>
+                                <a class="dropdown-item" href="#structure">Structure</a>
+                            </div>
+                            </li>
+                            <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                Members
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                                <a class="dropdown-item" href="#constructor">construct</a>
+                                <a class="dropdown-item" href="#destructor">destruct</a>
+                                <a class="dropdown-item" href="#event">event</a>
+                                <a class="dropdown-item" href="#function">func</a>
+                                <a class="dropdown-item" href="#property">prop</a>
+                            </div>
+                            </li>
+                            <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                Functions
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                                <a class="dropdown-item" href="#as">as</a>
+                                <a class="dropdown-item" href="#bring">bring</a>
+                                <a class="dropdown-item" href="#classOf">classOf</a>
+                                <a class="dropdown-item" href="#is">is</a>
+                                <a class="dropdown-item" href="#isderivedfrom">isDerivedFrom</a>
+                                <a class="dropdown-item" href="#isimplements">isImplements</a>
+                                <a class="dropdown-item" href="#isinstanceof">isInstanceOf</a>
+                                <a class="dropdown-item" href="#ismixed">isMixed</a>
+                                <a class="dropdown-item" href="#using">using</a>
+                                <a class="dropdown-item" href="#which">which</a>
+                            </div>
+                            </li>
+                            <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                Classes
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                                <a class="dropdown-item" href="#aspect">Aspect</a>
+                                <a class="dropdown-item" href="#attribute">Attribute</a>
+                            </div>
+                            </li>
+                            <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                Objects
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                                <a class="dropdown-item" href="#aspect">Aspects</a>
+                                <a class="dropdown-item" href="#attribute">Container</a>
+                                <a class="dropdown-item" href="#attribute">Exception</a>
+                                <a class="dropdown-item" href="#attribute">flair</a>
+                                <a class="dropdown-item" href="#attribute">Reflector</a>
+                                <a class="dropdown-item" href="#attribute">Serializer</a>
+                            </div>
+                            </li>                            
+                            <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                Attributes
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                                <a class="dropdown-item" href="#abstract">abstract</a>
+                                <a class="dropdown-item" href="#async">async</a>
+                                <a class="dropdown-item" href="#conditional">conditional</a>
+                                <a class="dropdown-item" href="#deprecate">deprecate</a>
+                                <a class="dropdown-item" href="#enumerate">enumerate</a>
+                                <a class="dropdown-item" href="#hide">hide</a>
+                                <a class="dropdown-item" href="#inject">inject</a>
+                                <a class="dropdown-item" href="#mixed">mixed</a>
+                                <a class="dropdown-item" href="#override">override</a>
+                                <a class="dropdown-item" href="#private">private</a>
+                                <a class="dropdown-item" href="#protected">protected</a>
+                                <a class="dropdown-item" href="#readonly">readonly</a>
+                                <a class="dropdown-item" href="#sealed">sealed</a>
+                                <a class="dropdown-item" href="#serialize">serialize</a>
+                                <a class="dropdown-item" href="#session">session</a>
+                                <a class="dropdown-item" href="#singleton">singleton</a>
+                                <a class="dropdown-item" href="#state">state</a>
+                                <a class="dropdown-item" href="#static">static</a>
+                                <a class="dropdown-item" href="#once">once</a>
+                            </div>
+                            </li>
+                        </ul>
+                    </div>             
+                </nav>
+                <div id="view" style="margin-top: 75px;">
+                    <div id="text" class="row-md-1" style="max-height: 150px; overflow: scroll;">
+                        <div id="md" class="col"></div>
+                        <br/>
+                    </div>
+                    <div id="code">
+                    <div class="row">
+                        <div class="col-7">
+                            <ul class="nav nav-tabs">
+                                <li class="nav-item">
+                                    <a id="js-link" class="nav-link active" href="javascript: showtab('js');">Javascript</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a id="html-link" class="nav-link" href="javascript: showtab('html');">Html</a>
+                                </li>                                
+                            </ul>
+                        </div>
+                        <div class="col-5">
+                            <ul class="nav nav-tabs">
+                                <li class="nav-item">
+                                    <a class="nav-link active">Result</a>
+                                </li>
+                            </ul>
+                        </div>                        
+                    </div>
+                    <div class="row">
+                        <div class="col-7">
+                            <div class="row">&nbsp;</div>
+                            <div class="row-md-1">
+                                <pre id="js-host"><code id="js" class="javascript"></code></pre>
+                                <pre id="html-host"><code id="html" class="html"></code></pre>
+                                <br><br><br><br>
+                            </div>
+                        </div>
+                        <div class="col-5">
+                            <div class="row">&nbsp;</div>                            
+                            <div class="row-md-1">
+                                <div id="result"></div>
+                            </div>
+                        </div>                        
+                    </div>
+                    </div>
+                </div>
+            </div>        
+        </div>
+
+        <script src="../../js/jquery.min.js"></script>
+        <script src="../../js/bootstrap.min.js"></script>
+        <script src="../../js/vue.min.js"></script>
+        <script src="../../js/flair.js"></script>
+        <script>
+            // show tab
+            var showtab = (id) => {
+                if (id === 'js') {
+                    $('#js-link').addClass('active');
+                    $('#html-link').removeClass('active');
+                    $('#js').text(jsText);
+                    $('#html-host').hide();
+                    $('#js-host').show();
+                    hljs.highlightBlock($('#js')[0]);
+                } else {
+                    $('#html-link').addClass('active');
+                    $('#js-link').removeClass('active');
+                    $('#html').text(htmlText);
+                    $('#js-host').hide();
+                    $('#html-host').show();
+                    hljs.highlightBlock($('#html')[0]);
+                };
+            };
+
+            // view loader
+            var loadView = () => {
+                let view = 'home'
+                window.data = {};
+                window.jsText = '',
+                window.htmlText = '';
+                if (location.href.indexOf('#') !== -1) {
+                    view = location.href.substr(location.href.indexOf('#')+1);
+                }
+                $.getScript({
+                    url: './views/' + view + '/index.js', 
+                    dataType: "script",                    
+                    cache: false
+                }).then((data) => {
+                    jsText = data;
+                    $.get({
+                        url: './views/' + view + '/index.md', 
+                        cache: false                        
+                    }).then((data) => {
+                        let converter = new showdown.Converter();
+                        $('#md').html(converter.makeHtml(data));
+                        $('#text').show();
+                        $.get({
+                            url: './views/' + view + '/index.html', 
+                            cache: false                        
+                        }).then((data) => {
+                            htmlText = data;
+                            $('#result').html(data);
+                            showtab('js');
+                            new Vue({
+                                el: '#main'
+                            });                             
+                            $('#code').show();
+                        }).fail(() => {
+                            $('#code').hide();
+                        });                        
+                    }).fail(() => {
+                        $('#text').hide();
+                    });
+                }).fail((e) => {
+                    $('#md').html('Error 404: Not found.');
+                    $('#text').show();
+                    $('#code').hide();
+                });
+            };
+
+            // on start
+            $(()=> {
+                // load view at start
+                loadView();
+
+                $(window).on('hashchange',function(){ 
+                    // load view at hash change
+                    loadView();
+                });
+            });
+        </script>
+    </body>
+</html>

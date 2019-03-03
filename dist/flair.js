@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.15.705
- *  Sun, 03 Mar 2019 03:39:31 GMT
+ *  Version: 0.15.707
+ *  Sun, 03 Mar 2019 04:10:49 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -76,10 +76,10 @@
     flair.info = Object.freeze({
         name: 'flair',
         file: currentFile,
-        version: '0.15.705',
+        version: '0.15.707',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 03 Mar 2019 03:39:31 GMT')
+        lupdate: new Date('Sun, 03 Mar 2019 04:10:49 GMT')
     });       
     flair.members = [];
     flair.options = Object.freeze(options);

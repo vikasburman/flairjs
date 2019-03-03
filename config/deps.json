@@ -2,6 +2,6 @@
     "pre": [
     ],
     "post": [
-        { "src": "./dist/flair.js", "dest": "./docs/js/flair.js" }
+        { "src": "./dist/flair.js", "dest": "./docs/v1/examples/js/flair.js" }
     ]
 }
