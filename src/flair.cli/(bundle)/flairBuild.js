@@ -288,7 +288,8 @@ const build = (options, done) => {
     };
     const minifyJS = (file) => {
         return new Promise((resolve, reject) => {
-            let result = options.minifyJS([file], options.minifyConfig.js);
+            let content = fsx.readFileSync(file, 'utf8');
+            let result = options.minifyJS(content, options.minifyConfig.js);
             if (result.error) { 
                 console.log(result.error); // eslint-disable-line no-console
                 reject(`Minify for ${file} failed.`); 
@@ -481,7 +482,7 @@ const build = (options, done) => {
         `const { AppDomain } = flair;\n` +
         `const __currentContextName = flair.AppDomain.context.current().name;\n` +
         `const { $$, attr } = flair;\n` +
-        `const { Container, include } = flair;\n` +
+        `const { bring, Container, include } = flair;\n` +
         `const { Port } = flair;\n` +
         `const { on, post, telemetry } = flair;\n` +
         `const { Reflector } = flair;\n` +
@@ -545,7 +546,7 @@ const build = (options, done) => {
 
             // wrap type in its own closure, so it's own constants etc defind on top of file
             // does not conflict with some other type's constants
-            content = `\n(() => { // ${thisFile}\n'use strict';\n${content}\n})();\n`;
+            content = `\n(async () => { // ${thisFile}\n'use strict';\n${content}\n})();\n`;
 
             // append content to file
             appendToFile(content);
@@ -911,7 +912,7 @@ const build = (options, done) => {
  *              minify: true/false   - is minify to be run
  *              minifyConfig - minify configuration options file path having structure
  *              {
- *                  "js": { NOTE: Option configuration comes from: https://github.com/mishoo/UglifyJS2#minify-options
+ *                  "js": { NOTE: Option configuration comes from: https://github.com/mishoo/UglifyJS2/tree/harmony
  *                  },
  *                  "css": { NOTE: Option configuration comes from: https://www.npmjs.com/package/clean-css
  *                  },
@@ -1176,7 +1177,7 @@ exports.flairBuild = function(options, cb) {
     // minify
     if (options.minify && options.minifyConfig) {
         if (options.minifyTypes.indexOf('js') !== -1) { // JS minifier
-            options.minifyJS = require('uglify-js-harmony').minify;
+            options.minifyJS = require('uglify-es').minify;
         }
         if (options.minifyTypes.indexOf('css') !== -1) { // CSS minifier
             options.minifyCSS = require('clean-css');

@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.15.655
- *  Sat, 02 Mar 2019 23:35:03 GMT
+ *  Version: 0.15.688
+ *  Sun, 03 Mar 2019 01:19:59 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -76,10 +76,10 @@
     flair.info = Object.freeze({
         name: 'flair',
         file: currentFile,
-        version: '0.15.655',
+        version: '0.15.688',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sat, 02 Mar 2019 23:35:03 GMT')
+        lupdate: new Date('Sun, 03 Mar 2019 01:19:59 GMT')
     });       
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -1301,7 +1301,7 @@
         this.loadScripts = (...scripts) => {
             return new Promise((resolve, reject) => {
                 try {
-                    _include(scripts, () => {
+                    _bring(scripts, () => {
                         resolve(); // resolve without passing anything
                     });
                 } catch (e) {
@@ -1490,6 +1490,22 @@
     
     // attach to flair
     a2f('getTypeOf', _getTypeOf);
+        
+    /**
+     * @name ns
+     * @description Gets the registered namespace from default assembly load context of default appdomain
+     * @example
+     *  ns(name)
+     * @params
+     *  name: string - name of the namespace
+     * @returns object - namespace object
+     */ 
+    const _ns = (name) => { 
+        return _AppDomain.context.namespace(name);
+    };
+    
+    // attach to flair
+    a2f('ns', _ns);
         
     /**
      * @name isDerivedFrom
@@ -1725,12 +1741,12 @@
      
 
     /**
-     * @name include
+     * @name bring
      * @description Fetch, load and/or resolve an external dependency for required context
      * @example
-     *  include(deps, fn)
+     *  bring(deps, fn)
      * @usage
-     *  include([
+     *  bring([
      *    'my.namespace.MyStruct',
      *    '[IBase]'
      *    'myServerClass | myClientClass'
@@ -1780,8 +1796,8 @@
      *  fn: function - function where to pass resolved dependencies, in order they are defined in deps
      * @returns void
      */ 
-    const incCycle = [];
-    const _include = (deps, fn) => {
+    const bringCycle = [];
+    const _bring = (deps, fn) => {
         if (['string', 'array'].indexOf(_typeOf(deps)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (deps)'); }
         if (typeof fn !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (fn)'); }
         if (!Array.isArray(deps)) { deps = [deps]; }
@@ -1872,7 +1888,7 @@
                 // done
                 let resolved = (isExcludePop) => {
                     _resolvedItems.push(_resolved);
-                    if (!isExcludePop) { incCycle.pop(); } // removed the last added dep
+                    if (!isExcludePop) { bringCycle.pop(); } // removed the last added dep
                     resolveNext();
                 };
     
@@ -1881,10 +1897,10 @@
                     resolved(true); return;
                 } else {
                     // cycle break check
-                    if (incCycle.indexOf(_dep) !== -1) {
+                    if (bringCycle.indexOf(_dep) !== -1) {
                         throw new _Exception('CircularDependency', `Circular dependency identified. (${_dep})`);
                     } else {
-                        incCycle.push(_dep);
+                        bringCycle.push(_dep);
                     }
     
                     // run
@@ -1910,9 +1926,39 @@
     };
     
     // attach to flair
-    a2f('include', _include, () => {
-        incCycle.length = 0;
+    a2f('bring', _bring, () => {
+        bringCycle.length = 0;
     });
+      
+    /**
+     * @name include
+     * @description bring the required dependency
+     * @example
+     *  include(dep)
+     * @params
+     *  dep: string - dependency to be included
+     *                NOTE: Dep can be of any type as defined for 'bring'
+     * @returns promise - that gets resolved with given dependency
+     */ 
+    const _include = (dep) => { 
+        return new Promise((resolve, reject) => {
+            if (typeof dep !== 'string') { reject(new _Exception('InvalidArgument', 'Argument type is invalid. (dep)')); return; }
+            try {
+                _bring([dep], (obj) => {
+                    if (obj) {
+                        resolve(obj);
+                    } else {
+                        reject();
+                    }
+                });
+            } catch (err) {
+                reject(err);
+            }
+        });
+    };
+    
+    // attach to flair
+    a2f('include', _include);
       
     /**
      * @name dispose
@@ -4558,6 +4604,206 @@
     
      
     /**
+     * @name Tasks
+     * @description Task execution
+     * @example
+     *  new Tasks.TaskInfo(qualifiedName, ...args)
+     *  Tasks.invoke(task, progressListener)
+     *  Tasks.getHandle(task, progressListener) -> handle
+     *      handle.run(...args) // (can be executed many times)
+     *      handle.close() // finally close
+     *  Tasks.parallel.invoke.any(...tasks)
+     *  Tasks.parallel.invoke.all(...tasks)
+     *  Tasks.parallel.invoke.each(onSuccess, onError, ...tasks)
+     *  Tasks.sequence.invoke(...tasks)
+     * @params
+     *  qualifiedName: string - qualified type name whose reference is needed
+     * @returns object - if assembly which contains this type is loaded, it will return flair type object OR will return null
+     */
+    const max_pool_size = (options.env.cores * 4);
+    const min_pool_size = Math.round(max_pool_size/4);
+    const ADPool = [];
+    const resetADPool = () => { // called by shared channel, whenever some AD goes idle
+        if (ADPool.length <= min_pool_size) { return; } // not needed
+        
+        // take one pass to unload all domains which are not busy
+        let allADs = ADPool.slice(0);
+        let processNext = () => {
+            if (allADs.length !== 0) { // unload idle sitting ad
+                let ad = allADs.shift();
+                if (!ad.context.isBusy()) { 
+                    ad.context.hasActiveInstances().then((count) => {
+                        if (count === 0) { // idle ad
+                            ad.unload(); // unload
+                            ADPool.shift(); // remove from top from main pool
+                            if (ADPool.length > min_pool_size) { // do more, if need be
+                                processNext();
+                            }
+                        } else {
+                            processNext();
+                        }
+                    }).catch(() => {
+                        // ignore error
+                        processNext();
+                    });
+                } else {
+                    processNext();
+                }
+            } 
+        };
+        processNext();
+    
+    };
+    const getFreeAD = () => {
+        return new Promise((resolve, reject) => {
+            // get a free AD from pool
+            // a free AD is whose default context does not have any open messages and instances count is zero
+            let allADs = ADPool.slice(0);
+            let processNext = () => {
+                if (allADs.length !== 0) { // find a free sitting ad
+                    let ad = allADs.shift();
+                    if (!ad.context.isBusy()) { 
+                        ad.context.hasActiveInstances().then((count) => {
+                            if (count === 0) {
+                                resolve(ad);
+                            } else {
+                                processNext();
+                            }
+                        }).catch(reject);
+                    } else {
+                        processNext();
+                    }
+                } else {
+                    if (ADPool.length < max_pool_size) { // create new ad
+                        _AppDomain.createDomain(guid()).then((ad) => { // with a random name
+                            resolve(ad);
+                        }).catch(reject);
+                    } else { 
+                        reject('AD POOL FULL'); // TODO: send proper error
+                    }
+                }
+            };
+            processNext();
+        });
+    };
+    
+    const _Tasks = { 
+        TaskInfo: function(qualifiedName, ...args) {
+            return Object.freeze({
+                type: qualifiedName,
+                typeArgs: args
+            });
+        },
+    
+        getHandle: (task, progressListener) => {
+            return new Promise((resolve, reject) => {
+                getFreeAD().then((ad) => {
+                    let taskHandle = {
+                        run: (...args) => {
+                            return new Promise((_resolve, _reject) => {
+                                ad.context.execute({
+                                    type: task.type,
+                                    typeArgs: task.typeArgs,
+                                    func: 'run',
+                                    args: args,
+                                    keepAlive: true
+                                }, progressListener).then(_resolve).catch(_reject); 
+                            });
+                        },
+                        close: () => {
+                            return new Promise((_resolve, _reject) => {
+                                ad.context.execute({
+                                    type: task.type,
+                                    typeArgs: task.typeArgs,
+                                    func: '',   // keeping it empty together with keepAlive = false, removes the internal instance
+                                    args: [],
+                                    keepAlive: false
+                                }, progressListener).then(_resolve).catch(_reject).finally(resetADPool); 
+                            });
+                        }
+                    };
+                    resolve(taskHandle);
+                }).catch(reject);
+            });
+        },
+    
+        invoke: (task, progressListener) => {
+            return new Promise((resolve, reject) => {
+                getFreeAD().then((ad) => {
+                    ad.context.execute({
+                        type: task.type,
+                        typeArgs: task.typeArgs,
+                        func: 'run',
+                        args: [],
+                        keepAlive: false
+                    }, progressListener).then(resolve).catch(reject).finally(resetADPool)
+                }).catch(reject);
+            });
+        },
+    
+        parallel: Object.freeze({
+            invokeMany: (...tasks) => {
+                let promises = [];
+                for(let task of tasks) {
+                    promises.push(_Tasks.invoke(task));
+                }
+                return promises;
+            },   
+            invoke: Object.freeze({
+                any: (...tasks) => { return Promise.race(_Tasks.parallel.invokeMany(...tasks)); },
+                all: (...tasks) => { return Promise.all(_Tasks.parallel.invokeMany(...tasks)); },
+                each: (onSuccess, onError, ...tasks) => {
+                    return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
+                        let promises = _Tasks.parallel.invokeMany(...tasks),
+                            done = 0;
+                        for(let p of promises) {
+                            p.then(onSuccess).catch(onError).finally(() => {
+                                done++;
+                                if (promises.length === done) {
+                                    resolve();
+                                }
+                            })
+                        }
+                    });
+                }
+            })
+        }),
+    
+        sequence: Object.freeze({
+            invoke: (...tasks) => {
+                return new Promise((resolve, reject) => {
+                    let allTasks = tasks.slice(0),
+                        results = [];
+                    let processNext = () => {
+                        if (allTasks.length === 0) { resolve(...results); return; }
+                        let task = allTasks.shift();
+                        _Tasks.invoke(task).then((result) => {
+                            results.push(result);
+                            processNext();
+                        }).catch(reject);
+                    };
+                    if (allTasks.length > 0) { 
+                        processNext(); 
+                    } else {
+                        resolve(...results);
+                    }
+                });
+            }
+        })
+    };
+    
+    // attach to flair
+    a2f('Tasks', _Tasks, () => {
+        // unload pooled ADs
+        ADPool.forEach((ad) => {
+            ad.unload();
+        });
+    
+        // clear pool
+        ADPool.length = 0;
+    });
+     
+    /**
      * @name Reflector
      * @description Reflection of flair types and objects.
      * @example
@@ -5198,7 +5444,7 @@ const { Aspects } = flair;
 const { AppDomain } = flair;
 const __currentContextName = flair.AppDomain.context.current().name;
 const { $$, attr } = flair;
-const { Container, include } = flair;
+const { bring, Container, include } = flair;
 const { Port } = flair;
 const { on, post, telemetry } = flair;
 const { Reflector } = flair;
@@ -5214,7 +5460,7 @@ const { env } = flair.options;
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('./flair{.min}.js');
 
-(() => { // ./src/flair/(root)/Aspect.js
+(async () => { // ./src/flair/(root)/Aspect.js
 'use strict';
 /**
  * @name Aspect
@@ -5278,7 +5524,7 @@ Class('Aspect', function() {
 
 })();
 
-(() => { // ./src/flair/(root)/Attribute.js
+(async () => { // ./src/flair/(root)/Attribute.js
 'use strict';
 /**
  * @name Attribute
@@ -5388,7 +5634,7 @@ Class('Attribute', function() {
 
 })();
 
-(() => { // ./src/flair/(root)/IDisposable.js
+(async () => { // ./src/flair/(root)/IDisposable.js
 'use strict';
 /**
  * @name IDisposable
@@ -5404,7 +5650,7 @@ Interface('IDisposable', function() {
 
 })();
 
-(() => { // ./src/flair/(root)/IProgressReporter.js
+(async () => { // ./src/flair/(root)/IProgressReporter.js
 'use strict';
 /**
  * @name IProgressReporter
@@ -5420,7 +5666,7 @@ Interface('IProgressReporter', function() {
 
 })();
 
-(() => { // ./src/flair/(root)/Task.js
+(async () => { // ./src/flair/(root)/Task.js
 'use strict';
 const { IProgressReporter, IDisposable } = ns('(root)');
 

@@ -37,7 +37,7 @@ const resetADPool = () => { // called by shared channel, whenever some AD goes i
                     } else {
                         processNext();
                     }
-                }).catch((err) => {
+                }).catch(() => {
                     // ignore error
                     processNext();
                 });
@@ -148,7 +148,7 @@ const _Tasks = {
             any: (...tasks) => { return Promise.race(_Tasks.parallel.invokeMany(...tasks)); },
             all: (...tasks) => { return Promise.all(_Tasks.parallel.invokeMany(...tasks)); },
             each: (onSuccess, onError, ...tasks) => {
-                return new Promise((resolve, reject) => {
+                return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
                     let promises = _Tasks.parallel.invokeMany(...tasks),
                         done = 0;
                     for(let p of promises) {
@@ -160,7 +160,7 @@ const _Tasks = {
                         })
                     }
                 });
-            };
+            }
         })
     }),
 
@@ -195,5 +195,5 @@ a2f('Tasks', _Tasks, () => {
     });
 
     // clear pool
-    ADPool = [];
+    ADPool.length = 0;
 });

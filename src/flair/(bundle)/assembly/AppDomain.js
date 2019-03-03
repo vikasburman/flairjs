@@ -139,7 +139,7 @@ const AppDomain = function(name) {
     this.loadScripts = (...scripts) => {
         return new Promise((resolve, reject) => {
             try {
-                _include(scripts, () => {
+                _bring(scripts, () => {
                     resolve(); // resolve without passing anything
                 });
             } catch (e) {

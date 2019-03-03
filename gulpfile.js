@@ -21,12 +21,5 @@ gulp.task('release', ['build-full', 'test', 'package'], () => {
 });
 
 gulp.task('fiddle', (done) => {
-    const {
-        Worker, isMainThread, parentPort, workerData
-      } = require('worker_threads');
-     
-      console.log(process.argv);
-      let w = new Worker('console.log(require("worker_threads").workerData); console.log(process.argv)', {eval: true, workerData: 'vikas', execArgv: ['TEST']});
-      //console.log(isMainThread);
-
+    console.log('write some code');
 });

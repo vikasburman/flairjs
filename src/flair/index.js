@@ -98,6 +98,7 @@
     <!-- inject: ./(bundle)/types/get/getType.js -->   
     <!-- inject: ./(bundle)/types/get/typeOf.js -->   
     <!-- inject: ./(bundle)/types/get/getTypeOf.js -->    
+    <!-- inject: ./(bundle)/types/get/ns.js -->    
     <!-- inject: ./(bundle)/types/check/isDerivedFrom.js --> 
     <!-- inject: ./(bundle)/types/check/isInstanceOf.js -->  
     <!-- inject: ./(bundle)/types/check/as.js --> 
@@ -106,6 +107,7 @@
     <!-- inject: ./(bundle)/types/check/isImplements.js -->   
     <!-- inject: ./(bundle)/types/check/isMixed.js --> 
 
+    <!-- inject: ./(bundle)/di/bring.js -->  
     <!-- inject: ./(bundle)/di/include.js -->  
     <!-- inject: ./(bundle)/types/lifecycle/dispose.js -->  
     <!-- inject: ./(bundle)/types/lifecycle/using.js -->   
@@ -125,6 +127,7 @@
     <!-- inject: ./(bundle)/pubsub/telemetry.js -->    
     <!-- inject: ./(bundle)/aop/aspects.js -->   
     <!-- inject: ./(bundle)/serialization/serializer.js --> 
+    <!-- inject: ./(bundle)/tasks/tasks.js --> 
     <!-- inject: ./(bundle)/reflection/reflector.js -->    
     <!-- inject: ./(bundle)/port/ports.js --> 
 
