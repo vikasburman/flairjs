@@ -1,9 +1,9 @@
 {
     "name": "flairjs",
-    "title": "FlairJS",
+    "title": "Flair.js",
     "description": "True Object Oriented JavaScript",
     "copyright": "(c) 2017-2019 Vikas Burman",
-    "version": "0.15.707",
+    "version": "0.15.709",
     "author": "Vikas Burman <vikasburman@gmail.com>",
     "keywords": [
         "javascript",

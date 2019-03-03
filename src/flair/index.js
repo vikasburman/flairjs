@@ -78,6 +78,10 @@
 
     // members
     <!-- inject: ./(bundle)/types/support/noop.js -->   
+    <!-- inject: ./(bundle)/types/support/nip.js -->   
+    <!-- inject: ./(bundle)/types/support/nim.js -->   
+    <!-- inject: ./(bundle)/types/support/event.js -->   
+    <!-- inject: ./(bundle)/types/support/nie.js -->   
     <!-- inject: ./(bundle)/types/support/Exception.js -->  
     <!-- inject: ./(bundle)/types/support/Dispatcher.js -->
     <!-- inject: ./(bundle)/port/port.js -->

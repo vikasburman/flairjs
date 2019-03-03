@@ -1,12 +1,12 @@
 /**
  * @preserve
- * FlairJS
+ * Flair.js
  * True Object Oriented JavaScript
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.15.707
- *  Sun, 03 Mar 2019 04:10:49 GMT
+ *  Version: 0.15.709
+ *  Sun, 03 Mar 2019 22:00:22 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -76,10 +76,10 @@
     flair.info = Object.freeze({
         name: 'flair',
         file: currentFile,
-        version: '0.15.707',
+        version: '0.15.709',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 03 Mar 2019 04:10:49 GMT')
+        lupdate: new Date('Sun, 03 Mar 2019 22:00:22 GMT')
     });       
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -102,6 +102,71 @@
     
     // attach to flair
     a2f('noop', _noop);
+       
+    /**
+     * @name nip
+     * @description Not Implemented Property
+     * @example
+     *  nip()
+     * @params
+     * @returns
+     */ 
+    const _nip = {
+        get: () => { throw new _Exception('NotImplemented', 'Property is not implemented.'); },
+        set: () => { throw new _Exception('NotImplemented', 'Property is not implemented.'); }
+    };
+    _nip.ni = true; // a special flag to quick check that this is a not-implemented object
+    
+    // attach to flair
+    a2f('nip', _nip);
+       
+    /**
+     * @name nim
+     * @description Not Implemented Method
+     * @example
+     *  nim()
+     * @params
+     * @returns
+     */ 
+    const _nim = () => { throw new _Exception('NotImplemented', 'Method is not implemented.'); };
+    _nim.ni = true; // a special flag to quick check that this is a not-implemented object
+    
+    // attach to flair
+    a2f('nim', _nim);
+       
+    /**
+     * @name event
+     * @description Event marker
+     * @example
+     *  event()
+     * @params
+     *  argsProcessor - args processor function, if args to be processed before event is raised
+     * @returns
+     *  function - returns given function or a noop function as is with an event marked tag
+     */ 
+    const _event = (argsProcessor) => { 
+        if (argsProcessor && typeof argsProcessor !== 'function') { throw _Exception.InvalidArgument('argsProcessor'); }
+        argsProcessor = (typeof argsProcessor === 'function' ? argsProcessor : _noop);
+        argsProcessor.event = true; // attach tag
+        return argsProcessor
+    }
+    
+    // attach to flair
+    a2f('event', _event);
+       
+    /**
+     * @name nie
+     * @description Not Implemented Event
+     * @example
+     *  nie()
+     * @params
+     * @returns
+     */ 
+    const _nie = _event(() => { throw new _Exception('NotImplemented', 'Event is not implemented.'); });
+    _nie.ni = true; // a special flag to quick check that this is a not-implemented object
+    
+    // attach to flair
+    a2f('nie', _nie);
        
     
     /**
@@ -2756,9 +2821,6 @@
                 }
             },
             proxy = null,
-            _nim = () => { throw new _Exception('NotImplemented', 'Method is not implemented.'); },
-            _nip = { get: () => { throw new _Exception('NotImplemented', 'Property is not implemented.'); },
-                     set: () => { throw new _Exception('NotImplemented', 'Property is not implemented.'); }},
             isBuildingObj = false,
             _member_dispatcher = null,
             _sessionStorage = _Port('sessionStorage'),
@@ -2933,11 +2995,11 @@
             }
             
             // abstract check
-            if (cfg.inheritance && attrs.members.probe('abstract', memberName).current() && (memberDef !== _noop || memberDef !== _nim || memberDef !== _nip) && (memberDef.get && memberDef.get !== _noop)) {
-                throw new _Exception('InvalidDefinition', `Abstract member must point to this.noop, this.nip or this.nim calls. (${memberName})`);
+            if (cfg.inheritance && attrs.members.probe('abstract', memberName).current() && memberDef.ni !== true) {
+                throw new _Exception('InvalidDefinition', `Abstract member must point to nip, nim or nie values. (${memberName})`);
             }
     
-            // constructor arguments check for a static type
+            // constructor arguments check for a static type // TODO: Check this one thoroughly 
             the_attr = attrs.type.probe('static').current();
             if (cfg.static && cfg.construct && memberName === _constructName && the_attr && memberDef.length !== 0) {
                 throw new _Exception('InvalidDefinition', `Static constructors cannot have arguments. (construct)`);
@@ -3004,7 +3066,6 @@
             _getter = _noop,
             _setter = _noop,
             _isReadOnly = attrs.members.probe('readonly', memberName).anywhere(),
-            _isOverriding = (cfg.inheritance && attrs.members.probe('override', memberName).current()), 
             _isStatic = attrs.members.probe('static', memberName).anywhere(),
             _isSession = attrs.members.probe('session', memberName).anywhere(),
             _isState = attrs.members.probe('state', memberName).anywhere(),
@@ -3019,18 +3080,7 @@
             isStorageHost = false,
             _injections = [];     
     
-            // handle abstract definition scenario
-            if (_isOverriding) {
-                if (memberDef.get === _noop || memberDef.get === _nip || memberDef.get === _nim) {
-                    if (memberDef.set === _noop || memberDef.set === _nip || memberDef.get === _nim) {
-                        memberDef = null; // treat it as a null valued property
-                    } else {
-                        memberDef.get = _noop; // since setter is defined but not getter - make getter as noop
-                    }
-                } else if (memberDef.set === _noop || memberDef.set === _nip || memberDef.get === _nim) {
-                    memberDef.set = _noop; // since getter is defined but not setter - make setter as noop
-                }
-            }
+            // NOTE: no check for isOverriding, because properties are always fully defined
     
             // define or redefine
             if (memberDef.get || memberDef.set) { // normal property, cannot be static because static cannot have custom getter/setter
@@ -3132,8 +3182,8 @@
             if (_isOverriding) {
                 base = obj[memberName].bind(bindingHost);
                 // handle abstract definition scenario
-                if (base === _noop || base === _nip || base === _nim) {
-                    base = _noop; // convert it into noop
+                if (base.ni === true) {
+                    base = null; // so it is not available
                 }
             } else if (_isStatic) {
                 // shared (static) copy bound to staticInterface
@@ -3243,8 +3293,8 @@
             if (_isOverriding) {
                 // wrap for base call
                 base = obj[memberName]._.processor;
-                if (base === _noop || base === _nip || base === _nim) {
-                    base = _noop; // convert it into noop
+                if (base.ni === true) {
+                    base = null; // so it is not available
                 }
             } 
        
@@ -3454,17 +3504,6 @@
         // define proxy for clean syntax inside factory
         proxy = new Proxy({}, {
             get: (_obj, name) => { 
-                if (name === 'noop') { return _noop; }
-                if (name === 'nim') { return _nim; }
-                if (name === 'nip') { return _nip; }
-                if (name === 'event') { // will help defining events like: this.myEvent = this.event(() => { });
-                    let _fn = (fn) => {
-                        if (typeof fn !== 'function') { throw new _Exception.InvalidArgument('fn'); }
-                        fn.event = true;
-                        return fn;
-                    };
-                    return _fn;
-                }
                 return obj[name]; 
             },
             set: (_obj, name, value) => {
@@ -3496,7 +3535,7 @@
                     }
                 } else {
                     // a function or event is being redefined or noop is being redefined
-                    if (typeof value === 'function' || ['noop', 'event', 'nim', 'nip'].indexOf(name) !== -1) { throw new _Exception('InvalidOperation', `Redefinition of members is not allowed. (${name})`); }
+                    if (typeof value === 'function') { throw new _Exception('InvalidOperation', `Redefinition of members is not allowed. (${name})`); }
     
                     // allow setting property values
                     obj[name] = value;
@@ -5474,7 +5513,7 @@ const { TaskInfo } = flair.Tasks;
 const { as, is, isComplies, isDerivedFrom, isImplements, isInstanceOf, isMixed } = flair;
 const { getAssembly, getAttr, getContext, getResource, getType, ns, getTypeOf, typeOf } = flair;
 const { dispose, using } = flair;
-const { args, Exception, noop  } = flair;
+const { args, Exception, noop, nip, nim, nie, event  } = flair;
 const { env } = flair.options;
 /* eslint-enable no-unused-vars */
 

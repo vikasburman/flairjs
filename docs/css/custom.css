@@ -1,0 +1,49 @@
+body {
+    font-family: "Source Sans Pro", "Roboto", "Helvetica", "Arial", sans-serif;
+    color: #212529;
+    background-color: #fafafa;
+}
+html {
+    background-color:#005593!important;    
+    margin-top: -10px!important;
+}
+
+:root {
+    --bg: #fafafa;
+    --dark: #005593;
+    --light: #11C0DE;
+    --thin: 200;
+    --loose: 0.0625em;
+}
+
+.navbar-fx {
+    background-color: transparent!important; 
+    box-shadow: none !important;
+}
+.navbar-brand-fx {
+    color: var(--dark)!important;
+}
+
+.f-title {
+    color: var(--dark)!important;
+    letter-spacing: var(--loose)!important;
+}
+.f-mt-negative {
+    margin-top: -3px!important;
+}
+
+.btn-main-1 {
+    border-radius: 25px!important;
+    background-color: var(--light)!important;
+    border-color: var(--light)!important;
+    color: var(--bg)!important;
+    font-weight: var(--thin)!important; 
+    letter-spacing: var(--loose)!important;
+}
+.btn-main-2 {
+    border-radius: 25px!important;
+    border-color: var(--light)!important;
+    font-weight: var(--thin)!important; 
+    letter-spacing: var(--loose)!important;
+}
+

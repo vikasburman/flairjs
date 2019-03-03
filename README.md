@@ -55,9 +55,6 @@ Include FlairJS in your html page or load it as a module, and initialize.
 When using on client side:
 ```html
 <script type="text/javascript" src="path/flair.min.js"></script>
-<script>
-   flair('DEBUG'); // initialize
-</script>
 ```
 
 > FlairJS also support module loaders and can be loaded via `require` or other module loading techniques.
@@ -65,7 +62,6 @@ When using on client side:
 When using on server side:
 ```html
 const flair = require('flairjs');
-flair('DEBUG'); // initialize
 ```
 
 **3. Play with Objects**
@@ -95,10 +91,9 @@ let Vehicle = Class('Vehicle', function() {
     };
 
     // event
-    attr('event'); // mark this as event
-    this.started = (time) => {
+    this.started = event((time) => {
         return { when: time }; // event args
-    };
+    });
 });
 
 ```
@@ -108,7 +103,7 @@ let Vehicle = Class('Vehicle', function() {
 // define Car, derived from Vehicle
 let Car = Class('Car', Vehicle, function() {
     
-    attr('override'); // constructor overriding
+    $$('override'); // constructor overriding
     this.construct = (base, model, capacity) => {
         // call base class's constructor
         base(capacity);
@@ -122,7 +117,7 @@ let Car = Class('Car', Vehicle, function() {
         console.log('Car constructed!');    
     });
 
-    attr('readonly'); // model is readonly, but can still be defined in constructor
+    $$('('readonly'); // model is readonly, but can still be defined in constructor
     this.model = '';
 
     // dispose car via destructor

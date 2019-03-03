@@ -438,9 +438,6 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             }
         },
         proxy = null,
-        _nim = () => { throw new _Exception('NotImplemented', 'Method is not implemented.'); },
-        _nip = { get: () => { throw new _Exception('NotImplemented', 'Property is not implemented.'); },
-                 set: () => { throw new _Exception('NotImplemented', 'Property is not implemented.'); }},
         isBuildingObj = false,
         _member_dispatcher = null,
         _sessionStorage = _Port('sessionStorage'),
@@ -615,11 +612,11 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         }
         
         // abstract check
-        if (cfg.inheritance && attrs.members.probe('abstract', memberName).current() && (memberDef !== _noop || memberDef !== _nim || memberDef !== _nip) && (memberDef.get && memberDef.get !== _noop)) {
-            throw new _Exception('InvalidDefinition', `Abstract member must point to this.noop, this.nip or this.nim calls. (${memberName})`);
+        if (cfg.inheritance && attrs.members.probe('abstract', memberName).current() && memberDef.ni !== true) {
+            throw new _Exception('InvalidDefinition', `Abstract member must point to nip, nim or nie values. (${memberName})`);
         }
 
-        // constructor arguments check for a static type
+        // constructor arguments check for a static type // TODO: Check this one thoroughly 
         the_attr = attrs.type.probe('static').current();
         if (cfg.static && cfg.construct && memberName === _constructName && the_attr && memberDef.length !== 0) {
             throw new _Exception('InvalidDefinition', `Static constructors cannot have arguments. (construct)`);
@@ -686,7 +683,6 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         _getter = _noop,
         _setter = _noop,
         _isReadOnly = attrs.members.probe('readonly', memberName).anywhere(),
-        _isOverriding = (cfg.inheritance && attrs.members.probe('override', memberName).current()), 
         _isStatic = attrs.members.probe('static', memberName).anywhere(),
         _isSession = attrs.members.probe('session', memberName).anywhere(),
         _isState = attrs.members.probe('state', memberName).anywhere(),
@@ -701,18 +697,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         isStorageHost = false,
         _injections = [];     
 
-        // handle abstract definition scenario
-        if (_isOverriding) {
-            if (memberDef.get === _noop || memberDef.get === _nip || memberDef.get === _nim) {
-                if (memberDef.set === _noop || memberDef.set === _nip || memberDef.get === _nim) {
-                    memberDef = null; // treat it as a null valued property
-                } else {
-                    memberDef.get = _noop; // since setter is defined but not getter - make getter as noop
-                }
-            } else if (memberDef.set === _noop || memberDef.set === _nip || memberDef.get === _nim) {
-                memberDef.set = _noop; // since getter is defined but not setter - make setter as noop
-            }
-        }
+        // NOTE: no check for isOverriding, because properties are always fully defined
 
         // define or redefine
         if (memberDef.get || memberDef.set) { // normal property, cannot be static because static cannot have custom getter/setter
@@ -814,8 +799,8 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         if (_isOverriding) {
             base = obj[memberName].bind(bindingHost);
             // handle abstract definition scenario
-            if (base === _noop || base === _nip || base === _nim) {
-                base = _noop; // convert it into noop
+            if (base.ni === true) {
+                base = null; // so it is not available
             }
         } else if (_isStatic) {
             // shared (static) copy bound to staticInterface
@@ -925,8 +910,8 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         if (_isOverriding) {
             // wrap for base call
             base = obj[memberName]._.processor;
-            if (base === _noop || base === _nip || base === _nim) {
-                base = _noop; // convert it into noop
+            if (base.ni === true) {
+                base = null; // so it is not available
             }
         } 
    
@@ -1136,17 +1121,6 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     // define proxy for clean syntax inside factory
     proxy = new Proxy({}, {
         get: (_obj, name) => { 
-            if (name === 'noop') { return _noop; }
-            if (name === 'nim') { return _nim; }
-            if (name === 'nip') { return _nip; }
-            if (name === 'event') { // will help defining events like: this.myEvent = this.event(() => { });
-                let _fn = (fn) => {
-                    if (typeof fn !== 'function') { throw new _Exception.InvalidArgument('fn'); }
-                    fn.event = true;
-                    return fn;
-                };
-                return _fn;
-            }
             return obj[name]; 
         },
         set: (_obj, name, value) => {
@@ -1178,7 +1152,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                 }
             } else {
                 // a function or event is being redefined or noop is being redefined
-                if (typeof value === 'function' || ['noop', 'event', 'nim', 'nip'].indexOf(name) !== -1) { throw new _Exception('InvalidOperation', `Redefinition of members is not allowed. (${name})`); }
+                if (typeof value === 'function') { throw new _Exception('InvalidOperation', `Redefinition of members is not allowed. (${name})`); }
 
                 // allow setting property values
                 obj[name] = value;

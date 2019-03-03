@@ -1,6 +1,7 @@
 node_modules/
 package/
+_archive/
+_local/
+temp/
 yarn.lock
 yarn-error.log
-_archive
-temp/
