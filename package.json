@@ -40,6 +40,7 @@
         "copy-dir": "^0.4.0",
         "del": "^3.0.0",
         "eslint": "^3.19.0",
+        "fast-glob": "^2.2.6",
         "fs-extra": "^7.0.1",
         "gulp": "^3.9.1",
         "html-minifier": "^3.5.21",
@@ -52,5 +53,6 @@
         "stylelint": "^9.10.1",
         "uglify-es": "^3.3.9"
     },
-    "dependencies": {}
+    "dependencies": {
+    }
 }
