@@ -66,11 +66,13 @@ const flair = require('flairjs');
 
 **3. Play with Objects**
 
-With global functions/objects added to environment, JavaScript now has the awesomeness of C#/Java. Define and play with objects.
+With flair functions/objects added available, JavaScript now has the awesomeness of C#/Java. Define and play with objects.
 
 Here is a quick example:
 
 ```javascript
+
+const { Class, $$, event } = flair;
 
 // define Vehicle class
 let Vehicle = Class('Vehicle', function() {
@@ -110,14 +112,14 @@ let Car = Class('Car', Vehicle, function() {
         this.model = model;
 
         // subscribe to started event of base class
-        this.started.subscribe((e) => {
+        this.started.add((e) => {
             // read event args, this and parent class properties
             console.log(`${this.model} (${this.cc}cc) ${e.name} at: ${e.args.when}`);
         });
         console.log('Car constructed!');    
     });
 
-    $$('('readonly'); // model is readonly, but can still be defined in constructor
+    $$('readonly'); // model is readonly, but can still be defined in constructor
     this.model = '';
 
     // dispose car via destructor
