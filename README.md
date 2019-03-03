@@ -66,7 +66,7 @@ const flair = require('flairjs');
 
 **3. Play with Objects**
 
-With flair functions/objects added available, JavaScript now has the awesomeness of C#/Java. Define and play with objects.
+With flair functions/objects available, JavaScript now has the awesomeness of C#/Java. Define and play with objects.
 
 Here is a quick example:
 

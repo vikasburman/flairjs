@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.15.709
- *  Sun, 03 Mar 2019 22:00:24 GMT
+ *  Version: 0.15.710
+ *  Sun, 03 Mar 2019 22:06:39 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -23,7 +23,7 @@ const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
     name: 'flair.cli',
-    version: '0.15.709',
+    version: '0.15.710',
     format: 'fasm',
     formatVersion: '1',
     contains: [
@@ -522,7 +522,7 @@ const build = (options, done) => {
         `const { as, is, isComplies, isDerivedFrom, isImplements, isInstanceOf, isMixed } = flair;\n` +
         `const { getAssembly, getAttr, getContext, getResource, getType, ns, getTypeOf, typeOf } = flair;\n` +
         `const { dispose, using } = flair;\n` +
-        `const { args, Exception, noop, nip, nim, nie, event  } = flair;\n` +
+        `const { args, Exception, noop, nip, nim, nie, event } = flair;\n` +
         `const { env } = flair.options;\n` +
         `/* eslint-enable no-unused-vars */\n` +
         `\n`; 

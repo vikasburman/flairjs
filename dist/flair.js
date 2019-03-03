@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.15.709
- *  Sun, 03 Mar 2019 22:00:22 GMT
+ *  Version: 0.15.710
+ *  Sun, 03 Mar 2019 22:06:37 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -76,10 +76,10 @@
     flair.info = Object.freeze({
         name: 'flair',
         file: currentFile,
-        version: '0.15.709',
+        version: '0.15.710',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 03 Mar 2019 22:00:22 GMT')
+        lupdate: new Date('Sun, 03 Mar 2019 22:06:37 GMT')
     });       
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -5513,7 +5513,7 @@ const { TaskInfo } = flair.Tasks;
 const { as, is, isComplies, isDerivedFrom, isImplements, isInstanceOf, isMixed } = flair;
 const { getAssembly, getAttr, getContext, getResource, getType, ns, getTypeOf, typeOf } = flair;
 const { dispose, using } = flair;
-const { args, Exception, noop, nip, nim, nie, event  } = flair;
+const { args, Exception, noop, nip, nim, nie, event } = flair;
 const { env } = flair.options;
 /* eslint-enable no-unused-vars */
 

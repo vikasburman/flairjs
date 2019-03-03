@@ -508,7 +508,7 @@ const build = (options, done) => {
         `const { as, is, isComplies, isDerivedFrom, isImplements, isInstanceOf, isMixed } = flair;\n` +
         `const { getAssembly, getAttr, getContext, getResource, getType, ns, getTypeOf, typeOf } = flair;\n` +
         `const { dispose, using } = flair;\n` +
-        `const { args, Exception, noop, nip, nim, nie, event  } = flair;\n` +
+        `const { args, Exception, noop, nip, nim, nie, event } = flair;\n` +
         `const { env } = flair.options;\n` +
         `/* eslint-enable no-unused-vars */\n` +
         `\n`; 
