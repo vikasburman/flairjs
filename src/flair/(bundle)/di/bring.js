@@ -24,7 +24,7 @@
  *              >> if resolved type is an string, it will again pass through <namespace>.<name> resolution process
  
  *          >> <namespace>.<name>
- *              >> e.g., 'my.namespace.MyClass'
+ *              >> e.g., 'my.namespace.MyClass' or 'my.namespace.MyResource'
  *              >> this will be looked in given namespace first, so an already loaded type will be picked first
  *              >> if not found in given namespace, it will look for the assembly where this type might be registered
  *              >> if found in a registered assembly, it will load that assembly and again look for it in given namespace
@@ -91,22 +91,25 @@ const _bring = (deps, fn) => {
 
             // check if it is available in any namespace
             let option2 = (done) => {
-                _resolved = _getType(_dep); done();
+                _resolved = _getType(_dep); 
+                if (!_resolved) { // check as resource
+                    _resolved = _getResource(_dep); 
+                }
+                done();
             };
 
             // check if it is available in any unloaded assembly
             let option3 = (done) => {
-                let asm = _getAssembly(_dep);
-                if (asm) { // if type exists in an assembly
-                    if (!asm.isLoaded()) {
-                        asm.load().then(() => {
-                            _resolved = _getType(_dep); done();
-                        }).catch((e) => {
-                            throw new _Exception('AssemblyLoad', `Assembly load operation failed with error: ${e}. (${asm.file})`);
-                        });
-                    } else {
-                        _resolved = _getType(_dep); done();
-                    }
+                let asmFile = _getAssembly(_dep);
+                if (asmFile) { // if type exists in an assembly
+                    _AppDomain.context.loadAssembly(asmFile).then(() => {
+                        _resolved = _getType(_dep); 
+                        if (!_resolved) { // check as resource
+                            _resolved = _getResource(_dep); 
+                        }
+                    }).catch((e) => {
+                        throw new _Exception('AssemblyLoad', `Assembly load operation failed with error: ${e}. (${asmFile})`);
+                    });
                 } else {
                     done();
                 }

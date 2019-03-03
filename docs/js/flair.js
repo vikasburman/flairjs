@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.15.689
- *  Sun, 03 Mar 2019 01:23:05 GMT
+ *  Version: 0.15.702
+ *  Sun, 03 Mar 2019 02:18:47 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -76,10 +76,10 @@
     flair.info = Object.freeze({
         name: 'flair',
         file: currentFile,
-        version: '0.15.689',
+        version: '0.15.702',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 03 Mar 2019 01:23:05 GMT')
+        lupdate: new Date('Sun, 03 Mar 2019 02:18:47 GMT')
     });       
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -682,6 +682,8 @@
                         // reject
                         reject(e);
                     });
+                } else {
+                    resolve();
                 }
             });        
         };    
@@ -1168,7 +1170,7 @@
      */
     const AppDomain = function(name) {
         let asmFiles = {},
-            asmTypes = {},
+            asmTypes = {}, // lists all Types and Resource Types
             domains = {},
             contexts = {},
             currentContexts = [],
@@ -1278,6 +1280,16 @@
                             asmTypes[qualifiedName] = ado.file; // means this type can be loaded from this assembly 
                         }
                     });
+    
+                    // flatten resources
+                    ado.resources.forEach(qualifiedName => {
+                        // qualified names across anywhere should be unique
+                        if (asmTypes[qualifiedName]) {
+                            throw new _Exception('DuplicateName', `Resource is already registered. (${qualifiedName})`);
+                        } else {
+                            asmTypes[qualifiedName] = ado.file; // means this resource can be loaded from this assembly
+                        }
+                    });                
                 }
             });  
     
@@ -1369,12 +1381,17 @@
      * @example
      *  _getAssembly(Type)
      * @params
-     *  Type: type - flair type whose assembly is required
-     * @returns object - assembly object which contains this type
+     *  Type: type/string - flair type whose assembly is required
+     *                      qualified type name, if it is needed to know in which assembly this exists
+     * @returns object/string - assembly object (or file name) which contains this type
      */ 
     const _getAssembly = (Type) => { 
-        if (!_is(Type, 'flair')) { throw new _Exception('InvalidArgument', 'Argument type is not valid. (Type)'); }
-        return Type._.assembly();
+        if (['string', 'flair'].indexOf(_typeOf(Type)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is not valid. (Type)'); }
+        if (typeof Type === 'string') {
+            return _AppDomain.resolve(Type);
+        } else {
+            return Type._.assembly();
+        }
     };
     
     // attach to flair
@@ -1766,7 +1783,7 @@
      *              >> if resolved type is an string, it will again pass through <namespace>.<name> resolution process
      
      *          >> <namespace>.<name>
-     *              >> e.g., 'my.namespace.MyClass'
+     *              >> e.g., 'my.namespace.MyClass' or 'my.namespace.MyResource'
      *              >> this will be looked in given namespace first, so an already loaded type will be picked first
      *              >> if not found in given namespace, it will look for the assembly where this type might be registered
      *              >> if found in a registered assembly, it will load that assembly and again look for it in given namespace
@@ -1833,22 +1850,25 @@
     
                 // check if it is available in any namespace
                 let option2 = (done) => {
-                    _resolved = _getType(_dep); done();
+                    _resolved = _getType(_dep); 
+                    if (!_resolved) { // check as resource
+                        _resolved = _getResource(_dep); 
+                    }
+                    done();
                 };
     
                 // check if it is available in any unloaded assembly
                 let option3 = (done) => {
-                    let asm = _getAssembly(_dep);
-                    if (asm) { // if type exists in an assembly
-                        if (!asm.isLoaded()) {
-                            asm.load().then(() => {
-                                _resolved = _getType(_dep); done();
-                            }).catch((e) => {
-                                throw new _Exception('AssemblyLoad', `Assembly load operation failed with error: ${e}. (${asm.file})`);
-                            });
-                        } else {
-                            _resolved = _getType(_dep); done();
-                        }
+                    let asmFile = _getAssembly(_dep);
+                    if (asmFile) { // if type exists in an assembly
+                        _AppDomain.context.loadAssembly(asmFile).then(() => {
+                            _resolved = _getType(_dep); 
+                            if (!_resolved) { // check as resource
+                                _resolved = _getResource(_dep); 
+                            }
+                        }).catch((e) => {
+                            throw new _Exception('AssemblyLoad', `Assembly load operation failed with error: ${e}. (${asmFile})`);
+                        });
                     } else {
                         done();
                     }

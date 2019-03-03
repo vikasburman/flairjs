@@ -6,7 +6,7 @@
  */
 const AppDomain = function(name) {
     let asmFiles = {},
-        asmTypes = {},
+        asmTypes = {}, // lists all Types and Resource Types
         domains = {},
         contexts = {},
         currentContexts = [],
@@ -116,6 +116,16 @@ const AppDomain = function(name) {
                         asmTypes[qualifiedName] = ado.file; // means this type can be loaded from this assembly 
                     }
                 });
+
+                // flatten resources
+                ado.resources.forEach(qualifiedName => {
+                    // qualified names across anywhere should be unique
+                    if (asmTypes[qualifiedName]) {
+                        throw new _Exception('DuplicateName', `Resource is already registered. (${qualifiedName})`);
+                    } else {
+                        asmTypes[qualifiedName] = ado.file; // means this resource can be loaded from this assembly
+                    }
+                });                
             }
         });  
 

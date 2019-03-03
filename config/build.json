@@ -17,6 +17,7 @@
     "minify": true,
     "minifyConfig": "./config/minify.json",
     "minifyTypes": ["js", "css", "html"],
+    "generateJSSourceMap": true,
 
     "gzip": true,
     "gzipConfig": "./config/gzip.json",

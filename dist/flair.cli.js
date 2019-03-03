@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.15.689
- *  Sun, 03 Mar 2019 01:23:06 GMT
+ *  Version: 0.15.702
+ *  Sun, 03 Mar 2019 02:18:49 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -23,7 +23,7 @@ const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
     name: 'flair.cli',
-    version: '0.15.689',
+    version: '0.15.702',
     format: 'fasm',
     formatVersion: '1',
     contains: [
@@ -300,14 +300,26 @@ const build = (options, done) => {
             }).catch(reject);
         });
     };
-    const minifyJS = (file) => {
+    const minifyJS = (file, mapFile, mapFileUrl) => {
         return new Promise((resolve, reject) => {
             let content = fsx.readFileSync(file, 'utf8');
+            if (options.generateJSSourceMap && mapFile) {
+                options.minifyConfig.js.sourceMap = {
+                    root: '',
+                    url: mapFileUrl
+                };
+            }
             let result = options.minifyJS(content, options.minifyConfig.js);
+            if (options.generateJSSourceMap && mapFile) {
+                delete options.minifyConfig.js.sourceMap;
+            }
             if (result.error) { 
                 console.log(result.error); // eslint-disable-line no-console
                 reject(`Minify for ${file} failed.`); 
             } else {
+                if (options.generateJSSourceMap && mapFile && result.map) {
+                    fsx.writeFileSync(mapFile, result.map, 'utf8');
+                }
                 resolve(result.code);
             }
         });
@@ -355,11 +367,13 @@ const build = (options, done) => {
     const minifyFile = (src) => {
         return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
             let ext = path.extname(src).substr(1),
-                dest = src.replace('.' + ext, '.min.' + ext);
+                dest = src.replace('.' + ext, '.min.' + ext),
+                mapFile = dest + '.map',
+                mapFileUrl = mapFile.replace(options.current.dest, '.');
             if (options.minifyTypes.indexOf(ext) !== -1) {
                 let p = null;
                 switch(ext) {
-                    case 'js': p = minifyJS(src); break;
+                    case 'js': p = minifyJS(src, mapFile, mapFileUrl); break;
                     case 'css': p = minifyCSS(src); break;
                     case 'html': p = minifyHTML(src);  break;
                 }
@@ -466,6 +480,8 @@ const build = (options, done) => {
                 }).catch((err) => { throw err; });
             } else { // delete old existing
                 if (!options.fullBuild && fsx.existsSync(minFile)) { fsx.removeSync(minFile); }
+                let mapFile = minFile + '.map';
+                if (!options.fullBuild && fsx.existsSync(mapFile)) { fsx.removeSync(mapFile); }
                 afterMinify();
             }
         };
@@ -695,6 +711,8 @@ const build = (options, done) => {
                 }).catch((err) => { throw err; });
             } else { // delete old existing
                 if (!options.fullBuild && fsx.existsSync(minFile)) { fsx.removeSync(minFile); }
+                let mapFile = minFile + '.map';
+                if (!options.fullBuild && fsx.existsSync(mapFile)) { fsx.removeSync(mapFile); }
                 afterMinify();
             }
         };
@@ -934,6 +952,7 @@ const build = (options, done) => {
  *                  }
  *              }
  *              minifyTypes: - what all types to run minification on - ["js", "css", "html"]
+ *              generateJSSourceMap: true/false - if source map to be generated for js files
  *              gzip: true/false     - is gzip to be run
  *              gzipConfig - gzip configuration options file path having structure
  *              {
@@ -1107,6 +1126,7 @@ exports.flairBuild = function(options, cb) {
     options.minify = options.minify !== undefined ? options.minify : true;
     options.minifyConfig = options.minifyConfig || '';
     options.minifyTypes = options.minifyTypes || ["js", "css", "html"];
+    options.generateJSSourceMap = options.generateJSSourceMap !== undefined ? options.generateJSSourceMap : false;
 
     options.gzip = options.gzip || false;
     options.gzipConfig = options.gzipConfig || '';

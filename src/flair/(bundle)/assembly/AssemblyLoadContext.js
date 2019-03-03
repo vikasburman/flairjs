@@ -264,6 +264,8 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
                     // reject
                     reject(e);
                 });
+            } else {
+                resolve();
             }
         });        
     };    
