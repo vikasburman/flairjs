@@ -19,7 +19,3 @@ gulp.task('package', (done) => {
 // task: release
 gulp.task('release', ['build-full', 'test', 'package'], () => {
 });
-
-gulp.task('fiddle', (done) => {
-    console.log('write some code');
-});
