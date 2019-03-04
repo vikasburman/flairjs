@@ -7,6 +7,7 @@ _Powerful object oriented concepts baked in plain vanilla JavaScript_
 [![Dependencies](https://david-dm.org/vikasburman/flairjs.svg)](https://david-dm.org/vikasburman/flairjs)
 [![Dev Dependencies](https://david-dm.org/vikasburman/flairjs/dev-status.svg)](https://david-dm.org/vikasburman/flairjs?type=dev)
 [![Known Vulnerabilities](https://snyk.io/test/github/vikasburman/flairjs/badge.svg?targetFile=package.json)](https://snyk.io/test/github/vikasburman/flairjs?targetFile=package.json) 
+[![Docs](https://inch-ci.org/github/vikasburman/flairjs.svg?branch=master&style=flat)](https://inch-ci.org/github/vikasburman/flairjs?branch=master&style=flat)
 [![npm version](https://badge.fury.io/js/flairjs.svg)](https://badge.fury.io/js/flairjs)
 
 
