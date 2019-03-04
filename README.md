@@ -12,11 +12,11 @@ _True object orientation features for plain vanilla JavaScript_
 ![GitHub file size in bytes](https://img.shields.io/github/size/vikasburman/flairjs/dist/flair.min.js.gz.svg?color=brightgreen)
 ![GitHub last commit](https://img.shields.io/github/last-commit/vikasburman/flairjs.svg)
 ![GitHub (Pre-)Release Date](https://img.shields.io/github/release-date-pre/vikasburman/flairjs.svg)
-[!Codacy Badge](https://api.codacy.com/project/badge/Grade/bfc47d5ae35b48de956639dbe128d8e5)](https://www.codacy.com/app/vikasburman/flairjs?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=vikasburman/flairjs&amp;utm_campaign=Badge_Grade)
+![Codacy Badge(https://api.codacy.com/project/badge/Grade/bfc47d5ae35b48de956639dbe128d8e5)](https://www.codacy.com/app/vikasburman/flairjs?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=vikasburman/flairjs&amp;utm_campaign=Badge_Grade)
 [![Issues](http://img.shields.io/github/issues/vikasburman/flairjs.svg)]( https://github.com/vikasburman/flairjs/issues)
 [![StackOverflow](http://img.shields.io/badge/stackoverflow-flairjs-brightgreen.svg)](http://stackoverflow.com/questions/tagged/
 flairjs)
-[!Maintenance](https://img.shields.io/maintenance/yes/2020.svg)
+![Maintenance](https://img.shields.io/maintenance/yes/2020.svg)
 
 
 Introduction 
