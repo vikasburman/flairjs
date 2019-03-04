@@ -16,7 +16,7 @@ _True object orientation features for plain vanilla JavaScript_
 [![Issues](http://img.shields.io/github/issues/vikasburman/flairjs.svg)]( https://github.com/vikasburman/flairjs/issues)
 [![StackOverflow](http://img.shields.io/badge/stackoverflow-flairjs-brightgreen.svg)](http://stackoverflow.com/questions/tagged/
 flairjs)
-![Maintenance](https://img.shields.io/maintenance/yes/2020.svg)
+
 
 
 Introduction 
