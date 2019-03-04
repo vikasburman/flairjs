@@ -9,7 +9,6 @@ _Powerful object oriented concepts baked in plain vanilla JavaScript_
 [![Known Vulnerabilities](https://snyk.io/test/github/vikasburman/flairjs/badge.svg?targetFile=package.json)](https://snyk.io/test/github/vikasburman/flairjs?targetFile=package.json) 
 [![npm version](https://badge.fury.io/js/flairjs.svg)](https://badge.fury.io/js/flairjs)
 [![Inline Docs](https://inch-ci.org/github/vikasburman/flairjs.svg?branch=master)](https://inch-ci.org/github/vikasburman/flairjs)
-[![NPM](https://nodei.co/npm/flairjs.png)](https://nodei.co/npm/flairjs/)
 
 Introduction 
 ---
@@ -169,7 +168,7 @@ See the changelog [here](https://flairjs.com/#/overview/changelog).
 
 License
 ---
-&copy; 2017-2019 Vikas Burman.
+Copyright &copy; 2017-2019 Vikas Burman.
 
 Licensed under the terms of the [MIT license](https://github.com/vikasburman/flairjs/blob/master/LICENSE), which essentially means that you are free to use FlairJS under any open source or commercial project, as long as this copyright header is left intact.
 
