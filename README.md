@@ -10,7 +10,7 @@ _Powerful object oriented concepts baked in plain vanilla JavaScript_
 [![npm version](https://badge.fury.io/js/flairjs.svg)](https://badge.fury.io/js/flairjs)
 [![MIT license](http://img.shields.io/badge/license-MIT-brightgreen.svg)](http://opensource.org/licenses/MIT)<br/>
 [![HitCount](http://hits.dwyl.io/vikasburman/flairjs.svg)](http://hits.dwyl.io/vikasburman/flairjs)
-[![Issues](http://img.shields.io/github/issues/USER/REPO.svg)]( https://github.com/USER/REPO/issues )
+[![Issues](http://img.shields.io/github/issues/vikasburman/flairjs.svg)]( https://github.com/vikasburman/flairjs/issues)
 
 Introduction 
 ---
