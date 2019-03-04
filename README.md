@@ -173,4 +173,4 @@ License
 ---
 Copyright &copy; 2017-2019 Vikas Burman.
 
-Released under the terms of the [MIT license](https://github.com/vikasburman/flairjs/blob/master/LICENSE). Authored and maintained by ([Vikas Burman](https://www.linkedin.com/in/vikasburman/)). 
+Released under the terms of the [MIT license](https://github.com/vikasburman/flairjs/blob/master/LICENSE). Authored and maintained by [Vikas Burman](https://www.linkedin.com/in/vikasburman/). 
