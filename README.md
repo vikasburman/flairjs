@@ -8,7 +8,8 @@ _True object orientation features for plain vanilla JavaScript_
 [![Dev Dependencies](https://david-dm.org/vikasburman/flairjs/dev-status.svg)](https://david-dm.org/vikasburman/flairjs?type=dev)
 [![Known Vulnerabilities](https://snyk.io/test/github/vikasburman/flairjs/badge.svg?targetFile=package.json)](https://snyk.io/test/github/vikasburman/flairjs?targetFile=package.json) 
 [![Issues](http://img.shields.io/github/issues/vikasburman/flairjs.svg)](https://github.com/vikasburman/flairjs/issues)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/bfc47d5ae35b48de956639dbe128d8e5)](https://www.codacy.com/app/vikasburman/flairjs?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=vikasburman/flairjs&amp;utm_campaign=Badge_Grade)<br/>
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/bfc47d5ae35b48de956639dbe128d8e5)](https://www.codacy.com/app/vikasburman/flairjs?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=vikasburman/flairjs&amp;utm_campaign=Badge_Grade)
+[![Maintainability](https://api.codeclimate.com/v1/badges/4a0ba6b340a2487a38cb/maintainability)](https://codeclimate.com/github/vikasburman/flairjs/maintainability)<br/>
 [![MIT license](http://img.shields.io/badge/license-MIT-brightgreen.svg)](http://opensource.org/licenses/MIT)
 [![npm version](https://badge.fury.io/js/flairjs.svg)](https://badge.fury.io/js/flairjs)
 ![GitHub top language](https://img.shields.io/github/languages/top/vikasburman/flairjs.svg?color=brightgreen)
