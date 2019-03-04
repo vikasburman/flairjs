@@ -4,7 +4,7 @@
 [![Known Vulnerabilities](https://snyk.io/test/github/vikasburman/flairjs/badge.svg?targetFile=package.json)](https://snyk.io/test/github/vikasburman/flairjs?targetFile=package.json) 
 [![npm version](https://badge.fury.io/js/flairjs.svg)](https://badge.fury.io/js/flairjs)
 
-![](./docs/images/logo_XS.png)[Flair.js](https://flairjs.com)
+![](./docs/images/logo_S.png)[Flair.js](https://flairjs.com)
 ===
 > **Powerful .Net/Java style object oriented concepts in plain vanilla JavaScript**
 
