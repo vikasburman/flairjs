@@ -21,7 +21,3 @@ gulp.task('test-client', (done) => {
 gulp.task('package', (done) => {
     require(gulpOptions.package).pack(done);
 });
-
-// task: release
-gulp.task('release', gulp.series('build-full', 'test', 'package', () => {
-}));

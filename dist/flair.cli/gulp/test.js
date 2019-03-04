@@ -61,6 +61,7 @@ const doTask = (done) => {
         // open temp runner
         const open = require('open');
         open(tempRunner);
+        done();
     } else {
         const Jasmine = require('jasmine');
         const jasmine = new Jasmine();
