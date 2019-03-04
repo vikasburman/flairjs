@@ -10,6 +10,7 @@ html {
 
 :root {
     --bg: #fafafa;
+    --normal: #212529;
     --dark: #005593;
     --light: #11C0DE;
     --thin: 200;
@@ -24,12 +25,18 @@ html {
     color: var(--dark)!important;
 }
 
+.f-footer {
+    background-color: var(--dark)!important;
+    color: var(--bg)!important;
+    
+}
+.f-footer a {
+    color: var(--bg)!important;
+}
+
 .f-title {
     color: var(--dark)!important;
     letter-spacing: var(--loose)!important;
-}
-.f-mt-negative {
-    margin-top: -3px!important;
 }
 
 .btn-main-1 {
@@ -47,3 +54,14 @@ html {
     letter-spacing: var(--loose)!important;
 }
 
+.rss2html-note {
+    display: none;
+}
+.feed-item-title {
+    color: var(--normal)!important;
+    font-weight: normal!important; 
+    font-size: medium!important;
+}
+.feed-item-title a {
+    color: var(--normal)!important;
+}
