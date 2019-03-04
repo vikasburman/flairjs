@@ -8,7 +8,7 @@
 ===
 > **Powerful .Net/Java style object oriented concepts in plain vanilla JavaScript**
 
-Introduction
+Introduction 
 ---
 
 JavaScript is everywhere, and its popularity has grown tremendously. There has been several enhancements done in the language to make it more powerful. ES6/ES7 has added several object-oriented features to the language, but the bottleneck has always been the varied support of these features by web browsers, thus restricting their large-scale usage.
