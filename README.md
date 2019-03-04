@@ -11,7 +11,7 @@ _Powerful object oriented concepts baked in plain vanilla JavaScript_
 [![MIT license](http://img.shields.io/badge/license-MIT-brightgreen.svg)](http://opensource.org/licenses/MIT)<br/>
 ![GitHub file size in bytes](https://img.shields.io/github/size/vikasburman/flairjs/dist/flair.min.js.gz.svg?color=brightgreen)
 ![GitHub last commit](https://img.shields.io/github/last-commit/vikasburman/flairjs.svg)
-![GitHub (Pre-)Release Date](https://img.shields.io/github/release-date-pre/vikasburman/flairjs.svg)<br/>
+![GitHub (Pre-)Release Date](https://img.shields.io/github/release-date-pre/vikasburman/flairjs.svg)
 [![Issues](http://img.shields.io/github/issues/vikasburman/flairjs.svg)]( https://github.com/vikasburman/flairjs/issues)
 [![StackOverflow](http://img.shields.io/badge/stackoverflow-flairjs-brightgreen.svg)]( http://stackoverflow.com/questions/tagged/flairjs)
 
