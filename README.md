@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.com/vikasburman/flairjs.svg?branch=master)](https://travis-ci.com/vikasburman/flairjs) 
-[![Dependencies](https://david-dm.org/vikasburman/flairjs.svg)](https://david-dm.org/vikasburman/flairjs.svg)
-[![Dev Dependencies](https://david-dm.org/vikasburman/flairjs.svg?type=dev)](https://david-dm.org/vikasburman/flairjs.svg?type=dev)
+[![Dependencies](https://david-dm.org/vikasburman/flairjs)](https://david-dm.org/vikasburman/flairjs)
+[![Dev Dependencies](https://david-dm.org/vikasburman/flairjs?type=dev)](https://david-dm.org/vikasburman/flairjs?type=dev)
 [![Known Vulnerabilities](https://snyk.io/test/github/vikasburman/flairjs/badge.svg?targetFile=package.json)](https://snyk.io/test/github/vikasburman/flairjs?targetFile=package.json) 
 [![npm version](https://badge.fury.io/js/flairjs.svg)](https://badge.fury.io/js/flairjs)
 
