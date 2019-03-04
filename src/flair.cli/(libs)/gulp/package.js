@@ -51,6 +51,7 @@ const doTask = (done) => {
     // done
     done();
 };
+
 exports.pack = function(cb) {
     doTask(cb);
 };

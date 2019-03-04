@@ -69,6 +69,7 @@ const doTask = (done) => {
         jasmine.execute();        
     }
 };
+
 exports.test = function(cb) {
     doTask(cb);
 };

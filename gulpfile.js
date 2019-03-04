@@ -5,9 +5,15 @@ const gulpOptions = require('./config/gulp.json');
 gulp.task('build', (done) => {
     require(gulpOptions.build).build(done);
 });
+gulp.task('build-full', (done) => {
+    require(gulpOptions.build).build(done);
+});
 
 // task: test
 gulp.task('test', (done) => {
+    require(gulpOptions.test).test(done);
+});
+gulp.task('test-client', (done) => {
     require(gulpOptions.test).test(done);
 });
 
@@ -17,5 +23,5 @@ gulp.task('package', (done) => {
 });
 
 // task: release
-gulp.task('release', ['build-full', 'test', 'package'], () => {
-});
+gulp.task('release', gulp.series('build-full', 'test', 'package', () => {
+}));
