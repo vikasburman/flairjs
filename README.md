@@ -173,6 +173,4 @@ License
 ---
 Copyright &copy; 2017-2019 Vikas Burman.
 
-Licensed under the terms of the [MIT license](https://github.com/vikasburman/flairjs/blob/master/LICENSE), which essentially means that you are free to use FlairJS under any open source or commercial project, as long as this copyright header is left intact.
-
-Disclaimer: FlairJS is authored by me ([Vikas Burman](https://www.linkedin.com/in/vikasburman/)). The concepts and opinions found here, as well as in code, are my own and do not represent my employers (past, current or future) in any ways. 
+Released under the terms of the [MIT license](https://github.com/vikasburman/flairjs/blob/master/LICENSE). Authored and maintained by ([Vikas Burman](https://www.linkedin.com/in/vikasburman/)). 
