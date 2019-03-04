@@ -1,6 +1,6 @@
 [![](./docs/images/logo_S.png)Flair.js](https://flairjs.com)
 ===
-*Powerful object oriented concepts baked in plain vanilla JavaScript*
+Powerful object oriented concepts baked in plain vanilla JavaScript
 ===
 [![Build Status](https://travis-ci.com/vikasburman/flairjs.svg?branch=master)](https://travis-ci.com/vikasburman/flairjs) 
 [![Dependencies](https://david-dm.org/vikasburman/flairjs.svg)](https://david-dm.org/vikasburman/flairjs)
