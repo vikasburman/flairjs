@@ -8,9 +8,8 @@ _Powerful object oriented concepts baked in plain vanilla JavaScript_
 [![Dev Dependencies](https://david-dm.org/vikasburman/flairjs/dev-status.svg)](https://david-dm.org/vikasburman/flairjs?type=dev)
 [![Known Vulnerabilities](https://snyk.io/test/github/vikasburman/flairjs/badge.svg?targetFile=package.json)](https://snyk.io/test/github/vikasburman/flairjs?targetFile=package.json) 
 [![npm version](https://badge.fury.io/js/flairjs.svg)](https://badge.fury.io/js/flairjs)
+[![HitCount](http://hits.dwyl.io/vikasburman/flairjs.svg)](http://hits.dwyl.io/vikasburman/flairjs)
 [![Inline Docs](https://inch-ci.org/github/vikasburman/flairjs.svg?branch=master)](https://inch-ci.org/github/vikasburman/flairjs)
-
-## Contributing [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/dwyl/esta/issues)
 
 
 Introduction 
