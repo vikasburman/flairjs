@@ -10,6 +10,9 @@ _Powerful object oriented concepts baked in plain vanilla JavaScript_
 [![npm version](https://badge.fury.io/js/flairjs.svg)](https://badge.fury.io/js/flairjs)
 [![Inline Docs](https://inch-ci.org/github/vikasburman/flairjs.svg?branch=master)](https://inch-ci.org/github/vikasburman/flairjs)
 
+## Contributing [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/dwyl/esta/issues)
+
+
 Introduction 
 ---
 
