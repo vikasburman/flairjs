@@ -14,6 +14,7 @@ _Powerful object oriented concepts baked in plain vanilla JavaScript_
 [![Issues](http://img.shields.io/github/issues/vikasburman/flairjs.svg)]( https://github.com/vikasburman/flairjs/issues)
 [![StackOverflow](http://img.shields.io/badge/stackoverflow-flairjs-brightgreen.svg)]( http://stackoverflow.com/questions/tagged/flairjs)
 
+
 Introduction 
 ---
 
