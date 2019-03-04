@@ -72,7 +72,7 @@ When using on client side:
 > FlairJS also support module loaders and can be loaded via `require` or other module loading techniques.
 
 When using on server side:
-```html
+```javascript
 const flair = require('flairjs');
 ```
 
