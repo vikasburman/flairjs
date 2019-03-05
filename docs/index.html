@@ -24,12 +24,11 @@
         <!-- menu -->
         <nav class="m-2 navbar navbar-fx">
           <a class="navbar-brand navbar-brand-fx mr-auto" href="./">&nbsp;Flair.js</a>
-          <a class="nav-link" target="_blank" href="https://medium.com/have-a-flair">Blog</a>
-          <a class="nav-link" target="_blank" href="https://twitter.com/flairjslib">News</a>
-          <a class="nav-link" href="./v1/guides/">Guides</a>
-          <a class="nav-link" href="./v1/api/">API</a>
-          <a class="nav-link" href="./v1/examples/">Examples</a>
-          <a class="nav-link" href="./v1/guides/#/setup">Download</a>
+          <a class="nav-link medium" target="_blank" href="#">Blog</a>
+          <a class="nav-link guides" href="#">Guides</a>
+          <a class="nav-link api" href="#">API</a>
+          <a class="nav-link demo" href="#">Examples</a>
+          <a class="nav-link setup" href="#">Download</a>
         </nav>
 
           <!-- intro -->
@@ -41,14 +40,14 @@
               <div class="col-6 ml-5 mt-1">
                   <h1 class="display-3 mt-4">True Object Oriented JavaScript</h1>
                   <div class="row ml-2 mt-4">
-                      <a class="btn btn-outline-primary btn-lg active btn-main-1" role="button">
+                      <a class="btn btn-outline-primary btn-lg active btn-main-1" data-toggle="modal" data-target="#why" role="button">
                         <svg class="align-middle" style="width:24px;height:24px" viewBox="0 0 24 24">
                             <path fill="#fafafa" d="M11,9H13V7H11M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,17H13V11H11V17Z" />
                         </svg>
                         <span class="align-middle ml-2">Why Flair.js?</span></a>
-                      <a class="btn  btn-outline-primary btn-lg btn-main-2 ml-2 mr-2" role="button" href="./v1/guides/#/get-started">
+                      <a class="btn  btn-outline-primary btn-lg btn-main-2 ml-2 mr-2 start" role="button" href="#">
                           <span class="align-middle ml-2">Get Started</span></a>
-                      <a class="btn btn-outline-primary btn-lg btn-main-2" role="button" href="https://github.com/vikasburman/flairjs" target="_blank">
+                      <a class="btn btn-outline-primary btn-lg btn-main-2 github" role="button" href="#" target="_blank">
                         <svg class="align-middle" style="width:24px;height:24px" viewBox="0 0 24 24">
                             <path fill="#11C0DE" d="M12,2A10,10 0 0,0 2,12C2,16.42 4.87,20.17 8.84,21.5C9.34,21.58 9.5,21.27 9.5,21C9.5,20.77 9.5,20.14 9.5,19.31C6.73,19.91 6.14,17.97 6.14,17.97C5.68,16.81 5.03,16.5 5.03,16.5C4.12,15.88 5.1,15.9 5.1,15.9C6.1,15.97 6.63,16.93 6.63,16.93C7.5,18.45 8.97,18 9.54,17.76C9.63,17.11 9.89,16.67 10.17,16.42C7.95,16.17 5.62,15.31 5.62,11.5C5.62,10.39 6,9.5 6.65,8.79C6.55,8.54 6.2,7.5 6.75,6.15C6.75,6.15 7.59,5.88 9.5,7.17C10.29,6.95 11.15,6.84 12,6.84C12.85,6.84 13.71,6.95 14.5,7.17C16.41,5.88 17.25,6.15 17.25,6.15C17.8,7.5 17.45,8.54 17.35,8.79C18,9.5 18.38,10.39 18.38,11.5C18.38,15.32 16.04,16.16 13.81,16.41C14.17,16.72 14.5,17.33 14.5,18.26C14.5,19.6 14.5,20.68 14.5,21C14.5,21.27 14.66,21.59 15.17,21.5C19.14,20.16 22,16.42 22,12A10,10 0 0,0 12,2Z" />
                         </svg>                        
@@ -101,7 +100,7 @@
                       <div class="card-body">
                         <h5 class="card-title">See it in action, live!</h5>
                         <p class="card-text text-muted">A collection of demo code is available to readily explore the look and feel of the constructs.</p>
-                        <a href="./v1/examples/" class="btn active">Examples</a>
+                        <a href="#" class="btn active demo">Examples</a>
                       </div>
                     </div>                  
               </div>
@@ -115,8 +114,8 @@
                       </div>
                       <div class="card-body">
                         <h5 class="card-title">All you need is <code>flair.js</code></h5>
-                        <p class="card-text text-muted">Add as dependency through <a href="https://www.npmjs.com/package/flairjs" target="_blank">NPM</a>, hotlink via <a href="https://cdn.jsdelivr.net/npm/flairjs" target="_blank">CDN</a> or download directly from <a href="https://github.com/vikasburman/flairjs/releases" target="_blank">Github</a>.</p>
-                        <a href="./v1/guides/#/setup" class="btn active">Setup</a>
+                        <p class="card-text text-muted">Add as dependency through <a href="#" class="npm" target="_blank">NPM</a>, hotlink via <a href="#" class="cdn" target="_blank">CDN</a> or download directly from <a class="releases" href="#" target="_blank">Github</a>.</p>
+                        <a href="#" class="btn active setup">Setup</a>
                       </div>
                     </div> 
               </div>              
@@ -131,8 +130,8 @@
                       <div class="card-body">
                         <h5 class="card-title">Get to know it.</h5>
                         <p class="card-text text-muted">Understand concepts using the succinct guides and refer feature implementation details from api pages.</p>
-                        <a href="./v1/guides/" class="btn active">Guides</a>
-                        <a href="./v1/api/" class="btn active ml-1">API</a>
+                        <a href="#" class="btn active guides">Guides</a>
+                        <a href="#" class="btn active ml-1 api">API</a>
                       </div>
                     </div>                  
               </div>
@@ -158,23 +157,87 @@
           <div class="row pt-5 pb-5 f-footer font-weight-light text-center">
             <div class="col-4"></div>
             <div class="col-4">
-                <a href="https://github.com/vikasburman/flairjs" target="_blank"><svg style="width:24px;height:24px" viewBox="0 0 24 24">
+                <a href="#" class="github" target="_blank"><svg style="width:24px;height:24px" viewBox="0 0 24 24">
                   <path fill="#fafafa" d="M12,2A10,10 0 0,0 2,12C2,16.42 4.87,20.17 8.84,21.5C9.34,21.58 9.5,21.27 9.5,21C9.5,20.77 9.5,20.14 9.5,19.31C6.73,19.91 6.14,17.97 6.14,17.97C5.68,16.81 5.03,16.5 5.03,16.5C4.12,15.88 5.1,15.9 5.1,15.9C6.1,15.97 6.63,16.93 6.63,16.93C7.5,18.45 8.97,18 9.54,17.76C9.63,17.11 9.89,16.67 10.17,16.42C7.95,16.17 5.62,15.31 5.62,11.5C5.62,10.39 6,9.5 6.65,8.79C6.55,8.54 6.2,7.5 6.75,6.15C6.75,6.15 7.59,5.88 9.5,7.17C10.29,6.95 11.15,6.84 12,6.84C12.85,6.84 13.71,6.95 14.5,7.17C16.41,5.88 17.25,6.15 17.25,6.15C17.8,7.5 17.45,8.54 17.35,8.79C18,9.5 18.38,10.39 18.38,11.5C18.38,15.32 16.04,16.16 13.81,16.41C14.17,16.72 14.5,17.33 14.5,18.26C14.5,19.6 14.5,20.68 14.5,21C14.5,21.27 14.66,21.59 15.17,21.5C19.14,20.16 22,16.42 22,12A10,10 0 0,0 12,2Z" />
                 </svg></a>
                 &nbsp;
-                <a href="https://twitter.com/flairjslib" target="_blank"><svg style="width:24px;height:24px" viewBox="0 0 24 24">
+                <a href="#" class="twitter" target="_blank"><svg style="width:24px;height:24px" viewBox="0 0 24 24">
                     <path fill="#fafafa" d="M22.46,6C21.69,6.35 20.86,6.58 20,6.69C20.88,6.16 21.56,5.32 21.88,4.31C21.05,4.81 20.13,5.16 19.16,5.36C18.37,4.5 17.26,4 16,4C13.65,4 11.73,5.92 11.73,8.29C11.73,8.63 11.77,8.96 11.84,9.27C8.28,9.09 5.11,7.38 3,4.79C2.63,5.42 2.42,6.16 2.42,6.94C2.42,8.43 3.17,9.75 4.33,10.5C3.62,10.5 2.96,10.3 2.38,10C2.38,10 2.38,10 2.38,10.03C2.38,12.11 3.86,13.85 5.82,14.24C5.46,14.34 5.08,14.39 4.69,14.39C4.42,14.39 4.15,14.36 3.89,14.31C4.43,16 6,17.26 7.89,17.29C6.43,18.45 4.58,19.13 2.56,19.13C2.22,19.13 1.88,19.11 1.54,19.07C3.44,20.29 5.7,21 8.12,21C16,21 20.33,14.46 20.33,8.79C20.33,8.6 20.33,8.42 20.32,8.23C21.16,7.63 21.88,6.87 22.46,6Z" />
                 </svg></a>
                 &nbsp;
-                <a href="https://medium.com/have-a-flair" target="_blank"><svg style="width:24px;height:24px" viewBox="0 0 24 24">
+                <a class="medium" href="#" target="_blank"><svg style="width:24px;height:24px" viewBox="0 0 24 24">
                     <path fill="#fafafa" d="M4.37,7.3C4.4,7.05 4.3,6.81 4.12,6.65L2.25,4.4V4.06H8.05L12.53,13.89L16.47,4.06H22V4.4L20.4,5.93C20.27,6.03 20.2,6.21 20.23,6.38V17.62C20.2,17.79 20.27,17.97 20.4,18.07L21.96,19.6V19.94H14.12V19.6L15.73,18.03C15.89,17.88 15.89,17.83 15.89,17.59V8.5L11.4,19.9H10.8L5.57,8.5V16.14C5.5,16.46 5.63,16.78 5.86,17L7.96,19.57V19.9H2V19.57L4.1,17C4.33,16.78 4.43,16.46 4.37,16.14V7.3Z" />
                 </svg></a>  
-                <p>Released under the <a href="https://github.com/vikasburman/flairjs/blob/master/LICENSE" target="_blank">MIT License</a>
-                <br>Copyright &copy; 2017-2019 <a href="https://www.linkedin.com/in/vikasburman/" target="_blank">Vikas Burman</a></p>
+                <p>Released under the <a href="#" class="license" target="_blank">MIT License</a>
+                <br>Copyright &copy; 2017-2019 <a href="#" class="linkedin" target="_blank">Vikas Burman</a></p>
             </div>
             <div class="col-4">
             </div>
-          </div>              
+          </div>    
+          
+          <!-- why flair -->
+          <div id="why" class="modal fade bd-example-modal-lg" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                  
+                    <div id="carouselExampleFade" class="carousel slide carousel-fade" data-ride="carousel">
+                        <ol class="carousel-indicators">
+                            <li data-target="#carouselExampleIndicators" data-slide-to="0" class="active"></li>
+                            <li data-target="#carouselExampleIndicators" data-slide-to="1"></li>
+                            <li data-target="#carouselExampleIndicators" data-slide-to="2"></li>
+                            <li data-target="#carouselExampleIndicators" data-slide-to="3"></li>
+                            <li data-target="#carouselExampleIndicators" data-slide-to="4"></li>
+                        </ol>
+                        <div class="carousel-inner" style="width:100%; height: 400px">
+                          <div class="carousel-item active">
+                              <div class="card text-white bg-info" style="width:100%;  height: 400px">
+                                  <div class="card-body m-5 p-5 text-justify">
+                                      <p class="card-title display-4">JavaScript is the only popular OOP language that uses object prototypes. The preference for class-based OOP is clear; ES6 employ classes, yet it is not as completely fleshed out as in .Net and Java.</p>
+                                  </div>
+                              </div>
+                          </div>
+                          <div class="carousel-item">
+                              <div class="card text-white bg-danger" style="width:100%;  height: 400px">
+                                  <div class="card-body m-5 p-5 text-justify">
+                                      <p class="card-title display-4">JavaScript object prototypes do not scale well to large applications; it’s a rather primitive and sloppy way to do object oriented programming.</p>
+                                  </div>
+                              </div>                            
+                          </div>
+                          <div class="carousel-item">
+                              <div class="card text-white bg-warning" style="width:100%;  height: 400px">
+                                  <div class="card-body m-5 p-5 text-justify">
+                                      <p class="card-title display-4">Using another language to write and transpiling into JavaScript requires being effective in both languages to properly debug; not to mention the horrible code that transpilers generate.</p>
+                                  </div>
+                              </div>                            
+                          </div>
+                          <div class="carousel-item">
+                              <div class="card text-white bg-dark" style="width:100%;  height: 400px">
+                                  <div class="card-body m-5 p-5 text-justify">
+                                      <p class="card-title display-4">ECMAScript 2020 Language specifications does not have anything on the roadmap that relates to oop enhancements.</p>
+                                  </div>
+                              </div>                            
+                          </div>
+                          <div class="carousel-item">
+                              <div class="card text-white bg-success" style="width:100%;  height: 400px">
+                                  <div class="card-body m-5 p-5 text-justify">
+                                      <p class="card-title display-4">Flair.js neatly fills the gap. In pure JavaScript it brings all the oop constructs and much more that other mature oop languages have.</p>
+                                  </div>
+                              </div>                            
+                          </div>
+                        </div>                                           
+                        <a class="carousel-control-prev" href="#carouselExampleFade" role="button" data-slide="prev">
+                          <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                          <span class="sr-only">Previous</span>
+                        </a>
+                        <a class="carousel-control-next" href="#carouselExampleFade" role="button" data-slide="next">
+                          <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                          <span class="sr-only">Next</span>
+                        </a>
+                      </div>
+
+                </div>
+              </div>
+          </div>          
     </div>
 
     <!-- Bootstrap Material Design -->
@@ -190,7 +253,23 @@
     <!-- showdown -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.0/showdown.min.js" integrity="sha256-LSUpTY0kkXGKvcBC9kbmgibmx3NVVgJvAEfTZbs51mU=" crossorigin="anonymous"></script>
 
-    <!-- showdown -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.0/showdown.min.js" integrity="sha256-LSUpTY0kkXGKvcBC9kbmgibmx3NVVgJvAEfTZbs51mU=" crossorigin="anonymous"></script>
+    <!-- update links -->
+    <script>$(document).ready(function() { 
+      let currentVersion = 'v1';
+      $(".medium").attr("href", "https://medium.com/have-a-flair");
+      $(".github").attr("href", "https://github.com/vikasburman/flairjs");
+      $(".twitter").attr("href", "https://twitter.com/flairjslib");
+      $(".linkedin").attr("href", "https://www.linkedin.com/in/vikasburman/");
+      $(".license").attr("href", "https://github.com/vikasburman/flairjs/blob/master/LICENSE");
+      $(".npm").attr("href", "https://www.npmjs.com/package/flairjs");
+      $(".cdn").attr("href", "https://cdn.jsdelivr.net/npm/flairjs");
+      $(".releases").attr("href", "https://github.com/vikasburman/flairjs/releases");
+      $(".guides").attr("href", `./${currentVersion}/guides/`);
+      $(".setup").attr("href", `./${currentVersion}/guides/#/setup`);
+      $(".api").attr("href", `./${currentVersion}/api/`);
+      $(".demo").attr("href", `./${currentVersion}/examples/`);
+      $(".start").attr("href", `./${currentVersion}/guides/#/get-started`);
+    });</script>
+
   </body>
 </html>
