@@ -20,7 +20,7 @@ Class('(auto)', function() {
      *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
      */  
     $$('virtual');
-    this.before = this.noop;
+    this.before = nim;
 
     /** 
      * @name around
@@ -38,7 +38,7 @@ Class('(auto)', function() {
      * fn: function - function which is wrapped, it should be called in between pre and post actions
      */  
     $$('virtual');
-    this.around = this.noop;
+    this.around = nim;
 
     /** 
      * @name after
@@ -55,5 +55,5 @@ Class('(auto)', function() {
      *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
      */  
     $$('virtual');
-    this.after = this.noop;
+    this.after = nim;
 });

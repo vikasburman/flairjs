@@ -3,5 +3,4 @@ package/
 _archive/
 _local/
 temp/
-yarn.lock
 yarn-error.log

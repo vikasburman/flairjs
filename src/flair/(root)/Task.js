@@ -27,7 +27,7 @@ Class('(auto)', [IProgressReporter, IDisposable], function() {
     * @description Task disposer
     */  
     $$('abstract');
-    this.dispose = this.nim;
+    this.dispose = nim;
 
    /** 
     *  @name args: array - for task setup
@@ -109,7 +109,7 @@ Class('(auto)', [IProgressReporter, IDisposable], function() {
      */  
     $$('virtual');
     $$('protected');
-    this.setup = this.noop;
+    this.setup = noop;
 
     /** 
      * @name onRun
@@ -123,6 +123,6 @@ Class('(auto)', [IProgressReporter, IDisposable], function() {
      */  
     $$('abstract');
     $$('protected');
-    this.onRun = this.nim;
+    this.onRun = nim;
 });
 

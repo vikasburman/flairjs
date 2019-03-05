@@ -31,6 +31,7 @@
         "test": "gulp test --TEST --options ./config/test.json",
         "test-client": "gulp test --TEST --client --options ./config/test.json",
         "package": "gulp package --options ./config/pack.json",
+        "docs": "http-server ./docs/ | open http://127.0.0.1:8080/ &",
         "start": "http-server ./docs/ | open http://127.0.0.1:8080/v1/examples/ &",
         "stop": "pkill -f http-server"
     },

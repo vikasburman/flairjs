@@ -39,6 +39,10 @@ html {
     letter-spacing: var(--loose)!important;
 }
 
+.f-sparse {
+    line-height: 200%;
+}
+
 .btn-main-1 {
     border-radius: 25px!important;
     background-color: var(--light)!important;

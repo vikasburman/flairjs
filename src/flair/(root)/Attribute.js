@@ -68,7 +68,7 @@ Class('(auto)', function() {
      *                 decorated set must accept value argument and pass it to member's set with or without processing
      */  
     $$('virtual');
-    this.decorateProperty = this.noop;
+    this.decorateProperty = nim;
 
     /** 
      * @name decorateFunction
@@ -84,7 +84,7 @@ Class('(auto)', function() {
      *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
      */  
     $$('virtual');
-    this.decorateFunction = this.noop;    
+    this.decorateFunction = nim;    
 
     /** 
      * @name decorateEvent
@@ -100,6 +100,6 @@ Class('(auto)', function() {
      *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
      */  
     $$('virtual');
-    this.decorateEvent = this.noop;
+    this.decorateEvent = nim;
 });
 
