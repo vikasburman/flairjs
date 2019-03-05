@@ -1,5 +1,3 @@
-<!-- nav: overview-nav.json -->
-
 Changelog
 =========
 

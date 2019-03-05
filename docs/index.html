@@ -22,13 +22,38 @@
   <body>
     <div class="container-fluid">
         <!-- menu -->
-        <nav class="m-2 navbar navbar-fx">
-          <a class="navbar-brand navbar-brand-fx mr-auto" href="./">&nbsp;Flair.js</a>
-          <a class="nav-link medium" target="_blank" href="#">Blog</a>
-          <a class="nav-link guides" href="#">Guides</a>
-          <a class="nav-link api" href="#">API</a>
-          <a class="nav-link demo" href="#">Examples</a>
-          <a class="nav-link setup" href="#">Download</a>
+        <nav class="m-2 navbar navbar-fx navbar-expand-lg">
+          <a class="navbar-brand navbar-brand-fx" href="./">&nbsp;Flair.js</a>
+          <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"><svg class="align-middle" style="width:24px;height:24px" viewBox="0 0 24 24">
+                <path fill="#005593" d="M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z" />
+            </svg></span>
+          </button> 
+          <div class="collapse navbar-collapse" id="navbarSupportedContent">
+              <ul class="navbar-nav ml-auto">
+                  <li class="nav-item active">
+                    <a class="nav-link medium" target="_blank" href="#">Blog</a>
+                  </li>
+                  <li class="nav-item">
+                    <a class="nav-link demo" href="#">Examples</a>
+                  </li>
+                  <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                      Docs
+                    </a>
+                    <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                      <a class="dropdown-item guides" href="#">Guides</a>
+                      <a class="dropdown-item api" href="#">API</a>
+                      <div class="dropdown-divider"></div>
+                      <a class="dropdown-item changelog" href="#">Changelog</a>
+                      <a class="dropdown-item roadmap" href="#">Roadmap</a>
+                    </div>
+                  </li>
+                  <li class="nav-item">
+                    <a class="nav-link setup" href="#">Download</a>
+                  </li>
+                </ul>            
+          </div>         
         </nav>
 
           <!-- intro -->
@@ -261,9 +286,11 @@
       $(".twitter").attr("href", "https://twitter.com/flairjslib");
       $(".linkedin").attr("href", "https://www.linkedin.com/in/vikasburman/");
       $(".license").attr("href", "https://github.com/vikasburman/flairjs/blob/master/LICENSE");
+      $(".changelog").attr("href", "https://github.com/vikasburman/flairjs/blob/master/LICENSE");
       $(".npm").attr("href", "https://www.npmjs.com/package/flairjs");
       $(".cdn").attr("href", "https://cdn.jsdelivr.net/npm/flairjs");
       $(".releases").attr("href", "https://github.com/vikasburman/flairjs/releases");
+      $(".roadmap").attr("href", "https://github.com/vikasburman/flairjs/projects/2");
       $(".guides").attr("href", `./${currentVersion}/guides/`);
       $(".setup").attr("href", `./${currentVersion}/guides/#/setup`);
       $(".api").attr("href", `./${currentVersion}/api/`);
