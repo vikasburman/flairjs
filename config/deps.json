@@ -2,5 +2,6 @@
     "pre": [
     ],
     "post": [
+        { "src": "./dist/flair.js", "dest": "./docs/edge/examples/js/flair.js" }
     ]
 }
