@@ -34,7 +34,10 @@
                   <li class="nav-item active">
                     <a class="nav-link medium" target="_blank" href="#">Blog</a>
                   </li>
-                  <li class="nav-item">
+                  <li class="nav-item active">
+                      <a class="nav-link twitter" target="_blank" href="#">News</a>
+                    </li>
+                    <li class="nav-item">
                     <a class="nav-link demo" href="#">Examples</a>
                   </li>
                   <li class="nav-item dropdown">
@@ -45,8 +48,8 @@
                       <a class="dropdown-item guides" href="#">Guides</a>
                       <a class="dropdown-item api" href="#">API</a>
                       <div class="dropdown-divider"></div>
-                      <a class="dropdown-item changelog" href="#">Changelog</a>
-                      <a class="dropdown-item roadmap" href="#">Roadmap</a>
+                      <a class="dropdown-item changelog" target="_blank" href="#">Changelog</a>
+                      <a class="dropdown-item roadmap" target="_blank" href="#">Roadmap</a>
                     </div>
                   </li>
                   <li class="nav-item">
@@ -57,20 +60,20 @@
         </nav>
 
           <!-- intro -->
-          <div class="row pt-5 mt-5">
+          <div class="row pt-5">
               <div class="col-lg-2"></div>
-              <div class="col-lg-2">
+              <div class="col-lg-2 ml-5">
                   <img src="./images/logo_XL.png" width="212" height="185" alt="">
               </div>
               <div class="col-lg-6 ml-5 mt-1">
                   <h1 class="display-3 mt-4">True Object Oriented JavaScript</h1>
                   <div class="row ml-2 mt-4">
-                      <a class="btn btn-outline-primary btn-lg active btn-main-1" data-toggle="modal" data-target="#why" role="button">
+                      <a class="btn btn-outline-primary btn-lg active btn-main-1 mr-2" data-toggle="modal" data-target="#why" role="button">
                         <svg class="align-middle" style="width:24px;height:24px" viewBox="0 0 24 24">
                             <path fill="#fafafa" d="M11,9H13V7H11M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,17H13V11H11V17Z" />
                         </svg>
                         <span class="align-middle">Why Flair.js?</span></a>
-                      <a class="btn  btn-outline-primary btn-lg btn-main-2 ml-2 mr-2 start" role="button" href="#">
+                      <a class="btn  btn-outline-primary btn-lg btn-main-2 mr-2 start" role="button" href="#">
                           <span class="align-middle">Get Started</span></a>
                       <a class="btn btn-outline-primary btn-lg btn-main-2 github" role="button" href="#" target="_blank">
                         <svg class="align-middle" style="width:24px;height:24px" viewBox="0 0 24 24">
@@ -286,7 +289,7 @@
       $(".twitter").attr("href", "https://twitter.com/flairjslib");
       $(".linkedin").attr("href", "https://www.linkedin.com/in/vikasburman/");
       $(".license").attr("href", "https://github.com/vikasburman/flairjs/blob/master/LICENSE");
-      $(".changelog").attr("href", "https://github.com/vikasburman/flairjs/blob/master/LICENSE");
+      $(".changelog").attr("href", "https://github.com/vikasburman/flairjs/blob/master/CHANGELOG.md");
       $(".npm").attr("href", "https://www.npmjs.com/package/flairjs");
       $(".cdn").attr("href", "https://cdn.jsdelivr.net/npm/flairjs");
       $(".releases").attr("href", "https://github.com/vikasburman/flairjs/releases");
