@@ -69,3 +69,25 @@ html {
 .feed-item-title a {
     color: var(--normal)!important;
 }
+
+.f-card {
+    box-shadow: none!important;
+    background-color: var(--bg)!important;
+}
+.f-list-group-item-header {
+    text-decoration: none!important;
+}
+.f-list-group-item {
+    list-style-type: none; 
+} 
+.f-list-group-item a {
+    text-decoration: none;
+}
+.f-active {
+    background-color: #eaeaea;
+}
+
+div [v-cloak] {
+    display: none;
+};
+
