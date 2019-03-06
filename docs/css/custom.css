@@ -87,7 +87,22 @@ html {
     background-color: #eaeaea;
 }
 
+.level-0 {
+    list-style-type: none;
+}
+.level-1 {
+    list-style-type: none;
+    margin-left: -25px;
+}
+.level-2 {
+    list-style-type: none;
+    margin-left: -15px;
+}
+.level-3 {
+    list-style-type: none;
+    margin-left: -10px;
+}
+
 div [v-cloak] {
     display: none;
-};
-
+}

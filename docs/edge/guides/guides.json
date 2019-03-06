@@ -1,0 +1,15 @@
+{
+    "version": { "title": "Edge", "path": "edge" },
+    "path": "../../content/guides/",
+    "groups": [
+        { "id": "essentials", "title": "Essentials", "list": [
+            {
+                "id": "essentials/introduction",
+                "file": "essentials/introduction.md",
+                "title": "Introduction"
+            }
+        ]},
+        { "id": "concepts", "title": "Concepts", "list": [
+        ]}
+    ]
+}

@@ -1,0 +1,15 @@
+{
+    "version": { "title": "Edge", "path": "edge" },
+    "path": "../../content/api/",
+    "groups": [
+        { "id": "types", "title": "Types", "list": [
+            {
+                "id": "types/class",
+                "file": "types/class.md",
+                "title": "Class"
+            }
+        ]},
+        { "id": "members", "title": "Members", "list": [
+        ]}
+    ]
+}
