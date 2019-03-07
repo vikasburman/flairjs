@@ -1278,8 +1278,10 @@ const builder = (cfg) => {
     cfg.customAttrs = cfg.customAttrs || false;
     cfg.types.instance = cfg.types.instance || 'unknown';
     cfg.types.type = cfg.types.type || 'unknown';
+    cfg.mex = cfg.mex || {};
     cfg.mex.instance = ((cfg.mex && cfg.mex.instance) ? cfg.mex.instance : {});
     cfg.mex.type = ((cfg.mex && cfg.mex.type) ? cfg.mex.type : {})
+    cfg.ex = cfg.ex || {};
     cfg.ex.instance = ((cfg.ex && cfg.ex.instance) ? cfg.ex.instance : {});
     cfg.ex.type = ((cfg.ex && cfg.ex.type) ? cfg.ex.type : {});
     cfg.params.typeName = cfg.params.typeName || '';

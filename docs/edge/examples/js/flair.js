@@ -5,14 +5,14 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.15.719
- *  Tue, 05 Mar 2019 21:52:20 GMT
+ *  Version: 0.15.720
+ *  Thu, 07 Mar 2019 23:12:25 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
  */
 /**
- * @name flairjs
+ * @name flair
  * @description Initializer
  */
  (function(root, factory) {
@@ -76,10 +76,10 @@
     flair.info = Object.freeze({
         name: 'flair',
         file: currentFile,
-        version: '0.15.719',
+        version: '0.15.720',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Tue, 05 Mar 2019 21:52:20 GMT')
+        lupdate: new Date('Thu, 07 Mar 2019 23:12:25 GMT')
     });       
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -3661,8 +3661,10 @@
         cfg.customAttrs = cfg.customAttrs || false;
         cfg.types.instance = cfg.types.instance || 'unknown';
         cfg.types.type = cfg.types.type || 'unknown';
+        cfg.mex = cfg.mex || {};
         cfg.mex.instance = ((cfg.mex && cfg.mex.instance) ? cfg.mex.instance : {});
         cfg.mex.type = ((cfg.mex && cfg.mex.type) ? cfg.mex.type : {})
+        cfg.ex = cfg.ex || {};
         cfg.ex.instance = ((cfg.ex && cfg.ex.instance) ? cfg.ex.instance : {});
         cfg.ex.type = ((cfg.ex && cfg.ex.type) ? cfg.ex.type : {});
         cfg.params.typeName = cfg.params.typeName || '';
@@ -3916,7 +3918,7 @@
                          'name: string, inherits: class, mixints: array, factory: function')(name, inherits, mixints, factory);
         if (args.isInvalid) { throw args.error; }
     
-        // builder config
+        // builder config (full set of configuration)
         let cfg = {
             new: true,
             mixins: true,

@@ -31,7 +31,7 @@ const _Class = (name, inherits, mixints, factory) => {
                      'name: string, inherits: class, mixints: array, factory: function')(name, inherits, mixints, factory);
     if (args.isInvalid) { throw args.error; }
 
-    // builder config
+    // builder config (full set of configuration)
     let cfg = {
         new: true,
         mixins: true,
