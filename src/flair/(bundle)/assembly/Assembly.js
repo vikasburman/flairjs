@@ -27,6 +27,21 @@ const Assembly = function (ado, alc) {
         if (ado.types.indexOf(qualifiedName) === -1) { throw new _Exception('NotFound', `Type is not available in this assembly. (${qualifiedName})`); }
         return this.context.getType(qualifiedName);
     };
+    this.getTypes = (intf) => {
+        if (['string', 'interface'] !== _typeOf(intf)) { throw new _Exception('InvalidArgument', `Argument type is not valid. (${intf})`); }
+        let result = [];
+        for(let qualifiedName of ado.types) {
+            try {
+                let Type = this.context.getType(qualifiedName);
+                if (_isImplements(Type, intf)) {
+                    result.push(Type);
+                }
+            } catch (e) {
+                // ignore as for incompatible types it will throw, and that's ok in this context
+            }
+        }
+        return result;
+    };
 
     // resources
     this.resources = () => { return ado.resources.slice(); }

@@ -16,14 +16,14 @@ const Resource = function(rdo, ns, alc) {
     // decode data (rdo.data is base64 encoded string, added by build engine)
     if (rdo.encodingType.indexOf('utf8;') !== -1) {
         if (isServer) {
-            let buff = new Buffer(rdo.data).toString('base64');
+            let buff = Buffer.from(rdo.data, 'base64');
             this.data = buff.toString('utf8');
         } else { // client
             this.data = b64DecodeUnicode(rdo.data); 
         }
     } else { // binary
         if (isServer) {
-            this.data = new Buffer(rdo.data).toString('base64');
+            this.data = Buffer.from(rdo.data, 'base64');
         } // else no change on client
     }
 

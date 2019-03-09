@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.15.860
- *  Sat, 09 Mar 2019 06:57:38 GMT
+ *  Version: 0.15.906
+ *  Sat, 09 Mar 2019 16:47:14 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -23,7 +23,7 @@ const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
     name: 'flair.cli',
-    version: '0.15.860',
+    version: '0.15.906',
     format: 'fasm',
     formatVersion: '1',
     contains: [
@@ -230,7 +230,7 @@ const build = (options, done) => {
         //      "license": "",
         //      "types": ["", "", ...],
         //      "resources": ["", "", ...],
-        //      "assets": ["", "", ...],
+        //      "assets": ["", "", ...]
         options.current.ado = {
             name: options.current.asmName,
             file: options.current.asm.replace(options.current.dest, '.').replace('.js', '{.min}.js'),
@@ -622,7 +622,7 @@ const build = (options, done) => {
             }
 
             // base64 encoding before adding to file
-            content = new Buffer(content).toString('base64');
+            content = Buffer.from(content).toString('base64');
             encodingType += 'base64;';
 
             // embed resource
@@ -1166,10 +1166,8 @@ exports.flairBuild = function(options, cb) {
         options.preBuildDeps = false;
     }
 
-    // exclude flair files from being registered
+    // exclude files from being registered
     options.skipRegistrationsFor = [
-        'flair',
-        'flair.cli'
     ];
 
     // define logger
@@ -1252,3 +1250,4 @@ exports.flairBuild = function(options, cb) {
     });
 };
 
+(() => { flair.AppDomain.registerAdo('{"name":"flair.cli","file":"./flair.cli{.min}.js","desc":"True Object Oriented JavaScript","version":"0.15.906","lupdate":"Sat, 09 Mar 2019 16:47:14 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":[],"resources":[],"assets":[]}');})();

@@ -38,11 +38,93 @@ const _Enum = (name, factory) => {
         params: {
             typeName: args.values.name,
             factory: args.values.factory
+        },
+        mex: {   // meta extensions
+            instance: {
+                getName: function (value) { 
+                    // get internal information { instance.{obj, def, attrs, modifiers}, type.{Type, def, attrs, modifiers}}
+                    let obj = this.instance.obj,
+                        def = this.instance.def;
+
+                    // check where this value is
+                    let name = '';
+                    for(let memberName in def.members) {
+                        if (def.members.hasOwnProperty(memberName)) {
+                            if (def.members[memberName] === 'prop') {
+                                if (obj[memberName] === value) {
+                                    name = memberName; break;
+                                }
+                            }
+                        }
+                    }
+
+                    // return
+                    return name;
+                },
+                getNames: function () { 
+                    // get internal information { instance.{obj, def, attrs, modifiers}, type.{Type, def, attrs, modifiers}}
+                    let def = this.instance.def;
+
+                    let names = [];
+                    for(let memberName in def.members) {
+                        if (def.members.hasOwnProperty(memberName)) {
+                            if (def.members[memberName] === 'prop') {
+                                names.push(memberName);
+                            }
+                        }
+                    }
+
+                    // return
+                    return names;
+                },
+                getValues: function () {
+                    // get internal information { instance.{obj, def, attrs, modifiers}, type.{Type, def, attrs, modifiers}}
+                    let def = this.instance.def,
+                        obj = this.instance.obj;
+
+                    let values = [];
+                    for(let memberName in def.members) {
+                        if (def.members.hasOwnProperty(memberName)) {
+                            if (def.members[memberName] === 'prop') {
+                                values.push(obj[memberName]);
+                            }
+                        }
+                    }
+
+                    // return
+                    return values;
+                }          
+            }
         }
     };
 
     // return built type
     return builder(cfg);
+};
+
+// enum static methods
+_Enum.getName = (enumType, enumValue) => {
+    if (_typeOf(enumType) !== 'enum') { throw _Exception('InvalidArgument', 'Argument type is invalid. (enumType)'); }
+    if (typeof enumValue !== 'number') { throw _Exception('InvalidArgument', 'Argument type is invalid. (enumValue)'); }
+    return enumType._.getName(enumValue);
+};
+_Enum.getNames = (enumType) => {
+    if (_typeOf(enumType) !== 'enum') { throw _Exception('InvalidArgument', 'Argument type is invalid. (enumType)'); }
+    return enumType._.getNames();
+};
+_Enum.getValues = (enumType) => {
+    if (_typeOf(enumType) !== 'enum') { throw _Exception('InvalidArgument', 'Argument type is invalid. (enumType)'); }
+    return enumType._.getValues();
+};
+_Enum.isDefined = (enumType, nameOrValue) => {
+    if (_typeOf(enumType) !== 'enum') { throw _Exception('InvalidArgument', 'Argument type is invalid. (enumType)'); }
+    if (typeof nameOrValue === 'string') {
+        return (enumType._.getNames().indexOf(nameOrValue) !== -1);
+    } else if (typeof nameOrValue === 'number') {
+        return (enumType._.getName(nameOrValue) !== '');
+    } else {
+        throw _Exception('InvalidArgument', 'Argument type is invalid. (nameOrValue)');
+    }
 };
 
 // attach to flair

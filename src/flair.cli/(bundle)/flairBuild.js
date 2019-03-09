@@ -216,7 +216,7 @@ const build = (options, done) => {
         //      "license": "",
         //      "types": ["", "", ...],
         //      "resources": ["", "", ...],
-        //      "assets": ["", "", ...],
+        //      "assets": ["", "", ...]
         options.current.ado = {
             name: options.current.asmName,
             file: options.current.asm.replace(options.current.dest, '.').replace('.js', '{.min}.js'),
@@ -608,7 +608,7 @@ const build = (options, done) => {
             }
 
             // base64 encoding before adding to file
-            content = new Buffer(content).toString('base64');
+            content = Buffer.from(content).toString('base64');
             encodingType += 'base64;';
 
             // embed resource
@@ -1152,10 +1152,8 @@ exports.flairBuild = function(options, cb) {
         options.preBuildDeps = false;
     }
 
-    // exclude flair files from being registered
+    // exclude files from being registered
     options.skipRegistrationsFor = [
-        'flair',
-        'flair.cli'
     ];
 
     // define logger

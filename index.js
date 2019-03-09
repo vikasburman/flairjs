@@ -12,6 +12,7 @@ let IPowertrain = Interface('IPowertrain', function() {
 
 //typeof obj[memberName].subscribe === 'function'
 
+$$('ns', 'com.vikas');
 let MyClass = Class('MyClass', [IPowertrain, IDisposable], function() {
     $$('virtual');
     this.construct = () => {

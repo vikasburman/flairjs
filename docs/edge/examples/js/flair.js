@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.15.860
- *  Sat, 09 Mar 2019 06:57:38 GMT
+ *  Version: 0.15.906
+ *  Sat, 09 Mar 2019 16:47:13 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -76,10 +76,10 @@
     flair.info = Object.freeze({
         name: 'flair',
         file: currentFile,
-        version: '0.15.860',
+        version: '0.15.906',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sat, 09 Mar 2019 06:57:38 GMT')
+        lupdate: new Date('Sat, 09 Mar 2019 16:47:13 GMT')
     });       
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -898,6 +898,21 @@
             if (ado.types.indexOf(qualifiedName) === -1) { throw new _Exception('NotFound', `Type is not available in this assembly. (${qualifiedName})`); }
             return this.context.getType(qualifiedName);
         };
+        this.getTypes = (intf) => {
+            if (['string', 'interface'] !== _typeOf(intf)) { throw new _Exception('InvalidArgument', `Argument type is not valid. (${intf})`); }
+            let result = [];
+            for(let qualifiedName of ado.types) {
+                try {
+                    let Type = this.context.getType(qualifiedName);
+                    if (_isImplements(Type, intf)) {
+                        result.push(Type);
+                    }
+                } catch (e) {
+                    // ignore as for incompatible types it will throw, and that's ok in this context
+                }
+            }
+            return result;
+        };
     
         // resources
         this.resources = () => { return ado.resources.slice(); }
@@ -938,14 +953,14 @@
         // decode data (rdo.data is base64 encoded string, added by build engine)
         if (rdo.encodingType.indexOf('utf8;') !== -1) {
             if (isServer) {
-                let buff = new Buffer(rdo.data).toString('base64');
+                let buff = Buffer.from(rdo.data, 'base64');
                 this.data = buff.toString('utf8');
             } else { // client
                 this.data = b64DecodeUnicode(rdo.data); 
             }
         } else { // binary
             if (isServer) {
-                this.data = new Buffer(rdo.data).toString('base64');
+                this.data = Buffer.from(rdo.data, 'base64');
             } // else no change on client
         }
     
@@ -2402,6 +2417,8 @@
             type: new _attrConfig('(class || struct) && prop'),
             args: new _attrConfig('(class || struct) && (func || construct) && !$on'),
             inject: new _attrConfig('class && (prop || func || construct) && !(static || session || state)'),
+            resource: new _attrConfig('class && prop && !(session || state || inject || asset)'),
+            asset: new _attrConfig('class && prop && !(session || state || inject || resource)'),
             singleton: new _attrConfig('(class && !(prop || func || event) && !($abstract || $static)'),
             serialize: new _attrConfig('((class || struct) || ((class || struct) && prop)) && !($abstract || $static)'),
             deprecate: new _attrConfig('!construct && !dispose'),
@@ -2468,7 +2485,6 @@
                 _supportedModifiers = ['static', 'abstract', 'sealed', 'virtual', 'override', 'private', 'protected', 'readonly', 'async'],
                 _list = [], // { withWhat, matchType, original, name, value }
                 _list2 = [], // to store all struct types, which needs to be processed at end, else replaceAll causes problem and 'struct' state is replaced on 'construct' too
-                dump = [],
                 constraintsLex = appliedAttr.cfg.constraints; // logical version with filled booleans
     
             // extract names
@@ -2528,6 +2544,7 @@
                 // select everything except these !, &, |, (, and )
                 let rex = new RegExp('[^!\&!|()]', 'g'), // eslint-disable-line no-useless-escape
                     match = '',
+                    dump = [],
                     idx = 0;
                 while(true) { // eslint-disable-line no-constant-condition
                     match = rex.exec(constraintsLex);
@@ -2832,6 +2849,93 @@
         root.members = Object.freeze(root.members);
         return Object.freeze(root);
     };
+    const defineExtensions = (cfg) => {
+        // object extensions
+        let _oex = { // every object of every type will have this, that means all types are derived from this common object
+            getType: function() {
+                // get internal information { instance.{obj, def, attrs, modifiers}, type.{Type, def, attrs, modifiers}}
+                let def = this.instance.def;
+                
+                // return
+                return def.Type;
+            }
+        }; 
+        let _omex = { // every object's meta will have this
+            id: guid()
+        }; 
+        cfg.ex.instance = shallowCopy(cfg.ex.instance, _oex, false); // don't override, which means defaults overriding is allowed
+        cfg.mex.instance = shallowCopy(cfg.mex.instance, _omex, false); // don't override, which means defaults overriding is allowed
+    
+        // type extensions
+        let _tex = { // every type will have this, that means all types are derived from this common type
+            getName: function() {
+                // get internal information { type.{Type, def, attrs, modifiers}}
+                let typeDef = this.type.def;
+                
+                // return
+                return typeDef.name;
+            }
+        }; 
+        let _tmex = { // every type's meta will have this
+            id: guid()
+        }; 
+        cfg.ex.type = shallowCopy(cfg.ex.type, _tex, false); // don't override, which means defaults overriding is allowed
+        cfg.mex.type = shallowCopy(cfg.mex.type, _tmex, false); // don't override, which means defaults overriding is allowed
+    };
+    const addTypeExtensions = (typeEx, Type, addTarget, typeDef, type_attrs, type_modifiers) => {
+        let bindWith = {
+            type: {
+                Type: Type,
+                def: typeDef,
+                attrs: type_attrs,
+                modifiers: type_modifiers
+            }
+        }
+        for(let ex in typeEx) {
+            if (typeEx.hasOwnProperty(ex)) {
+                if (typeof typeEx[ex] === 'function') {
+                    Object.defineProperty(addTarget, ex, {
+                        configurable: true, enumerable: false,
+                        value: typeEx[ex].bind(bindWith)
+                    });
+                } else {
+                    Object.defineProperty(addTarget, ex, {
+                        configurable: true, enumerable: false,
+                        value: typeEx[ex]
+                    });
+                }
+            }
+        }
+    };
+    const addInstanceExtensions = (instanceEx, obj, addTarget, Type, def, typeDef, attrs, modifiers, type_attrs, type_modifiers) => {
+        let bindWith = {
+            instance: {
+                obj: obj,
+                def: def,
+                attrs: attrs,
+                modifiers: modifiers
+            },
+            type: {
+                Type: Type,
+                typeDef: typeDef,
+                attrs: type_attrs,
+                modifiers: type_modifiers
+            }
+        }
+        for(let ex in instanceEx) {
+            if (typeof instanceEx[ex] === 'function') {
+                Object.defineProperty(addTarget, ex, {
+                    configurable: true, enumerable: false,
+                    value: instanceEx[ex].bind(bindWith)
+                });
+            } else {
+                Object.defineProperty(addTarget, ex, {
+                    configurable: true, enumerable: false,
+                    value: instanceEx[ex]
+                });
+            }
+        }
+    };
     const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         // define parameters and context
         let typeDef = Type._.def(),
@@ -2890,9 +2994,6 @@
             _member_dispatcher = null,
             _sessionStorage = (cfg.storage ? _Port('sessionStorage') : null),
             _localStorage = (cfg.storage ? _Port('localStorage') : null);
-    
-        // dump this def for builder to process at the end
-        cfg.dump.push(def); // TODO: check how it is being used
     
         const applyCustomAttributes = (bindingHost, memberName, memberType, member) => {
             for(let appliedAttr of attrs.members.all(memberName).current()) {
@@ -2993,7 +3094,11 @@
             // since these are of same object type, and since overwriting of this is allowed, add only at top level
             // and only missing ones
             if (params.isTopLevelInstance) {
-                exposed_obj = shallowCopy(exposed_obj, cfg.ex.instance, false); // don;t overwrite, since overriding defaults are allowed
+                // add instance level extensions
+                addInstanceExtensions(cfg.ex.instance, exposed_obj, exposed_obj, Type, def, typeDef, attrs, modifiers, Type._.attrs, Type._.modifiers); 
+    
+                // add instance meta level extensions
+                addInstanceExtensions(cfg.mex.instance, exposed_obj, exposed_obj._, Type, def, typeDef, attrs, modifiers, Type._.attrs, Type._.modifiers);
             }
     
             // expose def of this level for upper level to access if not on top level
@@ -3175,6 +3280,8 @@
             _isState = attrs.members.probe('state', memberName).anywhere(),
             _deprecate_attr = attrs.members.probe('deprecate', memberName).current(),
             inject_attr = attrs.members.probe('inject', memberName).current(),
+            asset_attr = attrs.members.probe('asset', memberName).current(),
+            resource_attr = attrs.members.probe('resource', memberName).current(),
             type_attr = attrs.members.probe('type', memberName).current(),
             _isDeprecate = (_deprecate_attr !== null),
             _deprecate_message = (_isDeprecate ? (_deprecate_attr.args[0] || `Event is marked as deprecate. (${memberName})`) : ''),
@@ -3187,7 +3294,7 @@
             // NOTE: no check for isOverriding, because properties are always fully defined
     
             // define or redefine
-            if (memberDef.get || memberDef.set) { // normal property, cannot be static because static cannot have custom getter/setter
+            if (memberDef && (memberDef.get || memberDef.set)) { // normal property, cannot be static because static cannot have custom getter/setter
                 if (!cfg.propGetterSetter) {
                     throw new _Exception('InvalidOperation', `Getter/Setter are not allowed. (${memberName})`);
                 }
@@ -3217,9 +3324,14 @@
                     if (type_attr && type_attr.args[0] && !_is(memberDef, type_attr.args[0])) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (value)'); } // type attribute is defined
                     propHost[uniqueName] = memberDef;
                 } else if (cfg.storage && (_isSession || _isState)) {
-                    propHost = (_isSession ? _sessionStorage : _localStorage);
                     isStorageHost = true;
-                    uniqueName = obj._.id + '_' + uniqueName; // because multiple instances of same object will have different id
+                    if (_isSession) { // session
+                        propHost = _sessionStorage;
+                        uniqueName = obj._.id + '_' + uniqueName; // because multiple instances of same object will have different id
+                    } else { // state
+                        propHost = _localStorage;
+                        // no change in unique-name, so all instances of same object share same state, this is because at every new instance id is changed, and since state is supposed to persist, to reach back to same state, name has to be same
+                    }
                     addDisposable((_isSession ? 'session' : 'state'), uniqueName);
                     if (!propHost.key(uniqueName)) { 
                         if (type_attr && type_attr.args[0] && !_is(memberDef, type_attr.args[0])) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (value)'); } // type attribute is defined
@@ -3257,13 +3369,35 @@
                 _injections = _Container.resolve(_injectWhat, _injectWith, _injectMany);
                 if (!Array.isArray(_injections)) { _injections = [_injections]; }
     
-                _member.set(_injections); // set injected value now - this includes the case of customer setter
+                _member.set(_injections); // set injected value now - this includes the case of custom setter
             }
     
             // disposable
             if (attrs.members.probe('dispose', memberName).anywhere() || inject_attr) { // if injected or marked for disposal
                 addDisposable('prop', memberName);
             }
+    
+            // set resource or asset
+            if ((resource_attr || asset_attr) && !isStorageHost) {
+                let resOrAssetData = null;
+                if (resource_attr) {
+                    if (resource_attr.args[0]) { // qualified name of resource is given on attr parameter
+                        resOrAssetData = _getResource(resource_attr.args[0]); 
+                    }
+                } else { // asset_attr
+                    if (asset_attr.args[0]) { // asset file name with relative path within asset folder of assembly
+                        let astPath = asset_attr.args[0];
+                        if (astPath.startsWith('../')) { astPath = astPath.substr(3); }
+                        if (astPath.startsWith('./')) { astPath = astPath.substr(2); }
+                        if (astPath.startsWith('/')) { astPath = astPath.substr(1); }
+                        resOrAssetData= _getAssembly(def.name) + '/' + astPath;
+                    }
+                }
+                if (resOrAssetData) {
+                    _member.set(resOrAssetData); // set value now - this includes the case of customer setter
+                }
+            } 
+    
     
             // apply custom attributes
             if (cfg.customAttrs) {
@@ -3569,7 +3703,8 @@
     
          // set object meta
          if (typeof obj._ === 'undefined') {
-            obj._ = shallowCopy({}, cfg.mex.instance, false); // these will always be same, since inheritance happen in same types, and these are defined at a type configuration level, so these will always be same and should behave just like the next set of definitions here
+             // these will always be same, since inheritance happen in same types, and these are defined at a type configuration level, so these will always be same and should behave just like the next set of definitions here
+            obj._ = {};
             if (cfg.dispose) {
                 obj._.disposables = []; // can have {type: 'session', data: 'unique name'} OR {type: 'state', data: 'unique name'} OR {type: 'prop', data: 'prop name'} OR {type: 'event', data: dispatcher object} OR {type: 'handler', data: {name: 'event name', handler: exact func that was attached}}
             }
@@ -3580,7 +3715,6 @@
         if (cfg.interfaces) {
             def.interfaces = cfg.params.interfaces; // interface types that were applied to this type, will be deleted after validation
         }
-         obj._.id = obj._.id || guid(); // inherited one or create here
          obj._.type = cfg.types.instance; // as defined for this instance by builder, this will always be same for all levels -- class 'instance' at all levels will be 'instance' only
         if (params.isTopLevelInstance) {
             obj._.Type = Type; // top level Type (all inheritance for these types will come from Type._.inherits)
@@ -3840,13 +3974,8 @@
         }
         delete cfg.params.mixinsAndInterfaces;
     
-        // object extensions
-        let _oex = { // every object of every type will have this, that means all types are derived from this common object
-        }; 
-        cfg.ex.instance = shallowCopy(cfg.ex.instance, _oex, false); // don't override, which means defaults overriding is allowed
-    
-        // collect complete hierarchy defs while the type is building
-        cfg.dump = []; // TODO: Check what is happening with this, not implemented yet, idea is to collect all hierarchy and made it available at Type level for reflector
+        // define extensions
+        defineExtensions(cfg);
     
         // pick current context in which this type is being registered
         let currentContext = _AppDomain.context.current();
@@ -3876,14 +4005,11 @@
             }
         }
     
-        // extend type itself
-        _Object = shallowCopy(_Object, cfg.ex.type, false); // don't overwrite while adding type extensions, this means defaults override is allowed
-    
         // type def
         let typeDef = { 
             name: cfg.params.typeName,
             type: cfg.types.type, // the type of the type itself: class, struct, etc.
-            Type: _Object,
+            Type: null,
             level: 'type',
             members: {}, // each named item here defines the type of member: func, prop, event, construct, etc.
             attrs: { 
@@ -3900,10 +4026,9 @@
         const attrs = modifierOrAttrRefl(false, null, typeDef);
     
         // set type meta
-        _Object._ = shallowCopy({}, cfg.mex.type, true);
+        _Object._ = {};
         _Object._.name = cfg.params.typeName;
         _Object._.type = cfg.types.type;
-        _Object._.id = guid();
         _Object._.namespace = null;
         _Object._.assembly = () => { return currentContext.getAssembly(currentAssembly) || null; };
         _Object._.context = currentContext;
@@ -4006,6 +4131,14 @@
                 delete typeDef.staticConstructionCycle;
             }
         }
+    
+        // extend type itself with type's extensions
+        // it may overwrite inbuilt defaults
+        addTypeExtensions(cfg.ex.type, _Object, _Object, typeDef, attrs, modifiers);
+    
+        // extend type meta  with type's meta extensions
+        // it may overwrite inbuilt defaults
+        addTypeExtensions(cfg.mex.type, _Object, _Object._, typeDef, attrs, modifiers);
     
         // get final return value
         let _finalObject = null,
@@ -4283,11 +4416,93 @@
             params: {
                 typeName: args.values.name,
                 factory: args.values.factory
+            },
+            mex: {   // meta extensions
+                instance: {
+                    getName: function (value) { 
+                        // get internal information { instance.{obj, def, attrs, modifiers}, type.{Type, def, attrs, modifiers}}
+                        let obj = this.instance.obj,
+                            def = this.instance.def;
+    
+                        // check where this value is
+                        let name = '';
+                        for(let memberName in def.members) {
+                            if (def.members.hasOwnProperty(memberName)) {
+                                if (def.members[memberName] === 'prop') {
+                                    if (obj[memberName] === value) {
+                                        name = memberName; break;
+                                    }
+                                }
+                            }
+                        }
+    
+                        // return
+                        return name;
+                    },
+                    getNames: function () { 
+                        // get internal information { instance.{obj, def, attrs, modifiers}, type.{Type, def, attrs, modifiers}}
+                        let def = this.instance.def;
+    
+                        let names = [];
+                        for(let memberName in def.members) {
+                            if (def.members.hasOwnProperty(memberName)) {
+                                if (def.members[memberName] === 'prop') {
+                                    names.push(memberName);
+                                }
+                            }
+                        }
+    
+                        // return
+                        return names;
+                    },
+                    getValues: function () {
+                        // get internal information { instance.{obj, def, attrs, modifiers}, type.{Type, def, attrs, modifiers}}
+                        let def = this.instance.def,
+                            obj = this.instance.obj;
+    
+                        let values = [];
+                        for(let memberName in def.members) {
+                            if (def.members.hasOwnProperty(memberName)) {
+                                if (def.members[memberName] === 'prop') {
+                                    values.push(obj[memberName]);
+                                }
+                            }
+                        }
+    
+                        // return
+                        return values;
+                    }          
+                }
             }
         };
     
         // return built type
         return builder(cfg);
+    };
+    
+    // enum static methods
+    _Enum.getName = (enumType, enumValue) => {
+        if (_typeOf(enumType) !== 'enum') { throw _Exception('InvalidArgument', 'Argument type is invalid. (enumType)'); }
+        if (typeof enumValue !== 'number') { throw _Exception('InvalidArgument', 'Argument type is invalid. (enumValue)'); }
+        return enumType._.getName(enumValue);
+    };
+    _Enum.getNames = (enumType) => {
+        if (_typeOf(enumType) !== 'enum') { throw _Exception('InvalidArgument', 'Argument type is invalid. (enumType)'); }
+        return enumType._.getNames();
+    };
+    _Enum.getValues = (enumType) => {
+        if (_typeOf(enumType) !== 'enum') { throw _Exception('InvalidArgument', 'Argument type is invalid. (enumType)'); }
+        return enumType._.getValues();
+    };
+    _Enum.isDefined = (enumType, nameOrValue) => {
+        if (_typeOf(enumType) !== 'enum') { throw _Exception('InvalidArgument', 'Argument type is invalid. (enumType)'); }
+        if (typeof nameOrValue === 'string') {
+            return (enumType._.getNames().indexOf(nameOrValue) !== -1);
+        } else if (typeof nameOrValue === 'number') {
+            return (enumType._.getName(nameOrValue) !== '');
+        } else {
+            throw _Exception('InvalidArgument', 'Argument type is invalid. (nameOrValue)');
+        }
     };
     
     // attach to flair
@@ -6051,6 +6266,25 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 
 })();
+
+(async () => { // ./src/flair/(root)/Test.js
+'use strict';
+/**
+ * @name Test
+ * @description testing platform base class.
+ */
+$$('ns', '(root)');
+Class('Test', function() {
+    $$('resource', 'hello');
+    this.resProp = null;
+
+    $$('asset', './ab/index.html');
+    this.astProp = null;
+});
+
+})();
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
 })();
+(() => { let rdo = JSON.parse('{"name":"hello","encodingType":"utf8;base64;","asmFile":"./flair{.min}.js","file":"./src/flair/(root)/hello.res.json","data":"ewogICAgInRlc3QiOiAxCn0="}'); flair.AppDomain.context.current().registerResource(rdo);})();
+(() => { flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","version":"0.15.906","lupdate":"Sat, 09 Mar 2019 16:47:13 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","Test"],"resources":["hello"],"assets":["./flair/ab/index.html"]}');})();
