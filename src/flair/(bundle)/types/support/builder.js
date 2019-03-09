@@ -405,9 +405,7 @@ const defineExtensions = (cfg) => {
         }
     }; 
     let _omex = { // every object's meta will have this
-        id: function() {
-            return guid();
-        }
+        id: guid() // property
     }; 
     cfg.ex.instance = shallowCopy(cfg.ex.instance, _oex, false); // don't override, which means defaults overriding is allowed
     cfg.mex.instance = shallowCopy(cfg.mex.instance, _omex, false); // don't override, which means defaults overriding is allowed
@@ -423,9 +421,7 @@ const defineExtensions = (cfg) => {
         }
     }; 
     let _tmex = { // every type's meta will have this
-        id: function() {
-            return guid();
-        }
+        id: guid() // property
     }; 
     cfg.ex.type = shallowCopy(cfg.ex.type, _tex, false); // don't override, which means defaults overriding is allowed
     cfg.mex.type = shallowCopy(cfg.mex.type, _tmex, false); // don't override, which means defaults overriding is allowed
