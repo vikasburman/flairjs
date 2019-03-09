@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.15.922
- *  Sat, 09 Mar 2019 19:02:04 GMT
+ *  Version: 0.15.924
+ *  Sat, 09 Mar 2019 19:03:48 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -77,10 +77,10 @@
     flair.info = Object.freeze({
         name: 'flair',
         file: currentFile,
-        version: '0.15.922',
+        version: '0.15.924',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sat, 09 Mar 2019 19:02:04 GMT')
+        lupdate: new Date('Sat, 09 Mar 2019 19:03:48 GMT')
     });       
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -6306,4 +6306,4 @@ flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
 })();
 (() => { let rdo = JSON.parse('{"name":"hello","encodingType":"utf8;base64;","asmFile":"./flair{.min}.js","file":"./src/flair/(root)/hello.res.json","data":"ewogICAgInRlc3QiOiAxCn0="}'); flair.AppDomain.context.current().registerResource(rdo);})();
-(() => { flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","version":"0.15.922","lupdate":"Sat, 09 Mar 2019 19:02:04 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","Test"],"resources":["hello"],"assets":["./flair/ab/index.html"]}');})();
+(() => { flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","version":"0.15.924","lupdate":"Sat, 09 Mar 2019 19:03:48 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","Test"],"resources":["hello"],"assets":["./flair/ab/index.html"]}');})();
