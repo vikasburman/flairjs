@@ -23,10 +23,10 @@ const _getAttr = (obj, name, attrName) => {
         attrHostItem = (isType ? 'type' : 'members');
 
     if (!attrName) { // all
-        let found_attrs = obj._.attrs[attrHostItem].all(name).anywhere();                           // NOTE: name will be ignored in case of type call, so no harm
+        let found_attrs = obj[meta].attrs[attrHostItem].all(name).anywhere();                           // NOTE: name will be ignored in case of type call, so no harm
         if (found_attrs) { result.push(...sieve(found_attrs, 'name, isCustom, args, type', true)); }
     } else { // specific
-        let found_attr = obj._.attrs[attrHostItem].probe(attrName, name).anywhere();                // NOTE: name will be ignored in case of type call, so no harm
+        let found_attr = obj[meta].attrs[attrHostItem].probe(attrName, name).anywhere();                // NOTE: name will be ignored in case of type call, so no harm
         if (found_attr) { result.push(sieve(found_attr, 'name, isCustom, args, type', true)); }
     }
 

@@ -63,13 +63,14 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         }        
         // certain types are built as instances, like interface and enum
         let name = '',
-            type = '';
-        if (Type._.Type) {
-            name = Type._.Type._.name;
-            type = Type._.Type._.type;
+            type = '',
+            typeMeta = Type[meta];
+        if (typeMeta.Type) {
+            name = typeMeta.Type[meta].name;
+            type = typeMeta.Type[meta].type;
         } else {
-            name = Type._.name;
-            type = Type._.type;
+            name = typeMeta.name;
+            type = typeMeta.type;
         }
 
         // only valid types are allowed

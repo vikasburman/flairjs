@@ -25,8 +25,8 @@ const _using = (obj, fn) => {
         isDone = false,
         isPromiseReturned = false,
         doDispose = () => {
-            if (!isDone && typeof obj._.dispose === 'function') {
-                isDone = true; obj._.dispose();
+            if (!isDone && typeof obj[meta].dispose === 'function') {
+                isDone = true; obj[meta].dispose();
             }
         };
     try {

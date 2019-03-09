@@ -13,7 +13,7 @@
 const _isDerivedFrom = (type, parent) => {
     if (_typeOf(type) !== 'class') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
     if (['string', 'class'].indexOf(_typeOf(parent)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (parent)'); }
-    return type._.isDerivedFrom(parent);
+    return type[meta].isDerivedFrom(parent);
 }; 
 
 // attach to flair

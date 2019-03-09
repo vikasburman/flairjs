@@ -21,7 +21,7 @@
  */ 
 const _is = (obj, type) => {
     // obj may be undefined or null or false, so don't check for validation of that here
-    if (type._ && type._.name) { type = type._.name; } // can be a type as well
+    if (type[meta]) { type = type[meta].name; } // since it can be a type as well
     if (_typeOf(type) !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
     let isMatched = false, 
         _typ = '';
@@ -45,7 +45,7 @@ const _is = (obj, type) => {
     if (!isMatched && (type === 'date' || type === 'Date')) { isMatched = (obj instanceof Date); }
 
     // flair
-    if (!isMatched && (type === 'flair' && obj._ && obj._.type)) { isMatched = true; }
+    if (!isMatched && (type === 'flair' && obj[meta])) { isMatched = true; } // presence ot meta symbol means it is flair type/instance
 
     // special function types
     if (!isMatched && (type === 'cfunction')) { isMatched = (typeof obj === 'function' && !isArrow(obj)); }
@@ -56,8 +56,8 @@ const _is = (obj, type) => {
 
     // flair types
     if (!isMatched) {
-        if (obj._ && obj._.type) { 
-            _typ = obj._.type;
+        if (obj[meta]) { 
+            _typ = obj[meta].type;
             isMatched = _typ === type; 
         }
     }

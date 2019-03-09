@@ -106,22 +106,22 @@ const _Enum = (name, factory) => {
 _Enum.getName = (enumType, enumValue) => {
     if (_typeOf(enumType) !== 'enum') { throw _Exception('InvalidArgument', 'Argument type is invalid. (enumType)'); }
     if (typeof enumValue !== 'number') { throw _Exception('InvalidArgument', 'Argument type is invalid. (enumValue)'); }
-    return enumType._.getName(enumValue);
+    return enumType[meta].getName(enumValue);
 };
 _Enum.getNames = (enumType) => {
     if (_typeOf(enumType) !== 'enum') { throw _Exception('InvalidArgument', 'Argument type is invalid. (enumType)'); }
-    return enumType._.getNames();
+    return enumType[meta].getNames();
 };
 _Enum.getValues = (enumType) => {
     if (_typeOf(enumType) !== 'enum') { throw _Exception('InvalidArgument', 'Argument type is invalid. (enumType)'); }
-    return enumType._.getValues();
+    return enumType[meta].getValues();
 };
 _Enum.isDefined = (enumType, nameOrValue) => {
     if (_typeOf(enumType) !== 'enum') { throw _Exception('InvalidArgument', 'Argument type is invalid. (enumType)'); }
     if (typeof nameOrValue === 'string') {
-        return (enumType._.getNames().indexOf(nameOrValue) !== -1);
+        return (enumType[meta].getNames().indexOf(nameOrValue) !== -1);
     } else if (typeof nameOrValue === 'number') {
-        return (enumType._.getName(nameOrValue) !== '');
+        return (enumType[meta].getName(nameOrValue) !== '');
     } else {
         throw _Exception('InvalidArgument', 'Argument type is invalid. (nameOrValue)');
     }

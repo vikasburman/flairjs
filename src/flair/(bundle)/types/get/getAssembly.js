@@ -13,7 +13,7 @@ const _getAssembly = (Type) => {
     if (typeof Type === 'string') {
         return _AppDomain.resolve(Type);
     } else {
-        return Type._.assembly();
+        return Type[meta].assembly();
     }
 };
 

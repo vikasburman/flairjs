@@ -11,18 +11,20 @@
  *  string: json string when serialized
  *  object: flair object instance, when deserialized
  */ 
-const serilzer_process = (source, isDeserialize) => {
+const serializer_process = (source, isDeserialize) => {
     let result = null,
         memberNames = null,
         src = (isDeserialize ? JSON.parse(source) : source),
-        Type = (isDeserialize ? null : source._.Type);
+        Type = (isDeserialize ? null : source[meta].Type),
+        TypeMeta = Type[meta];
     const getMemberNames = (obj, isSelectAll) => {
-        let attrRefl = obj._.attrs,
-            modiRefl = obj._.modifiers,
+        let objMeta = obj[meta],
+            attrRefl = objMeta.attrs,
+            modiRefl = objMeta.modifiers,
             props = [],
             isOK = false;
         for(let memberName in obj) {
-            if (obj.hasOwnProperty(memberName) && memberName !== '_') {
+            if (obj.hasOwnProperty(memberName) && memberName !== meta) {
                 isOK = modiRefl.members.isProperty(memberName);
                 if (isOK) {
                     if (isSelectAll) {
@@ -54,7 +56,7 @@ const serilzer_process = (source, isDeserialize) => {
         result = new Type(); // that's why serializable objects must be able to create themselves without arguments 
         
         // get members to deserialize
-        if (Type._.attrs.type.probe('serialize').anywhere()) {
+        if (TypeMeta.attrs.type.probe('serialize').anywhere()) {
             memberNames = getMemberNames(result, true);
         } else {
             memberNames = getMemberNames(result, false);
@@ -64,7 +66,7 @@ const serilzer_process = (source, isDeserialize) => {
         for(let memberName of memberNames) { result[memberName] = src.data[memberName]; }
     } else {
         // get members to serialize
-        if (Type._.attrs.type.probe('serialize').anywhere()) {
+        if (TypeMeta.attrs.type.probe('serialize').anywhere()) {
             memberNames = getMemberNames(src, true);
         } else {
             memberNames = getMemberNames(src, false);
@@ -72,7 +74,7 @@ const serilzer_process = (source, isDeserialize) => {
 
         // serialize
         result = {
-            type: src._.Type._.name,
+            type: src[meta].Type[meta].name,
             data: {}
         };
         for(let memberName of memberNames) { result.data[memberName] = src[memberName]; }
@@ -85,14 +87,14 @@ const serilzer_process = (source, isDeserialize) => {
 const _Serializer = {
     // serialize given supported flair type's instance
     serialize: (instance) => { 
-        if (!(instance && instance._ && instance._.type) || ['instance', 'sinstance'].indexOf(instance._.type) === -1) { throw _Exception.InvalidArgument('instance'); }
-        return serilzer_process(instance);
+        if (['instance', 'sinstance'].indexOf(_typeOf(instance) === -1)) { throw _Exception.InvalidArgument('instance'); }
+        return serializer_process(instance);
     },
 
     // deserialize last serialized instance
     deserialize: (json) => {
         if (!json || typeof json !== 'string') { throw _Exception.InvalidArgument('json'); }
-        return serilzer_process(json, true);
+        return serializer_process(json, true);
     }
 };
 

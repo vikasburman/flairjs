@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.15.906
- *  Sat, 09 Mar 2019 16:47:14 GMT
+ *  Version: 0.15.922
+ *  Sat, 09 Mar 2019 19:02:05 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -23,7 +23,7 @@ const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
     name: 'flair.cli',
-    version: '0.15.906',
+    version: '0.15.922',
     format: 'fasm',
     formatVersion: '1',
     contains: [
@@ -1250,4 +1250,4 @@ exports.flairBuild = function(options, cb) {
     });
 };
 
-(() => { flair.AppDomain.registerAdo('{"name":"flair.cli","file":"./flair.cli{.min}.js","desc":"True Object Oriented JavaScript","version":"0.15.906","lupdate":"Sat, 09 Mar 2019 16:47:14 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":[],"resources":[],"assets":[]}');})();
+(() => { flair.AppDomain.registerAdo('{"name":"flair.cli","file":"./flair.cli{.min}.js","desc":"True Object Oriented JavaScript","version":"0.15.922","lupdate":"Sat, 09 Mar 2019 19:02:05 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":[],"resources":[],"assets":[]}');})();

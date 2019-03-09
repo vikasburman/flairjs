@@ -13,7 +13,7 @@
 const _isImplements = (obj, intf) => {
     if (['instance', 'class', 'sinstance', 'struct'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
     if (['string', 'interface'].indexOf(_typeOf(intf)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (intf)'); }
-    return obj._.isImplements(intf);
+    return obj[meta].isImplements(intf);
 };
 
 // attach to flair

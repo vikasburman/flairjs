@@ -31,7 +31,7 @@ const _typeOf = (obj) => {
     if (!_type && (obj instanceof Date)) { _type = 'date'; }
 
     // flair types
-    if (!_type && obj._ && obj._.type) { _type = obj._.type; }
+    if (!_type && obj[meta]) { _type = obj[meta].type; }
 
     // native javascript types
     if (!_type) { _type = typeof obj; }

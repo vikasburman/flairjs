@@ -9,7 +9,7 @@
  */ 
 const _getContext = (Type) => { 
     if (!_is(Type, 'flair')) { throw new _Exception('InvalidArgument', 'Argument type is not valid. (Type)'); }
-    return Type._.context;
+    return Type[meta].context;
 };
 
 // attach to flair

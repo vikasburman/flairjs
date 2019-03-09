@@ -25,6 +25,7 @@
         flair = {},
         currentFile = (isServer ? __filename : _global.document.currentScript.src),
         sym = [],
+        meta = Symbol('[meta]'),
         disposers = [],
         options = {},
         flairTypes = ['class', 'enum', 'interface', 'mixin', 'struct'],

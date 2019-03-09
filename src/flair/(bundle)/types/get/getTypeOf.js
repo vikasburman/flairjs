@@ -8,7 +8,8 @@
  * @returns type - flair type for the given object
  */ 
 const _getTypeOf = (obj) => {
-    return ((obj._ && obj._.Type)  ? obj._.Type : null);
+    let objMeta = obj[meta];
+    return (objMeta ? (objMeta.Type || null) : null);
 };
 
 // attach to flair

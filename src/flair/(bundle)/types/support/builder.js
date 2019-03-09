@@ -121,9 +121,9 @@ const attributesAndModifiers = (def, typeDef, memberName, isTypeLevel, isCustomA
                 case 'typeName':
                     switch(item.matchType) {
                         case 'anywhere':
-                            item.value = ((item.name === typeDef.name) || typeDef.Type._.isDerivedFrom(item.name)); break;
+                            item.value = ((item.name === typeDef.name) || typeDef.Type[meta].isDerivedFrom(item.name)); break;
                         case 'inherited':
-                            item.value = typeDef.Type._.isDerivedFrom(item.name); break;
+                            item.value = typeDef.Type[meta].isDerivedFrom(item.name); break;
                         case 'current':
                             item.value = (item.name === typeDef.name); break;
                     }
@@ -405,7 +405,9 @@ const defineExtensions = (cfg) => {
         }
     }; 
     let _omex = { // every object's meta will have this
-        id: guid()
+        id: function() {
+            return guid();
+        }
     }; 
     cfg.ex.instance = shallowCopy(cfg.ex.instance, _oex, false); // don't override, which means defaults overriding is allowed
     cfg.mex.instance = shallowCopy(cfg.mex.instance, _omex, false); // don't override, which means defaults overriding is allowed
@@ -421,7 +423,9 @@ const defineExtensions = (cfg) => {
         }
     }; 
     let _tmex = { // every type's meta will have this
-        id: guid()
+        id: function() {
+            return guid();
+        }
     }; 
     cfg.ex.type = shallowCopy(cfg.ex.type, _tex, false); // don't override, which means defaults overriding is allowed
     cfg.mex.type = shallowCopy(cfg.mex.type, _tmex, false); // don't override, which means defaults overriding is allowed
@@ -482,7 +486,8 @@ const addInstanceExtensions = (instanceEx, obj, addTarget, Type, def, typeDef, a
 };
 const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     // define parameters and context
-    let typeDef = Type._.def(),
+    let TypeMeta = Type[meta],
+        typeDef = TypeMeta.def(),
         _flagName = '___flag___',
         params = {
             _flagName: _flagName
@@ -508,10 +513,12 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     }
 
     // singleton specific case
-    if (cfg.singleton && !typeDef.staticConstructionCycle && params.isTopLevelInstance && Type._.singleInstance()) { return Type._.singleInstance(); }
+    if (cfg.singleton && !typeDef.staticConstructionCycle && params.isTopLevelInstance && TypeMeta.singleInstance()) { return TypeMeta.singleInstance(); }
 
     // define vars
     let exposed_obj = {},
+        objMeta = null,
+        exposed_objMeta = null,
         mixin_being_applied = null,
         _constructName = '_construct',
         _disposeName = '_dispose',
@@ -595,14 +602,15 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         doCopy = (memberName) => { Object.defineProperty(exposed_obj, memberName, Object.getOwnPropertyDescriptor(obj, memberName)); };
         
         // copy meta member as non-enumerable
-        let desc = Object.getOwnPropertyDescriptor(obj, '_');
+        let desc = Object.getOwnPropertyDescriptor(obj, meta);
         desc.enumerable = false;
-        Object.defineProperty(exposed_obj, '_', desc);
+        Object.defineProperty(exposed_obj, meta, desc);
+        exposed_objMeta = exposed_obj[meta];
         
         // copy other members, excluding static members
         for(let memberName in obj) { 
             isCopy = false;
-            if (obj.hasOwnProperty(memberName) && memberName !== '_') { 
+            if (obj.hasOwnProperty(memberName) && memberName !== meta) { 
                 isCopy = true;
                 if (def.members[memberName]) { // member is defined here
                     if (modifiers.members.probe('private', memberName).current()) { isCopy = false; }   // private members don't get out
@@ -639,22 +647,22 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         // and only missing ones
         if (params.isTopLevelInstance) {
             // add instance level extensions
-            addInstanceExtensions(cfg.ex.instance, exposed_obj, exposed_obj, Type, def, typeDef, attrs, modifiers, Type._.attrs, Type._.modifiers); 
+            addInstanceExtensions(cfg.ex.instance, exposed_obj, exposed_obj, Type, def, typeDef, attrs, modifiers, TypeMeta.attrs, TypeMeta.modifiers); 
 
             // add instance meta level extensions
-            addInstanceExtensions(cfg.mex.instance, exposed_obj, exposed_obj._, Type, def, typeDef, attrs, modifiers, Type._.attrs, Type._.modifiers);
+            addInstanceExtensions(cfg.mex.instance, exposed_obj, exposed_objMeta, Type, def, typeDef, attrs, modifiers, TypeMeta.attrs, TypeMeta.modifiers);
         }
 
         // expose def of this level for upper level to access if not on top level
         if (!params.isTopLevelInstance) {
-            exposed_obj._.def = def; // this will be deleted as soon as picked at top level
+            exposed_objMeta.def = def; // this will be deleted as soon as picked at top level
         }
     };
     const validateMember = (memberName, interface_being_validated) => {
         // member must exists check + member type must match
-        if (typeof exposed_obj[memberName] === 'undefined' || modifiers.members.type(memberName) !== interface_being_validated._.modifiers.members.type(memberName)) {
+        if (typeof exposed_obj[memberName] === 'undefined' || modifiers.members.type(memberName) !== interface_being_validated[meta].modifiers.members.type(memberName)) {
             if (memberName === 'dispose' && (typeof exposed_obj[_disposeName] === 'function' || 
-                                             typeof exposed_obj._.dispose === 'function')) {
+                                             typeof exposed_objMeta.dispose === 'function')) {
                 // its ok, continue below
             } else {
                 throw new _Exception('NotImplemented', `Interface member is not implemented. (${memberName})`); 
@@ -664,7 +672,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         // Note: type and args checking is intentionally not done, considering the flexible type nature of JavaScript
 
         // pick interface being validated at this time
-        _attr('interface', interface_being_validated._.name);
+        _attr('interface', interface_being_validated[meta].name);
 
         // collect attributes and modifiers - validate applied attributes as per attribute configuration - throw when failed
         attributesAndModifiers(def, typeDef, memberName, false, cfg.customAttrs);
@@ -686,7 +694,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         }
     };
     const validatePreMemberDefinitionFeasibility = (memberName, memberType, memberDef) => { // eslint-disable-line no-unused-vars
-        if (['func', 'prop', 'event'].indexOf(memberType) !== -1 && memberName.startsWith('_')) { new _Exception('InvalidName', `Name is not valid. (${memberName})`); }
+        if (['func', 'prop', 'event'].indexOf(memberType) !== -1 && memberName.startsWith('_')) { new _Exception('InvalidName', `Name is not valid. (${memberName})`); } // this is for some future usage, where internal names can be added starting with '_'
         switch(memberType) {
             case 'func':
                 if (!cfg.func) { throw new _Exception('InvalidOperation', `Function cannot be defined on this type. (${def.name})`); }
@@ -738,7 +746,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         // for a static type, constructor arguments check and dispose check
         the_attr = modifiers.type.probe('static').current();
         if (the_attr && cfg.static) {
-            if (Type._.isStatic()) {
+            if (TypeMeta.isStatic()) {
                 if (cfg.construct && memberName === _constructName && memberDef.length !== 0) {
                     throw new _Exception('InvalidDefinition', `Static constructors cannot have arguments. (construct)`);
                 }
@@ -776,7 +784,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         }
 
         // static members cannot be arrow functions and properties cannot have custom getter/setter
-        if (cfg.static && (modifiers.members.probe('static', memberName).current() || Type._.isStatic())) {
+        if (cfg.static && (modifiers.members.probe('static', memberName).current() || TypeMeta.isStatic())) {
             if (memberType === 'func') {
                 if (isArrow(memberDef)) { 
                     throw new _Exception('InvalidOperation', `Static functions cannot be defined as an arrow function. (${memberName})`); 
@@ -857,13 +865,13 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             }.bind(bindingHost);
             _member.set = function(value) {
                 if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
-                if (_isReadOnly && !bindingHost._.constructing) { throw new _Exception('InvalidOperation', `Property is readonly. (${memberName})`); } // readonly props can be set only when object is being constructed 
+                if (_isReadOnly && !bindingHost[meta].constructing) { throw new _Exception('InvalidOperation', `Property is readonly. (${memberName})`); } // readonly props can be set only when object is being constructed 
                 if (type_attr && type_attr.args[0] && !_is(value, type_attr.args[0])) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (value)'); } // type attribute is defined
                 return _setter.apply(bindingHost, [value]);
             }.bind(bindingHost);
         } else { // direct value
             if (cfg.static && _isStatic) {
-                propHost = params.staticInterface._.props; // property values are stored on static interface itself in  ._.props
+                propHost = params.staticInterface[meta].props; // property values are stored on static interface itself in  .[meta].props
                 bindingHost = params.staticInterface; // binding to static interface, so with 'this' object internals are not accessible
                 if (type_attr && type_attr.args[0] && !_is(memberDef, type_attr.args[0])) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (value)'); } // type attribute is defined
                 propHost[uniqueName] = memberDef;
@@ -871,7 +879,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                 isStorageHost = true;
                 if (_isSession) { // session
                     propHost = _sessionStorage;
-                    uniqueName = obj._.id + '_' + uniqueName; // because multiple instances of same object will have different id
+                    uniqueName = obj[meta].id + '_' + uniqueName; // because multiple instances of same object will have different id
                 } else { // state
                     propHost = _localStorage;
                     // no change in unique-name, so all instances of same object share same state, this is because at every new instance id is changed, and since state is supposed to persist, to reach back to same state, name has to be same
@@ -893,7 +901,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             }.bind(bindingHost);
             _member.set = function(value) {
                 if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
-                if (_isReadOnly && !bindingHost._.constructing) { throw new _Exception('InvalidOperation', `Property is readonly. (${memberName})`); } // readonly props can be set only when object is being constructed 
+                if (_isReadOnly && !bindingHost[meta].constructing) { throw new _Exception('InvalidOperation', `Property is readonly. (${memberName})`); } // readonly props can be set only when object is being constructed 
                 if (type_attr && type_attr.args[0] && !_is(value, type_attr.args[0])) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (value)'); } // type attribute is defined
                 if (isStorageHost) {
                     propHost.setItem(uniqueName, JSON.stringify({value: value}));
@@ -1048,7 +1056,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             let isInTimerCode = false;
             let intervalId = setInterval(() => {
                 // run only, when object construction is completed
-                if (!bindingHost._.constructing && !isInTimerCode) {
+                if (!bindingHost[meta].constructing && !isInTimerCode) {
                     isInTimerCode = true;
                     obj[memberName](); // call as if called from outside
                     isInTimerCode = false;
@@ -1081,7 +1089,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         // override, if required
         if (_isOverriding) {
             // wrap for base call
-            base = obj[memberName]._.processor;
+            base = obj[memberName][meta].processor;
             if (base.ni === true) {
                 base = null; // so it is not available
             }
@@ -1118,7 +1126,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                 _post(_post_attr.args[0], processedArgs);   // .args[0] is supposed to the channel name on which to post, so there is no conflict
             }
         }.bind(bindingHost);
-        _member._ = Object.freeze({
+        _member[meta] = Object.freeze({
             processor: argsProcessorFn
         });
         _member.add = (handler) => { _member_dispatcher.add(name, handler); };
@@ -1161,7 +1169,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         // pick mixin being applied at this time
         if (cfg.mixins) {        
             if (mixin_being_applied !== null) {
-                _attr('mixin', mixin_being_applied._.name);
+                _attr('mixin', mixin_being_applied[meta].name);
             }
         }
 
@@ -1207,7 +1215,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         }
     };
     const addDisposable = (disposableType, data) => {
-        obj._.disposables.push({type: disposableType, data: data});
+        objMeta.disposables.push({type: disposableType, data: data});
     }
     const modifiers = modifierOrAttrRefl(true, def, typeDef);
     const attrs = modifierOrAttrRefl(false, def, typeDef);
@@ -1219,38 +1227,42 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         }
 
         // create parent instance, if required, else use passed object as base object
-        let Parent = Type._.inherits;
+        let Parent = TypeMeta.inherits,
+            ParentMeta = null;
         if (Parent) {
-            if (Parent._.isSealed() || Parent._.isSingleton() || Parent._.isStatic()) {
-                throw new _Exception('InvalidOperation', `Cannot inherit from a sealed, static or singleton type. (${Parent._.name})`); 
+            ParentMeta = Parent[meta];
+            if (ParentMeta.isSealed() || ParentMeta.isSingleton() || ParentMeta.isStatic()) {
+                throw new _Exception('InvalidOperation', `Cannot inherit from a sealed, static or singleton type. (${ParentMeta.name})`); 
             }
-            if (Parent._.type !== Type._.type) {
-                throw new _Exception('InvalidOperation', `Cannot inherit from another type family. (${Parent._.type})`); 
+            if (ParentMeta.type !== TypeMeta.type) {
+                throw new _Exception('InvalidOperation', `Cannot inherit from another type family. (${ParentMeta.type})`); 
             }
-            if (Parent._.context && Parent._.context.isUnloaded()) {
-                throw new _Exception('InvalidOperation', `Parent context is not active anymore. (${Parent._.name})`); 
+            if (ParentMeta.context && ParentMeta.context.isUnloaded()) {
+                throw new _Exception('InvalidOperation', `Parent context is not active anymore. (${ParentMeta.name})`); 
             }
 
             // construct base object (the inherited one)
             obj = new Parent(params._flagName, params.staticInterface, params.args); // obj reference is now parent of object
+            objMeta = obj[meta];
 
             // pick previous level def
-            _previousDef = obj._.def;
-            delete obj._.def;
+            _previousDef = objMeta.def;
+            delete objMeta.def;
         } else {
             // check for own context
-            if (Type._.context && Type._.context.isUnloaded()) {
-                throw new _Exception('InvalidOperation', `Type context is not active anymore. (${Type._.name})`); 
+            if (TypeMeta.context && TypeMeta.context.isUnloaded()) {
+                throw new _Exception('InvalidOperation', `Type context is not active anymore. (${TypeMeta.name})`); 
             }
         }
     }
 
      // set object meta
-     if (typeof obj._ === 'undefined') {
+     if (typeof obj[meta] === 'undefined') {
          // these will always be same, since inheritance happen in same types, and these are defined at a type configuration level, so these will always be same and should behave just like the next set of definitions here
-        obj._ = {};
+        obj[meta] = {};
+        objMeta = obj[meta];
         if (cfg.dispose) {
-            obj._.disposables = []; // can have {type: 'session', data: 'unique name'} OR {type: 'state', data: 'unique name'} OR {type: 'prop', data: 'prop name'} OR {type: 'event', data: dispatcher object} OR {type: 'handler', data: {name: 'event name', handler: exact func that was attached}}
+            objMeta.disposables = []; // can have {type: 'session', data: 'unique name'} OR {type: 'state', data: 'unique name'} OR {type: 'prop', data: 'prop name'} OR {type: 'event', data: dispatcher object} OR {type: 'handler', data: {name: 'event name', handler: exact func that was attached}}
         }
      }
      if (cfg.mixins) {
@@ -1259,24 +1271,24 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     if (cfg.interfaces) {
         def.interfaces = cfg.params.interfaces; // interface types that were applied to this type, will be deleted after validation
     }
-     obj._.type = cfg.types.instance; // as defined for this instance by builder, this will always be same for all levels -- class 'instance' at all levels will be 'instance' only
+    objMeta.type = cfg.types.instance; // as defined for this instance by builder, this will always be same for all levels -- class 'instance' at all levels will be 'instance' only
     if (params.isTopLevelInstance) {
-        obj._.Type = Type; // top level Type (all inheritance for these types will come from Type._.inherits)
+        objMeta.Type = Type; // top level Type (all inheritance for these types will come from TypeMeta.inherits)
         if (cfg.new) {
-            obj._.isInstanceOf = (name) => {
-                if (name._ && name._.name) { name = name._.name; } // could be the 'Type' itself
+            objMeta.isInstanceOf = (name) => {
+                if (name[meta]) { name = name[meta].name; } // could be the 'Type' itself
                 if (!name) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
-                return (obj._.Type._.name === name) || Type._.isDerivedFrom(name); 
+                return (TypeMeta.name === name) || TypeMeta.isDerivedFrom(name); 
             };
         }
         if (cfg.mixins) {
-            obj._.isMixed = (name) => { return obj._.Type._.isMixed(name); };
+            objMeta.isMixed = (name) => { return TypeMeta.isMixed(name); };
         }
         if (cfg.interfaces) {
-            obj._.isImplements = (name) => { return obj._.Type._.isImplements(name); };
+            objMeta.isImplements = (name) => { return TypeMeta.isImplements(name); };
         }
-        obj._.modifiers = modifiers;
-        obj._.attrs = attrs;
+        objMeta.modifiers = modifiers;
+        objMeta.attrs = attrs;
     }
 
     // building started
@@ -1346,14 +1358,14 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     // move constructor and dispose out of main object
     if (params.isTopLevelInstance && !typeDef.staticConstructionCycle) { // so that till now, a normal override behavior can be applied to these functions as well
         if (cfg.construct && typeof obj[_constructName] === 'function') {
-            obj._.construct = obj[_constructName]; delete obj[_constructName];
+            objMeta.construct = obj[_constructName]; delete obj[_constructName];
         }
         if (cfg.dispose && typeof obj[_disposeName] === 'function') {
             // wrap dispose to clean all types of disposables
             let customDisposer = obj[_disposeName]; delete obj[_disposeName];
-            obj._.dispose = () => {
+            objMeta.dispose = () => {
                 // clear all disposables
-                for(let item of obj._.disposables) {
+                for(let item of objMeta.disposables) {
                     switch(item.type) {
                         case 'session': _sessionStorage.removeItem(item.data); break;           // data = sessionStorage key name
                         case 'state': _localStorage.removeItem(item.data); break;               // data = localStorage key name
@@ -1370,7 +1382,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                 }
 
                 // clear all key references related to this object
-                obj._.disposables.length = 0; 
+                objMeta.disposables.length = 0; 
                 _props = null;
                 _previousDef = null;
                 def = null;
@@ -1383,9 +1395,9 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     }
 
     // move static constructor out of main interface
-    if (cfg.static && Type._.isStatic() && typeDef.staticConstructionCycle) {
+    if (cfg.static && TypeMeta.isStatic() && typeDef.staticConstructionCycle) {
         if (Type.construct && typeof Type[_constructName] === 'function') {
-            Type._.construct = Type[_constructName]; delete Type[_constructName];
+            TypeMeta.construct = Type[_constructName]; delete Type[_constructName];
         }
     }
 
@@ -1398,23 +1410,23 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     }
 
     // call constructor
-    if (cfg.construct && params.isTopLevelInstance && !typeDef.staticConstructionCycle && typeof exposed_obj._.construct === 'function') {
-        exposed_obj._.constructing = true;
-        exposed_obj._.construct(...params.args);
-        delete exposed_obj._.constructing;
+    if (cfg.construct && params.isTopLevelInstance && !typeDef.staticConstructionCycle && typeof exposed_objMeta.construct === 'function') {
+        exposed_objMeta.constructing = true;
+        exposed_objMeta.construct(...params.args);
+        delete exposed_objMeta.constructing;
     }
-    if (cfg.construct && typeDef.staticConstructionCycle && typeof Type._.construct === 'function') {
-        Type._.constructing = true;
-        Type._.construct();
-        delete Type._.constructing;
+    if (cfg.construct && typeDef.staticConstructionCycle && typeof TypeMeta.construct === 'function') {
+        TypeMeta.constructing = true;
+        TypeMeta.construct();
+        delete TypeMeta.constructing;
     }
 
     // add/update meta on top level instance
     if (params.isTopLevelInstance && !typeDef.staticConstructionCycle) {
         if (cfg.singleton && attrs.type.probe('singleton').current()) {
-            Type._.singleInstance = () => { return exposed_obj; }; 
-            Type._.singleInstance.clear = () => { 
-                Type._.singleInstance = () => { return null; };
+            TypeMeta.singleInstance = () => { return exposed_obj; }; 
+            TypeMeta.singleInstance.clear = () => { 
+                TypeMeta.singleInstance = () => { return null; };
             };
         }
     }
@@ -1422,7 +1434,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     // seal object, so nothing can be added/deleted from outside
     // also, keep protected version intact for 
     if (params.isTopLevelInstance && !typeDef.staticConstructionCycle) {
-        exposed_obj._ = Object.freeze(exposed_obj._); // freeze meta information
+        exposed_objMeta = Object.freeze(exposed_objMeta); // freeze meta information
         exposed_obj = Object.seal(exposed_obj);
     }
 
@@ -1431,6 +1443,21 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
 
     // return
     return exposed_obj;
+};
+const builder_dispose = () => {
+    // all dispose time actions that builder need to do
+    
+    // clear sessionStorage
+    let externalHandler = _Port('sessionStorage');   
+    if (externalHandler) {
+        externalHandler.clear();
+    } else {
+        if (isServer) {
+            if (global.sessionStorage) { delete global.sessionStorage; }
+        } else {
+            sessionStorage.clear();
+        }
+    }
 };
 const builder = (cfg) => {
     // process cfg
@@ -1493,7 +1520,7 @@ const builder = (cfg) => {
     if (ns) {
         switch(ns) {
             case '(auto)':  // this is a placeholder that gets replaced by assembly builder with dynamic namespace based on folder structure, so if is it left, it is wrong
-                throw  `Namespace '(auto)' should be used only when bundling the type in an assembly. (${ns})`;
+                throw `Namespace '(auto)' should be used only when bundling the type in an assembly. (${ns})`;
             case '(root)':  // this is mark to instruct builder that register type at root namespace
                 break; // go on
             default: // anything else
@@ -1508,8 +1535,8 @@ const builder = (cfg) => {
     // extract mixins and interfaces
     if (cfg.params.mixinsAndInterfaces) {
         for(let item of cfg.params.mixinsAndInterfaces) {
-            if (item._ && item._.type) {
-                switch (item._.type) {
+            if (item[meta]) {
+                switch (item[meta].type) {
                     case 'mixin': cfg.params.mixins.push(item); break;
                     case 'interface': cfg.params.interfaces.push(item); break;
                 }
@@ -1528,7 +1555,8 @@ const builder = (cfg) => {
     let currentAssembly = currentContext.currentAssemblyBeingLoaded() || '';
 
     // base type definition
-    let _Object = null;
+    let _Object = null,
+        _ObjectMeta = null;
     if (cfg.new) { // class, struct
         _Object = function(_flag, _static, ...args) {
             return buildTypeInstance(cfg, _Object, {}, _flag, _static, ...args);
@@ -1553,7 +1581,7 @@ const builder = (cfg) => {
     let typeDef = { 
         name: cfg.params.typeName,
         type: cfg.types.type, // the type of the type itself: class, struct, etc.
-        Type: null,
+        Type: _Object,
         level: 'type',
         members: {}, // each named item here defines the type of member: func, prop, event, construct, etc.
         attrs: { 
@@ -1563,95 +1591,95 @@ const builder = (cfg) => {
             type: [], // will have: {name, cfg, attr, args}
         },
         previous: () => {
-            return _Object._.inherits ? _Object._.inherits._.def() : null;
+            return _Object[meta].inherits ? _Object[meta].inherits[meta].def() : null;
         }
     };
     const modifiers = modifierOrAttrRefl(true, null, typeDef);
     const attrs = modifierOrAttrRefl(false, null, typeDef);
 
     // set type meta
-    _Object._ = {};
-    _Object._.name = cfg.params.typeName;
-    _Object._.type = cfg.types.type;
-    _Object._.namespace = null;
-    _Object._.assembly = () => { return currentContext.getAssembly(currentAssembly) || null; };
-    _Object._.context = currentContext;
-    _Object._.inherits = null;
+    _Object[meta] = {};
+    _ObjectMeta = _Object[meta];
+    _ObjectMeta.name = cfg.params.typeName;
+    _ObjectMeta.type = cfg.types.type;
+    _ObjectMeta.namespace = null;
+    _ObjectMeta.assembly = () => { return currentContext.getAssembly(currentAssembly) || null; };
+    _ObjectMeta.context = currentContext;
     if (cfg.inheritance) {
-        _Object._.inherits = cfg.params.inherits || null;
-        _Object._.isAbstract = () => { return modifiers.type.probe('abstract').current() ? true : false; };
-        _Object._.isSealed = () => { return modifiers.type.probe('sealed').current() ? true : false; };
-        _Object._.isDerivedFrom = (name) => { 
-            if (name._ && name._.name) { name = name._.name; }
+        _ObjectMeta.inherits = cfg.params.inherits || null;
+        _ObjectMeta.isAbstract = () => { return modifiers.type.probe('abstract').current() ? true : false; };
+        _ObjectMeta.isSealed = () => { return modifiers.type.probe('sealed').current() ? true : false; };
+        _ObjectMeta.isDerivedFrom = (name) => { 
+            if (name[meta]) { name = name[meta].name; }
             if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
             let result = false,
                 prv = cfg.params.inherits; // look from parent onwards
             if (!result) {
                 while(true) { // eslint-disable-line no-constant-condition
                     if (prv === null) { break; }
-                    if (prv._.name === name) { result = true; break; }
-                    prv = prv._.inherits;
+                    if (prv[meta].name === name) { result = true; break; }
+                    prv = prv[meta].inherits;
                 }
             }
             return result;
         };
 
         // warn for type deprecate at the time of inheritance
-        if (_Object._.inherits) {
+        if (_ObjectMeta.inherits) {
             let the_attr = attrs.type.probe('deprecate').anywhere();
             if (the_attr) {
-                let deprecateMessage = the_attr.args[0] || `Type is marked as deprecated. (${_Object._.name})`;
+                let deprecateMessage = the_attr.args[0] || `Type is marked as deprecated. (${_ObjectMeta.name})`;
                 console.log(deprecateMessage); // eslint-disable-line no-console
             }            
         }
     }
     if (cfg.static) {
-        _Object._.isStatic = () => { return modifiers.type.probe('static').current() ? true : false; };
-        _Object._.props = {}; // static property values host
+        _ObjectMeta.isStatic = () => { return modifiers.type.probe('static').current() ? true : false; };
+        _ObjectMeta.props = {}; // static property values host
     }
     if (cfg.singleton) {
-        _Object._.isSingleton = () => { return attrs.type.probe('singleton').current() ? true : false; };
-        _Object._.singleInstance = () => { return null; };
-        _Object._.singleInstance.clear = _noop;
+        _ObjectMeta.isSingleton = () => { return attrs.type.probe('singleton').current() ? true : false; };
+        _ObjectMeta.singleInstance = () => { return null; };
+        _ObjectMeta.singleInstance.clear = _noop;
     }
     if (cfg.mixins) {
-        _Object._.mixins = cfg.params.mixins; // mixin types that were applied to this type
-        _Object._.isMixed = (name) => {
-            if (name._ && name._.name) { name = name._.name; }
+        _ObjectMeta.mixins = cfg.params.mixins; // mixin types that were applied to this type
+        _ObjectMeta.isMixed = (name) => {
+            if (name[meta]) { name = name[meta].name; }
             if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
             let result = false,
                 prv = _Object; // look from this itself
             while(true) { // eslint-disable-line no-constant-condition
                 if (prv === null) { break; }
-                if (prv._.mixins) { result = (findItemByProp(prv._.mixins, 'name', name) !== -1); }
+                if (prv[meta].mixins) { result = (findItemByProp(prv[meta].mixins, 'name', name) !== -1); }
                 if (result) { break; }
-                prv = prv._.inherits;
+                prv = prv[meta].inherits;
             }
             return result;
         };
     }
     if (cfg.interfaces) {
-        _Object._.interfaces = cfg.params.interfaces,     
-        _Object._.isImplements = (name) => {
-            if (name._ && name._.name) { name = name._.name; }
+        _ObjectMeta.interfaces = cfg.params.interfaces,     
+        _ObjectMeta.isImplements = (name) => {
+            if (name[meta]) { name = name[meta].name; }
             if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
             let result = false,
                 prv = _Object; // look from this itself
             while(true) { // eslint-disable-line no-constant-condition
                 if (prv === null) { break; }
-                if (prv._.interfaces) { result = (findItemByProp(prv._.interfaces, 'name', name) !== -1); }
+                if (prv[meta].interfaces) { result = (findItemByProp(prv[meta].interfaces, 'name', name) !== -1); }
                 if (result) { break; }
-                prv = prv._.inherits;
+                prv = prv[meta].inherits;
             }
             return result;
         };                
     }
-    _Object._.isDeprecated = () => { 
+    _ObjectMeta.isDeprecated = () => { 
         return attrs.type.probe('deprecate').current() ? true : false;
     };
-    _Object._.def = () => { return typeDef; };
-    _Object._.modifiers = modifiers;
-    _Object._.attrs = attrs;
+    _ObjectMeta.def = () => { return typeDef; };
+    _ObjectMeta.modifiers = modifiers;
+    _ObjectMeta.attrs = attrs;
 
     // type level attributes pick here
     attributesAndModifiers(null, typeDef, null, true, cfg.customAttrs);
@@ -1669,7 +1697,7 @@ const builder = (cfg) => {
     // static construction cycle
     if (cfg.static) {
         let factoryCode = (cfg.params.factory ? cfg.params.factory.toString() : '');
-        if (_Object._.isStatic() || factoryCode.indexOf(`$$('static')`) !== -1 || factoryCode.indexOf(`$$("static")`) !== -1) {
+        if (_ObjectMeta.isStatic() || factoryCode.indexOf(`$$('static')`) !== -1 || factoryCode.indexOf(`$$("static")`) !== -1) {
             typeDef.staticConstructionCycle = true;
             new _Object();
             delete typeDef.staticConstructionCycle;
@@ -1682,12 +1710,12 @@ const builder = (cfg) => {
 
     // extend type meta  with type's meta extensions
     // it may overwrite inbuilt defaults
-    addTypeExtensions(cfg.mex.type, _Object, _Object._, typeDef, attrs, modifiers);
+    addTypeExtensions(cfg.mex.type, _Object, _ObjectMeta, typeDef, attrs, modifiers);
 
     // get final return value
     let _finalObject = null,
         toFreeze = false;
-    if ((cfg.static && _Object._.isStatic()) || cfg.const) {
+    if ((cfg.static && _ObjectMeta.isStatic()) || cfg.const) {
         _finalObject = new _Object();
         if (cfg.const) { toFreeze = true; }
     } else { // return type
@@ -1697,11 +1725,11 @@ const builder = (cfg) => {
 
     // register type with current context of current load context
     if (ns) { // if actual namespace or '(root)' is there, then go and register
-        _Object._.namespace = _AppDomain.context.current().registerType(_finalObject);
+        _ObjectMeta.namespace = _AppDomain.context.current().registerType(_finalObject);
     }
 
     // freeze object meta
-    _Object._ = Object.freeze(_Object._);
+    _Object[meta] = Object.freeze(_ObjectMeta);
 
     // freeze final object
     if (toFreeze) { Object.freeze(_finalObject); }
@@ -1709,19 +1737,4 @@ const builder = (cfg) => {
     // return 
     return _finalObject;
 
-};
-const builder_dispose = () => {
-    // all dispose time actions that builder need to do
-    
-    // clear sessionStorage
-    let externalHandler = _Port('sessionStorage');   
-    if (externalHandler) {
-        externalHandler.clear();
-    } else {
-        if (isServer) {
-            if (global.sessionStorage) { delete global.sessionStorage; }
-        } else {
-            sessionStorage.clear();
-        }
-    }
 };

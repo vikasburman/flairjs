@@ -63,7 +63,7 @@ const _Class = (name, inherits, mixints, factory) => {
             mixinsAndInterfaces: args.values.mixints,
             factory: args.values.factory
         },
-        mex: {  // meta extensions (under <>._ property)
+        mex: {  // meta extensions (under <>[meta] property)
             instance: {},
             type: {}
         },

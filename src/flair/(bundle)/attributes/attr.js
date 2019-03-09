@@ -18,19 +18,19 @@ const _$$ = (name, ...args) => {
         attrInstance = null,
         cfg = null;
     if (typeof name === 'string') {
-        cfg = _attr._.inbuilt[name] || null;
+        cfg = _attrMeta.inbuilt[name] || null;
         if (!cfg) { // not an inbuilt attr
             AttrType = _getType(name);
             if (!AttrType) { throw new _Exception('NotFound', `Attribute is not found. (${name})`); }
-            name = AttrType._.name;
+            name = AttrType[meta].name;
         }
     } else {
         AttrType = name; // the actual Attribute type
-        name = AttrType._.name;
+        name = AttrType[meta].name;
     }
 
     // duplicate check
-    if (findIndexByProp(_attr._.bucket, 'name', name) !== -1) { throw new _Exception('Duplicate', `Duplicate attributes are not allowed. (${name})`); }
+    if (findIndexByProp(_attrMeta.bucket, 'name', name) !== -1) { throw new _Exception('Duplicate', `Duplicate attributes are not allowed. (${name})`); }
 
     // custom attribute instance
     if (AttrType) {
@@ -39,7 +39,7 @@ const _$$ = (name, ...args) => {
     }
 
     // store
-    _attr._.bucket.push({name: name, cfg: cfg, isCustom: (attrInstance !== null), attr: attrInstance, args: args});
+    _attrMeta.bucket.push({name: name, cfg: cfg, isCustom: (attrInstance !== null), attr: attrInstance, args: args});
 };
 
 /**
@@ -107,7 +107,7 @@ const _attrConfig = function(isModifier, constraints) {
 const _attr = (name, ...args) => {
     return _$$(name, ...args);
 };
-_attr._ = Object.freeze({
+const _attrMeta = _attr[meta] = Object.freeze({
     bucket: [],
     inbuilt: Object.freeze({ 
         static: new _attrConfig(true, '((class || struct) && !$abstract) || (((class || struct) && (prop || func)) && !($abstract || $virtual || $override))'),
@@ -146,20 +146,20 @@ _attr._ = Object.freeze({
     })
 });
 _attr.collect = () => {
-    let attrs = _attr._.bucket.slice();
+    let attrs = _attrMeta.bucket.slice();
     _attr.clear();
     return attrs;
 }
 _attr.has = (name) => {
-    return (_attr._.bucket.findIndex(item => item.name === name) !== -1);
+    return (_attrMeta.bucket.findIndex(item => item.name === name) !== -1);
 };
 _attr.get = (name) => {
-    let idx = _attr._.bucket.findIndex(item => item.name === name);
-    if (idx !== -1) { return _attr._.bucket[idx]; }
+    let idx = _attrMeta.bucket.findIndex(item => item.name === name);
+    if (idx !== -1) { return _attrMeta.bucket[idx]; }
     return null;
 };
 _attr.clear = () => {
-    _attr._.bucket.length = 0; // remove all
+    _attrMeta.bucket.length = 0; // remove all
 };
 
 // attach to flair (NOTE: _attr is for internal use only, so collect/clear etc. are not exposed out)
