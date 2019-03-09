@@ -7,6 +7,7 @@
  *  obj: object - object that needs to be checked
  *  type: string OR type - type to be checked for, it can be following:
  *                         > expected native javascript data types like 'string', 'number', 'function', 'array', 'date', etc.
+ *                         > 'function' - any function, cfunction' - constructor function and 'afunction - arrow function
  *                         > any 'flair' object or type
  *                         > inbuilt flair object types like 'class', 'struct', 'enum', etc.
  *                         > custom flair object instance types which are checked in following order:

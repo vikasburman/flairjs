@@ -4,7 +4,6 @@ const { IProgressReporter, IDisposable } = ns('(root)');
  * @name Task
  * @description Task base class.
  */
-$$('virtual');
 $$('ns', '(auto)');
 Class('(auto)', [IProgressReporter, IDisposable], function() {
     let isSetupDone = false,
@@ -95,7 +94,7 @@ Class('(auto)', [IProgressReporter, IDisposable], function() {
     * @example
     *  progress()
     */  
-    this.progress = this.event((data) => {
+    this.progress = event((data) => {
         return { data: data };
     });
 

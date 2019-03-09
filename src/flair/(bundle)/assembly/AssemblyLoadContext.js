@@ -61,12 +61,23 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         if (this.isUnloaded()) { 
             throw 'Unloaded'; // TODO: fix
         }        
-        // only valid types are allowed
-        if (flairTypes.indexOf(_typeOf(Type)) === -1) { throw new _Exception('InvalidArgument', `Type is not valid.`); }
+        // certain types are built as instances, like interface and enum
+        let name = '',
+            type = '';
+        if (Type._.Type) {
+            name = Type._.Type._.name;
+            type = Type._.Type._.type;
+        } else {
+            name = Type._.name;
+            type = Type._.type;
+        }
 
-        let name = Type._.name, // namespace name is already attached to it, and for all '(root)' 
-                                // marked types' no namespace is added, so it will automatically go to root
-            ns = name.substr(0, name.lastIndexOf('.')),
+        // only valid types are allowed
+        if (flairTypes.indexOf(type) === -1) { throw new _Exception('InvalidArgument', `Type is not valid.`); }
+
+        // namespace name is already attached to it, and for all '(root)' 
+        // marked types' no namespace is added, so it will automatically go to root
+        let ns = name.substr(0, name.lastIndexOf('.')),
             onlyName = name.replace(ns + '.', '');
 
         // check if already registered
@@ -218,10 +229,16 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
     // namespace
     this.namespace = (name) => { 
         if (name && name === '(root)') { name = ''; }
+        let source = null;
         if (name) {
-            return Object.freeze(namespaces[name]) || null; 
+            source = namespaces[name] || null;
         } else { // root
-            return Object.freeze(namespaces);
+            source = namespaces;
+        }
+        if (source) {
+            return Object.freeze(shallowCopy({}, source)); // return a freezed copy of the namespace segment
+        } else {
+            return null;
         }
     };
 

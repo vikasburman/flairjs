@@ -35,8 +35,8 @@ const AppDomain = function(name) {
             // unload all contexts of this domain, including default one
             for(let context in contexts) {
                 if (contexts.hasOwnProperty(context)) {
-                    if (typeof context.unload === 'function') {
-                        context.unload();
+                    if (typeof contexts[context].unload === 'function') {
+                        contexts[context].unload();
                     }
                 }
             }
@@ -44,8 +44,8 @@ const AppDomain = function(name) {
 
             // unload all domains, including this one
             for(let domain in domains) {
-                if (domains.hasOwnProperty(domain) && domain !== this) {
-                    domain.unload();
+                if (domains.hasOwnProperty(domain) && domains[domain] !== this) {
+                    domains[domain].unload();
                 }
             }
 

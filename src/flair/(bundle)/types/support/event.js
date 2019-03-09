@@ -11,8 +11,11 @@
 const _event = (argsProcessor) => { 
     if (argsProcessor && typeof argsProcessor !== 'function') { throw _Exception.InvalidArgument('argsProcessor'); }
     argsProcessor = (typeof argsProcessor === 'function' ? argsProcessor : _noop);
+    if (argsProcessor === _noop) {
+        argsProcessor = () => {}; // note: because _noop/flair.noop is freezed, it does not allow add/delete 'event' flag.
+    }
     argsProcessor.event = true; // attach tag
-    return argsProcessor
+    return argsProcessor;
 }
 
 // attach to flair

@@ -7,6 +7,7 @@
  *  obj: object - object that needs to be checked
  *  type: string OR type - type to be checked for, it can be following:
  *                         > expected native javascript data types like 'string', 'number', 'function', 'array', 'date', etc.
+ *                         > 'function' - any function, cfunction' - constructor function and 'afunction - arrow function
  *                         > any 'flair' object or type
  *                         > inbuilt flair object types like 'class', 'struct', 'enum', etc.
  *                         > custom flair object instance types which are checked in following order:
@@ -45,6 +46,10 @@ const _is = (obj, type) => {
 
     // flair
     if (!isMatched && (type === 'flair' && obj._ && obj._.type)) { isMatched = true; }
+
+    // special function types
+    if (!isMatched && (type === 'cfunction')) { isMatched = (typeof obj === 'function' && !isArrow(obj)); }
+    if (!isMatched && (type === 'afunction')) { isMatched = (typeof obj === 'function' && isArrow(obj)); }
 
     // native javascript types
     if (!isMatched) { isMatched = (typeof obj === type); }

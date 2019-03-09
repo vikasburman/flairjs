@@ -24,7 +24,10 @@
 let ports_registry = {};
 const _Port = (name) => {
     if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
-    return (ports_registry[name] ? ports_registry[name].handler : ports_registry[name].inbuilt); // inbuilt could also be null if not inbuilt implementation is given
+    if (ports_registry[name]) {
+        return (ports_registry[name].handler ? ports_registry[name].handler : ports_registry[name].inbuilt); // inbuilt could also be null if not inbuilt implementation is given
+    }
+    return null;
 };
 _Port.define = (name, members, inbuilt) => {
     if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
@@ -71,7 +74,7 @@ _Port.isConnected = (name) => {
 a2f('Port', _Port, () => {
     // disconnect all ports
     for(let port in ports_registry) {
-        if (ports_registry.hasOnwProperty(port)) {
+        if (ports_registry.hasOwnProperty(port)) {
             ports_registry[port].handler = null;
         }
     }

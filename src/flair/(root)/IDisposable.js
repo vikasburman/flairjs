@@ -6,6 +6,6 @@ $$('ns', '(auto)');
 Interface('(auto)', function() {
     
     // dispose
-    this.dispose = this.noop;
+    this.dispose = nim;
     
 });

@@ -6,6 +6,6 @@ $$('ns', '(auto)');
 Interface('(auto)', function() {
     
     // progress report
-    this.progress = this.event(this.noop);
+    this.progress = nie;
     
 });

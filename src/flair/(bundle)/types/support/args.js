@@ -9,6 +9,7 @@
  *                        'type, type, type, ...' OR 'name: type, name: type, name: type, ...'
  *                          type: can be following:
  *                              > expected native javascript data types like 'string', 'number', 'function', 'array', etc.
+ *                              > 'function' - any function, cfunction' - constructor function and 'afunction - arrow function
  *                              > inbuilt flair object types like 'class', 'struct', 'enum', etc.
  *                              > custom flair object instance types which are checked in following order:
  *                                  >> for class instances: 
@@ -45,6 +46,7 @@ const _Args = (...patterns) => {
             pIndex = -1, aIndex = -1,   // pattern index, argument index
             matched = false,
             mCount = 0, // matched arguments count of pattern
+            faliedMatch = '',
             result = {
                 raw: args || [],
                 index: -1,
@@ -67,7 +69,7 @@ const _Args = (...patterns) => {
                         type = items[1].trim() || '';
                     }
                     if (aIndex > result.raw.length) { matched = false; break; }
-                    if (!_is(result.raw[aIndex], type)) { matched = false; break; }
+                    if (!_is(result.raw[aIndex], type)) { matched = false; faliedMatch = name; break; }
                     result.values[name] = result.raw[aIndex]; matched = true; mCount++;
                 }
                 if (matched && mCount === types.length) {result.index = pIndex; break; }
@@ -76,7 +78,7 @@ const _Args = (...patterns) => {
 
         // set state
         result.isInvalid = (result.index === -1 ? true : false);
-        result.error = (result.isInvalid ? new _Exception('InvalidArguments', 'One or more argument types are invalid.') : null );
+        result.error = (result.isInvalid ? new _Exception('InvalidArguments', `Argument type is invalid. (${faliedMatch})`, _args) : null );
 
         // return
         return result;

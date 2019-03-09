@@ -5,29 +5,48 @@
  * @example
  *  Exception()
  *  Exception(type)
+ *  Exception(type, stStart)
  *  Exception(error)
+ *  Exception(error, stStart)
  *  Exception(type, message)
+ *  Exception(type, message, stStart)
  *  Exception(type, error)
+ *  Exception(type, error, stStart)
  *  Exception(type, message, error)
+ *  Exception(type, message, error, stStart)
  * @params
  *  type: string - error name or type
  *  message: string - error message
  *  error: object - inner error or exception object
+ *  stStart: function - hide stack trace before this function
  * @constructs Exception object
  */  
-const _Exception = function(arg1, arg2, arg3) {
-    let _this = Error();
+const _Exception = function(arg1, arg2, arg3, arg4) {
+    let _this = new Error(),
+        stStart = _Exception;
     switch(typeof arg1) {
         case 'string':
             _this.name = arg1;
             switch(typeof arg2) {
                 case 'string': 
                     _this.message = arg2;
-                    _this.error = (typeof arg3 === 'object' ? arg3 : null);
+                    switch(typeof arg3) {
+                        case 'object':
+                            _this.error = arg3;
+                            if (typeof arg4 === 'function') { stStart = arg4; }
+                            break;
+                        case 'function':
+                            stStart = arg3;
+                            break;
+                    } 
                     break;
                 case 'object': 
                     _this.message = arg2.message || '';
                     _this.error = arg2;
+                    if (typeof arg3 === 'function') { stStart = arg3; }
+                    break;
+                case 'function': 
+                    stStart = arg2;
                     break;
             }
             break;
@@ -35,11 +54,17 @@ const _Exception = function(arg1, arg2, arg3) {
             _this.name = arg1.name || 'Unknown';
             _this.message = arg1.message || '';
             _this.error = arg1;
+            if (typeof arg2 === 'function') { stStart = arg2; }
             break;
     }
 
     _this.name =  _this.name || 'Undefined';
     if (!_this.name.endsWith('Exception')) { _this.name += 'Exception'; }
+
+    // limit stacktrace
+    if (typeof Error.captureStackTrace === 'function') {
+        Error.captureStackTrace(_this, stStart);
+    }
 
     // return
     return Object.freeze(_this);
