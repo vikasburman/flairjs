@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.15.857
- *  Sat, 09 Mar 2019 06:03:26 GMT
+ *  Version: 0.15.860
+ *  Sat, 09 Mar 2019 06:57:38 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -76,10 +76,10 @@
     flair.info = Object.freeze({
         name: 'flair',
         file: currentFile,
-        version: '0.15.857',
+        version: '0.15.860',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sat, 09 Mar 2019 06:03:26 GMT')
+        lupdate: new Date('Sat, 09 Mar 2019 06:57:38 GMT')
     });       
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -3999,9 +3999,12 @@
     
         // static construction cycle
         if (cfg.static) {
-            typeDef.staticConstructionCycle = true;
-            new _Object();
-            delete typeDef.staticConstructionCycle;
+            let factoryCode = (cfg.params.factory ? cfg.params.factory.toString() : '');
+            if (_Object._.isStatic() || factoryCode.indexOf(`$$('static')`) !== -1 || factoryCode.indexOf(`$$("static")`) !== -1) {
+                typeDef.staticConstructionCycle = true;
+                new _Object();
+                delete typeDef.staticConstructionCycle;
+            }
         }
     
         // get final return value

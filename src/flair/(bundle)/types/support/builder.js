@@ -1560,9 +1560,12 @@ const builder = (cfg) => {
 
     // static construction cycle
     if (cfg.static) {
-        typeDef.staticConstructionCycle = true;
-        new _Object();
-        delete typeDef.staticConstructionCycle;
+        let factoryCode = (cfg.params.factory ? cfg.params.factory.toString() : '');
+        if (_Object._.isStatic() || factoryCode.indexOf(`$$('static')`) !== -1 || factoryCode.indexOf(`$$("static")`) !== -1) {
+            typeDef.staticConstructionCycle = true;
+            new _Object();
+            delete typeDef.staticConstructionCycle;
+        }
     }
 
     // get final return value

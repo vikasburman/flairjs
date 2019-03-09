@@ -21,7 +21,6 @@ let MyClass = Class('MyClass', [IPowertrain, IDisposable], function() {
     $$('virtual');
     this.prop1 = 20;
 
-    $$('type', 'void')
     this.func1 = () => {
         console.log(1);
     };
