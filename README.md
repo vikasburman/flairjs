@@ -26,7 +26,7 @@ JavaScript is everywhere, and its popularity has grown tremendously. There has b
 
 Besides, due to rich and long history of JavaScript, several compatibility issues do exists. Expecting to have all awesome object-oriented concepts as they exists in any new languages like C#, Java, etc., is tough.
 
-_FlairJS_ takes the problem head-on and brings majority of the awesomeness of C#/Java features in JavaScript, natively! Basic object oriented concepts like, inheritance, encapsulation, polymorphism, events, together with advance features like aspect oriented and attribute based programming, custom attributes, serialization, 
+_Flair.js_ takes the problem head-on and brings majority of the awesomeness of C#/Java features in JavaScript, natively! Basic object oriented concepts like, inheritance, encapsulation, polymorphism, events, together with advance features like aspect oriented and attribute based programming, custom attributes, serialization, 
 dependency injection and reflection, etc. are all nicely baked in this tiny JavaScript library.
 
 All of these are available via pure JavaScript syntax, without any build-time transpilation or compilation 
@@ -38,12 +38,12 @@ This works in web browsers and in other JavaScript environments like [Node](http
 
 Features
 ---
-* Pure JavaScript, No external dependencies, ~40k minified.
+* Pure JavaScript, No external dependencies, ~20k min+gz.
 * **Inheritance:** Single inheritance chain, Multiple inheritance via Mixins, Restrictions via 'sealed', etc.
 * **Encapsulation:** True Public, Private and Protected members etc.
 * **Polymorphism:** Abstract classes, Interfaces, Method overriding, Restrictions via 'sealed', Dynamic casting via 'as', etc.
-* **Mature Base Types:** Class, Structure, Interface, Mixin, Enum, Exception, etc.
-* **Aspect orientation:** Aspect definitions with Before, After and Around advise weaving on methods and properties.
+* **Mature Base Types:** Class, Struct, Interface, Mixin, Enum, Exception, etc.
+* **Aspect orientation:** Aspect definitions with Before, After and Around advise weaving on methods.
 * **Attributes based programming:** Inbuilt system attributes like 'readonly', 'sealed' and many more with full-blown support of defining custom attributes and its usage over class and class members.
 * **Dependency injection:** Object life-cycle management via DI container and constructor, method and property injection of registered types.
 * **Serialization:** Seamless serialization and deserialization of class objects for persistance and transfer.
@@ -60,16 +60,16 @@ Install using `npm install flairjs` or download [latest release](https://github.
 
 **2. Include**
 
-Include FlairJS in your html page or load it as a module, and initialize.
+Include Flair.js in your html page or load it as a module, and initialize.
 
-> There are no external dependencies of this library, therefore feel free to include in whatever order required. However this must be loaded before any `*.js` file which uses FlairJS features, for them to be available.
+> There are no external dependencies of this library, therefore feel free to include in whatever order required. However this must be loaded before any `*.js` file which uses Flair.js features, for them to be available.
 
 When using on client side:
 ```html
 <script type="text/javascript" src="path/flair.min.js"></script>
 ```
 
-> FlairJS also support module loaders and can be loaded via `require` or other module loading techniques.
+> Flair.js also support module loaders and can be loaded via `require` or other module loading techniques.
 
 When using on server side:
 ```javascript
@@ -164,9 +164,9 @@ Car disposed!
 
 Explore The Power
 ---
-What you have seen above is the tip of the iceberg. FlairJS adds a lot of firepower to JavaScript that makes building complex JavaScript projects as easy as with C# or Java.
+What you have seen above is the tip of the iceberg. Flair.js adds a lot of firepower to JavaScript that makes building complex JavaScript projects as easy as with C# or Java.
 
-To tap the real power of FlairJS, explore the [Guides](https://flairjs.com/#/guides) to understand concepts and behaviors, [API](https://flairjs.com/#/api) to know details of each exposed programming interface of various constructs and finally [Examples](https://flairjs.com/#/examples) to see real codebase showcasing all these concepts in action. 
+To tap the real power of Flair.js, explore the [Guides](https://flairjs.com/#/guides) to understand concepts and behaviors, [API](https://flairjs.com/#/api) to know details of each exposed programming interface of various constructs and finally [Examples](https://flairjs.com/#/examples) to see real codebase showcasing all these concepts in action. 
 
 However, before you delve deep into any of these areas, begin with getting an [Overview](https://flairjs.com/#/overview) first.
 

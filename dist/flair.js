@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.16.1
- *  Sun, 10 Mar 2019 22:44:49 GMT
+ *  Version: 0.16.3
+ *  Sun, 10 Mar 2019 22:55:02 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -78,10 +78,10 @@
     flair.info = Object.freeze({
         name: 'flair',
         file: currentFile,
-        version: '0.16.1',
+        version: '0.16.3',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 10 Mar 2019 22:44:49 GMT')
+        lupdate: new Date('Sun, 10 Mar 2019 22:55:02 GMT')
     });       
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -6452,4 +6452,4 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
 })();
-(() => { flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","version":"0.16.1","lupdate":"Sun, 10 Mar 2019 22:44:49 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[]}');})();
+(() => { flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","version":"0.16.3","lupdate":"Sun, 10 Mar 2019 22:55:02 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[]}');})();
