@@ -11,13 +11,13 @@
  * @returns any - returns anything that is returned by processor function, it may also be a promise
  */ 
 const _using = (obj, fn) => {
-    if (['instance', 'string'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
-    if (_typeOf(fn) !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (fn)'); }
+    let args = _Args('obj: instance, fn: afunction', 
+                     'obj: string, fn: afunction')(obj, fn); args.throwOnError(_using);
 
     // create instance, if need be
-    if (typeof obj === 'string') { // qualifiedName
+    if (args.index === 1) { // i.e., obj = string
         let Type = _getType(obj);
-        if (!Type) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
+        if (!Type) { throw _Exception.NotFound(obj, _using); }
         obj = new Type(); // this does not support constructor args, for ease of use only.
     }
 
@@ -33,9 +33,8 @@ const _using = (obj, fn) => {
         result = fn(obj);
         if (result && typeof result.finally === 'function') { // a promise is returned
             isPromiseReturned = true;
-            result = result.finally((args) => {
+            result = result.finally(() => {
                 doDispose();
-                return args;
             });
         }
     } finally {

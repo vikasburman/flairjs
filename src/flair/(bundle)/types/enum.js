@@ -23,8 +23,7 @@
  * @returns type - constructed flair enum type
  */
 const _Enum = (name, factory) => {
-    let args = _Args('name: string, factory: cfunction')(name, factory);
-    if (args.isInvalid) { throw args.error; }
+    let args = _Args('name: string, factory: cfunction')(name, factory); args.throwOnError(_Enum);
 
     // builder config
     let cfg = {
@@ -104,27 +103,24 @@ const _Enum = (name, factory) => {
 
 // enum static methods
 _Enum.getName = (enumType, enumValue) => {
-    if (_typeOf(enumType) !== 'enum') { throw _Exception('InvalidArgument', 'Argument type is invalid. (enumType)'); }
-    if (typeof enumValue !== 'number') { throw _Exception('InvalidArgument', 'Argument type is invalid. (enumValue)'); }
+    let args = _Args('enumType: enum, enumValue: number')(enumType, enumValue); args.throwOnError(_Enum.getName);
     return enumType[meta].getName(enumValue);
 };
 _Enum.getNames = (enumType) => {
-    if (_typeOf(enumType) !== 'enum') { throw _Exception('InvalidArgument', 'Argument type is invalid. (enumType)'); }
+    let args = _Args('enumType: enum')(enumType); args.throwOnError(_Enum.getNames);
     return enumType[meta].getNames();
 };
 _Enum.getValues = (enumType) => {
-    if (_typeOf(enumType) !== 'enum') { throw _Exception('InvalidArgument', 'Argument type is invalid. (enumType)'); }
+    let args = _Args('enumType: enum')(enumType); args.throwOnError(_Enum.getValues);    
     return enumType[meta].getValues();
 };
 _Enum.isDefined = (enumType, nameOrValue) => {
-    if (_typeOf(enumType) !== 'enum') { throw _Exception('InvalidArgument', 'Argument type is invalid. (enumType)'); }
-    if (typeof nameOrValue === 'string') {
+    let args = _Args('enumType: enum, nameOrValue: number',
+                     'enumType: enum, nameOrValue: string')(enumType, nameOrValue); args.throwOnError(_Enum.isDefined);
+    if (args.index === 1) { // i.e., nameOrValue = string
         return (enumType[meta].getNames().indexOf(nameOrValue) !== -1);
-    } else if (typeof nameOrValue === 'number') {
-        return (enumType[meta].getName(nameOrValue) !== '');
-    } else {
-        throw _Exception('InvalidArgument', 'Argument type is invalid. (nameOrValue)');
-    }
+    } 
+    return (enumType[meta].getName(nameOrValue) !== '');
 };
 
 // attach to flair

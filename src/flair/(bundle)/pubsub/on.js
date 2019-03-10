@@ -13,6 +13,7 @@
 const _dispatcher = new Dispatcher();
 const _dispatchEvent = _dispatcher.dispatch;  // this can be used via dispatch member to dispatch any event
 const _on = (event, handler, isRemove) => {
+    let args = _Args('event: string, handler: afunction')(event, handler); args.throwOnError(_on);
     if (isRemove) { _dispatcher.remove(event, handler); return; }
     _dispatcher.add(event, handler);
 };

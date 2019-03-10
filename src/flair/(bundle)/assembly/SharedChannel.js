@@ -27,6 +27,7 @@ const SharedChannel = function(allADOs, onError) {
                         isComplete: true,
                         isError: false,
                         error: null,
+                        ctx: e.data.ctx,
                         result: (e.data.returnsAsIs ? data : (data ? true : false))
                     }
                 }); 
@@ -38,6 +39,7 @@ const SharedChannel = function(allADOs, onError) {
                         isComplete: false,
                         isError: false,
                         error: null,
+                        ctx: e.data.ctx,
                         result: progressData
                     }
                 }); 
@@ -49,6 +51,7 @@ const SharedChannel = function(allADOs, onError) {
                         isComplete: true,
                         isError: true,
                         error: (err ? err.toString() : 'UnknownError'),
+                        ctx: e.data.ctx,
                         result: null
                     }
                 });  
@@ -113,7 +116,7 @@ const SharedChannel = function(allADOs, onError) {
     remoteMessageHandlerScript = `(${remoteMessageHandlerScript})();`
     // NOTE: script/end
 
-    const postMessageToWorker = (objId, name, returnsAsIs, func, args, progressListener) => { // async message sent to worker thread
+    const postMessageToWorker = (objId, name, returnsAsIs, func, args, ctx, progressListener) => { // async message sent to worker thread
         return new Promise((resolve, reject) => {
             // store message for post processing handling
             let messageId = guid();
@@ -131,6 +134,7 @@ const SharedChannel = function(allADOs, onError) {
                     obj: objId,
                     name: name,
                     returnsAsIs: returnsAsIs,
+                    ctx: ctx || {},
                     func: func,
                     args: ((args && Array.isArray(args)) ? args : [])
                 }
@@ -150,16 +154,19 @@ const SharedChannel = function(allADOs, onError) {
                 if (e.data.isError) {
                     msg.reject(e.data.error);
                 } else {
-                    msg.resolve(e.data.result);
+                    msg.resolve(Object.freeze({
+                        ctx: e.data.ctx,
+                        result: e.data.result
+                    }));
                 }
             } else { // progress
                 if (typeof progressListener === 'function' && msg.progressListener) {
                     // should match with Dispatcher's dispatch event style of passing data
-                    setTimeout(() => { msg.progressListener({ name: 'progress', args: e.data.result }); }, 0); // <-- event handler will receive this
+                    setTimeout(() => { msg.progressListener(Object.freeze({ host: (e.data.ctx._ ? e.data.ctx._.host : ''), name: 'progress', args: e.data.result })); }, 0); // <-- event handler will receive this
                 }
             }
         } else { // unsolicited message
-            onError(e.data); // TODO: fix - send proper error
+            onError(`Unknown operation is not supported. (${e.data.id})`);
         }
     };
 

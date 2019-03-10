@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.15.968
- *  Sun, 10 Mar 2019 05:51:04 GMT
+ *  Version: 0.16.1
+ *  Sun, 10 Mar 2019 22:44:50 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -23,7 +23,7 @@ const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
     name: 'flair.cli',
-    version: '0.15.968',
+    version: '0.16.1',
     format: 'fasm',
     formatVersion: '1',
     contains: [
@@ -70,9 +70,9 @@ const bump = (options) => {
     ver[0] = parseInt(ver[0]);
     ver[1] = parseInt(ver[1]);
     ver[2] = parseInt(ver[2]);
-    if (ver[2] >= 99999) {
+    if (ver[2] >= 99) {
         ver[2] = 0
-        if (ver[1] >= 999) {
+        if (ver[1] >= 99) {
             ver[1] = 0
             ver[0] += 1
         } else {
@@ -1164,6 +1164,7 @@ exports.flairBuild = function(options, cb) {
         options.gzipAssets = false;
         options.minifyResources = false;
         options.preBuildDeps = false;
+        options.skipBumpVersion = true;
     }
 
     // exclude files from being registered
@@ -1250,4 +1251,4 @@ exports.flairBuild = function(options, cb) {
     });
 };
 
-(() => { flair.AppDomain.registerAdo('{"name":"flair.cli","file":"./flair.cli{.min}.js","desc":"True Object Oriented JavaScript","version":"0.15.968","lupdate":"Sun, 10 Mar 2019 05:51:04 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":[],"resources":[],"assets":[]}');})();
+(() => { flair.AppDomain.registerAdo('{"name":"flair.cli","file":"./flair.cli{.min}.js","desc":"True Object Oriented JavaScript","version":"0.16.1","lupdate":"Sun, 10 Mar 2019 22:44:50 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":[],"resources":[],"assets":[]}');})();

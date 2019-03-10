@@ -23,8 +23,7 @@
  * @returns type - constructed flair mixin type
  */
 const _Mixin = (name, factory) => {
-    let args = _Args('name: string, factory: function')(name, factory);
-    if (args.isInvalid) { throw args.error; }
+    let args = _Args('name: string, factory: cfunction')(name, factory); args.throwOnError(_Mixin);
 
     // builder config
     let cfg = {

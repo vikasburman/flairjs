@@ -59,7 +59,7 @@ const AppDomain = function(name) {
     };
     this.createDomain = (name) => {
         return new Promise((resolve, reject) => {
-            if(typeof name !== 'string' || name === 'default' || domains[name]) { reject(_Exception.invalidArguments('name')); }
+            if(typeof name !== 'string' || (name && name === 'default') || domains[name]) { reject(_Exception.InvalidArguments('name')); return; }
             let proxy = Object.freeze(new AppDomainProxy(name, domains, allADOs));
             domains[name] = proxy;
             resolve(proxy);
@@ -72,7 +72,7 @@ const AppDomain = function(name) {
     this.contexts = (name) => { return contexts[name] || null; }
     this.createContext = (name) => {
         return new Promise((resolve, reject) => {
-            if(typeof name !== 'string' || name === 'default' || contexts[name]) { reject(_Exception.invalidArguments('name')); }
+            if(typeof name !== 'string' || (name && name === 'default') || contexts[name]) { reject(_Exception.InvalidArguments('name')); return; }
             let alc = Object.freeze(new AssemblyLoadContext(name, this, defaultLoadContext, currentContexts, contexts));
             contexts[name] = alc;
             resolve(alc);
@@ -96,22 +96,21 @@ const AppDomain = function(name) {
                 _typeOf(ado.assets) !== 'array' ||
                 typeof ado.name !== 'string' ||
                 typeof ado.file !== 'string' || ado.file === '') {
-                throw _Exception.InvalidArgument('ado');
+                throw _Exception.InvalidArgument('ado', this.registerAdo);
             }
 
             ado.file = which(ado.file, true); // min/dev contextual pick
             if (asmFiles[ado.file]) {
-                if (isThrowOnDuplicate) { throw new _Exception('DuplicateName', `Assembly is already registered. (${ado.file})`); }
+                if (isThrowOnDuplicate) { throw _Exception.Duplicate(ado.file, this.registerAdo); }
                 return;
-            } else {
-                // register
+            } else { // register
                 asmFiles[ado.file] = Object.freeze(ado);
 
                 // flatten types
                 ado.types.forEach(qualifiedName => {
                     // qualified names across anywhere should be unique
                     if (asmTypes[qualifiedName]) {
-                        throw new _Exception('DuplicateName', `Type is already registered. (${qualifiedName})`);
+                        throw _Exception.Duplicate(qualifiedName, this.registerAdo);
                     } else {
                         asmTypes[qualifiedName] = ado.file; // means this type can be loaded from this assembly 
                     }
@@ -121,7 +120,7 @@ const AppDomain = function(name) {
                 ado.resources.forEach(qualifiedName => {
                     // qualified names across anywhere should be unique
                     if (asmTypes[qualifiedName]) {
-                        throw new _Exception('DuplicateName', `Resource is already registered. (${qualifiedName})`);
+                        throw _Exception.Duplicate(qualifiedName, this.registerAdo);
                     } else {
                         asmTypes[qualifiedName] = ado.file; // means this resource can be loaded from this assembly
                     }
@@ -133,14 +132,14 @@ const AppDomain = function(name) {
         allADOs.push(...ados);
     };
     this.getAdo = (file) => {
-        if (typeof file !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${file})`); }
+        if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.getAdo); }
         return asmFiles[file] || null;
     };
     this.allAdos = () => { return Object.keys(asmFiles); }
 
     // types
     this.resolve = (qualifiedName) => {
-        if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', 'Argument type if not valid. (qualifiedName)'); }
+        if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.resolve); }
         return asmTypes[qualifiedName] || null; // gives the assembly file name where this type reside     
     };
     this.allTypes = () => { return Object.keys(asmTypes); }
@@ -152,8 +151,8 @@ const AppDomain = function(name) {
                 _bring(scripts, () => {
                     resolve(); // resolve without passing anything
                 });
-            } catch (e) {
-                reject(e);
+            } catch (err) {
+                reject(err);
             }
         });
     };

@@ -10,13 +10,13 @@
  */ 
 const _include = (dep) => { 
     return new Promise((resolve, reject) => {
-        if (typeof dep !== 'string') { reject(new _Exception('InvalidArgument', 'Argument type is invalid. (dep)')); return; }
+        if (typeof dep !== 'string') { reject(_Exception.InvalidArgument('dep')); return; }
         try {
             _bring([dep], (obj) => {
                 if (obj) {
                     resolve(obj);
                 } else {
-                    reject();
+                    reject(_Exception.OperationFailed(`Dependency could not be resolved. (${dep})`));
                 }
             });
         } catch (err) {

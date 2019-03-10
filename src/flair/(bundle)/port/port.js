@@ -15,58 +15,60 @@
  *  Port.isConnected(name)         // @returns boolean - true/false
  * @params
  *  name: string - name of the port
- *  members: string - array of strings having member names that are checked for their presence
+ *  members: array of strings - having member names that are checked for their presence
  *  handler: function - a factory that return the actual handler to provide named functionality for current environment
  *  inbuilt: function - an inbuilt factory implementation of the port functionality, if nothing is configured, this implementation will be returned
- *          NOTE: Both factory and inbuilt are passed flair.options.env object to return most suited implementation of the port
+ *          NOTE: Both handler and inbuilt are passed flair.options.env object to return most suited implementation of the port
  * @returns handler/boolean/void - as specified above
  */ 
 let ports_registry = {};
 const _Port = (name) => {
-    if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+    if (typeof name !== 'string') { throw _Exception.InvalidArgument('name', _Port); }
     if (ports_registry[name]) {
         return (ports_registry[name].handler ? ports_registry[name].handler : ports_registry[name].inbuilt); // inbuilt could also be null if not inbuilt implementation is given
     }
     return null;
 };
 _Port.define = (name, members, inbuilt) => {
-    if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
-    if (members && !Array.isArray(members)) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (members)'); }
-    if (ports_registry[name]) { throw new _Exception('Duplicate', `Port is already defined. (${name})`); }
+    let args = _Args('name: string',
+                     'name: string, members: array',
+                     'name: string, members: array, inbuilt: afunction',
+                     'name: string, inbuilt: afunction')(name, members, inbuilt); args.throwOnError(_Port.define);
 
+    if (ports_registry[name]) { throw _Exception.Duplicate(name, _Port.define); }
     ports_registry[name] = {
-        type: (members ? 'object' : 'function'),
-        members: members || null,
+        type: (args.values.members ? 'object' : 'function'), // a port handler can be 
+        members: args.values.members || null,
         handler: null,
-        inbuilt: (typeof inbuilt !== 'undefined' ? inbuilt(options.env) : null)
+        inbuilt: (args.values.inbuilt ? args.values.inbuilt(options.env) : null)
     };
 };
 _Port.connect = (name, handler) => {
-    if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }    
-    if (typeof handler !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (handler)'); } 
-    if (!ports_registry[name]) { throw new _Exception('NotFound', `Port is not defined. (${name})`); } 
+    let args = _Args('name: string, handler: afunction')(name, handler); args.throwOnError(_Port.connect);
 
+    if (!ports_registry[name]) { throw _Exception.NotFound(name, _Port.connect); } 
     let actualHandler = handler(options.env); // let it return handler as per context
-    if (typeof actualHandler !== ports_registry[name].type) { throw new _Exception('InvalidType', `Handler type is invalid. (${name})`); } 
+    if (typeof actualHandler !== ports_registry[name].type) { throw _Exception.InvalidArgument('handler', _Port.connect); } 
     let members = ports_registry[name].members;
     if (members) { 
         for(let member of members) {
-            if (typeof actualHandler[member] === 'undefined') { throw new _Exception('InvalidType', `Handler interface is invalid. (${name})`); }
+            if (typeof actualHandler[member] === 'undefined') { throw  _Exception.NotImplemented(member, _Port.connect); }
         }
     }
     ports_registry[name].handler = actualHandler;
 };
 _Port.disconnect = (name) => {
-    if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }    
+    if (typeof name !== 'string') { throw _Exception.InvalidArgument('name', _Port.disconnect); }
     if (ports_registry[name]) {
         ports_registry[name].handler = null;
     }
 };
 _Port.isDefined = (name) => {
-    if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }    
+    if (typeof name !== 'string') { throw _Exception.InvalidArgument('name', _Port.isDefined); }
     return (ports_registry[name] ? true : false);
 };
 _Port.isConnected = (name) => {
+    if (typeof name !== 'string') { throw _Exception.InvalidArgument('name', _Port.isConnected); }
     return (ports_registry[name] && ports_registry[name].handler ? false : true);
 };
 

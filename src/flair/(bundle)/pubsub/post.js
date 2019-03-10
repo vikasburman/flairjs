@@ -13,6 +13,7 @@
  * @returns void
  */ 
 const _post = (event, args) => {
+    if (typeof event !== 'string') { throw _Exception.InvalidArgument('event', _post); }
     _dispatchEvent(event, args);
 };
 

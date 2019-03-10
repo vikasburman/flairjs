@@ -22,7 +22,7 @@
  * @returns function - validator function that is configured for specified patterns
  */ 
 const _Args = (...patterns) => {
-    if (patterns.length === 0) { throw new _Exception('InvalidArgument', 'Argument must be defined. (patterns)'); }
+    if (patterns.length === 0) { throw _Exception.InvalidArgument('patterns', _Args); }
 
     /**
      * @description Args validator function that validates against given patterns
@@ -78,10 +78,15 @@ const _Args = (...patterns) => {
 
         // set state
         result.isInvalid = (result.index === -1 ? true : false);
-        result.error = (result.isInvalid ? new _Exception('InvalidArguments', `Argument type is invalid. (${faliedMatch})`, _args) : null );
+        result.error = (result.isInvalid ? _Exception.InvalidArgument(faliedMatch) : null);
+
+        // throw helper
+        result.throwOnError = (stStart) => {
+            if (result.error) { throw new _Exception(result.error, stStart || _args); }
+        };
 
         // return
-        return result;
+        return Object.freeze(result);
     };
 
     // return freezed

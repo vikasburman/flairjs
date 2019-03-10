@@ -56,9 +56,9 @@
  */ 
 const bringCycle = [];
 const _bring = (deps, fn) => {
-    if (['string', 'array'].indexOf(_typeOf(deps)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (deps)'); }
-    if (typeof fn !== 'function') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (fn)'); }
-    if (!Array.isArray(deps)) { deps = [deps]; }
+    let args = _Args('deps: string, fn: afunction',
+                     'deps: array, fn: afunction')(deps, fn); args.throwOnError(_bring);
+    if (args.index === 0) { deps = [deps]; }
 
     let _resolvedItems = [],
         _deps = deps.slice();
@@ -100,15 +100,15 @@ const _bring = (deps, fn) => {
 
             // check if it is available in any unloaded assembly
             let option3 = (done) => {
-                let asmFile = _getAssembly(_dep);
+                let asmFile = _getAssemblyOf(_dep);
                 if (asmFile) { // if type exists in an assembly
                     _AppDomain.context.loadAssembly(asmFile).then(() => {
                         _resolved = _getType(_dep); 
                         if (!_resolved) { // check as resource
                             _resolved = _getResource(_dep); 
                         }
-                    }).catch((e) => {
-                        throw new _Exception('AssemblyLoad', `Assembly load operation failed with error: ${e}. (${asmFile})`);
+                    }).catch((err) => {
+                        throw _Exception.OperationFailed(`Assembly could not be loaded. (${asmFile})`, err, _bring);
                     });
                 } else {
                     done();
@@ -128,8 +128,8 @@ const _bring = (deps, fn) => {
                     } else { // some other file (could be json, css, html, etc.)
                         loadFile(_dep).then((content) => {
                             _resolved = content; done();
-                        }).catch((e) => {
-                            throw new _Exception('FileLoad', `File load failed. (${_dep})`, e); 
+                        }).catch((err) => {
+                            throw _Exception.OperationFailed(`File could not be loaded. (${_dep})`, err, _bring);
                         });
                     }
                 } else { // not a file
@@ -141,8 +141,8 @@ const _bring = (deps, fn) => {
             let option5 = (done) => {
                 loadModule(_dep).then((content) => { // as last option, try to load it as module
                     _resolved = content; done();
-                }).catch((e) => {
-                   throw new _Exception('ModuleLoad', `Module load operation failed. (${_dep})`, e);
+                }).catch((err) => {
+                    throw _Exception.OperationFailed(`Module could not be loaded. (${_dep})`, err, _bring);
                 });
             };
 
@@ -159,7 +159,7 @@ const _bring = (deps, fn) => {
             } else {
                 // cycle break check
                 if (bringCycle.indexOf(_dep) !== -1) {
-                    throw new _Exception('CircularDependency', `Circular dependency identified. (${_dep})`);
+                    throw _Exception.Circular(_dep, _bring);
                 } else {
                     bringCycle.push(_dep);
                 }
@@ -171,7 +171,7 @@ const _bring = (deps, fn) => {
                             if (!_resolved) { option4(() => {
                                 if (!_resolved) { option5(() => {
                                     if (!_resolved) {
-                                        throw new _Exception('DependencyResolution', `Failed to resolve dependency. ${_dep}`);
+                                        throw _Exception.OperationFailed(`Dependency could not be resolved. (${_dep})`, _bring);
                                     } else { resolved(); }
                                 }) } else { resolved(); }
                             }) } else { resolved(); }

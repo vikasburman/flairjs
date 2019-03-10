@@ -20,6 +20,12 @@
  * @returns object - if can be used as specified type, return same object, else null
  */ 
 const _as = (obj, type) => {
+    // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
+
+    // obj may be undefined or null or false, so don't check for validation of that here
+    if (type[meta]) { type = type[meta].name; } // since it can be a type as well
+    if (_typeOf(type) !== 'string') { throw _Exception.InvalidArgument('type', _as); }
+
     if (_is(obj, type)) { return obj; }
     return null;
 };

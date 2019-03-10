@@ -6,7 +6,7 @@
  * @params
  * @returns
  */ 
-const _nim = () => { throw new _Exception('NotImplemented', 'Method is not implemented.'); };
+const _nim = () => { throw _Exception.NotImplemented('func', _nim); };
 _nim.ni = true; // a special flag to quick check that this is a not-implemented object
 
 // attach to flair

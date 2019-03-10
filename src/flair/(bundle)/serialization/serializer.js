@@ -37,6 +37,8 @@ const serializer_process = (source, isDeserialize) => {
                                 !modiRefl.members.is('protected', memberName) &&
                                 !modiRefl.members.is('static', memberName) &&
                                 !modiRefl.members.is('readonly', memberName) &&
+                                !attrRefl.members.probe('resource', memberName).anywhere() && 
+                                !attrRefl.members.probe('asset', memberName).anywhere() && 
                                 !attrRefl.members.probe('inject', memberName).anywhere());
                     }
                 }
@@ -52,8 +54,12 @@ const serializer_process = (source, isDeserialize) => {
 
         // get base instance to load property values
         Type = _getType(src.type);
-        if (!Type) { throw new _Exception('NotRegistered', `Type is not registered. (${src.type})`); }
-        result = new Type(); // that's why serializable objects must be able to create themselves without arguments 
+        if (!Type) { throw _Exception.NotFound(src.type, _Serializer.deserialize); }
+        try {
+            result = new Type(); // that's why serializable objects must be able to create themselves without arguments 
+        } catch (err) {
+            throw _Exception.OperationFailed(`Object could not be deserialized. (${src.type})`, err, _Serializer.deserialize); 
+        }
         
         // get members to deserialize
         if (TypeMeta.attrs.type.probe('serialize').anywhere()) {
@@ -78,7 +84,11 @@ const serializer_process = (source, isDeserialize) => {
             data: {}
         };
         for(let memberName of memberNames) { result.data[memberName] = src[memberName]; }
-        result = JSON.stringify(result);
+        try {
+            result = JSON.stringify(result);
+        } catch (err) {
+            throw _Exception.OperationFailed(`Object could not be serialized. (${src[meta].Type[meta].name})`, err, _Serializer.serialize); 
+        }
     }
 
     // return
@@ -87,17 +97,16 @@ const serializer_process = (source, isDeserialize) => {
 const _Serializer = {
     // serialize given supported flair type's instance
     serialize: (instance) => { 
-        if (['instance', 'sinstance'].indexOf(_typeOf(instance) === -1)) { throw _Exception.InvalidArgument('instance'); }
+        if (flairInstances.indexOf(_typeOf(instance) === -1)) { throw _Exception.InvalidArgument('instance', _Serializer.serialize); }
         return serializer_process(instance);
     },
 
     // deserialize last serialized instance
     deserialize: (json) => {
-        if (!json || typeof json !== 'string') { throw _Exception.InvalidArgument('json'); }
+        if (!json || typeof json !== 'string') { throw _Exception.InvalidArgument('json', _Serializer.deserialize); }
         return serializer_process(json, true);
     }
 };
 
 // attach to flair
 a2f('Serializer', _Serializer);
-

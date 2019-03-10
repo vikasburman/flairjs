@@ -8,6 +8,9 @@
  * @returns object - namespace object
  */ 
 const _ns = (name) => { 
+    let args = _Args('name: undefined', 
+                     'name: string')(name); args.throwOnError(_ns);
+    
     return _AppDomain.context.namespace(name);
 };
 

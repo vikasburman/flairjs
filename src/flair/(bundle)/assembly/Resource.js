@@ -13,18 +13,22 @@ const Resource = function(rdo, ns, alc) {
     this.type = rdo.file.substr(rdo.file.lastIndexOf('.') + 1).toLowerCase();
     this.data = rdo.data;
 
-    // decode data (rdo.data is base64 encoded string, added by build engine)
-    if (rdo.encodingType.indexOf('utf8;') !== -1) {
-        if (isServer) {
-            let buff = Buffer.from(rdo.data, 'base64');
-            this.data = buff.toString('utf8');
-        } else { // client
-            this.data = b64DecodeUnicode(rdo.data); 
+    try {
+        // decode data (rdo.data is base64 encoded string, added by build engine)
+        if (rdo.encodingType.indexOf('utf8;') !== -1) {
+            if (isServer) {
+                let buff = Buffer.from(rdo.data, 'base64');
+                this.data = buff.toString('utf8');
+            } else { // client
+                this.data = b64DecodeUnicode(rdo.data); 
+            }
+        } else { // binary
+            if (isServer) {
+                this.data = Buffer.from(rdo.data, 'base64');
+            } // else no change on client
         }
-    } else { // binary
-        if (isServer) {
-            this.data = Buffer.from(rdo.data, 'base64');
-        } // else no change on client
+    } catch (err) {
+        throw _Exception.OperationFailed(`Resource data could not be decoded. (${rdo.name})`, Resource);
     }
 
     // special case of JSON

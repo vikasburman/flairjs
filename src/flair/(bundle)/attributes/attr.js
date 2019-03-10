@@ -2,26 +2,25 @@
  * @name attr / $$
  * @description Decorator function to apply attributes on type and member definitions
  * @example
- *  attr(name) OR $$(name)
- *  attr(name, ...args) OR $$(name, ...args)
+ *  $$(name)
  * @params
  *  attrName: string/type - Name of the attribute, it can be an internal attribute or namespaced attribute name
  *                          It can also be the Attribute flair type itself
- *  args: any - Any arguments that may be needed by attribute
+ *  attrArgs: any - Any arguments that may be needed by attribute
  * @returns void
  */ 
-const _$$ = (name, ...args) => {
-    if (!name || ['string', 'class'].indexOf(_typeOf(name)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
-    if (name && typeof name !== 'string' && !_isDerivedFrom(name, 'Attribute')) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+const _$$ = (name, ...attrArgs) => {
+    let args = _Args('name: string',
+                     'name: Attribute')(name); args.throwOnError(_$$);
 
     let AttrType = null,
-        attrInstance = null,
+        attrInstance = null, // for inbuilt, this will remain null
         cfg = null;
-    if (typeof name === 'string') {
+    if (args.index === 0) { // name = string
         cfg = _attrMeta.inbuilt[name] || null;
         if (!cfg) { // not an inbuilt attr
             AttrType = _getType(name);
-            if (!AttrType) { throw new _Exception('NotFound', `Attribute is not found. (${name})`); }
+            if (!AttrType) { throw _Exception.NotFound(name, _$$); }
             name = AttrType[meta].name;
         }
     } else {
@@ -30,16 +29,20 @@ const _$$ = (name, ...args) => {
     }
 
     // duplicate check
-    if (findIndexByProp(_attrMeta.bucket, 'name', name) !== -1) { throw new _Exception('Duplicate', `Duplicate attributes are not allowed. (${name})`); }
+    if (findIndexByProp(_attrMeta.bucket, 'name', name) !== -1) { throw _Exception.Duplicate(name, _$$); }
 
     // custom attribute instance
     if (AttrType) {
-        attrInstance = new AttrType(...args);
+        try {
+            attrInstance = new AttrType(...attrArgs);
+        } catch (err) {
+            throw new _Exception(err, _$$);
+        }
         cfg = new _attrConfig(attrInstance.constraints);
     }
 
     // store
-    _attrMeta.bucket.push({name: name, cfg: cfg, isCustom: (attrInstance !== null), attr: attrInstance, args: args});
+    _attrMeta.bucket.push({name: name, cfg: cfg, isCustom: (attrInstance !== null), attr: attrInstance, args: attrArgs});
 };
 
 /**
@@ -87,25 +90,22 @@ const _$$ = (name, ...args) => {
  * @constructs Constructs attribute configuration object
  */ 
 const _attrConfig = function(isModifier, constraints) {
-    if (typeof isModifier === 'string') {
-        constraints = isModifier;
-        isModifier = false;
-    }
-    if (typeof constraints !== 'string') { throw new _Exception.InvalidArgument('constraints'); }
-
+    let args = _Args('isModifier: boolean, constraints: string',
+                     'constraints: string',
+                     'isModifier: boolean,')(isModifier, constraints); args.throwOnError(_attrConfig);
 
     // config object
     let _this = {
-        isModifier: isModifier,
-        constraints: constraints
+        isModifier: args.values.isModifier || false,
+        constraints: args.values.constraints
     };
 
     // return
     return _this;
 };
 
-const _attr = (name, ...args) => {
-    return _$$(name, ...args);
+const _attr = (name, ...attrArgs) => { // _attr is for internal use only, so collect/clear etc. are not exposed out)
+    return _$$(name, ...attrArgs);
 };
 const _attrMeta = _attr[meta] = Object.freeze({
     bucket: [],
@@ -145,15 +145,19 @@ const _attrMeta = _attr[meta] = Object.freeze({
         interface: new _attrConfig('class && (prop || func || event)')
     })
 });
+
 _attr.collect = () => {
-    let attrs = _attrMeta.bucket.slice();
-    _attr.clear();
+    let attrs = _attrMeta.bucket.slice(); _attr.clear();
     return attrs;
-}
+};
 _attr.has = (name) => {
+    if (typeof name !== 'string') { throw _Exception.InvalidArgument('name'); }
+    
     return (_attrMeta.bucket.findIndex(item => item.name === name) !== -1);
 };
 _attr.get = (name) => {
+    if (typeof name !== 'string') { throw _Exception.InvalidArgument('name'); }
+
     let idx = _attrMeta.bucket.findIndex(item => item.name === name);
     if (idx !== -1) { return _attrMeta.bucket[idx]; }
     return null;
@@ -162,6 +166,5 @@ _attr.clear = () => {
     _attrMeta.bucket.length = 0; // remove all
 };
 
-// attach to flair (NOTE: _attr is for internal use only, so collect/clear etc. are not exposed out)
-a2f('attr', _$$);
+// attach to flair
 a2f('$$', _$$);

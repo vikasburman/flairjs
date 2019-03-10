@@ -1,13 +1,13 @@
-const { Class, Interface, Mixin, Struct, Enum, $$, nip, event, getType } = flair;
-const IDisposable = getType('IDisposable');
+const { Class, Interface, Mixin, Struct, Enum, $$, nip, event, ns } = flair;
+const { IDisposable } = ns();
 
 let IPowertrain = Interface('IPowertrain', function() {
     this.prop1 = nip;
 });
 
-flair.isDerivedFrom(null, 'IPowertrain')
+// flair.isDerivedFrom(null, 'IPowertrain')
 
-IPowertrain.prop1 = 10;
+// IPowertrain.prop1 = 10;
 
 // let x = {};
 // //IPowertrain.apply(x);
@@ -20,16 +20,20 @@ let MyClass = Class('MyClass', [IPowertrain, IDisposable], function() {
     $$('virtual');
     this.construct = () => {
         console.log('In MyClass');
+        this.ev.add(this.func2);
     };
 
     $$('virtual');
     this.prop1 = 20;
 
     this.func1 = () => {
-        console.log(1);
+        this.ev('vikas', 'burman');
+    };
+    this.func2 = (e) => {
+        console.log(e);
     };
 
-    this.ev = event(() => {});
+    this.ev = event();
 
     this.dispose = () => {};
 
@@ -104,6 +108,8 @@ let MyEnum = Enum('MyEnum', function() {
     this.prop1 = 10;
 });
 console.log(MyEnum);
+
+//Enum.getName(MyEnum, true);
 
 
     // var myProc = Proc('core.abc.proc', (a1) => {

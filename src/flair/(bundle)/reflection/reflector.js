@@ -9,7 +9,7 @@
 let isNewFromReflector = false;
 const underReflection = [];
 const _Reflector = function (Type) {
-    if (!Type || !(Type[meta] || flairTypes.indexOf(Type[meta].type) === -1)) { throw new _Exception.InvalidArgument('Type'); }
+    if (!Type || !(Type[meta] || flairTypes.indexOf(Type[meta].type) === -1)) { throw _Exception.InvalidArgument('Type', _Reflector); }
 
     // define
     let TypeMeta = null,
@@ -62,11 +62,13 @@ const _Reflector = function (Type) {
             return list; 
         };
         this.getAttribute = (name) => { 
+            if (typeof name !== 'string') { throw _Exception.InvalidArgument('name', this.getAttribute); }
             let attribute = findItemByProp(typeDef.attrs.type, 'name', name);
             if (attribute) { return AttrReflector(attribute); }
             return null;
         };
         this.getModifier = (name) => { 
+            if (typeof name !== 'string') { throw _Exception.InvalidArgument('name', this.getModifier); }
             let modifier = findItemByProp(typeDef.modifiers.type, 'name', name); 
             if (modifier) { return ModifierReflector(modifier); }
             return null;
@@ -82,7 +84,10 @@ const _Reflector = function (Type) {
             }
             return items;
         };
-        refl.isMixed = (name) => { return TypeMeta.isMixed ? TypeMeta.isMixed(name) : false; };
+        refl.isMixed = (name) => { 
+            if (!name) { throw _Exception.InvalidArgument('name', refl.isMixed); }
+            return TypeMeta.isMixed ? TypeMeta.isMixed(name) : false; 
+        };
     };
     const addIntfRefl = function(refl) {
         refl.getInterfaces = () => {
@@ -94,11 +99,17 @@ const _Reflector = function (Type) {
             }            
             return items;
         };
-        refl.isImplements = (name) => { return TypeMeta.isImplements ? TypeMeta.isImplements(name) : false; }
+        refl.isImplements = (name) => {
+            if (!name) { throw _Exception.InvalidArgument('name', refl.isImplements); }
+            return TypeMeta.isImplements ? TypeMeta.isImplements(name) : false; 
+        }
     };
     const addInstanceRefl = function(refl) {
         refl.getInstanceType = () => { return objMeta.type; };
-        refl.isInstanceOf = (name) => { return objMeta.isInstanceOf ? objMeta.isInstanceOf(name) : false; }
+        refl.isInstanceOf = (name) => { 
+            if (!name) { throw _Exception.InvalidArgument('name', refl.isInstanceOf); }
+            return objMeta.isInstanceOf ? objMeta.isInstanceOf(name) : false; 
+        }
     };
     const findMemberDef = (memberName) => {
         let def = objMeta.def; // start from this top one
@@ -147,11 +158,13 @@ const _Reflector = function (Type) {
             return list; 
         };
         this.getAttribute = (name) => { 
+            if (typeof name !== 'string') { throw _Exception.InvalidArgument('name', this.getAttribute); }
             let attribute = findItemByProp(objDef.attrs[memberName], 'name', name); 
             if (attribute) { return AttrReflector(attribute); }
             return null;
         };
         this.getModifier = (name) => { 
+            if (typeof name !== 'string') { throw _Exception.InvalidArgument('name', this.getModifier); }
             let modifier = findItemByProp(objDef.modifiers[memberName], 'name', name); 
             if (modifier) { return ModifierReflector(modifier); }
             return null;
@@ -239,6 +252,7 @@ const _Reflector = function (Type) {
             return null;
         };
         refl.getAspect = (name) => {
+            if (typeof name !== 'string') { throw _Exception.InvalidArgument('name', refl.getAspect); }
             if (objDef.aspects && objDef.aspects[memberName].length > 0) {
                 let item = findItemByProp(objDef.aspects[memberName], 'name', name);
                 if (item) { return _Reflector(item); }
@@ -308,6 +322,7 @@ const _Reflector = function (Type) {
             return list;
         };
         refl.getMember = (memberName) => {
+            if (typeof memberName !== 'string') { throw _Exception.InvalidArgument('memberName', refl.getMember); }
             ensureMembers();
             return objMembers[memberName] || null;
         };
@@ -318,7 +333,10 @@ const _Reflector = function (Type) {
             if (TypeMeta.inherits !== null) { return _Reflector(TypeMeta.inherits); }
             return null;
         };
-        refl.isDerivedFrom = (name) => { return (TypeMeta.isDerivedFrom ? TypeMeta.isDerivedFrom(name) : false); };
+        refl.isDerivedFrom = (name) => { 
+            if (!name) { throw _Exception.InvalidArgument('name', refl.isDerivedFrom); }
+            return (TypeMeta.isDerivedFrom ? TypeMeta.isDerivedFrom(name) : false); 
+        };
         refl.getFamily = () => {
             let items = [],
                 prv = TypeMeta.inherits;
@@ -371,12 +389,16 @@ const _Reflector = function (Type) {
             return list; 
         };
         refl.getName = (enumValue) => { 
+            if (!enumValue) { throw _Exception.InvalidArgument('enumValue', refl.getName); }
             let name = _Enum.getName(obj, enumValue); 
             if (name) { return PropReflector(name, objDef); }
             return null;
         };
         refl.getValues = () => { return _Enum.getValues(obj); };
-        refl.isDefined = (nameOrValue) => { return _Enum.isDefined(obj, nameOrValue);}
+        refl.isDefined = (nameOrValue) => { 
+            if (!nameOrValue) { throw _Exception.InvalidArgument('nameOrValue', refl.isDefined); }
+            return _Enum.isDefined(obj, nameOrValue);
+        }
         return refl;
     };
  

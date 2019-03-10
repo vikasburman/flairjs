@@ -10,7 +10,7 @@ const AppDomainProxy = function(name, domains, allADOs) {
 
     // shared communication channel between main and worker thread
     let channel = new SharedChannel(allADOs, (err) => {  // eslint-disable-line no-unused-vars
-        throw new _Exception('RemoteError', err); // TODO:
+        throw _Exception.OperationFailed('Remote operation failed.', err); 
     });
 
     // app domain
@@ -41,14 +41,14 @@ const AppDomainProxy = function(name, domains, allADOs) {
     this.contexts = (name) => { return contextProxies[name] || null; }    
     this.createContext = (name) => {
         return new Promise((resolve, reject) => {
-            if(typeof name !== 'string' || name === 'default' || contextProxies[name]) { reject(_Exception.invalidArguments('name')); }
+            if(typeof name !== 'string' || (name && name === 'default') || contextProxies[name]) { reject(_Exception.InvalidArguments('name')); return; }
             channel.remoteCall('ad', '', false, 'createContext', [name]).then((state) => {
                 if (state) { // state is true, if context was created
                     let alcp = Object.freeze(new AssemblyLoadContextProxy(name, this, channel));
                     contextProxies[name] = alcp;
                     resolve(alcp);
                 } else {
-                    reject();
+                    reject(_Exception.OperationFailed('Context could not be created.'));
                 }
             }).catch(reject);
         });
@@ -56,9 +56,7 @@ const AppDomainProxy = function(name, domains, allADOs) {
 
     // scripts
     this.loadScripts = (...scripts) => {
-        if (this.isUnloaded()) { 
-            throw 'Unloaded'; // TODO: fix
-        }
+        if (this.isUnloaded()) { throw _Exception.InvalidOperation(`AppDomain is already unloaded. (${this.name})`, this.loadScripts); }
         return channel.remoteCall('ad', '', false, 'loadScripts', scripts);
     };
 };

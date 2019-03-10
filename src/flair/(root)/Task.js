@@ -1,4 +1,4 @@
-const { IProgressReporter, IDisposable } = ns('(root)');
+const { IProgressReporter, IDisposable } = ns();
 
 /**
  * @name Task
@@ -56,36 +56,35 @@ Class('(auto)', [IProgressReporter, IDisposable], function() {
     * @returns
     *  any - anything
     */  
-    this.run = (...args) => {
-        return new Promise((resolve, reject) => {
-            if (!isRunning) {
-                // mark
-                isRunning = true;
+    $$('async');
+    this.run = (resolve, reject, ...args) => {
+        if (!isRunning) {
+            // mark
+            isRunning = true;
 
-                const afterSetup = () => {
-                    isSetupDone = true;
-                    let result = this.onRun(...args);
-                    if (result && typeof result.then === 'function') {
-                        result.then(resolve).catch(reject).finally(() => {
-                            isRunning = false;
-                        });
-                    } else {
+            const afterSetup = () => {
+                isSetupDone = true;
+                let result = this.onRun(...args);
+                if (result && typeof result.then === 'function') {
+                    result.then(resolve).catch(reject).finally(() => {
                         isRunning = false;
-                        resolve(result);
-                    }
-                };
-                if (!isSetupDone) {
-                    this.setup().then(afterSetup).catch((err) => {
-                        isRunning = false;
-                        reject(err);
                     });
                 } else {
-                    afterSetup();
+                    isRunning = false;
+                    resolve(result);
                 }
+            };
+            if (!isSetupDone) {
+                this.setup().then(afterSetup).catch((err) => {
+                    isRunning = false;
+                    reject(err);
+                });
             } else {
-                reject('Already running'); // TODO: fix w real error
+                afterSetup();
             }
-        });
+        } else {
+            reject(Exception.InvalidOperation('Task is already running', this.run));
+        }
     };
    
    /** 

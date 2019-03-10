@@ -9,18 +9,19 @@
  * @returns boolean - true/false
  */ 
 const _isComplies = (obj, intf) => {
+    // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
     if (!obj) { throw _Exception.InvalidArgument('obj', _isComplies); }
     if (_typeOf(intf) !== 'interface') { throw _Exception.InvalidArgument('intf', _isComplies); }
     
     let complied = true;
     for(let member in intf) {
         if (intf.hasOwnProperty(member) && member !== meta) {
-            if (typeof obj[member] !== typeof intf[member]) { // TODO: check, how it is happening, this seems a bug - Interface type might not have members
-                complied = false; break;
-            }
+            if (!obj[member]) { complied = false; break; } // member not available
+            if (typeof intf[member] === 'function') { // function or event
+                if (typeof obj[member] !== 'function') { complied = false; break; } // member is not a function or event
+            } // else property, just presence was to be checked
         }
     }
-
     return complied;
 };
 

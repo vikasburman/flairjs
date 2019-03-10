@@ -18,14 +18,13 @@
  *          xyz.xx*.abc         - on functions of all classes names abc under namespaces where pattern matches xyz.xx* (e.g., xyz.xx1 and xyz.xx2)
  *          *xyx.xx*.abc        - on functions of all classes names abc under namespaces where pattern matches *xyz.xx* (e.g., 1xyz.xx1 and 2xyz.xx1)
  *     
- * Aspect: type - flair Aspect type
+ * aspect: type - flair Aspect type
  */ 
 const allAspects = [];
 const _Aspects = {
     // register Aspect against given pointcut definition
-    register: (pointcut, Aspect) => {
-        if (typeof pointcut !== 'string') { throw new _Exception.InvalidArgument('pointcut'); }
-        if (!_is(Aspect, 'Aspect')) { throw new _Exception.InvalidArgument('Aspect'); }
+    register: (pointcut, aspect) => {
+        let args = _Args('pointcut: string, aspect: Aspect')(pointcut, aspect); args.throwOnError(_Aspects.register);
         
         // add new entry
         let pc = pointcut,
@@ -56,10 +55,11 @@ const _Aspects = {
         __identifier = replaceAll(__identifier, '*', '.*');     // * -> .*
 
         // register
-        allAspects.push({rex: new RegExp(__identifier), Aspect: Aspect});
+        allAspects.push({rex: new RegExp(__identifier), Aspect: aspect});
     }
 };
 const _get_Aspects = (typeName, funcName) => {
+    // NOTE: intentionally not checking type, because it is an internal call and this needs to run as fast as possible
     // get parts
     let funcAspects = [],
         __ns = '',
@@ -88,6 +88,7 @@ const _get_Aspects = (typeName, funcName) => {
     return funcAspects;
 };
 const _attach_Aspects = (fn, typeName, funcName, funcAspects) => {
+    // NOTE: no type checking, as this is an internal call
     let before = [],
         after = [],
         around = [],

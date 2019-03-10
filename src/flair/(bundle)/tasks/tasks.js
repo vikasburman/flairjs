@@ -74,7 +74,7 @@ const getFreeAD = () => {
                         resolve(ad);
                     }).catch(reject);
                 } else { 
-                    reject('AD POOL FULL'); // TODO: send proper error
+                    reject(_Exception.OperationFailed('AppDomain pool limit reached.'));
                 }
             }
         };
@@ -84,6 +84,7 @@ const getFreeAD = () => {
 
 const _Tasks = { 
     TaskInfo: function(qualifiedName, ...args) {
+        if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', _Tasks.TaskInfo); }
         return Object.freeze({
             type: qualifiedName,
             typeArgs: args

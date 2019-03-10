@@ -17,15 +17,14 @@ let container_registry = {};
 const _Container = {
     // if an alias is registered
     isRegistered: (alias) => {
-        if (typeof alias !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
+        if (typeof alias !== 'string') { throw _Exception.InvalidArgument('alias', _Container.isRegistered); }
         return (typeof container_registry[alias] !== 'undefined' && container_registry[alias].length > 0);
     },
 
     // get registered items as is for given alias
     get: (alias, isAll) => {
-        if (typeof alias !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
-        if (typeof isAll !== 'boolean') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (isAll)'); }
-    
+        if (typeof alias !== 'string') { throw _Exception.InvalidArgument('alias', _Container.get); }
+
         if (isAll) {
             return (container_registry[alias] ? container_registry[alias].slice() : []);
         } else {
@@ -35,24 +34,25 @@ const _Container = {
 
     // register given alias
     register: (alias, item) => {
-        if (typeof alias !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
-        if (alias.indexOf('.') !== -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
-        if (!item) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (item)'); }
+        if (typeof alias !== 'string') { throw _Exception.InvalidArgument('alias', _Container.register); }
+        if (!item) { throw _Exception.InvalidArgument('item', _Container.register); }
+        if (alias.indexOf('.') !== -1) { throw _Exception.InvalidArgument('alias', _Container.register); }
+
         if (typeof item === 'string') { 
             item = which(item); // register only relevant item for server/client
             if (item.endsWith('.js') || item.endsWith('.mjs')) { 
                 item = which(item, true); // consider prod/dev scenario as well
             }
         }
-        // register
+        // register (first time or push more with same alias)
         if (!container_registry[alias]) { container_registry[alias] = []; }
         container_registry[alias].push(item);
     },
 
     // resolve alias with registered item(s)
     resolve: (alias, isAll, ...args) => {
-        if (typeof alias !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (alias)'); }
-        if (typeof isAll !== 'boolean') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (isAll)'); }
+        if (typeof alias !== 'string') { throw _Exception.InvalidArgument('alias', _Container.resolve); }
+        if (typeof isAll !== 'boolean') { throw _Exception.InvalidArgument('isAll', _Container.resolve); }
     
         let result = null;
         const getResolvedObject = (Type) => {
@@ -66,10 +66,14 @@ const _Container = {
                 }
             }
             if (['class', 'struct'].indexOf(_typeOf(Type)) !== -1) { // only class and struct need a new instance
-                if (args) {
-                    obj = new Type(...args); 
-                } else {
-                    obj = new Type(); 
+                try {
+                    if (args) {
+                        obj = new Type(...args); 
+                    } else {
+                        obj = new Type(); 
+                    }
+                } catch (err) {
+                    throw _Exception.OperationFailed(`Type could not be instantiated. (${Type[meta].name})`, _Container.resolve);
                 }
             }
             // any other type of object will be passed through as is
@@ -77,7 +81,7 @@ const _Container = {
             // return
             return obj;
         };
-        
+
         if (container_registry[alias] && container_registry[alias].length > 0) {
             if (isAll) {
                 result = [];

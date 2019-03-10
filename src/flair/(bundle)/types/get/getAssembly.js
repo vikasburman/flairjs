@@ -1,20 +1,31 @@
 /**
  * @name getAssembly
- * @description Gets the assembly of a given flair type
+ * @description Gets the assembly of a given flair type/instance
  * @example
  *  _getAssembly(Type)
  * @params
- *  Type: type/string - flair type whose assembly is required
- *                      qualified type name, if it is needed to know in which assembly this exists
- * @returns object/string - assembly object (or file name) which contains this type
+ *  Type: type/instance/string - flair type or instance whose assembly is required
+ *                               qualified type name, if it is needed to know in which assembly this exists
+ *                               (if assembly is not loaded, it will )
+ * @returns object - assembly which contains this type
  */ 
 const _getAssembly = (Type) => { 
-    if (['string', 'flair'].indexOf(_typeOf(Type)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is not valid. (Type)'); }
-    if (typeof Type === 'string') {
-        return _AppDomain.resolve(Type);
-    } else {
-        return Type[meta].assembly();
+    let args = _Args('Type: flairtype',
+                     'Type: flairinstance',
+                     'Type: string')(Type); args.throwOnError(_getAssembly);
+
+    let result = null,
+        asmFile = '';
+    switch(args.index) {
+        case 0: // type
+            result = Type[meta].assembly(); break;
+        case 1: // instance
+            result = Type[meta].Type[meta].assembly(); break;
+        case 2: // qualifiedName
+            asmFile = _AppDomain.resolve(Type);
+            if (asmFile) { result = _AppDomain.context.getAssembly(asmFile); } break;
     }
+    return result;
 };
 
 // attach to flair

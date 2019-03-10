@@ -16,7 +16,7 @@ const attributesAndModifiers = (def, typeDef, memberName, isTypeLevel, isCustomA
     if (!isCustomAllowed) {
         for(let item of appliedAttrs) {
             if (item.isCustom) {
-                throw _Exception('CustomAttributesNotAllowed', `Custom attribute cannot be applied. (${item.name})`, attributesAndModifiers);
+                throw _Exception.InvalidOperation(`Custom attribute cannot be applied. (${item.name})`, builder);
             }
         }
     }
@@ -164,7 +164,7 @@ const attributesAndModifiers = (def, typeDef, memberName, isTypeLevel, isCustomA
         result = (new Function("try {return (" + constraintsLex + ");}catch(e){return false;}")());
         if (!result) {
             // TODO: send telemetry of _list, so it can be debugged
-            throw new _Exception('InvalidOperation', `${appliedAttr.cfg.isModifier ? 'Modifier' : 'Attribute'} ${appliedAttr.name} could not be applied. (${memberName})`);
+            throw _Exception.InvalidOperation(`${appliedAttr.cfg.isModifier ? 'Modifier' : 'Attribute'} ${appliedAttr.name} could not be applied. (${memberName})`, builder);
         }
 
         // return
@@ -191,6 +191,8 @@ const modifierOrAttrRefl = (isModifier, def, typeDef) => {
     let defItemName = (isModifier ? 'modifiers' : 'attrs');
     let root_get = (name, memberName, isCheckInheritance, isTypeLevel) => {
         let result = null; 
+        if (memberName && memberName === 'construct') { memberName = '_construct'; }
+        if (memberName && memberName === 'dispose') { memberName = '_dispose'; }
         if (isTypeLevel) {
             if (!isCheckInheritance) {
                 if (typeDef[defItemName] && typeDef[defItemName].type) { result = findItemByProp(typeDef[defItemName].type, 'name', name); }
@@ -552,7 +554,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                         newSet.set = newSet.set.bind(bindingHost);
                         member = newSet; // update for next attribute application
                     } else {
-                        throw new _Exception('Unexpected', `${appliedAttr.name} decoration result is unexpected. (${memberName})`);
+                        throw _Exception.OperationFailed(`${appliedAttr.name} decoration result is unexpected. (${memberName})`, builder);
                     }
                 } else { // func or event
                     let newFn = null;
@@ -564,7 +566,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                     if (newFn) {
                         member = newFn.bind(bindingHost); // update for next attribute application
                     } else {
-                        throw new _Exception('Unexpected', `${appliedAttr.name} decoration result is unexpected. (${memberName})`);
+                        throw _Exception.OperationFailed(`${appliedAttr.name} decoration result is unexpected. (${memberName})`, builder);
                     }
                 }
 
@@ -618,7 +620,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
 
                 // any abstract member should not left unimplemented now
                 if (isCopy && modifiers.members.is('abstract', memberName)) {
-                    throw new _Exception('InvalidDefinition', `Abstract member is not implemented. (${memberName})`);
+                    throw _Exception.NotImplemented(`Abstract member is not implemented. (${memberName})`, builder);
                 }
 
                 // apply enumerate attribute now
@@ -661,7 +663,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                                              typeof exposed_objMeta.dispose === 'function')) {
                 // its ok, continue below
             } else {
-                throw new _Exception('NotImplemented', `Interface member is not implemented. (${memberName})`); 
+                throw _Exception.NotImplemented(`Interface member is not implemented. (${interface_being_validated[meta].name + ':' + memberName})`, builder); 
             }
         }
 
@@ -693,20 +695,20 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         if (['func', 'prop', 'event'].indexOf(memberType) !== -1 && memberName.startsWith('_')) { new _Exception('InvalidName', `Name is not valid. (${memberName})`); } // this is for some future usage, where internal names can be added starting with '_'
         switch(memberType) {
             case 'func':
-                if (!cfg.func) { throw new _Exception('InvalidOperation', `Function cannot be defined on this type. (${def.name})`); }
+                if (!cfg.func) { throw _Exception.InvalidOperation(`Function cannot be defined on this type. (${def.name})`, builder); }
                 break;
             case 'prop':
-                if (!cfg.prop) { throw new _Exception('InvalidOperation', `Property cannot be defined on this type. (${def.name})`); }
+                if (!cfg.prop) { throw _Exception.InvalidOperation(`Property cannot be defined on this type. (${def.name})`, builder); }
                 break;
             case 'event':
-                if (!cfg.event) { throw new _Exception('InvalidOperation', `Event cannot be defined on this type. (${def.name})`); }
+                if (!cfg.event) { throw _Exception.InvalidOperation(`Event cannot be defined on this type. (${def.name})`, builder); }
                 break;
             case 'construct':
-                if (!cfg.construct) { throw new _Exception('InvalidOperation', `Constructor cannot be defined on this type. (${def.name})`); }
+                if (!cfg.construct) { throw _Exception.InvalidOperation(`Constructor cannot be defined on this type. (${def.name})`, builder); }
                 memberType = 'func'; 
                 break;
             case 'dispose':
-                if (!cfg.dispose) { throw new _Exception('InvalidOperation', `Dispose cannot be defined on this type. (${def.name})`); }
+                if (!cfg.dispose) { throw _Exception.InvalidOperation(`Dispose cannot be defined on this type. (${def.name})`, builder); }
                 memberType = 'func'; 
                 break;
         }
@@ -736,7 +738,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         
         // abstract check
         if (cfg.inheritance && modifiers.members.probe('abstract', memberName).current() && memberDef.ni !== true) {
-            throw new _Exception('InvalidDefinition', `Abstract member must point to nip, nim or nie values. (${memberName})`);
+            throw _Exception.InvalidDefinition(`Abstract member must point to nip, nim or nie values. (${memberName})`, builder);
         }
 
         // for a static type, constructor arguments check and dispose check
@@ -744,38 +746,38 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         if (the_attr && cfg.static) {
             if (TypeMeta.isStatic()) {
                 if (cfg.construct && memberName === _constructName && memberDef.length !== 0) {
-                    throw new _Exception('InvalidDefinition', `Static constructors cannot have arguments. (construct)`);
+                    throw _Exception.InvalidDefinition(`Static constructors cannot have arguments. (construct)`, builder);
                 }
                 if (cfg.dispose && memberName === _disposeName) {
-                    throw new _Exception('InvalidDefinition', `Static types cannot have destructors. (dispose)`);
+                    throw _Exception.InvalidDefinition(`Static types cannot have destructors. (dispose)`, builder);
                 }        
             } else {
                 if (cfg.construct && memberName === _constructName) {
-                    throw new _Exception('InvalidDefinition', `Non-static types cannot have static constructors. (construct)`);
+                    throw _Exception.InvalidDefinition(`Non-static types cannot have static constructors. (construct)`, builder);
                 }
                 if (cfg.dispose && memberName === _disposeName) {
-                    throw new _Exception('InvalidDefinition', `Static destructors cannot be defined. (dispose)`);
+                    throw _Exception.InvalidDefinition(`Static destructors cannot be defined. (dispose)`, builder);
                 }        
             }
         }
 
         // dispose arguments check always
         if (cfg.dispose && memberName === _disposeName && memberDef.length !== 0) {
-            throw new _Exception('InvalidDefinition', `Destructor method cannot have arguments. (dispose)`);
+            throw _Exception.InvalidDefinition(`Destructor method cannot have arguments. (dispose)`, builder);
         }
         
         // duplicate check, if not overriding 
         if (typeof obj[memberName] !== 'undefined' && 
             (!cfg.inheritance || (cfg.inheritance && !modifiers.members.probe('override', memberName).current()))) {
-                throw new _Exception('InvalidOperation', `Member with this name is already defined. (${memberName})`); 
+                throw _Exception.Duplicate(memberName, builder); 
         }
 
         // overriding member must be present and of the same type
         if (cfg.inheritance && modifiers.members.probe('override', memberName).current()) {
             if (typeof obj[memberName] === 'undefined') {
-                throw new _Exception('InvalidOperation', `Member not found to override. (${memberName})`); 
+                throw _Exception.InvalidDefinition(`Member not found to override. (${memberName})`, builder); 
             } else if (modifiers.members.type(memberName) !== memberType) {
-                throw new _Exception('InvalidOperation', `Overriding member type is invalid. (${memberName})`); 
+                throw _Exception.InvalidDefinition(`Overriding member type is invalid. (${memberName})`, builder); 
             }
         }
 
@@ -783,17 +785,17 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         if (cfg.static && (modifiers.members.probe('static', memberName).current() || TypeMeta.isStatic())) {
             if (memberType === 'func') {
                 if (isArrow(memberDef)) { 
-                    throw new _Exception('InvalidOperation', `Static functions cannot be defined as an arrow function. (${memberName})`); 
+                    throw _Exception.InvalidDefinition(`Static functions cannot be defined as an arrow function. (${memberName})`, builder); 
                 }
             } else if (memberType === 'prop') {
                 if (memberDef.get && typeof memberDef.get === 'function') {
                     if (isArrow(memberDef)) { 
-                        throw new _Exception('InvalidOperation', `Static property getters cannot be defined as an arrow function. (${memberName})`); 
+                        throw _Exception.InvalidDefinition(`Static property getters cannot be defined as an arrow function. (${memberName})`, builder); 
                     }
                 }
                 if (memberDef.set && typeof memberDef.set === 'function') {
                     if (isArrow(memberDef)) { 
-                        throw new _Exception('InvalidOperation', `Static property setters cannot be defined as an arrow function. (${memberName})`); 
+                        throw _Exception.InvalidDefinition(`Static property setters cannot be defined as an arrow function. (${memberName})`, builder); 
                     }
                 }
             }
@@ -802,14 +804,14 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         // session/state properties cannot have custom getter/setter and also relevant port must be configured
         if (cfg.storage && attrs.members.probe('session', memberName).current()) {
             if (memberDef.get && typeof memberDef.get === 'function') {
-                throw new _Exception('InvalidOperation', `Session properties cannot be defined with a custom getter/setter. (${memberName})`); 
+                throw _Exception.InvalidDefinition(`Session properties cannot be defined with a custom getter/setter. (${memberName})`, builder); 
             }
         }
         if (cfg.storage && attrs.members.probe('state', memberName).current()) {
             if (memberDef.get && typeof memberDef.get === 'function') {
-                throw new _Exception('InvalidOperation', `State properties cannot be defined with a custom getter/setter. (${memberName})`); 
+                throw _Exception.InvalidDefinition(`State properties cannot be defined with a custom getter/setter. (${memberName})`, builder); 
             }
-            if (!_localStorage) { throw new _Exception('NotConfigured', 'Port is not configured. (localStorage)'); }
+            if (!_localStorage) { throw _Exception.InvalidOperation('Port is not configured. (localStorage)', builder); }
         }
 
         // return (when all was a success)
@@ -837,14 +839,14 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         bindingHost = obj,
         uniqueName = def.name + '_' + memberName,
         isStorageHost = false,
-        _injections = [];     
+        _injections = null;     
 
         // NOTE: no check for isOverriding, because properties are always fully defined
 
         // define or redefine
         if (memberDef && (memberDef.get || memberDef.set)) { // normal property, cannot be static because static cannot have custom getter/setter
             if (!cfg.propGetterSetter) {
-                throw new _Exception('InvalidOperation', `Getter/Setter are not allowed. (${memberName})`);
+                throw _Exception.InvalidDefinition(`Getter/Setter are not allowed. (${memberName})`, builder);
             }
             if (memberDef.get && typeof memberDef.get === 'function') {
                 _getter = memberDef.get;
@@ -861,15 +863,15 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             }.bind(bindingHost);
             _member.set = function(value) {
                 if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
-                if (_isReadOnly && !bindingHost[meta].constructing) { throw new _Exception('InvalidOperation', `Property is readonly. (${memberName})`); } // readonly props can be set only when object is being constructed 
-                if (type_attr && type_attr.args[0] && !_is(value, type_attr.args[0])) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (value)'); } // type attribute is defined
+                if (_isReadOnly && !bindingHost[meta].constructing) { throw _Exception.InvalidOperation(`Property is readonly. (${memberName})`, builder); } // readonly props can be set only when object is being constructed 
+                if (type_attr && type_attr.args[0] && !_is(value, type_attr.args[0])) { throw _Exception.InvalidArgument('value', builder); } // type attribute is defined
                 return _setter.apply(bindingHost, [value]);
             }.bind(bindingHost);
         } else { // direct value
             if (cfg.static && _isStatic) {
                 propHost = params.staticInterface[meta].props; // property values are stored on static interface itself in  .[meta].props
                 bindingHost = params.staticInterface; // binding to static interface, so with 'this' object internals are not accessible
-                if (type_attr && type_attr.args[0] && !_is(memberDef, type_attr.args[0])) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (value)'); } // type attribute is defined
+                if (type_attr && type_attr.args[0] && !_is(memberDef, type_attr.args[0])) { throw _Exception.InvalidArgument('value', builder); } // type attribute is defined
                 propHost[uniqueName] = memberDef;
             } else if (cfg.storage && (_isSession || _isState)) {
                 isStorageHost = true;
@@ -882,12 +884,12 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                 }
                 addDisposable((_isSession ? 'session' : 'state'), uniqueName);
                 if (!propHost.key(uniqueName)) { 
-                    if (type_attr && type_attr.args[0] && !_is(memberDef, type_attr.args[0])) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (value)'); } // type attribute is defined
+                    if (type_attr && type_attr.args[0] && !_is(memberDef, type_attr.args[0])) { throw _Exception.InvalidArgument('value', builder); } // type attribute is defined
                     propHost.setItem(uniqueName, JSON.stringify({value: memberDef})); 
                 }
             } else { // normal value
-                if (type_attr && type_attr.args[0] && !_is(memberDef, type_attr.args[0])) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (value)'); } // type attribute is defined
-                if (cfg.numOnlyProps && typeof memberDef !== 'number') { throw new _Exception('InvalidArgument', 'Value type is invalid.'); } 
+                if (type_attr && type_attr.args[0] && !_is(memberDef, type_attr.args[0])) { throw _Exception.InvalidArgument('value', builder); } // type attribute is defined
+                if (cfg.numOnlyProps && typeof memberDef !== 'number') { throw _Exception.InvalidArgument('value', builder); } 
                 propHost[uniqueName] = memberDef;
             }
             _member.get = function() {
@@ -897,8 +899,8 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             }.bind(bindingHost);
             _member.set = function(value) {
                 if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
-                if (_isReadOnly && !bindingHost[meta].constructing) { throw new _Exception('InvalidOperation', `Property is readonly. (${memberName})`); } // readonly props can be set only when object is being constructed 
-                if (type_attr && type_attr.args[0] && !_is(value, type_attr.args[0])) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (value)'); } // type attribute is defined
+                if (_isReadOnly && !bindingHost[meta].constructing) { throw _Exception.InvalidOperation(`Property is readonly. (${memberName})`, builder); } // readonly props can be set only when object is being constructed 
+                if (type_attr && type_attr.args[0] && !_is(value, type_attr.args[0])) { throw _Exception.InvalidArgument('value', builder); } // type attribute is defined
                 if (isStorageHost) {
                     propHost.setItem(uniqueName, JSON.stringify({value: value}));
                 } else {
@@ -910,13 +912,42 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         // set injected value now
         if (inject_attr && !_isStatic && !isStorageHost) {
             // resolve injections
-            let _injectWhat = inject_attr.args[0],                                          // aliasName || qualifiedTypeName || Type itself || array ot Types // TODO: Map this that container.resolve() can work on all these
+            let _injectWhat = inject_attr.args[0],                                          // aliasName || qualifiedTypeName || Type itself
                 _injectWith = (inject_attr.args.length > 0 ? inject_attr.args[1] : []),     // [..., ...] <- any parameters to pass to constructor of type(s) being injected
                 _injectMany = (inject_attr.args.length > 1 ? inject_attr.args[2] : false);  // true | false <- if multi injection to be done
 
-            _injections = _Container.resolve(_injectWhat, _injectWith, _injectMany);
-            if (!Array.isArray(_injections)) { _injections = [_injections]; }
-
+            let _Type = null;
+            try {
+                switch(_typeOf(_injectWhat)) {
+                    case 'class':
+                    case 'struct':
+                        _Type = _injectWith;
+                        break;
+                    case 'string':
+                        _Type = _getType(_injectWhat);
+                        if (!_Type) {
+                            _injections = _Container.resolve(_injectWhat, _injectWith, _injectMany);
+                            if (!Array.isArray(_injections)) { _injections = [_injections]; }
+                        } else {
+                            if (['class', 'struct'].indexOf(_typeOf(_Type)) === -1) {
+                                throw _Exception.InvalidArgument('inject', builder);
+                            }
+                        }
+                        break;
+                    default:
+                        throw _Exception.InvalidArgument('inject', builder);
+                }
+                if (!_injections && _Type) {
+                    _injections = [];
+                    if (_injectWith.length > 0) {
+                        _injections.push(new _Type(..._injectWith)); 
+                    } else {
+                        _injections.push(new _Type());
+                    }
+                }
+            } catch (err) {
+                throw new _Exception(err, builder);
+            }
             _member.set(_injections); // set injected value now - this includes the case of custom setter
         }
 
@@ -938,7 +969,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                     if (astPath.startsWith('../')) { astPath = astPath.substr(3); }
                     if (astPath.startsWith('./')) { astPath = astPath.substr(2); }
                     if (astPath.startsWith('/')) { astPath = astPath.substr(1); }
-                    resOrAssetData= _getAssembly(def.name) + '/' + astPath;
+                    resOrAssetData= _getAssemblyOf(def.name) + '/' + astPath;
                 }
             }
             if (resOrAssetData) {
@@ -1004,12 +1035,12 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                     if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base or as first, if injected
                     fnArgs.push(resolve);                                           // resolve, reject follows, in async mode
                     fnArgs.push(reject);
-                    if (args_attr && args.attr.args.length > 0) {
-                        let argsObj = _Args(...args.attr.args)(...args);
+                    if (args_attr && args_attr.args.length > 0) {
+                        let argsObj = _Args(...args_attr.args)(...args);
                         if (argsObj.isInvalid) { reject(argsObj.error); return; }
                         fnArgs.push(argsObj);                                       // push a single args processor's result object
                     } else {
-                        fnArgs.concat(args);                                        // add args as is
+                        fnArgs = fnArgs.concat(args);                               // add args as is
                     }
                     return memberDef.apply(bindingHost, fnArgs);
                 }.bind(bindingHost));
@@ -1020,12 +1051,11 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                 let fnArgs = [];
                 if (base) { fnArgs.push(base); }                                // base is always first, if overriding
                 if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base or as first, if injected
-                if (args_attr && args.attr.args.length > 0) {
-                    let argsObj = _Args(...args.attr.args)(...args);
-                    if (argsObj.isInvalid) { throw argsObj.error; }
+                if (args_attr && args_attr.args.length > 0) {
+                    let argsObj = _Args(...args_attr.args)(...args); argsObj.throwOnError(builder);
                     fnArgs.push(argsObj);                                       // push a single args processor's result object
                 } else {
-                    fnArgs.concat(args);                                        // add args as is
+                    fnArgs = fnArgs.concat(args);                               // add args as is
                 }
                 return memberDef.apply(bindingHost, fnArgs);
             }.bind(bindingHost);                  
@@ -1068,7 +1098,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         let _member = null,
             argsProcessorFn = null,
             base = null,
-            fnArgs = null,     
+            fnArgs = null,
             _isOverriding = (cfg.inheritance && modifiers.members.probe('override', memberName).current()), 
             _deprecate_attr = attrs.members.probe('deprecate', memberName).current(),
             _post_attr = attrs.members.probe('post', memberName).current(), // always post as per what is defined here, in case of overriding
@@ -1078,7 +1108,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
 
         // create dispatcher, if not already created
         if (!_member_dispatcher) {
-            _member_dispatcher = new Dispatcher();
+            _member_dispatcher = new Dispatcher(def.name);
             addDisposable('event', _member_dispatcher); // so it can be cleared on dispose
         }
 
@@ -1115,7 +1145,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             if (typeof argsProcessorFn === 'function') { processedArgs = argsProcessorFn(...args); }
 
             // dispatch
-            _member_dispatcher.dispatch(name, processedArgs);
+            _member_dispatcher.dispatch(memberName, processedArgs);
 
             // post, if configured
             if (_post_attr && _post_attr.args.length > 0) { // post always happens for current() configuration, in case of overriding, any post defined on inherited event is lost
@@ -1125,8 +1155,8 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         _member[meta] = Object.freeze({
             processor: argsProcessorFn
         });
-        _member.add = (handler) => { _member_dispatcher.add(name, handler); };
-        _member.remove = (handler) => { _member_dispatcher.remove(name, handler); };
+        _member.add = (handler) => { _member_dispatcher.add(memberName, handler); };
+        _member.remove = (handler) => { _member_dispatcher.remove(memberName, handler); };
         _member.strip = (_exposed_obj) => {
             // returns the stripped version of the event without event raising ability
             let strippedEvent = shallowCopy({}, _member, true, ['strip']);
@@ -1219,7 +1249,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     // construct base object from parent, if applicable
     if (cfg.inheritance) {
         if (params.isTopLevelInstance && !typeDef.staticConstructionCycle && !isNewFromReflector) {
-            if (modifiers.type.probe('abstract').current()) { throw new _Exception('InvalidOperation', `Cannot create instance of an abstract type. (${def.name})`); }
+            if (modifiers.type.probe('abstract').current()) { throw _Exception.InvalidOperation(`Cannot create instance of an abstract type. (${def.name})`, builder); }
         }
 
         // create parent instance, if required, else use passed object as base object
@@ -1228,13 +1258,13 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         if (Parent) {
             ParentMeta = Parent[meta];
             if (ParentMeta.isSealed() || ParentMeta.isSingleton() || ParentMeta.isStatic()) {
-                throw new _Exception('InvalidOperation', `Cannot inherit from a sealed, static or singleton type. (${ParentMeta.name})`); 
+                throw _Exception.InvalidDefinition(`Cannot inherit from a sealed, static or singleton type. (${ParentMeta.name})`, builder); 
             }
             if (ParentMeta.type !== TypeMeta.type) {
-                throw new _Exception('InvalidOperation', `Cannot inherit from another type family. (${ParentMeta.type})`); 
+                throw _Exception.InvalidDefinition(`Cannot inherit from another type family. (${ParentMeta.type})`, builder); 
             }
             if (ParentMeta.context && ParentMeta.context.isUnloaded()) {
-                throw new _Exception('InvalidOperation', `Parent context is not active anymore. (${ParentMeta.name})`); 
+                throw _Exception.InvalidOperation(`Parent context is not active anymore. (${ParentMeta.name})`, builder); 
             }
 
             // construct base object (the inherited one)
@@ -1247,21 +1277,21 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         } else {
             // check for own context
             if (TypeMeta.context && TypeMeta.context.isUnloaded()) {
-                throw new _Exception('InvalidOperation', `Type context is not active anymore. (${TypeMeta.name})`); 
+                throw _Exception.InvalidOperation(`Type context is not active anymore. (${TypeMeta.name})`, builder); 
             }
         }
     }
 
-     // set object meta
-     if (typeof obj[meta] === 'undefined') {
-         // these will always be same, since inheritance happen in same types, and these are defined at a type configuration level, so these will always be same and should behave just like the next set of definitions here
+    // set object meta
+    if (typeof obj[meta] === 'undefined') {
+        // these will always be same, since inheritance happen in same types, and these are defined at a type configuration level, so these will always be same and should behave just like the next set of definitions here
         obj[meta] = {};
         objMeta = obj[meta];
         if (cfg.dispose) {
             objMeta.disposables = []; // can have {type: 'session', data: 'unique name'} OR {type: 'state', data: 'unique name'} OR {type: 'prop', data: 'prop name'} OR {type: 'event', data: dispatcher object} OR {type: 'handler', data: {name: 'event name', handler: exact func that was attached}}
         }
-     }
-     if (cfg.mixins) {
+    }
+    if (cfg.mixins) {
         def.mixins = cfg.params.mixins; // mixin types that were applied to this type, will be deleted after apply
     }
     if (cfg.interfaces) {
@@ -1273,7 +1303,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         if (cfg.new) {
             objMeta.isInstanceOf = (name) => {
                 if (name[meta]) { name = name[meta].name; } // could be the 'Type' itself
-                if (!name) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+                if (!name) { throw _Exception.InvalidArgument('name', builder); }
                 return (TypeMeta.name === name) || TypeMeta.isDerivedFrom(name); 
             };
         }
@@ -1329,7 +1359,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                 addMember(name, memberType, value);
             } else {
                 // a function or event is being redefined or noop is being redefined
-                if (typeof value === 'function') { throw new _Exception('InvalidOperation', `Redefinition of members is not allowed. (${name})`); }
+                if (typeof value === 'function') { throw _Exception.InvalidOperation(`Redefinition of members is not allowed. (${name})`, builder); }
 
                 // allow setting property values
                 obj[name] = value;
@@ -1514,14 +1544,14 @@ const builder = (cfg) => {
     }
 
     // type name and namespace validations
-    if (!cfg.params.typeName || cfg.params.typeName.indexOf('.') !== -1) { throw  `Type name is invalid. (${cfg.params.typeName})`; } // dots are not allowed in names
+    if (!cfg.params.typeName || cfg.params.typeName.indexOf('.') !== -1) { throw _Exception.InvalidDefinition(`Type name is invalid. (${cfg.params.typeName})`, builder); } // dots are not allowed in names
     // peer ns attribute on type and if found merge it with name
     let ns_attr = _attr.get('ns'),
         ns = ns_attr ? ns_attr.args[0] : '';
     if (ns) {
         switch(ns) {
             case '(auto)':  // this is a placeholder that gets replaced by assembly builder with dynamic namespace based on folder structure, so if is it left, it is wrong
-                throw `Namespace '(auto)' should be used only when bundling the type in an assembly. (${ns})`;
+                throw _Exception.InvalidDefinition(`Namespace '(auto)' should be used only when bundling the type in an assembly. (${ns})`, builder);
             case '(root)':  // this is mark to instruct builder that register type at root namespace
                 break; // go on
             default: // anything else
@@ -1568,11 +1598,11 @@ const builder = (cfg) => {
                 return buildTypeInstance(cfg, _Object, {});
             };            
         } else { // mixin
-            _Object = function() {
+            _Object = function(...args) {
                 if (new.target) { // called with new which is not allowed
-                    throw _Exception('NewNotAllowed', `Cannot construct. (${cfg.params.typeName})`, _Object);
+                    throw _Exception.InvalidOperation(`Construction cannot be done for this type. (${cfg.params.typeName})`, _Object);
                 } else {
-                    cfg.params.factory.apply(this);
+                    cfg.params.factory.apply(this, ...args);
                 }
             }
         }
@@ -1611,7 +1641,7 @@ const builder = (cfg) => {
         _ObjectMeta.isSealed = () => { return modifiers.type.probe('sealed').current() ? true : false; };
         _ObjectMeta.isDerivedFrom = (name) => { 
             if (name[meta]) { name = name[meta].name; }
-            if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+            if (typeof name !== 'string') { throw _Exception.InvalidArgument('name', _ObjectMeta.isDerivedFrom); }
             let result = false,
                 prv = cfg.params.inherits; // look from parent onwards
             if (!result) {
@@ -1646,7 +1676,7 @@ const builder = (cfg) => {
         _ObjectMeta.mixins = cfg.params.mixins; // mixin types that were applied to this type
         _ObjectMeta.isMixed = (name) => {
             if (name[meta]) { name = name[meta].name; }
-            if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+            if (typeof name !== 'string') { throw _Exception.InvalidArgument('name', _ObjectMeta.isMixed); }
             let result = false,
                 prv = _Object; // look from this itself
             while(true) { // eslint-disable-line no-constant-condition
@@ -1662,7 +1692,7 @@ const builder = (cfg) => {
         _ObjectMeta.interfaces = cfg.params.interfaces,     
         _ObjectMeta.isImplements = (name) => {
             if (name[meta]) { name = name[meta].name; }
-            if (typeof name !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (name)'); }
+            if (typeof name !== 'string') { throw _Exception.InvalidArgument('name', _ObjectMeta.isImplements); }
             let result = false,
                 prv = _Object; // look from this itself
             while(true) { // eslint-disable-line no-constant-condition
@@ -1687,10 +1717,10 @@ const builder = (cfg) => {
     // validations
     if (cfg.static && modifiers.type.probe('static').current()) {
         if (cfg.params.interfaces.length > 0) {
-            throw _Exception('InvalidOperation', 'Static types cannot implement interfaces.');
+            throw _Exception.InvalidDefinition('Static types cannot implement interfaces.', builder);
         }
         if (cfg.params.mixins.length > 0) {
-            throw _Exception('InvalidOperation', 'Static types cannot implement mixins.');
+            throw _Exception.InvalidDefinition('Static types cannot implement mixins.', builder);
         }
     }    
 

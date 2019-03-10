@@ -29,6 +29,7 @@
         disposers = [],
         options = {},
         flairTypes = ['class', 'enum', 'interface', 'mixin', 'struct'],
+        flairInstances = ['instance', 'sinstance'],
         argsString = '';
 
     // read symbols from environment
@@ -81,12 +82,15 @@
     <!-- inject: ./(bundle)/types/support/noop.js -->   
     <!-- inject: ./(bundle)/types/support/nip.js -->   
     <!-- inject: ./(bundle)/types/support/nim.js -->   
+    <!-- inject: ./(bundle)/types/support/Exception.js -->  
+    <!-- inject: ./(bundle)/types/support/general.js -->  
+    <!-- inject: ./(bundle)/types/get/typeOf.js -->   
+    <!-- inject: ./(bundle)/types/check/is.js --> 
+    <!-- inject: ./(bundle)/types/support/args.js -->   
     <!-- inject: ./(bundle)/types/support/event.js -->   
     <!-- inject: ./(bundle)/types/support/nie.js -->   
-    <!-- inject: ./(bundle)/types/support/Exception.js -->  
     <!-- inject: ./(bundle)/types/support/Dispatcher.js -->
     <!-- inject: ./(bundle)/port/port.js -->
-    <!-- inject: ./(bundle)/types/support/general.js -->  
 
     <!-- inject: ./(bundle)/assembly/AssemblyLoadContext.js -->  
     <!-- inject: ./(bundle)/assembly/Assembly.js -->  
@@ -98,16 +102,15 @@
 
     <!-- inject: ./(bundle)/types/get/getAttr.js -->
     <!-- inject: ./(bundle)/types/get/getAssembly.js -->   
+    <!-- inject: ./(bundle)/types/get/getAssemblyOf.js -->   
     <!-- inject: ./(bundle)/types/get/getContext.js -->   
     <!-- inject: ./(bundle)/types/get/getResource.js -->  
     <!-- inject: ./(bundle)/types/get/getType.js -->   
-    <!-- inject: ./(bundle)/types/get/typeOf.js -->   
     <!-- inject: ./(bundle)/types/get/getTypeOf.js -->    
     <!-- inject: ./(bundle)/types/get/ns.js -->    
     <!-- inject: ./(bundle)/types/check/isDerivedFrom.js --> 
     <!-- inject: ./(bundle)/types/check/isInstanceOf.js -->  
     <!-- inject: ./(bundle)/types/check/as.js --> 
-    <!-- inject: ./(bundle)/types/check/is.js --> 
     <!-- inject: ./(bundle)/types/check/isComplies.js -->  
     <!-- inject: ./(bundle)/types/check/isImplements.js -->   
     <!-- inject: ./(bundle)/types/check/isMixed.js --> 
@@ -116,7 +119,6 @@
     <!-- inject: ./(bundle)/di/include.js -->  
     <!-- inject: ./(bundle)/types/lifecycle/dispose.js -->  
     <!-- inject: ./(bundle)/types/lifecycle/using.js -->   
-    <!-- inject: ./(bundle)/types/support/args.js -->   
     <!-- inject: ./(bundle)/attributes/attr.js -->  
 
     <!-- inject: ./(bundle)/types/support/builder.js -->  

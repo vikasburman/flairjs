@@ -3,7 +3,7 @@
  * @description Constructs a Struct type
  * @example
  *  Struct(name, factory)
- *  Struct(name, implementations, factory)
+ *  Struct(name, mixints, factory)
  * @params
  *  name: string - name of the struct
  *                 >> simple, e.g.,
@@ -27,8 +27,7 @@
  */
 const _Struct = (name, mixints, factory) => {
     let args = _Args('name: string, factory: cfunction', 
-                     'name: string, mixints: array, factory: cfunction')(name, mixints, factory);
-    if (args.isInvalid) { throw args.error; }
+                     'name: string, mixints: array, factory: cfunction')(name, mixints, factory); args.throwOnError(_Struct);
 
     // builder config
     let cfg = {

@@ -24,8 +24,7 @@
  * @returns type - constructed flair interface type
  */
 const _Interface = (name, factory) => {
-    let args = _Args('name: string, factory: cfunction')(name, factory);
-    if (args.isInvalid) { throw args.error; }
+    let args = _Args('name: string, factory: cfunction')(name, factory); args.throwOnError(_Interface);
 
     // builder config
     let cfg = {

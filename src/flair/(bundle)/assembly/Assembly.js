@@ -23,12 +23,12 @@ const Assembly = function (ado, alc) {
     // types
     this.types = () => { return ado.types.slice(); }
     this.getType = (qualifiedName) => {
-        if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${qualifiedName})`); }
-        if (ado.types.indexOf(qualifiedName) === -1) { throw new _Exception('NotFound', `Type is not available in this assembly. (${qualifiedName})`); }
+        if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.getType); }
+        if (ado.types.indexOf(qualifiedName) === -1) { throw _Exception.NotFound(qualifiedName, this.getType); }
         return this.context.getType(qualifiedName);
     };
     this.getTypes = (intf) => {
-        if (['string', 'interface'] !== _typeOf(intf)) { throw new _Exception('InvalidArgument', `Argument type is not valid. (${intf})`); }
+        if (['string', 'interface'] !== _typeOf(intf)) { throw _Exception.InvalidArgument('intf', this.getTypes); }
         let result = [];
         for(let qualifiedName of ado.types) {
             try {
@@ -36,7 +36,7 @@ const Assembly = function (ado, alc) {
                 if (_isImplements(Type, intf)) {
                     result.push(Type);
                 }
-            } catch (e) {
+            } catch (err) {
                 // ignore as for incompatible types it will throw, and that's ok in this context
             }
         }
@@ -46,8 +46,8 @@ const Assembly = function (ado, alc) {
     // resources
     this.resources = () => { return ado.resources.slice(); }
     this.getResource = (qualifiedName) => {
-        if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${qualifiedName})`); }
-        if (ado.resources.indexOf(qualifiedName) === -1) { throw new _Exception('NotFound', `Resource is not available in this assembly. (${qualifiedName})`); }
+        if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.getResource); }
+        if (ado.resources.indexOf(qualifiedName) === -1) { throw _Exception.NotFound(qualifiedName, this.getResource); }
         return this.context.getResource(qualifiedName);
     };
 
@@ -55,11 +55,12 @@ const Assembly = function (ado, alc) {
     this.assets = () => { return ado.assets.slice(); }
     this.assetsRoot = this.file.replace('.js', '/');
     this.getAsset = (file) => { 
-        if (typeof file !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${file})`); }
+        if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.getAsset); }
+
         // file: will be in local context of assembly, e.g., <asmFolder>/(assets)/myCSS.css will be referred everywhere as './myCSS.css'
         // passing ./myCSS.css to this method will return './<asmFolder>/myCSS.css'
         let astFile = file.replace('./', this.assetsRoot);
-        if (ado.assets.indexOf(file) === -1) { throw new _Exception('NotFound', `Asset is not available for this assembly. (${astFile})`); }
+        if (ado.assets.indexOf(file) === -1) {  throw _Exception.NotFound(astFile, this.getAsset); }
         return astFile;        
     };
 };

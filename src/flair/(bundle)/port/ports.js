@@ -9,20 +9,20 @@ const __sessionStorage = (env) => {
             let nodeSessionStorage = function() {
                 let keys = {};
                 this.key = (key) => { 
-                    if (!key) { throw _Exception.invalidArgument('key'); }
+                    if (!key) { throw _Exception.InvalidArgument('key', this.key); }
                     return (keys.key ? true : false); 
                 };
                 this.getItem = (key) => { 
-                    if (!key) { throw _Exception.invalidArgument('key'); }
-                    return keys.key || null 
+                    if (!key) { throw _Exception.InvalidArgument('key', this.getItem); }
+                    return keys.key || null;
                 };
-                this.setItem = (key, value) => { 
-                    if (!key) { throw _Exception.invalidArgument('key'); }
-                    if (typeof value === 'undefined') { throw _Exception.invalidArgument('value'); }
-                    keys[key] = value; 
+                this.setItem = (key, value) => {
+                    if (!key) { throw _Exception.InvalidArgument('key', this.setItem); }
+                    if (typeof value === 'undefined') { throw _Exception.InvalidArgument('value', this.setItem); }
+                    keys[key] = value;
                 };
                 this.removeItem = (key) => { 
-                    if (!key) { throw _Exception.invalidArgument('key'); }
+                    if (!key) { throw _Exception.InvalidArgument('key', this.removeItem); }
                     delete keys[key];
                 };
                 this.clear = () => { 
@@ -41,7 +41,7 @@ _Port.define('sessionStorage', ['key', 'getItem', 'setItem', 'removeItem', 'clea
 // localStorage factory
 const __localStorage = (env) => {
     if (env.isServer) {
-        console.log("Use of 'state' is not support on server. Using 'session' instead."); // eslint-disable-line no-console
+        console.warn("Use of 'state' is not support on server. Using 'session' instead."); // eslint-disable-line no-console
         return __sessionStorage(env);
     } else { // client
         return env.global.localStorage;
@@ -51,29 +51,39 @@ _Port.define('localStorage', ['key', 'getItem', 'setItem', 'removeItem', 'clear'
 
 // serverModule factory
 const __serverModule = (env) => { // eslint-disable-line no-unused-vars
-    return {
+    let funcs = {
         require: (module) => {
             return new Promise((resolve, reject) => {
+                if (typeof module !== 'string') { reject(_Exception.InvalidArgument('module')); return; }
+
                 // both worker and normal scenarios, same loading technique
                 try {
                     resolve(require(module));
-                } catch (e) {
-                    reject(e);
+                } catch (err) {
+                    reject(new _Exception(err));
                 }
             });
         },
         undef: (module) => {
-            delete require.cache[require.resolve(module)]
+            if (typeof module !== 'string') { throw _Exception.InvalidArgument('module', funcs.undef); }
+            try {
+                delete require.cache[require.resolve(module)]
+            } catch (err) {
+                throw new _Exception(err, funcs.undef);
+            }
         }
-    }
+    };
+    return funcs;
 };
 _Port.define('serverModule', ['require', 'undef'], __serverModule);
 
 // clientModule factory
 const __clientModule = (env) => {
-    return {
+    let funcs = {
         require: (module) => {
             return new Promise((resolve, reject) => {
+                if (typeof module !== 'string') { reject(_Exception.InvalidArgument('module')); return; }
+
                 let ext = module.substr(module.lastIndexOf('.') + 1).toLowerCase();
                 try {
                     if (typeof env.global.require !== 'undefined') { // if requirejs is available
@@ -83,8 +93,8 @@ const __clientModule = (env) => {
                             try {
                                 env.global.importScripts(module); // sync call
                                 resolve(); // TODO: Check how we can pass the loaded 'exported' object of module to this resolve.
-                            } catch (e) {
-                                reject(e);
+                            } catch (err) {
+                                reject(new _Exception(err));
                             }
                         } else { // browser
                             let js = env.global.document.createElement('script');
@@ -98,23 +108,26 @@ const __clientModule = (env) => {
                             js.onload = () => { 
                                 resolve(); // TODO: Check how we can pass the loaded 'exported' object of module to this resolve.
                             };
-                            js.onerror = (e) => {
-                                reject(e);
+                            js.onerror = (err) => {
+                                reject(new _Exception(err));
                             };
                             env.global.document.head.appendChild(js);
                         }
                     }
-                } catch(e) {
-                    reject(e);
+                } catch(err) {
+                    reject(new _Exception(err));
                 }
             });
         },
         undef: (module) => {
+            if (typeof module !== 'string') { throw _Exception.InvalidArgument('module', funcs.undef); }
             if (typeof env.global.requirejs !== 'undefined') { // if requirejs library is available
                 env.global.requirejs.undef(module);
-            } // else no default way to uncache - for other environments, this port can be connected to an external handler
+            } else {
+                console.warn("No approach is available to undef a loaded module. Connect clientModule port to an external handler."); // eslint-disable-line no-console
+            }
         }
-    }
+    };
 };
 _Port.define('clientModule', ['require', 'undef'], __clientModule);
 
@@ -122,6 +135,8 @@ _Port.define('clientModule', ['require', 'undef'], __clientModule);
 const __serverFile = (env) => { // eslint-disable-line no-unused-vars
     return (file) => {
         return new Promise((resolve, reject) => {
+            if (typeof file !== 'string') { reject(_Exception.InvalidArgument('file')); return; }
+
             let ext = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
             try {
                 let httpOrhttps = null,
@@ -139,16 +154,18 @@ const __serverFile = (env) => { // eslint-disable-line no-unused-vars
                             try {
                                 let data = JSON.parse(body);
                                 resolve(data);
-                            } catch (e) {
-                                reject(e);
+                            } catch (err) {
+                                reject(new _Exception(err));
                             }
                         } else { // everything else is a text
                             resolve(body);
                         }
                     });
-                }).on('error', reject);
-            } catch(e) {
-                reject(e);
+                }).on('error', (err) => {
+                    reject(new _Exception(err));
+                });
+            } catch(err) {
+                reject(new _Exception(err));
             }
         });
     };
@@ -159,19 +176,27 @@ _Port.define('serverFile', null, __serverFile);
 const __clientFile = (env) => { // eslint-disable-line no-unused-vars
     return (file) => {
         return new Promise((resolve, reject) => {
+            if (typeof file !== 'string') { reject(_Exception.InvalidArgument('file')); return; }
+
             let ext = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
             fetch(file).then((response) => {
                 if (response.status !== 200) {
-                    reject(response.status);
+                    reject(_Exception.OperationFailed(file, response.status));
                 } else {
                     let contentType = response.headers['content-type'];
                     if (ext === 'json' || /^application\/json/.test(contentType)) { // special case of JSON
-                        response.json().then(resolve).catch(reject);
+                        response.json().then(resolve).catch((err) => {
+                            reject(new _Exception(err));
+                        });
                     } else { // everything else is a text
-                        response.text().then(resolve).catch(reject);
+                        response.text().then(resolve).catch((err) => {
+                            reject(new _Exception(err));
+                        });
                     }
                 }
-            }).catch(reject);
+            }).catch((err) => {
+                reject(new _Exception(err));
+            });
         });
     };
 };

@@ -6,32 +6,36 @@
  * @example
  *  isInstanceOf(obj, type)
  * @params
- *  obj: object - flair object that needs to be checked
- *  type: string OR class OR struct OR interface OR mixin - type to be checked for, it can be following:
- *                         > fully qualified type name
- *                         > type reference
+ *  obj: object - flair object instance that needs to be checked
+ *  Type: flair type of string
  * @returns boolean - true/false
  */ 
-const _isInstanceOf = (obj, type) => {
+const _isInstanceOf = (obj, Type) => {
+    // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
     let _objType = _typeOf(obj),
-        _typeType = _typeOf(type),
+        _typeType = _typeOf(Type),
         isMatched = false;
-    if (['instance', 'sinstance'].indexOf(_objType) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
-    if (['string', 'class', 'interface', 'struct', 'mixin'].indexOf(_typeType) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
+    if (flairInstances.indexOf(_objType) === -1) { throw _Exception.InvalidArgument('obj', _isInstanceOf); }
+    if (flairTypes.indexOf(_typeType) === -1 && _typeType !== 'string') { throw _Exception.InvalidArgument('Type', _isInstanceOf); }
 
     let objMeta = obj[meta];
     switch(_typeType) {
         case 'class':
+            isMatched = objMeta.isInstanceOf(Type); 
+            if (!isMatched) {
+                isMatched = objMeta.Type[meta].isDerivedFrom(Type);
+            }
+            break;
         case 'struct':
-            isMatched = objMeta.isInstanceOf(type); break;
+            isMatched = objMeta.isInstanceOf(Type); break;
         case 'interface':
-            isMatched = objMeta.isImplements(type); break;
+            isMatched = objMeta.isImplements(Type); break;
         case 'mixin':
-            isMatched = objMeta.isMixed(type); break;
+            isMatched = objMeta.isMixed(Type); break;
         case 'string':
-            isMatched = objMeta.isInstanceOf(type);
-            if (!isMatched && typeof objMeta.isImplements === 'function') { isMatched = objMeta.isImplements(type); }
-            if (!isMatched && typeof objMeta.isMixed === 'function') { isMatched = objMeta.isMixed(type); }
+            isMatched = objMeta.isInstanceOf(Type);
+            if (!isMatched && typeof objMeta.isImplements === 'function') { isMatched = objMeta.isImplements(Type); }
+            if (!isMatched && typeof objMeta.isMixed === 'function') { isMatched = objMeta.isMixed(Type); }
             break;
     }
 

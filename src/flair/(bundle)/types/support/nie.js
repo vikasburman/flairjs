@@ -6,7 +6,7 @@
  * @params
  * @returns
  */ 
-const _nie = _event(() => { throw new _Exception('NotImplemented', 'Event is not implemented.'); });
+const _nie = _event(() => { throw _Exception.NotImplemented('event', _nie); });
 _nie.ni = true; // a special flag to quick check that this is a not-implemented object
 
 // attach to flair

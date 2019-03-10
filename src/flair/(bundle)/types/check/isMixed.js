@@ -11,8 +11,10 @@
  * @returns boolean - true/false
  */ 
 const _isMixed = (obj, mixin) => {
-    if (['instance', 'class', 'sinstance', 'struct'].indexOf(_typeOf(obj)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
-    if (['string', 'mixin'].indexOf(_typeOf(mixin)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (mixin)'); }
+    // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
+    if (['class', 'struct', 'instance', 'sinstance'].indexOf(_typeOf(obj)) === -1) { throw _Exception.InvalidArgument('obj', _isMixed); }
+    if (['string', 'mixin'].indexOf(_typeOf(mixin)) === -1) {  throw _Exception.InvalidArgument('mixin', _isMixed); }
+
     return obj[meta].isMixed(mixin);
 };
 

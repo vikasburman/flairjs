@@ -9,7 +9,10 @@
  * @returns void
  */ 
 const _dispose = (obj) => {
-    if (typeof obj === 'boolean' && obj === true) { // special call to dispose flair
+    let args = _Args('obj: instance', 
+                     'obj: boolean')(obj); args.throwOnError(_dispose);
+
+    if (args.index === 1 && obj === true) { // special call to dispose flair
         // dispose anything that builder engine might need to do
         builder_dispose();
 
@@ -17,10 +20,7 @@ const _dispose = (obj) => {
         disposers.forEach(disposer => { disposer(); });
         disposers.length = 0;        
     } else { // regular call
-        if (_typeOf(obj) !== 'instance') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
-
-        // call disposer
-        if (typeof obj[meta].dispose === 'function') {
+        if (typeof obj[meta].dispose === 'function') { // call disposer
             obj[meta].dispose();
         }
     }

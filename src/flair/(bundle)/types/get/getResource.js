@@ -8,7 +8,8 @@
  * @returns object - resource object's data
  */ 
 const _getResource = (qualifiedName) => { 
-    if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (qualifiedName)'); }
+    let args = _Args('qualifiedName: string')(qualifiedName); args.throwOnError(_getResource);
+    
     let res = _AppDomain.context.getResource(qualifiedName) || null;
     return (res ? res.data : null);
 };

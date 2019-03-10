@@ -7,8 +7,9 @@
  *  Type: type - flair type whose context is required
  * @returns object - assembly load context object where this type is loaded
  */ 
-const _getContext = (Type) => { 
-    if (!_is(Type, 'flair')) { throw new _Exception('InvalidArgument', 'Argument type is not valid. (Type)'); }
+const _getContext = (Type) => {
+    let args = _Args('Type: flairtype')(Type); args.throwOnError(_getContext);
+
     return Type[meta].context;
 };
 

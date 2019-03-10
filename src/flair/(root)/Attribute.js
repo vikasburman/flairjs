@@ -5,6 +5,7 @@
 $$('abstract');
 $$('ns', '(auto)');
 Class('(auto)', function() {
+    $$('virtual');
     this.construct = (args) => {
         this.args = args;
     };
@@ -50,6 +51,7 @@ Class('(auto)', function() {
     *                                  (((<name1> || <name2>) && (<name1> || <name2>)) || <name3>)
     * 
     **/
+    $$('readonly');
     this.constraints = '';
 
     /** 

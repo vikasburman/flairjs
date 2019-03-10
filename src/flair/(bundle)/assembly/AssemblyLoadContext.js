@@ -39,9 +39,8 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         }
     };
     this.current = () => {
-        if (this.isUnloaded()) { 
-            throw 'Unloaded'; // TODO: fix
-        }        
+        if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.current); }
+
         if (currentContexts.length === 0) {
             return defaultLoadContext || this; // the first content created is the default context, so in first case, it will come as null, hence return this
         } else { // return last added context
@@ -58,9 +57,8 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
 
      // types
     this.registerType = (Type) => {
-        if (this.isUnloaded()) { 
-            throw 'Unloaded'; // TODO: fix
-        }        
+        if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.registerType); }
+
         // certain types are built as instances, like interface and enum
         let name = '',
             type = '',
@@ -74,7 +72,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         }
 
         // only valid types are allowed
-        if (flairTypes.indexOf(type) === -1) { throw new _Exception('InvalidArgument', `Type is not valid.`); }
+        if (flairTypes.indexOf(type) === -1) { throw _Exception.InvalidArgument('Type', this.registerType); }
 
         // namespace name is already attached to it, and for all '(root)' 
         // marked types' no namespace is added, so it will automatically go to root
@@ -82,8 +80,8 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
             onlyName = name.replace(ns + '.', '');
 
         // check if already registered
-        if (alcTypes[name]) { throw `Type (${name}) is already registered.`; }
-        if (alcResources[name]) { throw `Already registered as resource. (${name})`; }
+        if (alcTypes[name]) { throw _Exception.Duplicate(name, this.registerType); }
+        if (alcResources[name]) { throw _Exception.Duplicate(`Already registered as resource. (${name})`, this.registerType); }
 
         // register
         alcTypes[name] = Type;
@@ -100,14 +98,15 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         return ns;
     };
     this.getType = (qualifiedName) => {
-        if (this.isUnloaded()) { 
-            throw 'Unloaded'; // TODO: fix
-        }        
-        if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${qualifiedName})`); }
+        if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.getType); }
+        if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.getType); }
         return alcTypes[qualifiedName] || null;
     };
     this.ensureType = (qualifiedName) => {
         return new Promise((resolve, reject) => {
+            if (this.isUnloaded()) { reject(_Exception.InvalidOperation(`Context is already unloaded. (${this.name})`)); return; }
+            if (typeof qualifiedName !== 'string') { reject(_Exception.InvalidArgument('qualifiedName')); return; }
+    
             let Type = this.getType(qualifiedName);
             if (!Type) {
                 let asmFile = domain.resolve(qualifiedName);
@@ -115,13 +114,13 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
                     this.loadAssembly(asmFile).then(() => {
                         Type = this.getType(qualifiedName);
                         if (!Type) {
-                            reject();
+                            reject(_Exception.OperationFailed(`Assembly could not be loaded. (${asmFile})`));
                         } else {
                             resolve(Type);
                         }
                     }).catch(reject);
                 } else {
-                    reject();
+                    reject(_Exception.NotFound(qualifiedName));
                 }
             } else {
                 resolve(Type);
@@ -129,11 +128,9 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         });
     };
     this.allTypes = () => { 
-        if (this.isUnloaded()) { 
-            throw 'Unloaded'; // TODO: fix
-        }        
+        if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.allTypes); }
         return Object.keys(alcTypes); 
-    }
+    };
     this.execute = (info, progressListener) => {
         // NOTE: The logic goes as:
         // 1. instance of given type is created with given constructor arguments
@@ -147,16 +144,15 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         //    if just the instance is to be removed and no func is to be called, set funcName to '' and keepAlive to false
         //    and it will not call function but just remove stored instance
 
-        return new Promise((resolve, reject) => {
-            if (this.isUnloaded()) { 
-                reject('Unloaded'); // TODO: fix
-            }
+        return new Promise((_resolve, _reject) => {
+            if (this.isUnloaded()) { _reject(_Exception.InvalidOperation(`Context is already unloaded. (${this.name})`)); return; }
 
             // execution info
             info.type = info.type || '';
             info.typeArgs = info.typeArgs || [];
             info.func = info.func || '';
             info.args = info.args || [];
+            info.ctx = info.ctx || {};
             info.keepAlive = (typeof info.keepAlive !== 'undefined' ? info.keepAlive : false);
             
             const getInstance = () => {
@@ -195,33 +191,33 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
             if (info.keepAlive) {
                 if (instances[info.type]) {
                     instance = instances[info.type];
-                    runInstanceFunc(instance).then(resolve).catch(reject);
+                    runInstanceFunc(instance).then(_resolve).catch(_reject);
                 } else {
                     getInstance().then((obj) => {
                         instance = obj;
                         instances[info.type] = instance;
-                        runInstanceFunc(instance).then(resolve).catch(reject);
-                    }).catch(reject);
+                        runInstanceFunc(instance).then(_resolve).catch(_reject);
+                    }).catch(_reject);
                 }
             } else {
                 if (instances[info.type]) {
                     instance = instances[info.type];
                     if (info.func) {
-                        runInstanceFunc(instance).then(resolve).catch(reject).finally(() => {
+                        runInstanceFunc(instance).then(_resolve).catch(_reject).finally(() => {
                             _dispose(instance);
                             delete instances[info.type];
                         });
                     } else { // special request of just removing the instance - by keeping func name as empty
                         _dispose(instance);
                         delete instances[info.type];
-                        resolve();
+                        _resolve();
                     }
                 } else {
                     getInstance().then((obj) => {
-                        runInstanceFunc(obj).then(resolve).catch(reject).finally(() => {
+                        runInstanceFunc(obj).then(_resolve).catch(_reject).finally(() => {
                             _dispose(obj);
                         });
-                    }).catch(reject);                
+                    }).catch(_reject);                
                 }
             }
         });
@@ -245,9 +241,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
 
     // assembly
     this.currentAssemblyBeingLoaded = (value) => {
-        if (this.isUnloaded()) { 
-            throw 'Unloaded'; // TODO: fix
-        }        
+        // NOTE: called at build time, so no checking is required
         if (typeof value !== 'undefined') { 
             currentAssemblyBeingLoaded = which(value, true);
         }
@@ -255,9 +249,8 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
     }
     this.loadAssembly = (file) => {
         return new Promise((resolve, reject) => {
-            if (this.isUnloaded()) { 
-                reject('Unloaded'); // TODO: fix
-            }            
+            if (this.isUnloaded()) { reject(_Exception.InvalidOperation(`Context is already unloaded. (${this.name})`)); return; }
+
             if (!asmFiles[file]) { // load only when it is not already loaded in this load context
                 // set this context as current context, so all types being loaded in this assembly will get attached to this context;
                 currentContexts.push(this);
@@ -275,12 +268,12 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
 
                     // resolve
                     resolve();
-                }).catch((e) => {
+                }).catch((err) => {
                     // remove this from current context list
                     currentContexts.pop();
 
                     // reject
-                    reject(e);
+                    reject(err);
                 });
             } else {
                 resolve();
@@ -288,29 +281,24 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         });        
     };    
     this.getAssembly = (file) => {
-        if (this.isUnloaded()) { 
-            throw 'Unloaded'; // TODO: fix
-        }        
-        if (typeof file !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${file})`); }
+        if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.getAssembly); }
+        if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.getAssembly); }
         return asmFiles[file] || null;
     };
     this.allAssemblies = () => { 
-        if (this.isUnloaded()) { 
-            throw 'Unloaded'; // TODO: fix
-        }
+        if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.allAssemblies); }
         return Object.keys(asmFiles); 
-    }
+    };
 
     // resources
     this.registerResource = (rdo) => {
-        if (this.isUnloaded()) { 
-            throw 'Unloaded'; // TODO: fix
-        }        
+        if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.registerResource); }
+
         if (typeof rdo.name !== 'string' || rdo.name === '' ||
             typeof rdo.encodingType !== 'string' || rdo.encodingType === '' ||
             typeof rdo.file !== 'string' || rdo.file === '' ||
             typeof rdo.data !== 'string' || rdo.data === '') {
-            throw _Exception.InvalidArgument('rdo');
+            throw _Exception.InvalidArgument('rdo', this.registerResource);
         }
 
         // namespace name is already attached to it, and for all '(root)'    
@@ -319,8 +307,8 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
             onlyName = rdo.name.replace(ns + '.', '');
 
         // check if already registered
-        if (alcResources[rdo.name]) { throw `Resource (${rdo.name}) is already registered.`; }
-        if (alcTypes[rdo.name]) { throw `Already registered as Type. (${rdo.name})`; }
+        if (alcResources[rdo.name]) { throw _Exception.Duplicate(rdo.name, this.registerResource); }
+        if (alcTypes[rdo.name]) { throw _Exception.Duplicate(`Already registered as Type. (${rdo.name})`, this.registerResource); }
 
         // register
         alcResources[rdo.name] = Object.freeze(new Resource(rdo, ns, this));
@@ -338,16 +326,12 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         return ns;
     };
     this.getResource = (qualifiedName) => {
-        if (this.isUnloaded()) { 
-            throw 'Unloaded'; // TODO: fix
-        }        
-        if (typeof qualifiedName !== 'string') { throw new _Exception('InvalidArgument', `Argument type is not valid. (${qualifiedName})`); }
+        if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.getResource); }
+        if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.getResource); }
         return alcResources[qualifiedName] || null;
     };     
     this.allResources = () => { 
-        if (this.isUnloaded()) { 
-            throw 'Unloaded'; // TODO: fix
-        }        
+        if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.allResources); }
         return Object.keys(alcResources); 
     }   
     
