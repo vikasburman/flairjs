@@ -20,7 +20,9 @@ const _dispose = (obj) => {
         if (_typeOf(obj) !== 'instance') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
 
         // call disposer
-        obj[meta].dispose();
+        if (typeof obj[meta].dispose === 'function') {
+            obj[meta].dispose();
+        }
     }
 };
 

@@ -339,7 +339,7 @@ const modifierOrAttrRefl = (isModifier, def, typeDef) => {
                 return root_has(name, memberName, isCheckInheritance, false);
             }, 
             all: members_all,
-            probe: members_probe,
+            probe: members_probe
         }
     };
     if (isModifier) {
@@ -509,7 +509,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     }
 
     // singleton specific case
-    if (cfg.singleton && !typeDef.staticConstructionCycle && params.isTopLevelInstance && TypeMeta.singleInstance()) { return TypeMeta.singleInstance(); }
+    if (cfg.singleton && !typeDef.staticConstructionCycle && !isNewFromReflector && params.isTopLevelInstance && TypeMeta.singleInstance()) { return TypeMeta.singleInstance(); }
 
     // define vars
     let exposed_obj = {},
@@ -527,7 +527,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             level: 'object',
             members: {}, // each named item here defines the type of member: func, prop, event, construct, etc.
             attrs: { 
-                members: {} // each named item array in here will have: {name, cfg, attr, args}
+                members: {} // each named item array in here will have: {name, cfg, isCustom, attr, args}
             },
             modifiers: {
                 members: {} // each named item array in here will have: {name, cfg, attr, args}
@@ -580,7 +580,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
 
         // get aspects that are applicable for this function (NOTE: Optimization will be needed here, eventually)
         funcAspects = _get_Aspects(def.name, memberName);
-        def.aspects.members[memberName] = funcAspects; // store for reference
+        def.aspects.members[memberName] = funcAspects; // store for reference by reflector
             
         // apply these aspects
         if (funcAspects.length > 0) {
@@ -1218,7 +1218,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     
     // construct base object from parent, if applicable
     if (cfg.inheritance) {
-        if (params.isTopLevelInstance && !typeDef.staticConstructionCycle) {
+        if (params.isTopLevelInstance && !typeDef.staticConstructionCycle && !isNewFromReflector) {
             if (modifiers.type.probe('abstract').current()) { throw new _Exception('InvalidOperation', `Cannot create instance of an abstract type. (${def.name})`); }
         }
 
@@ -1285,6 +1285,11 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         }
         objMeta.modifiers = modifiers;
         objMeta.attrs = attrs;
+        if (isNewFromReflector) { // expose internals as well for reflector
+            objMeta.def = def;
+            objMeta.typeDef = typeDef;
+            objMeta.obj = obj;
+        }
     }
 
     // building started
@@ -1352,7 +1357,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     _attr.clear();
 
     // move constructor and dispose out of main object
-    if (params.isTopLevelInstance && !typeDef.staticConstructionCycle) { // so that till now, a normal override behavior can be applied to these functions as well
+    if (params.isTopLevelInstance) { // so that till now, a normal override behavior can be applied to these functions as well
         if (cfg.construct && typeof obj[_constructName] === 'function') {
             objMeta.construct = obj[_constructName]; delete obj[_constructName];
         }
@@ -1401,12 +1406,12 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     buildExposedObj();
 
     // validate interfaces of type
-    if (cfg.interfaces && !typeDef.staticConstructionCycle) {
+    if (cfg.interfaces && !typeDef.staticConstructionCycle && !isNewFromReflector) {
         validateInterfaces();
     }
 
     // call constructor
-    if (cfg.construct && params.isTopLevelInstance && !typeDef.staticConstructionCycle && typeof exposed_objMeta.construct === 'function') {
+    if (cfg.construct && params.isTopLevelInstance && !typeDef.staticConstructionCycle && !isNewFromReflector && typeof exposed_objMeta.construct === 'function') {
         exposed_objMeta.constructing = true;
         exposed_objMeta.construct(...params.args);
         delete exposed_objMeta.constructing;
@@ -1418,7 +1423,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     }
 
     // add/update meta on top level instance
-    if (params.isTopLevelInstance && !typeDef.staticConstructionCycle) {
+    if (params.isTopLevelInstance && !typeDef.staticConstructionCycle && !isNewFromReflector) {
         if (cfg.singleton && attrs.type.probe('singleton').current()) {
             TypeMeta.singleInstance = () => { return exposed_obj; }; 
             TypeMeta.singleInstance.clear = () => { 
@@ -1429,7 +1434,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
 
     // seal object, so nothing can be added/deleted from outside
     // also, keep protected version intact for 
-    if (params.isTopLevelInstance && !typeDef.staticConstructionCycle) {
+    if (params.isTopLevelInstance && !typeDef.staticConstructionCycle && !isNewFromReflector) {
         exposed_objMeta = Object.freeze(exposed_objMeta); // freeze meta information
         exposed_obj = Object.seal(exposed_obj);
     }
@@ -1579,9 +1584,8 @@ const builder = (cfg) => {
         type: cfg.types.type, // the type of the type itself: class, struct, etc.
         Type: _Object,
         level: 'type',
-        members: {}, // each named item here defines the type of member: func, prop, event, construct, etc.
         attrs: { 
-            type: [], // will have: {name, cfg, attr, args}
+            type: [], // will have: {name, cfg, isCustom, attr, args}
         },
         modifiers: {
             type: [], // will have: {name, cfg, attr, args}
@@ -1695,7 +1699,8 @@ const builder = (cfg) => {
         let factoryCode = (cfg.params.factory ? cfg.params.factory.toString() : '');
         if (_ObjectMeta.isStatic() || factoryCode.indexOf(`$$('static')`) !== -1 || factoryCode.indexOf(`$$("static")`) !== -1) {
             typeDef.staticConstructionCycle = true;
-            new _Object();
+            let tempObj = new _Object();
+            _dispose(tempObj); // so any auto-wiring of events etc is cleaned up along with anything else done in types
             delete typeDef.staticConstructionCycle;
         }
     }

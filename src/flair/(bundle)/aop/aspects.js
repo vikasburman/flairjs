@@ -78,8 +78,8 @@ const _get_Aspects = (typeName, funcName) => {
 
     allAspects.forEach(item => {
         if (item.rex.test(__identifier)) { 
-            if (funcAspects.indexOf(item.Aspect) === -1) {
-                funcAspects.push(item.Aspect);
+            if (findIndexByProp(funcAspects, 'name', item.Aspect[meta].name) === -1) {
+                funcAspects.push({ name: item.Aspect[meta].name, Aspect: item.Aspect });
             }
         }
     });
@@ -94,8 +94,8 @@ const _attach_Aspects = (fn, typeName, funcName, funcAspects) => {
         instance = null;
 
     // collect all advices
-    for(let funcAspect of funcAspects) {
-        instance = new funcAspect();
+    for(let item of funcAspects) {
+        instance = new item.Aspect();
         if (instance.before !== _noop) { before.push(instance.before); }
         if (instance.around !== _noop) { around.push(instance.around); }
         if (instance.after !== _noop) { after.push(instance.after); }

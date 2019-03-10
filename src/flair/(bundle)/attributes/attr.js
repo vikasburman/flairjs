@@ -110,11 +110,11 @@ const _attr = (name, ...args) => {
 const _attrMeta = _attr[meta] = Object.freeze({
     bucket: [],
     inbuilt: Object.freeze({ 
-        static: new _attrConfig(true, '((class || struct) && !$abstract) || (((class || struct) && (prop || func)) && !($abstract || $virtual || $override))'),
+        static: new _attrConfig(true, '(class && !$abstract) || ((class && (prop || func)) && !($abstract || $virtual || $override))'),
     
-        abstract: new _attrConfig(true, '((class || struct) && !$sealed && !$static) || (((class || struct) && (prop || func || event)) && !($override || $sealed || $static))'),
-        virtual: new _attrConfig(true, '(class || struct) && (prop || func || construct || dispose || event) && !($abstract || $override || $sealed || $static)'),
-        override: new _attrConfig(true, '((class || struct) && (prop || func || construct || dispose || event) && ((@virtual || @abstract) && !(virtual || abstract)) && !($sealed || $static))'),
+        abstract: new _attrConfig(true, '(class && !$sealed && !$static) || ((class && (prop || func || event)) && !($override || $sealed || $static))'),
+        virtual: new _attrConfig(true, 'class && (prop || func || construct || dispose || event) && !($abstract || $override || $sealed || $static)'),
+        override: new _attrConfig(true, '(class && (prop || func || construct || dispose || event) && ((@virtual || @abstract) && !(virtual || abstract)) && !($sealed || $static))'),
         sealed: new _attrConfig(true, '(class || ((class && (prop || func || event)) && override))'), 
     
         private: new _attrConfig(true, '(class || struct) && (prop || func || event) && !($protected || @private || $static)'),
@@ -133,7 +133,7 @@ const _attrMeta = _attr[meta] = Object.freeze({
         resource: new _attrConfig('class && prop && !(session || state || inject || asset)'),
         asset: new _attrConfig('class && prop && !(session || state || inject || resource)'),
         singleton: new _attrConfig('(class && !(prop || func || event) && !($abstract || $static)'),
-        serialize: new _attrConfig('((class || struct) || ((class || struct) && prop)) && !($abstract || $static)'),
+        serialize: new _attrConfig('((class || struct) || ((class || struct) && prop)) && !($abstract || $static || noserialize)'),
         deprecate: new _attrConfig('!construct && !dispose'),
         session: new _attrConfig('(class && prop) && !($static || $state || $readonly || $abstract || $virtual)'),
         state: new _attrConfig('(class && prop) && !($static || $session || $readonly || $abstract || $virtual)'),

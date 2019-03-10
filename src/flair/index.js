@@ -133,8 +133,8 @@
     <!-- inject: ./(bundle)/aop/aspects.js -->   
     <!-- inject: ./(bundle)/serialization/serializer.js --> 
     <!-- inject: ./(bundle)/tasks/tasks.js --> 
-    <!-- inject: ./(bundle)/reflection/reflector.js -->    
     <!-- inject: ./(bundle)/port/ports.js --> 
+    <!-- inject: ./(bundle)/reflection/reflector.js -->    
 
     // freeze members
     flair.members = Object.freeze(flair.members);

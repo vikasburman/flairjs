@@ -78,7 +78,7 @@ let yyy = new MyClass2();
 
 
 
-debugger;
+
 
 $$('static');
 let MyStaticClass2 = Class('MyStaticClass', function() {
