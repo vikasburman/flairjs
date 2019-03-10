@@ -5,6 +5,9 @@ let IPowertrain = Interface('IPowertrain', function() {
     this.prop1 = nip;
 });
 
+flair.isDerivedFrom(null, 'IPowertrain')
+
+IPowertrain.prop1 = 10;
 
 // let x = {};
 // //IPowertrain.apply(x);

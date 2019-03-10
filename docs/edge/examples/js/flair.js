@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.15.950
- *  Sun, 10 Mar 2019 04:13:54 GMT
+ *  Version: 0.15.968
+ *  Sun, 10 Mar 2019 05:51:02 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -77,10 +77,10 @@
     flair.info = Object.freeze({
         name: 'flair',
         file: currentFile,
-        version: '0.15.950',
+        version: '0.15.968',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 10 Mar 2019 04:13:54 GMT')
+        lupdate: new Date('Sun, 10 Mar 2019 05:51:02 GMT')
     });       
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -113,8 +113,8 @@
      * @returns
      */ 
     const _nip = {
-        get: () => { throw new _Exception('NotImplemented', 'Property is not implemented.'); },
-        set: () => { throw new _Exception('NotImplemented', 'Property is not implemented.'); }
+        get: () => { throw _Exception.NotImplemented('prop'); },
+        set: () => { throw _Exception.NotImplemented('prop'); }
     };
     _nip.ni = true; // a special flag to quick check that this is a not-implemented object
     
@@ -245,7 +245,13 @@
     };
     
     // all inbuilt exceptions
-    _Exception.InvalidArgument = (name) => { return new _Exception('InvalidArgument', `Argument type is invalid. (${name})`); }
+    _Exception.InvalidArgument = (name, stStart = _Exception.InvalidArgument) => { return new _Exception('InvalidArgument', `Argument type is invalid. (${name})`, stStart); }
+    _Exception.OperationFailed = (name, error, stStart = _Exception.OperationFailed) => { return new _Exception('OperationFailed', `Operation failed with error. (${name})`, error, stStart); }
+    _Exception.Duplicate = (name, stStart = _Exception.Duplicate) => { return new _Exception('Duplicate', `Item already exists.(${name})`, stStart); }
+    _Exception.NotFound = (name, stStart = _Exception.NotFound) => { return new _Exception('NotFound', `Item not found. (${name})`, stStart); }
+    _Exception.InvalidOperation = (name, stStart = _Exception.InvalidOperation) => { return new _Exception('InvalidOperation', `Operation is invalid in current context. (${name})`, stStart); }
+    _Exception.Circular = (name, stStart = _Exception.Circular) => { return new _Exception('Circular', `Circular calls found. (${name})`, stStart); }
+    _Exception.NotImplemented = (name, stStart = _Exception.NotImplemented) => { return new _Exception('NotImplemented', `Member is not implemented. (${name})`, stStart); }
     
     // attach to flair
     a2f('Exception', _Exception);
@@ -1668,8 +1674,8 @@
      * @returns boolean - true/false
      */ 
     const _isDerivedFrom = (type, parent) => {
-        if (_typeOf(type) !== 'class') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
-        if (['string', 'class'].indexOf(_typeOf(parent)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (parent)'); }
+        if (_typeOf(type) !== 'class') { throw _Exception.InvalidArgument('type', _isDerivedFrom); }
+        if (['string', 'class'].indexOf(_typeOf(parent)) === -1) { throw _Exception.InvalidArgument('parent', _isDerivedFrom); }
         return type[meta].isDerivedFrom(parent);
     }; 
     
@@ -1834,8 +1840,8 @@
      * @returns boolean - true/false
      */ 
     const _isComplies = (obj, intf) => {
-        if (!obj) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
-        if (_typeOf(intf) !== 'interface') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (intf)'); }
+        if (!obj) { throw _Exception.InvalidArgument('obj', _isComplies); }
+        if (_typeOf(intf) !== 'interface') { throw _Exception.InvalidArgument('intf', _isComplies); }
         
         let complied = true;
         for(let member in intf) {
@@ -6273,25 +6279,7 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 
 })();
-
-(async () => { // ./src/flair/(root)/Test.js
-'use strict';
-/**
- * @name Test
- * @description testing platform base class.
- */
-$$('ns', '(root)');
-Class('Test', function() {
-    $$('resource', 'hello');
-    this.resProp = null;
-
-    $$('asset', './ab/index.html');
-    this.astProp = null;
-});
-
-})();
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
 })();
-(() => { let rdo = JSON.parse('{"name":"hello","encodingType":"utf8;base64;","asmFile":"./flair{.min}.js","file":"./src/flair/(root)/hello.res.json","data":"ewogICAgInRlc3QiOiAxCn0="}'); flair.AppDomain.context.current().registerResource(rdo);})();
-(() => { flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","version":"0.15.950","lupdate":"Sun, 10 Mar 2019 04:13:54 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","Test"],"resources":["hello"],"assets":["./flair/ab/index.html"]}');})();
+(() => { flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","version":"0.15.968","lupdate":"Sun, 10 Mar 2019 05:51:02 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[]}');})();

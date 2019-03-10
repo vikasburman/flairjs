@@ -9,8 +9,8 @@
  * @returns boolean - true/false
  */ 
 const _isComplies = (obj, intf) => {
-    if (!obj) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (obj)'); }
-    if (_typeOf(intf) !== 'interface') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (intf)'); }
+    if (!obj) { throw _Exception.InvalidArgument('obj', _isComplies); }
+    if (_typeOf(intf) !== 'interface') { throw _Exception.InvalidArgument('intf', _isComplies); }
     
     let complied = true;
     for(let member in intf) {

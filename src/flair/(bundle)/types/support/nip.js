@@ -7,8 +7,8 @@
  * @returns
  */ 
 const _nip = {
-    get: () => { throw new _Exception('NotImplemented', 'Property is not implemented.'); },
-    set: () => { throw new _Exception('NotImplemented', 'Property is not implemented.'); }
+    get: () => { throw _Exception.NotImplemented('prop'); },
+    set: () => { throw _Exception.NotImplemented('prop'); }
 };
 _nip.ni = true; // a special flag to quick check that this is a not-implemented object
 

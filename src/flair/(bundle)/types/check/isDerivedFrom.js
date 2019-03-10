@@ -11,8 +11,8 @@
  * @returns boolean - true/false
  */ 
 const _isDerivedFrom = (type, parent) => {
-    if (_typeOf(type) !== 'class') { throw new _Exception('InvalidArgument', 'Argument type is invalid. (type)'); }
-    if (['string', 'class'].indexOf(_typeOf(parent)) === -1) { throw new _Exception('InvalidArgument', 'Argument type is invalid. (parent)'); }
+    if (_typeOf(type) !== 'class') { throw _Exception.InvalidArgument('type', _isDerivedFrom); }
+    if (['string', 'class'].indexOf(_typeOf(parent)) === -1) { throw _Exception.InvalidArgument('parent', _isDerivedFrom); }
     return type[meta].isDerivedFrom(parent);
 }; 
 
