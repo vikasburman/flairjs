@@ -567,9 +567,7 @@ const build = (options, done) => {
             afterLint();
         }
     };
-    const appendTypes = (done) => {
-        if (options.current.ado.types.length === 0) { done(); return; }
-
+    const startClosure = () => {
         // append closure header with settings
         let settings = '';
         if (fsx.existsSync(options.current.asmSettings)) {
@@ -606,7 +604,17 @@ const build = (options, done) => {
         } else {
         `const settings = {}; // eslint-disable-line no-unused-vars\n`;
         }
-        appendToFile(closureHeader);
+        appendToFile(closureHeader);        
+    };
+    const endClosure = () => {
+        // append closure footer
+        let closureFooter = 
+        `\n` + 
+        `})();\n`;
+        appendToFile(closureFooter);
+    };
+    const appendTypes = (done) => {
+        if (options.current.ado.types.length === 0) { done(); return; }
 
         logger(0, 'types', '');
 
@@ -658,15 +666,9 @@ const build = (options, done) => {
         options.current.ado.types = justNames; // update types list
 
         // deactivate current file name
-        dump = `flair.AppDomain.context.current().currentAssemblyBeingLoaded('');\n`;
+        dump = `\nflair.AppDomain.context.current().currentAssemblyBeingLoaded('');\n`;
         appendToFile(dump);
 
-        // append closure footer
-        let closureFooter = 
-        `\n` + 
-        `})();\n`;
-        appendToFile(closureFooter);
-        
         // done
         done();
     };
@@ -708,7 +710,8 @@ const build = (options, done) => {
                 data: content
             };
 
-            let dump = `(() => { let rdo = JSON.parse('${JSON.stringify(rdo)}'); flair.AppDomain.context.current().registerResource(rdo);})();\n`;
+            // eslint-disable-next-line no-useless-escape
+            let dump = `\n(() => { \/\/ ${rdo.file}\n\tlet rdo = JSON.parse('${JSON.stringify(rdo)}'); \n\tflair.AppDomain.context.current().registerResource(rdo);}\n)();\n`;
             appendToFile(dump);
 
             appendResources(done, justNames2); // pick next
@@ -751,7 +754,7 @@ const build = (options, done) => {
         if (options.skipRegistrationsFor.indexOf(options.current.asmName) !== -1) { return; } // skip for special cases
 
         logger(0, 'self-reg', 'yes'); 
-        let dump = `(() => { flair.AppDomain.registerAdo('${JSON.stringify(options.current.ado)}');})();\n`;
+        let dump = `\nflair.AppDomain.registerAdo('${JSON.stringify(options.current.ado)}');\n`;
         appendToFile(dump);
     };
     const pack = (done) => {
@@ -935,10 +938,16 @@ const build = (options, done) => {
                 // copy libs over assets
                 copyLibs();
 
+                // start assembly content closure
+                startClosure();
+
                 // append types, resources and self-registration
                 appendTypes(() => {
                     appendResources(() => {
                         appendSelfRegistration();
+
+                        // end assembly content closure
+                        endClosure();
 
                         // lint, minify and gzip assembly
                         pack(() => {

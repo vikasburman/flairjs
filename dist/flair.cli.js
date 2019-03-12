@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.16.62
- *  Tue, 12 Mar 2019 03:32:57 GMT
+ *  Version: 0.16.77
+ *  Tue, 12 Mar 2019 12:45:57 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -23,7 +23,7 @@ const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
     name: 'flair.cli',
-    version: '0.16.62',
+    version: '0.16.77',
     format: 'fasm',
     formatVersion: '1',
     contains: [
@@ -581,9 +581,7 @@ const build = (options, done) => {
             afterLint();
         }
     };
-    const appendTypes = (done) => {
-        if (options.current.ado.types.length === 0) { done(); return; }
-
+    const startClosure = () => {
         // append closure header with settings
         let settings = '';
         if (fsx.existsSync(options.current.asmSettings)) {
@@ -620,7 +618,17 @@ const build = (options, done) => {
         } else {
         `const settings = {}; // eslint-disable-line no-unused-vars\n`;
         }
-        appendToFile(closureHeader);
+        appendToFile(closureHeader);        
+    };
+    const endClosure = () => {
+        // append closure footer
+        let closureFooter = 
+        `\n` + 
+        `})();\n`;
+        appendToFile(closureFooter);
+    };
+    const appendTypes = (done) => {
+        if (options.current.ado.types.length === 0) { done(); return; }
 
         logger(0, 'types', '');
 
@@ -672,15 +680,9 @@ const build = (options, done) => {
         options.current.ado.types = justNames; // update types list
 
         // deactivate current file name
-        dump = `flair.AppDomain.context.current().currentAssemblyBeingLoaded('');\n`;
+        dump = `\nflair.AppDomain.context.current().currentAssemblyBeingLoaded('');\n`;
         appendToFile(dump);
 
-        // append closure footer
-        let closureFooter = 
-        `\n` + 
-        `})();\n`;
-        appendToFile(closureFooter);
-        
         // done
         done();
     };
@@ -722,7 +724,8 @@ const build = (options, done) => {
                 data: content
             };
 
-            let dump = `(() => { let rdo = JSON.parse('${JSON.stringify(rdo)}'); flair.AppDomain.context.current().registerResource(rdo);})();\n`;
+            // eslint-disable-next-line no-useless-escape
+            let dump = `\n(() => { \/\/ ${rdo.file}\n\tlet rdo = JSON.parse('${JSON.stringify(rdo)}'); \n\tflair.AppDomain.context.current().registerResource(rdo);}\n)();\n`;
             appendToFile(dump);
 
             appendResources(done, justNames2); // pick next
@@ -765,7 +768,7 @@ const build = (options, done) => {
         if (options.skipRegistrationsFor.indexOf(options.current.asmName) !== -1) { return; } // skip for special cases
 
         logger(0, 'self-reg', 'yes'); 
-        let dump = `(() => { flair.AppDomain.registerAdo('${JSON.stringify(options.current.ado)}');})();\n`;
+        let dump = `\nflair.AppDomain.registerAdo('${JSON.stringify(options.current.ado)}');\n`;
         appendToFile(dump);
     };
     const pack = (done) => {
@@ -949,10 +952,16 @@ const build = (options, done) => {
                 // copy libs over assets
                 copyLibs();
 
+                // start assembly content closure
+                startClosure();
+
                 // append types, resources and self-registration
                 appendTypes(() => {
                     appendResources(() => {
                         appendSelfRegistration();
+
+                        // end assembly content closure
+                        endClosure();
 
                         // lint, minify and gzip assembly
                         pack(() => {
@@ -1385,3 +1394,29 @@ exports.flairBuild = function(options, cb) {
     });
 };
 
+(() => {
+'use strict';
+
+/* eslint-disable no-unused-vars */
+const flair = (typeof global !== 'undefined' ? require('flair') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));
+const { Class, Struct, Enum, Interface, Mixin } = flair;
+const { Aspects } = flair;
+const { AppDomain } = flair;
+const __currentContextName = flair.AppDomain.context.current().name;
+const { $$, attr } = flair;
+const { bring, Container, include } = flair;
+const { Port } = flair;
+const { on, post, telemetry } = flair;
+const { Reflector } = flair;
+const { Serializer } = flair;
+const { Tasks } = flair;
+const { TaskInfo } = flair.Tasks;
+const { as, is, isComplies, isDerivedFrom, isImplements, isInstanceOf, isMixed } = flair;
+const { getAssembly, getAttr, getContext, getResource, getType, ns, getTypeOf, typeOf } = flair;
+const { dispose, using } = flair;
+const { args, Exception, noop, nip, nim, nie, event } = flair;
+const { env } = flair.options;
+/* eslint-enable no-unused-vars */
+
+
+})();
