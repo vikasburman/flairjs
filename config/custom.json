@@ -1,0 +1,12 @@
+{
+    "copy": [
+    ],
+    "build": [
+    ],
+    "skipMinifyRoot": [
+    ],
+    "resolveRoot": {
+    },
+    "preambleRoot": {
+    }
+}

@@ -12,7 +12,7 @@
  */ 
 const _isImplements = (obj, intf) => {
     // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
-    if (['class', 'struct', 'instance', 'sinstance'].indexOf(_typeOf(obj)) === -1) { throw _Exception.InvalidArgument('obj', _isImplements); }
+    if (['class', 'instance'].indexOf(_typeOf(obj)) === -1) { throw _Exception.InvalidArgument('obj', _isImplements); }
     if (['string', 'interface'].indexOf(_typeOf(intf)) === -1) {  throw _Exception.InvalidArgument('intf', _isImplements); }
     
     return obj[meta].isImplements(intf);

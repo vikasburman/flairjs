@@ -3,7 +3,6 @@
  * @description Constructs a Struct type
  * @example
  *  Struct(name, factory)
- *  Struct(name, mixints, factory)
  * @params
  *  name: string - name of the struct
  *                 >> simple, e.g.,
@@ -20,20 +19,15 @@
  *                    To put a type in root namespace, use $$('ns' '(root)') or just put it in '(root)' folder and
  *                    use $$('ns', '(auto)');
  *                    Then struct can be accessed as getType('MyStruct');
- *  mixints: array - An array of mixin and/or interface types which needs to be applied to this struct type
- *                        mixins will be applied in order they are defined here
  *  factory: function - factory function to build struct definition
  * @returns type - constructed flair struct type
  */
-const _Struct = (name, mixints, factory) => {
-    let args = _Args('name: string, factory: cfunction', 
-                     'name: string, mixints: array, factory: cfunction')(name, mixints, factory); args.throwOnError(_Struct);
+const _Struct = (name, factory) => {
+    let args = _Args('name: string, factory: cfunction')(name, factory); args.throwOnError(_Struct);
 
     // builder config
     let cfg = {
         new: true,
-        mixins: true,
-        interfaces: true,
         func: true,
         construct: true,
         prop: true,
@@ -44,7 +38,6 @@ const _Struct = (name, mixints, factory) => {
         },
         params: {
             typeName: args.values.name,
-            mixinsAndInterfaces: args.values.mixints,
             factory: args.values.factory
         }
     };

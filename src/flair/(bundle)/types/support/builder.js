@@ -493,12 +493,12 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     if (typeof _flag !== 'undefined' && _flag === _flagName) { // inheritance in play
         params.isNeedProtected = true;
         params.isTopLevelInstance = false;
-        params.staticInterface = _static;
+        params.staticInterface = cfg.static ? _static : null;
         params.args = args;
     } else {
         params.isNeedProtected = false;
         params.isTopLevelInstance = true;
-        params.staticInterface = Type;
+        params.staticInterface = cfg.static ? Type : null;
         if (typeof _flag !== 'undefined') {
             if (typeof _static !== 'undefined') {
                 params.args = [_flag, _static].concat(args); // one set
@@ -1589,9 +1589,15 @@ const builder = (cfg) => {
     let _Object = null,
         _ObjectMeta = null;
     if (cfg.new) { // class, struct
-        _Object = function(_flag, _static, ...args) {
-            return buildTypeInstance(cfg, _Object, {}, _flag, _static, ...args);
-        };
+        if (cfg.inheritance) { // class
+            _Object = function(_flag, _static, ...args) {
+                return buildTypeInstance(cfg, _Object, {}, _flag, _static, ...args);
+            };
+        } else { // struct
+            _Object = function(...args) {
+                return buildTypeInstance(cfg, _Object, {}, null, null, ...args);
+            };
+        }
     } else { // mixin, interface, enum
         if(cfg.const) { // enum, interface
             _Object = function() {

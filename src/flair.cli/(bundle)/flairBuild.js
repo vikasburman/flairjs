@@ -89,7 +89,7 @@ const copyDeps = (isPost, options, done) => {
 
     const processNext = (items) => {
         if (items.length !== 0) {
-            let item = items.shift(); // {src, dest}
+            let item = items.shift(); // {src, dest, exclude}
             options.logger(1, '', item.dest);
             if (!isPost && item.src.startsWith('http')) { // http is supported only in case of pre deps
                 let httpOrhttps = null,
@@ -104,7 +104,7 @@ const copyDeps = (isPost, options, done) => {
                     resp.on('end', () => {
                         let dest = path.resolve(item.dest);
                         fsx.ensureFileSync(dest);
-                        fsx.writeFileSync(dest, body, 'utf8');
+                        fsx.writeFileSync(dest, body, 'utf8'); // overwrite
                         processNext(items);
                     });
                 }).on('error', (e) => {
@@ -112,11 +112,42 @@ const copyDeps = (isPost, options, done) => {
                 });
             } else { // local file / folder path
                 let src = path.resolve(item.src),
-                    dest = path.resolve(item.dest);
+                    dest = path.resolve(item.dest),
+                    exclude = item.exclude,
+                    minFile = '';
                 if (fsx.lstatSync(src).isDirectory()) {
-                    copyDir.sync(src, dest);
+                    delAll(dest); // delete all content inside
+                    copyDir.sync(src, dest, (state, filepath, filename) => { // copy
+                        let result = true;
+                        // maps
+                        if (exclude.maps && path.extname(filename) === '.map') { result = false; }
+
+                        // un-min: for every js file, check if it's .min version exists at same path, don't copy this file, as .min.js might have been copied or will be copied
+                        if (result && exclude["un-min"] && path.extname(filename) === '.js' && !path.extname(filename).endsWith('.min.js')) {
+                            minFile = filepath.substr(0, filepath.length - 3) + '.min.js'; // remove .js and add .min.js
+                            if (fsx.existsSync(minFile)) { result = false; }
+                        }
+
+                        // pattern
+                        if (result) {
+                            for(let pattern of exclude.patterns) {
+                                if (pattern.startsWith('*')) {
+                                    pattern = pattern.substr(1); // remove *
+                                    if (filename.endsWith(pattern)) { result = false; break; }
+                                } else if (pattern.endsWith('*')) {
+                                    pattern = pattern.substr(0, pattern.length - 1); // remove *
+                                    if (filename.startsWith(pattern)) { result = false; break; }
+                                } else {
+                                    if (filename === pattern) { result = false; break; }
+                                }
+                            }
+                        }
+
+                        // ok
+                        return result;
+                    }); 
                 } else {
-                    fsx.copyFileSync(src, dest);
+                    fsx.copyFileSync(src, dest); // overwrite
                 }
                 processNext(items);
             }
@@ -126,6 +157,28 @@ const copyDeps = (isPost, options, done) => {
     };
 
     processNext(deps);
+};
+const copyCustom = (options, done) => {
+    if (!options.customBuild) { done(); return; }
+
+    // copy all files or folders as is in dest
+    options.logger(0, 'copy', '', true);    
+        let src = '',
+            dest = '';
+    for(let fileOrFolder of options.customBuildConfig.copy) {
+        src = path.resolve(path.join(options.src, fileOrFolder));
+        dest = path.resolve(path.join(options.dest, fileOrFolder))
+        options.logger(1, '', './' + path.join(options.src, fileOrFolder));
+        if (fsx.lstatSync(src).isDirectory()) {
+            copyDir.sync(src, dest)
+        } else {
+            fsx.ensureDirSync(path.dirname(dest));
+            fsx.copyFileSync(src, dest);
+        }        
+    }
+
+    // done
+    done();
 };
 const injector = (base, content) => {
     // Unescaped \s*([\(\)\w@_\-.\\\/]+)\s*
@@ -161,7 +214,42 @@ const build = (options, done) => {
         } else {
             fsx.writeFileSync(options.current.asm, text);
         }
-    };     
+    };  
+    const resolveRoot = (buildPath) => {
+        let resolvedRoot = 'error/define/resolveRoot/for/' + buildPath;
+        for(let partialBuildPath in options.customBuildConfig.resolveRoot) {
+            if (options.customBuildConfig.resolveRoot.hasOwnProperty(partialBuildPath)) {
+                if (buildPath.startsWith(partialBuildPath)) {
+                    resolvedRoot = buildPath.replace(options.customBuildConfig.resolveRoot[partialBuildPath], './');
+                    break;
+                }
+            }
+        }
+        return resolvedRoot;
+    };
+    const resolvePreamble = (buildPath) => {
+        let preambleRoot = buildPath;
+        for(let partialBuildPath in options.customBuildConfig.preambleRoot) {
+            if (options.customBuildConfig.preambleRoot.hasOwnProperty(partialBuildPath)) {
+                if (buildPath.startsWith(partialBuildPath)) {
+                    preambleRoot = options.customBuildConfig.preambleRoot[partialBuildPath];
+                    break;
+                }
+            }
+        }
+        return path.join(options.dest, preambleRoot);
+    };
+    const resolveSkipMinify = (buildPath) => {
+        let skip = false;
+        for(let partialBuildPath of options.customBuildConfig.skipMinifyRoot) {
+            if (buildPath.startsWith(partialBuildPath)) {
+                skip = true;
+                break;
+            }
+        }
+        return skip;
+    };
+
     const appendHeader = () => {
         let header = 
         `/**\n`+
@@ -170,7 +258,7 @@ const build = (options, done) => {
         ` * ${options.packageJSON.description}\n` +
         ` * \n` +
         ` * Assembly: ${options.current.asmName}\n` +
-        ` *     File: ${options.current.asm.replace(options.current.dest, '.')}\n` +
+        ` *     File: ${options.current.asmFileName}\n` +
         ` *  Version: ${options.packageJSON.version}\n` +
         ` *  ${new Date().toUTCString()}\n` +
         ` * \n` +
@@ -219,7 +307,7 @@ const build = (options, done) => {
         //      "assets": ["", "", ...]
         options.current.ado = {
             name: options.current.asmName,
-            file: options.current.asm.replace(options.current.dest, '.').replace('.js', '{.min}.js'),
+            file: options.current.asmFileName.replace('.js', '{.min}.js'),
             desc: options.packageJSON.description,
             version: options.packageJSON.version,
             lupdate: new Date().toUTCString(),
@@ -423,7 +511,7 @@ const build = (options, done) => {
         const afterMinify = () => {
             // gzip
             let gzFile = '';
-            if (options.gzip) {
+            if (options.gzip && !options.current.skipMinify && !options.current.skipMinifyThisAssembly) {
                 if (options.minify && fsx.existsSync(minFile)) {
                     gzFile = minFile + '.gz';
                     gzipFile(minFile).then(() => {
@@ -457,7 +545,7 @@ const build = (options, done) => {
         const afterLint = () => {
             // minify
             minFile = astFile.dest.replace('.' + astFile.ext, '.min.' + astFile.ext);
-            if (options.minify) {
+            if (options.minify && !options.current.skipMinify && !options.current.skipMinifyThisAssembly) {
                 minifyFile(astFile.dest).then(() => {
                     if (fsx.existsSync(minFile)) {
                         astFile.stat += ', ' + Math.round(fsx.statSync(minFile).size / 1024) + 'kb minified';
@@ -627,7 +715,7 @@ const build = (options, done) => {
         };
         const afterLint = () => {
             // minify/read resource
-            if (options.minifyResources) {
+            if (options.minifyResources && !options.current.skipMinify && !options.current.skipMinifyThisAssembly) {
                 if (options.minifyTypes.indexOf(nsFile.ext) !== -1) {
                     if (options.minifyTypes.indexOf(nsFile.ext) !== -1) {
                         let p = null;
@@ -667,8 +755,8 @@ const build = (options, done) => {
         appendToFile(dump);
     };
     const pack = (done) => {
-        options.current.stat = options.current.asm.replace(options.current.dest, '.') + ' (' + Math.round(fsx.statSync(options.current.asm).size / 1024) + 'kb';
-
+        options.current.stat = options.current.asmFileName + ' (' + Math.round(fsx.statSync(options.current.asm).size / 1024) + 'kb';
+        
         let minFile = '';
         const afterGzip = () => {
             options.current.stat += ')';
@@ -677,7 +765,7 @@ const build = (options, done) => {
         const afterMinify = () => {
             // gzip
             let gzFile = minFile + '.gz';
-            if (options.gzip) {
+            if (options.gzip && !options.current.skipMinify && !options.current.skipMinifyThisAssembly) {
                 gzipFile(minFile).then(() => {
                     options.current.stat += ', ' + Math.round(fsx.statSync(gzFile).size / 1024) + 'kb gzipped';
                     afterGzip();
@@ -690,7 +778,7 @@ const build = (options, done) => {
         const afterLint = () => {
             // minify
             minFile = options.current.asm.replace('.js', '.min.js');
-            if (options.minify) {
+            if (options.minify && !options.current.skipMinify && !options.current.skipMinifyThisAssembly) {
                 minifyFile(options.current.asm).then(() => {
                     options.current.stat += ', ' + Math.round(fsx.statSync(minFile).size / 1024) + 'kb minified';
                     afterMinify();
@@ -713,10 +801,10 @@ const build = (options, done) => {
     const createPreamble = () => {
         if (options.current.adosJSON.length === 0) { return; }
 
-        logger(0, 'preamble', options.current.preamble.replace(options.current.dest.replace('./', ''), '.'));
+        logger(0, 'preamble', options.current.preamble.replace(options.dest, '.'), true);
         let ados = JSON.stringify(options.current.adosJSON);
-        let dump = `(() => { let ados = JSON.parse('${ados}');flair.AppDomain.registerAdo(ados);})();`;
-        fsx.writeFileSync(options.current.preamble, dump);
+        let dump = `(() => { let ados = JSON.parse('${ados}');flair.AppDomain.registerAdo(ados);})();\n`;
+        fsx.writeFileSync(options.current.preamble, dump, {flag: 'a'}); // append if already exists
     };
     const collectTypesAndResources = () => {
         let files = rrd(options.current.nsPath);
@@ -822,8 +910,12 @@ const build = (options, done) => {
         options.current.asmName = asmFolder;
         options.current.asmPath = './' + path.join(options.current.src, options.current.asmName);
         options.current.asm = './' + path.join(options.current.dest, options.current.asmName + '.js');
+        options.current.asmFileName = './' + path.join(options.current.resolvedRoot, options.current.asmName) + '.js';
         options.current.asmMain = './' + path.join(options.current.src, options.current.asmName, 'index.js');
         options.current.asmSettings = './' + path.join(options.current.src, options.current.asmName, 'settings.json');
+
+        // skip minify for this assembly, if this is a special file
+        options.current.skipMinifyThisAssembly = (options.skipRegistrationsFor.indexOf(asmFolder) !== -1);
 
         // initialize
         initAsm();
@@ -860,18 +952,21 @@ const build = (options, done) => {
         });
     };
     const processSources = (done) => {
-        // pick source
         if (options.sources.length === 0) { done(); return; }
+
+        // pick source
         let source = options.sources.splice(0, 1)[0]; // pick from top
         if (source.startsWith('_')) { processSources(done); return; } // ignore if starts with '_'
 
         // start group
-        logger(0, 'group', `${source.replace(source, '.')} (start)`, true);  
+        logger(0, 'group', `${source.replace(options.src, '.')} (start)`, true);  
         options.current = {};
-        options.current.src = source;
-        options.current.dest = source.replace(options.current.src, options.dest);
+        options.current.src = options.customBuild ? ('./' + path.join(options.src, source)) : source;
+        options.current.dest = options.current.src.replace(options.src, options.dest);
+        options.current.resolvedRoot = options.customBuild ? resolveRoot(source) : '.';
         options.current.adosJSON = [];
-        options.current.preamble = path.join(options.current.dest, 'preamble.js');
+        options.current.preamble = './' + path.join((options.customBuild ? resolvePreamble(source) : options.current.dest), 'preamble.js');
+        options.current.skipMinify = options.customBuild ? resolveSkipMinify(source) : false;
 
         // process all assemblies under this group
         let folders = getFolders(options.current.src, true);
@@ -881,17 +976,11 @@ const build = (options, done) => {
             createPreamble();
 
             // done
-            logger(0, 'group', `${source.replace(source, '.')} (end)`, true);  
+            logger(0, 'group', `${source.replace(options.src, '.')} (end)`, true);  
             options.current = {};
             processSources(done);
         });
     };
-
-    // delete all dest files
-    if (options.fullBuild) {
-        delAll(options.dest);
-        logger(0, 'clean', 'done');
-    }
 
     // begin
     processSources(done);
@@ -906,13 +995,34 @@ const build = (options, done) => {
  *  options: object - build configuration object having following options:
  *              src: source folder root path
  *              dest: destination folder root path - where to copy built assemblies
- *              processAsGroups: how to interpret src folder
+ *              customBuild: if custom control is needed for picking source and other files
  *                  true - all root level folders under 'src' will be treated as one individual assembly
- *                  false - all root level folders under 'src' will be treated as individual groups and next level folders 
- *                          under each of these groups will be treated as one individual assembly
- *                          In this case, dest will have same folder groups created and group specific assemblies will be placed
- *                          under each group
- *                  Note: In both cases, if folder name starts with '_', it is skipped
+ *                      Note: if folder name starts with '_', it is skipped
+ *                  false - customization can be done using a config
+ *              customBuildConfig: custom folders configuration options file path, having structure
+ *              {
+ *                  "copy": [ ] - having path (relative to src path) to copy as is on dest folder
+ *                  "build": [ ] - having path (relative to src path) to treat as assembly folder group
+ *                                 all root level folders under each of these will be treated as one individual assembly
+ *                                 Note: if folder name (of assembly folder under it) starts with '_', it is skipped
+ *                  "skipMinifyRoot": [ ] - some of the build folders may be skipped for minify (e.g., server folders)
+ *                                      those can be defined here, any build folder that starts with the given folder path here will be skipped for minification
+ *                                      e.g., "server/app/" here will skip minification for all build folders such as "server/app/group1/", "server/app/group2/", etc.
+ *                  "resolveRoot": {
+ *                      "<buildPath>": "<removeThisToReachRootPath>" - for each path in "build", define how this will be resolved 
+ *                                      when generating path of assemblies underneath
+ *                  }
+ *                      e.g., "server/app/": "server/" - means, a file at server/app/file.js will be defined as: ./app/file.js - because at runtime server will be the root folder of app
+ *                      This means, the second string is replaced with "." in first string
+ *                      NOTE: for many build paths that start with same partial path, only one entry may exists here and all build paths
+ *                            that start with this path will use same resolveRoot path
+ *                  "preambleRoot": {
+ *                      "<buildPath>": "<preambleRoot>" - for each path in "build", define where this path's preamble will be created
+ *                  }
+ *                      e.g., "server/app/": "server/app/" - means, assembly files that exists under path that starts with "server/app/", will have their preamble generated at: "server/app/"preamble.js
+ *                      NOTE: for many build paths that start with same partial path, only one entry may exists here and preambles for all build paths
+ *                            that start with this path will be generated at same place, in such case, preambles will be merged into one - so there will always be one preamble at one target given path
+ *              }
  *              fullBuild: true/false   - is full build to be done
  *              skipBumpVersion: true/false - if skip bump version with build
  *              suppressLogging: true/false  - if build time log is to be shown on terminal
@@ -965,10 +1075,20 @@ const build = (options, done) => {
  *                           NOTE:
  *                                src: can be a web url or a local file path (generally a web url to download an external dependency to embed)
  *                                dest: local file path (generally an embedded dependency)
+ *                                exclude: {
+ *                                      patterns: [] - file or folder name patterns, either full name or if ends with a *, checks start with, or if start with a *, checks for endsWith possibilities
+ *                                      maps: - true/false - to exclude *.map files
+ *                                      un-min: - true/false - to exclude *.js file, if a *.min.js exists for same file, that means only *.min.js will be copied, and not *.js of this file
+ *                                }
  *                  post: [] - each item in here should have structure as: { src, dest }
  *                            NOTE:
  *                                src:  local file path (generally the built files)
  *                                dest: local file path (generally copied to some other local folder)
+ *                                exclude: {
+ *                                      patterns: [] - file or folder name patterns, either full name or if ends with a *, checks start with, or if start with a *, checks for endsWith possibilities
+ *                                      maps: - true/false - to exclude *.map files
+ *                                      un-min: - true/false - to exclude *.js file, if a *.min.js exists for same file, that means only *.min.js will be copied, and not *.js of this file
+ *                                }
  *                  }
  *              preBuildDeps: true/false   - if before the start of assembly building, all local copies of external dependencies  need to be refreshed 
  *              postBuildDeps: true/false  - if after build update other local copies using the built files
@@ -1099,7 +1219,9 @@ exports.flairBuild = function(options, cb) {
 
     options.dest = options.dest || './dist';
     options.src = options.src || './src';
-    options.processAsGroups = options.processAsGroups || false; // if true, it will treat first level folders under src as groups and will process each folder as group, otherwise it will treat all folders under src as individual assemblies
+   
+    options.customBuild = options.customBuild || false; 
+    options.customBuildConfig = options.customBuildConfig || '';
 
     options.fullBuild = options.fullBuild || false;
     options.skipBumpVersion = options.skipBumpVersion || false;
@@ -1155,12 +1277,15 @@ exports.flairBuild = function(options, cb) {
 
     // exclude files from being registered
     options.skipRegistrationsFor = [
+        'flair.cli'
     ];
 
     // define logger
     const logger = (level, msg, data, prlf, polf) => {
         if (options.suppressLogging) { return; }
-
+        
+        prlf=false; polf=false; // no lf is much cleaner - so turn off all pre/post lf settings
+        
         let colLength = 15;
         msg = ' '.repeat(colLength - msg.length) + msg + (level === 0 ? ': ' : '');
         if (level !== 0) { data = '- ' + data; }
@@ -1177,6 +1302,7 @@ exports.flairBuild = function(options, cb) {
     options.minifyConfig = options.minifyConfig ? fsx.readJSONSync(path.resolve(options.minifyConfig)) : null;
     options.gzipConfig = options.gzipConfig ? fsx.readJSONSync(path.resolve(options.gzipConfig)) : null;
     options.depsConfig = options.depsConfig ? fsx.readJSONSync(path.resolve(options.depsConfig)) : null;
+    options.customBuildConfig = options.customBuildConfig ? fsx.readJSONSync(path.resolve(options.customBuildConfig)) : null;
 
     // lint
     if (options.lint && options.lintConfig) {
@@ -1214,24 +1340,32 @@ exports.flairBuild = function(options, cb) {
     // start
     logger(0, 'flairBuild', 'start', true);    
 
+    // delete all dest files
+    if (options.fullBuild) {
+        delAll(options.dest);
+        logger(0, 'clean', 'done');
+    }
+
     // build source list
     let srcList = [];
-    if (options.processAsGroups) {
-        srcList = getFolders(options.src, true); // list of all group folders
+    if (options.customBuild) {
+        srcList = [].concat(options.customBuildConfig.build);
     } else {
-        srcList.push(options.src);  // this itself is a group folder
+        srcList.push(options.src);  // source itself is the folder
     }
     options.sources = srcList;
 
     // bump version number
     bump(options);
-    
+
     // build
-    copyDeps(false, options, () => {
-        build(options, () => {
-            copyDeps(true, options, () => {
-                logger(0, 'flairBuild', 'end', true, true);
-                if (typeof cb === 'function') { cb(); } 
+    copyCustom(options, () => {
+        copyDeps(false, options, () => {
+            build(options, () => {
+                copyDeps(true, options, () => {
+                    logger(0, 'flairBuild', 'end', true, true);
+                    if (typeof cb === 'function') { cb(); } 
+                });
             });
         });
     });

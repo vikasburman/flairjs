@@ -362,8 +362,6 @@ const _Reflector = function (Type) {
     };
     const StructReflector = function() {
         let refl = new CommonTypeReflector();
-        addMixinsRefl(refl);
-        addIntfRefl(refl);
         refl.isSerializable = () => { return findItemByProp(typeDef.attrs.type, 'name', 'serialize') !== null; };        
         addInstanceRefl(refl);
         addMembersRefl(refl);

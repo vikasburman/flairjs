@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.16.3
- *  Sun, 10 Mar 2019 22:55:02 GMT
+ *  Version: 0.16.62
+ *  Tue, 12 Mar 2019 03:32:55 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -78,10 +78,10 @@
     flair.info = Object.freeze({
         name: 'flair',
         file: currentFile,
-        version: '0.16.3',
+        version: '0.16.62',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 10 Mar 2019 22:55:02 GMT')
+        lupdate: new Date('Tue, 12 Mar 2019 03:32:55 GMT')
     });       
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -1918,7 +1918,7 @@
     /**
      * @name isInstanceOf
      * @description Checks if given flair class/struct instance is an instance of given class/struct type or
-     *              if given class instance implements given interface or has given mixin mixed somewhere in class/struct 
+     *              if given class instance implements given interface or has given mixin mixed somewhere in class
      *              hierarchy
      * @example
      *  isInstanceOf(obj, type)
@@ -2042,7 +2042,7 @@
      */ 
     const _isImplements = (obj, intf) => {
         // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
-        if (['class', 'struct', 'instance', 'sinstance'].indexOf(_typeOf(obj)) === -1) { throw _Exception.InvalidArgument('obj', _isImplements); }
+        if (['class', 'instance'].indexOf(_typeOf(obj)) === -1) { throw _Exception.InvalidArgument('obj', _isImplements); }
         if (['string', 'interface'].indexOf(_typeOf(intf)) === -1) {  throw _Exception.InvalidArgument('intf', _isImplements); }
         
         return obj[meta].isImplements(intf);
@@ -2065,7 +2065,7 @@
      */ 
     const _isMixed = (obj, mixin) => {
         // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
-        if (['class', 'struct', 'instance', 'sinstance'].indexOf(_typeOf(obj)) === -1) { throw _Exception.InvalidArgument('obj', _isMixed); }
+        if (['class', 'instance'].indexOf(_typeOf(obj)) === -1) { throw _Exception.InvalidArgument('obj', _isMixed); }
         if (['string', 'mixin'].indexOf(_typeOf(mixin)) === -1) {  throw _Exception.InvalidArgument('mixin', _isMixed); }
     
         return obj[meta].isMixed(mixin);
@@ -3044,12 +3044,12 @@
         if (typeof _flag !== 'undefined' && _flag === _flagName) { // inheritance in play
             params.isNeedProtected = true;
             params.isTopLevelInstance = false;
-            params.staticInterface = _static;
+            params.staticInterface = cfg.static ? _static : null;
             params.args = args;
         } else {
             params.isNeedProtected = false;
             params.isTopLevelInstance = true;
-            params.staticInterface = Type;
+            params.staticInterface = cfg.static ? Type : null;
             if (typeof _flag !== 'undefined') {
                 if (typeof _static !== 'undefined') {
                     params.args = [_flag, _static].concat(args); // one set
@@ -4140,9 +4140,15 @@
         let _Object = null,
             _ObjectMeta = null;
         if (cfg.new) { // class, struct
-            _Object = function(_flag, _static, ...args) {
-                return buildTypeInstance(cfg, _Object, {}, _flag, _static, ...args);
-            };
+            if (cfg.inheritance) { // class
+                _Object = function(_flag, _static, ...args) {
+                    return buildTypeInstance(cfg, _Object, {}, _flag, _static, ...args);
+                };
+            } else { // struct
+                _Object = function(...args) {
+                    return buildTypeInstance(cfg, _Object, {}, null, null, ...args);
+                };
+            }
         } else { // mixin, interface, enum
             if(cfg.const) { // enum, interface
                 _Object = function() {
@@ -4459,7 +4465,6 @@
      * @description Constructs a Struct type
      * @example
      *  Struct(name, factory)
-     *  Struct(name, mixints, factory)
      * @params
      *  name: string - name of the struct
      *                 >> simple, e.g.,
@@ -4476,20 +4481,15 @@
      *                    To put a type in root namespace, use $$('ns' '(root)') or just put it in '(root)' folder and
      *                    use $$('ns', '(auto)');
      *                    Then struct can be accessed as getType('MyStruct');
-     *  mixints: array - An array of mixin and/or interface types which needs to be applied to this struct type
-     *                        mixins will be applied in order they are defined here
      *  factory: function - factory function to build struct definition
      * @returns type - constructed flair struct type
      */
-    const _Struct = (name, mixints, factory) => {
-        let args = _Args('name: string, factory: cfunction', 
-                         'name: string, mixints: array, factory: cfunction')(name, mixints, factory); args.throwOnError(_Struct);
+    const _Struct = (name, factory) => {
+        let args = _Args('name: string, factory: cfunction')(name, factory); args.throwOnError(_Struct);
     
         // builder config
         let cfg = {
             new: true,
-            mixins: true,
-            interfaces: true,
             func: true,
             construct: true,
             prop: true,
@@ -4500,7 +4500,6 @@
             },
             params: {
                 typeName: args.values.name,
-                mixinsAndInterfaces: args.values.mixints,
                 factory: args.values.factory
             }
         };
@@ -5990,8 +5989,6 @@
         };
         const StructReflector = function() {
             let refl = new CommonTypeReflector();
-            addMixinsRefl(refl);
-            addIntfRefl(refl);
             refl.isSerializable = () => { return findItemByProp(typeDef.attrs.type, 'name', 'serialize') !== null; };        
             addInstanceRefl(refl);
             addMembersRefl(refl);
@@ -6452,4 +6449,4 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
 })();
-(() => { flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","version":"0.16.3","lupdate":"Sun, 10 Mar 2019 22:55:02 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[]}');})();
+(() => { flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","version":"0.16.62","lupdate":"Tue, 12 Mar 2019 03:32:55 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[]}');})();

@@ -16,12 +16,11 @@ const doTask = (done) => {
     // load options
     optionsJSON = fsx.readJSONSync(options, 'utf8');
     if (forcedFullBuild) { optionsJSON.fullBuild = true; }
-    let engine = path.resolve(optionsJSON.engine) || '';
-    if (!engine || !fsx.existsSync(engine)) {
-        console.log('Build engine is either not configured or not found. Define correct path of flair.build.js at "engine" option in build options file.'); // eslint-disable-line no-console
-        return;
+    let engine = optionsJSON.engine || '';
+    if (!engine) {
+        console.log('Build engine is not configured. Define correct path of flair.cli.js at "engine" option in build options file.'); // eslint-disable-line no-console
     }
-    
+
     // load and run engine
     let flairBuild = require(engine).flairBuild;
     flairBuild(optionsJSON, done);

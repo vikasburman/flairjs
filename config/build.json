@@ -1,10 +1,12 @@
 {
-    "engine": "./src/flair.cli/(bundle)/flairBuild.js",
+    "engine": "../../(bundle)/flairBuild.js",
     "package": "./package.json",
 
     "dest": "./dist",
     "src": "./src",
-    "processAsGroups": false,
+
+    "customBuild": false,
+    "customBuildConfig": "./config/custom.json",
 
     "fullBuild": false,
     "skipBumpVersion": false,

@@ -1,7 +1,7 @@
 /**
  * @name isInstanceOf
  * @description Checks if given flair class/struct instance is an instance of given class/struct type or
- *              if given class instance implements given interface or has given mixin mixed somewhere in class/struct 
+ *              if given class instance implements given interface or has given mixin mixed somewhere in class
  *              hierarchy
  * @example
  *  isInstanceOf(obj, type)
