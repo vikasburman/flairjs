@@ -11,6 +11,7 @@ const AppDomain = function(name) {
         contexts = {},
         currentContexts = [],
         allADOs = [],
+        configFileJSON = null,
         defaultLoadContext = null,
         unloadDefaultContext = null,
         isUnloaded = false;
@@ -143,6 +144,20 @@ const AppDomain = function(name) {
         return asmTypes[qualifiedName] || null; // gives the assembly file name where this type reside     
     };
     this.allTypes = () => { return Object.keys(asmTypes); }
+
+    // load config (can do only once)
+    this.config = (configFile) => {
+        if (!configFileJSON) { // load only when not already loaded
+            return Promise((resolve, reject) => {
+                loadFile(configFile).then((json) => {
+                    configFileJSON = json;
+                    resolve(Object.assign({}, configFileJSON)); // return a copy
+                }).catch(reject);
+            });
+        } else {
+            return Object.assign({}, configFileJSON); // return a copy
+        }
+    };
 
     // scripts
     this.loadScripts = (...scripts) => {

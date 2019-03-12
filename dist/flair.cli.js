@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.16.77
- *  Tue, 12 Mar 2019 12:45:57 GMT
+ *  Version: 0.16.78
+ *  Tue, 12 Mar 2019 21:48:56 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -23,7 +23,7 @@ const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
     name: 'flair.cli',
-    version: '0.16.77',
+    version: '0.16.78',
     format: 'fasm',
     formatVersion: '1',
     contains: [
@@ -582,12 +582,7 @@ const build = (options, done) => {
         }
     };
     const startClosure = () => {
-        // append closure header with settings
-        let settings = '';
-        if (fsx.existsSync(options.current.asmSettings)) {
-            settings = JSON.stringify(fsx.readJSONSync(options.current.asmSettings));
-            logger(0, 'settings',  options.current.asmSettings);
-        }
+        // append closure header
         let closureHeader = 
         `(() => {\n` + 
         `'use strict';\n\n` +
@@ -612,12 +607,6 @@ const build = (options, done) => {
         `const { env } = flair.options;\n` +
         `/* eslint-enable no-unused-vars */\n` +
         `\n`; 
-        if (settings) { // settings is a closure variable of each assembly separately
-            closureHeader += 
-        `const settings = JSON.parse('${settings}'); // eslint-disable-line no-unused-vars\n`;
-        } else {
-        `const settings = {}; // eslint-disable-line no-unused-vars\n`;
-        }
         appendToFile(closureHeader);        
     };
     const endClosure = () => {
@@ -626,6 +615,31 @@ const build = (options, done) => {
         `\n` + 
         `})();\n`;
         appendToFile(closureFooter);
+    };
+    const appendSettings = () => {
+        let settings = '',
+            settingsContent = '';
+        if (fsx.existsSync(options.current.asmSettings)) {
+            settings = JSON.stringify(fsx.readJSONSync(options.current.asmSettings));
+            logger(0, 'settings',  options.current.asmSettings);
+        }
+        // settings is a closure variable of each assembly separately
+        if (settings) { 
+            settingsContent = `let settings = JSON.parse('${settings}'); // eslint-disable-line no-unused-vars\n`;
+        } else {
+            settingsContent = `let settings = {}; // eslint-disable-line no-unused-vars\n`;
+        }
+        // settings can be defined outside as well, new also
+        // default values given in these settings will be overwritten by what is defined in external config file
+        settingsContent += `
+        let settingsReader = flair.Port('settingsReader');
+        if (typeof settingsReader === 'function') {
+            let externalSettings = settingsReader('${options.current.asmName}');
+            if (externalSettings) { settings = Object.assign(settings, externalSettings); }
+        }
+        settings = Object.freeze(settings);
+        `;
+        appendToFile(settingsContent);
     };
     const appendTypes = (done) => {
         if (options.current.ado.types.length === 0) { done(); return; }
@@ -954,6 +968,9 @@ const build = (options, done) => {
 
                 // start assembly content closure
                 startClosure();
+
+                // append settings
+                appendSettings();
 
                 // append types, resources and self-registration
                 appendTypes(() => {
@@ -1418,5 +1435,13 @@ const { args, Exception, noop, nip, nim, nie, event } = flair;
 const { env } = flair.options;
 /* eslint-enable no-unused-vars */
 
+let settings = {}; // eslint-disable-line no-unused-vars
 
+        let settingsReader = flair.Port('settingsReader');
+        if (typeof settingsReader === 'function') {
+            let externalSettings = settingsReader('flair.cli');
+            if (externalSettings) { settings = Object.assign(settings, externalSettings); }
+        }
+        settings = Object.freeze(settings);
+        
 })();

@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.16.77
- *  Tue, 12 Mar 2019 12:45:55 GMT
+ *  Version: 0.16.78
+ *  Tue, 12 Mar 2019 21:48:53 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -78,10 +78,10 @@
     flair.info = Object.freeze({
         name: 'flair',
         file: currentFile,
-        version: '0.16.77',
+        version: '0.16.78',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Tue, 12 Mar 2019 12:45:55 GMT')
+        lupdate: new Date('Tue, 12 Mar 2019 21:48:53 GMT')
     });       
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -1535,6 +1535,7 @@
             contexts = {},
             currentContexts = [],
             allADOs = [],
+            configFileJSON = null,
             defaultLoadContext = null,
             unloadDefaultContext = null,
             isUnloaded = false;
@@ -1667,6 +1668,20 @@
             return asmTypes[qualifiedName] || null; // gives the assembly file name where this type reside     
         };
         this.allTypes = () => { return Object.keys(asmTypes); }
+    
+        // load config (can do only once)
+        this.config = (configFile) => {
+            if (!configFileJSON) { // load only when not already loaded
+                return Promise((resolve, reject) => {
+                    loadFile(configFile).then((json) => {
+                        configFileJSON = json;
+                        resolve(Object.assign({}, configFileJSON)); // return a copy
+                    }).catch(reject);
+                });
+            } else {
+                return Object.assign({}, configFileJSON); // return a copy
+            }
+        };
     
         // scripts
         this.loadScripts = (...scripts) => {
@@ -5624,6 +5639,55 @@
         };
     };
     _Port.define('clientFile', null, __clientFile);
+    
+    // settingsReader factory
+    const __settingsReader = (env) => {
+        return (asmName) => {
+            /** 
+             * NOTE: appConfig.json (on server) and webConfig.json (on client)
+             * is the standard config file which can contain settings for every
+             * assembly for various settings. Only defined settings will be overwritten 
+             * over inbuilt settings of that assembly's setting.json
+             * there can be two versions of settings for each assembly:
+             * 1. when assembly is loaded in main thread
+             * 2. when assembly is loaded on worker thread
+             * these can be defined as:
+             * {
+             *      "assemblyName": { <-- this is used when assembly is loaded in main thread
+             *          "settingName1": "settingValue",
+             *          "settingName2": "settingValue"
+             *      }
+             *      "worker.assemblyName": { <-- this is used when assembly is loaded in worker thread
+             *          "settingName1": "settingValue",
+             *          "settingName2": "settingValue"
+             *      }
+             * }
+             * Note: The whole settings of the assembly are merged in following order as:
+             * A. When assembly is being loaded in main thread:
+             *      settings.json <-- appConfig/webConfig.assemblyName section
+             * B. When assembly is being loaded in worker thread:
+             *      settings.json <-- appConfig/webConfig:assemblyName section <-- appConfig/webConfig:worker.assemblyName section
+             * 
+             * This means, when being loaded on worker, only differentials should be defined for worker environment
+             * which can be worker specific settings
+             * 
+             * NOTE: under every "assemblyName", all settings underneath are treated as whole object, 
+             * and all merging happens at this level, merging does not go deeper than this level
+            */
+    
+            // return relevant settings
+            let settings = {},
+                configFileJSON = _AppDomain.config();
+            if (configFileJSON && configFileJSON[asmName]) { // pick non-worker settings
+                settings = Object.assign(settings, configFileJSON[asmName]);
+            }
+            if (env.isWorker && configFileJSON && configFileJSON[`worker.${asmName}`]) { // overwrite with worker section if defined
+                settings = Object.assign(settings, configFileJSON[`worker.${asmName}`]);
+            }
+            return settings;
+        };
+    };
+    _Port.define('settingsReader', null, __settingsReader);
      
     /**
      * @name Reflector
@@ -6106,7 +6170,15 @@ const { args, Exception, noop, nip, nim, nie, event } = flair;
 const { env } = flair.options;
 /* eslint-enable no-unused-vars */
 
-flair.AppDomain.context.current().currentAssemblyBeingLoaded('./flair{.min}.js');
+let settings = {}; // eslint-disable-line no-unused-vars
+
+        let settingsReader = flair.Port('settingsReader');
+        if (typeof settingsReader === 'function') {
+            let externalSettings = settingsReader('flair');
+            if (externalSettings) { settings = Object.assign(settings, externalSettings); }
+        }
+        settings = Object.freeze(settings);
+        flair.AppDomain.context.current().currentAssemblyBeingLoaded('./flair{.min}.js');
 
 (async () => { // ./src/flair/(root)/Aspect.js
 'use strict';
@@ -6449,6 +6521,6 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","version":"0.16.77","lupdate":"Tue, 12 Mar 2019 12:45:55 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[]}');
+flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","version":"0.16.78","lupdate":"Tue, 12 Mar 2019 21:48:53 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[]}');
 
 })();
