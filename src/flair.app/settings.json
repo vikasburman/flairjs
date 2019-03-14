@@ -1,0 +1,10 @@
+{
+    "preambles": [
+    ],
+    "bootwares": [
+    ],
+    "server": "flair.server.Server",
+    "app": "flair.server.App | flair.client.App",
+    "entryPoint": "./main.js | ./index.js",
+    "bootEngine": "flair.boot.BootEngine"
+}

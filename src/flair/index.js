@@ -137,6 +137,7 @@
     <!-- inject: ./(bundle)/tasks/tasks.js --> 
     <!-- inject: ./(bundle)/port/ports.js --> 
     <!-- inject: ./(bundle)/reflection/reflector.js -->    
+    <!-- inject: ./(bundle)/types/support/utils.js -->    
 
     // freeze members
     flair.members = Object.freeze(flair.members);

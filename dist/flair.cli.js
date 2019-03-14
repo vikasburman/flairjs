@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.16.78
- *  Tue, 12 Mar 2019 21:48:56 GMT
+ *  Version: 0.16.98
+ *  Thu, 14 Mar 2019 17:47:35 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -23,7 +23,7 @@ const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
     name: 'flair.cli',
-    version: '0.16.78',
+    version: '0.16.98',
     format: 'fasm',
     formatVersion: '1',
     contains: [
@@ -605,6 +605,9 @@ const build = (options, done) => {
         `const { dispose, using } = flair;\n` +
         `const { args, Exception, noop, nip, nim, nie, event } = flair;\n` +
         `const { env } = flair.options;\n` +
+        `const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;\n` +
+        `const { $static, $abstract, $virtual, $override, $sealed, $private, $protected, $readonly, $async } = $$;\n` +
+        `const { $enumerate, $dispose, $post, $on, $timer, $type, $args, $inject, $resource, $asset, $singleton, $serialize, $deprecate, $session, $state, $conditional, $noserialize, $ns } = $$;\n` +
         `/* eslint-enable no-unused-vars */\n` +
         `\n`; 
         appendToFile(closureHeader);        
@@ -1433,6 +1436,9 @@ const { getAssembly, getAttr, getContext, getResource, getType, ns, getTypeOf, t
 const { dispose, using } = flair;
 const { args, Exception, noop, nip, nim, nie, event } = flair;
 const { env } = flair.options;
+const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
+const { $static, $abstract, $virtual, $override, $sealed, $private, $protected, $readonly, $async } = $$;
+const { $enumerate, $dispose, $post, $on, $timer, $type, $args, $inject, $resource, $asset, $singleton, $serialize, $deprecate, $session, $state, $conditional, $noserialize, $ns } = $$;
 /* eslint-enable no-unused-vars */
 
 let settings = {}; // eslint-disable-line no-unused-vars

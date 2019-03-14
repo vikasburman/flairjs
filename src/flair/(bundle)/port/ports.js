@@ -219,7 +219,7 @@ const __settingsReader = (env) => {
          *          "settingName1": "settingValue",
          *          "settingName2": "settingValue"
          *      }
-         *      "worker.assemblyName": { <-- this is used when assembly is loaded in worker thread
+         *      "worker:assemblyName": { <-- this is used when assembly is loaded in worker thread
          *          "settingName1": "settingValue",
          *          "settingName2": "settingValue"
          *      }
@@ -228,7 +228,7 @@ const __settingsReader = (env) => {
          * A. When assembly is being loaded in main thread:
          *      settings.json <-- appConfig/webConfig.assemblyName section
          * B. When assembly is being loaded in worker thread:
-         *      settings.json <-- appConfig/webConfig:assemblyName section <-- appConfig/webConfig:worker.assemblyName section
+         *      settings.json <-- appConfig/webConfig:assemblyName section <-- appConfig/webConfig:worker:assemblyName section
          * 
          * This means, when being loaded on worker, only differentials should be defined for worker environment
          * which can be worker specific settings
@@ -243,8 +243,8 @@ const __settingsReader = (env) => {
         if (configFileJSON && configFileJSON[asmName]) { // pick non-worker settings
             settings = Object.assign(settings, configFileJSON[asmName]);
         }
-        if (env.isWorker && configFileJSON && configFileJSON[`worker.${asmName}`]) { // overwrite with worker section if defined
-            settings = Object.assign(settings, configFileJSON[`worker.${asmName}`]);
+        if (env.isWorker && configFileJSON && configFileJSON[`worker:${asmName}`]) { // overwrite with worker section if defined
+            settings = Object.assign(settings, configFileJSON[`worker:${asmName}`]);
         }
         return settings;
     };

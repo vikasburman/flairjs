@@ -56,34 +56,33 @@ Class('(auto)', [IProgressReporter, IDisposable], function() {
     * @returns
     *  any - anything
     */  
-    $$('async');
-    this.run = (resolve, reject, ...args) => {
+    this.run = async (...args) => {
         if (!isRunning) {
             // mark
             isRunning = true;
 
-            const afterSetup = () => {
-                isSetupDone = true;
-                let result = this.onRun(...args);
-                if (result && typeof result.then === 'function') {
-                    result.then(resolve).catch(reject).finally(() => {
-                        isRunning = false;
-                    });
-                } else {
-                    isRunning = false;
-                    resolve(result);
-                }
-            };
+            // setup
             if (!isSetupDone) {
-                this.setup().then(afterSetup).catch((err) => {
+                try {
+                    await this.setup();
+                    isSetupDone = true;
+                } catch(err) {
                     isRunning = false;
-                    reject(err);
-                });
-            } else {
-                afterSetup();
+                    throw err;
+                }
+            }
+
+            // run
+            try {
+                let result = await this.onRun(...args);
+                return result;
+            } catch(err) {
+                throw err;
+            } finally {
+                isRunning = false;
             }
         } else {
-            reject(Exception.InvalidOperation('Task is already running', this.run));
+             throw Exception.InvalidOperation('Task is already running', this.run);
         }
     };
    
@@ -99,7 +98,7 @@ Class('(auto)', [IProgressReporter, IDisposable], function() {
 
     /** 
      * @name setup
-     * @description Task related setup, executed only once, before onRun is called
+     * @description Task related setup, executed only once, before onRun is called, - async
      * @example
      *  setup()
      * @returns
@@ -107,11 +106,12 @@ Class('(auto)', [IProgressReporter, IDisposable], function() {
      */  
     $$('virtual');
     $$('protected');
+    $$('async');
     this.setup = noop;
 
     /** 
      * @name onRun
-     * @description Task run handler, can be sync or async (returns promise)
+     * @description Task run handler - async
      * @example
      *  onRun(...args)
      * @arguments
@@ -121,6 +121,7 @@ Class('(auto)', [IProgressReporter, IDisposable], function() {
      */  
     $$('abstract');
     $$('protected');
+    $$('async');
     this.onRun = nim;
 });
 

@@ -560,6 +560,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                     let newFn = null;
                     if (memberType === 'func') { // func
                         newFn = appliedAttr.attr.decorateFunction(def.name, memberName, member);
+                        if (isASync(member) !== isASync(newFn)) { throw _Exception.OperationFailed(`${appliedAttr.name} decoration result is unexpected. (${memberName})`, builder); }
                     } else { // event
                         newFn = appliedAttr.attr.decorateEvent(def.name, memberName, member);
                     }
@@ -1026,25 +1027,34 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         }
 
         // define
+        _isASync = _isASync || isASync(memberDef); // if memberDef is an async function, mark it as async automatically
         if (_isASync) {
-            _member = function(...args) {
-                return new Promise(function(resolve, reject) {
+            _member = async function(...args) {
+                let wrappedMemberDef = new Promise(function(resolve, reject) {
                     if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
                     let fnArgs = [];
                     if (base) { fnArgs.push(base); }                                // base is always first, if overriding
                     if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base or as first, if injected
-                    fnArgs.push(resolve);                                           // resolve, reject follows, in async mode
-                    fnArgs.push(reject);
                     if (args_attr && args_attr.args.length > 0) {
-                        let argsObj = _Args(...args_attr.args)(...args);
-                        if (argsObj.isInvalid) { reject(argsObj.error); return; }
+                        let argsObj = _Args(...args_attr.args)(...args); 
+                        if (argsObj.error) { reject(argsObj.error, memberDef); }
                         fnArgs.push(argsObj);                                       // push a single args processor's result object
                     } else {
                         fnArgs = fnArgs.concat(args);                               // add args as is
                     }
-                    return memberDef.apply(bindingHost, fnArgs);
+                    try {
+                        let memberDefResult = memberDef.apply(bindingHost, fnArgs);
+                        if (typeof memberDefResult.then === 'function') { // send result when it comes
+                            memberDefResult.then(resolve).catch((err) => { reject(err, memberDef); });
+                        } else {
+                            resolve(memberDefResult); // send result as is
+                        }
+                    } catch (err) {
+                        reject(err, memberDef);
+                    }
                 }.bind(bindingHost));
-            }.bind(bindingHost);                 
+                return await wrappedMemberDef();
+            }.bind(bindingHost);    
         } else {
             _member = function(...args) {
                 if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console

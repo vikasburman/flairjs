@@ -32,6 +32,9 @@ const which = (def, isFile) => {
 const isArrow = (fn) => {
     return (!(fn).hasOwnProperty('prototype'));
 };
+const isASync = (fn) => {
+    return (fn.constructor.name === 'AsyncFunction');
+};
 const findIndexByProp = (arr, propName, propValue) => {
     return arr.findIndex((item) => {
         return (item[propName] === propValue ? true : false);
@@ -127,4 +130,17 @@ const uncacheModule = (module) => {
     } else { 
         _Port('clientModule').undef(module);
     }
+};
+const forEachAsync = (items, asyncFn) => {
+    return Promise((resolve, reject) => {
+        const processItems = (items) => {
+            if (!items || items.length === 0) { resolve(); return; }
+            Promise((_resolve, _reject) => {
+                asyncFn(_resolve, _reject, items.shift());
+            }).then(() => { processItems(items); }).catch(reject); // process one from top
+        };
+
+        // start
+        processItems(items.slice());
+    });
 };

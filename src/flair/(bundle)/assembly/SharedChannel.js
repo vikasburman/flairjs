@@ -84,8 +84,9 @@ const SharedChannel = function(allADOs, onError) {
 
         // initialize environment
         if (isServer) {
-            // load flair
-            flair = require('<<file>>');
+            // load entry point
+            require('<<entryPoint>>');
+            flair = require('flairjs');
 
             // plumb to parent port for private port connection
             let parentPort = require('worker_threads').parentPort;
@@ -95,8 +96,8 @@ const SharedChannel = function(allADOs, onError) {
                 port.on('message', onMessageFromMain);
             });
         } else {
-            // load flair
-            _global.importScripts('<<file>>');
+            // load entry point
+            _global.importScripts('<<entryPoint>>');
             flair = _global.flair;
 
             // plumb to private port 
@@ -110,7 +111,7 @@ const SharedChannel = function(allADOs, onError) {
             AppDomain.registerAdo(...ados);
         }        
     };
-    let remoteMessageHandlerScript = remoteMessageHandler.toString().replace('<<file>>', currentFile);
+    let remoteMessageHandlerScript = remoteMessageHandler.toString().replace('<<entryPoint>>', AppDomain.entryPoint());
     remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<isServer>>', isServer.toString());
     remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<ados>>', JSON.stringify(allADOs));
     remoteMessageHandlerScript = `(${remoteMessageHandlerScript})();`

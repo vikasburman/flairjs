@@ -146,6 +146,13 @@ const _attrMeta = _attr[meta] = Object.freeze({
     })
 });
 
+// define easy-syntax methods to be made available in assembly closure
+for(let inbuilt_attr in _attrMeta.inbuilt) {
+    if (_attrMeta.inbuilt.hasOwnProperty(inbuilt_attr)) {
+        _$$[`$${inbuilt_attr}`] = (...args) => { _$$(inbuilt_attr, ...args); };
+    }
+}
+
 _attr.collect = () => {
     let attrs = _attrMeta.bucket.slice(); _attr.clear();
     return attrs;

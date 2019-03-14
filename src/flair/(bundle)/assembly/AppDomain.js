@@ -11,10 +11,15 @@ const AppDomain = function(name) {
         contexts = {},
         currentContexts = [],
         allADOs = [],
+        entryPoint = '',
         configFileJSON = null,
+        app = null,
+        server = null,
         defaultLoadContext = null,
         unloadDefaultContext = null,
         isUnloaded = false;
+    
+    const { ILifecycleHandle } = _ns();
 
     // default load context
     defaultLoadContext = new AssemblyLoadContext('default', this, null, currentContexts, contexts),
@@ -28,12 +33,18 @@ const AppDomain = function(name) {
     this.name = name;
     this.isRemote = false;
     this.isUnloaded = () => { return isUnloaded; };
-    this.unload = () => {
+    this.unload = async () => {
         if (!isUnloaded) {
             // mark unloaded
             isUnloaded = true;
 
-            // unload all contexts of this domain, including default one
+            // stop app (sync mode)
+            if (app) { await app.stop(); _dispose(app); }
+
+            // stop server (sync mode)
+            if (server) { await server.stop(); _dispose(server); }
+
+            // unload all contexts of this domain, including default one (async)
             for(let context in contexts) {
                 if (contexts.hasOwnProperty(context)) {
                     if (typeof contexts[context].unload === 'function') {
@@ -145,9 +156,9 @@ const AppDomain = function(name) {
     };
     this.allTypes = () => { return Object.keys(asmTypes); }
 
-    // load config (can do only once)
+    // set onces, read many times
     this.config = (configFile) => {
-        if (!configFileJSON) { // load only when not already loaded
+        if (!configFileJSON && configFile) { // load only when not already loaded
             return Promise((resolve, reject) => {
                 loadFile(configFile).then((json) => {
                     configFileJSON = json;
@@ -155,9 +166,35 @@ const AppDomain = function(name) {
                 }).catch(reject);
             });
         } else {
-            return Object.assign({}, configFileJSON); // return a copy
+            if (configFileJSON) {
+                return Object.assign({}, configFileJSON); // return a copy
+            }
+            return null;
         }
     };
+    this.entryPoint = (file) => {
+        if (!entryPoint) {
+            if (typeof file !== 'string') { throw _Exception.InvalidArgument('file'); }
+            entryPoint = _which(file || ''); // main entry point file
+        }
+        return entryPoint;
+    };
+    this.App = (appInstance) => {
+        if (appInstance && !app) { 
+            if (!_is(appInstance, ILifecycleHandle)) { throw _Exception.InvalidArgument('appInstance'); }
+            app = appInstance; 
+        }
+        return app;
+    };
+    if (isServer) {
+        this.Server = (serverInstance) => {
+            if (serverInstance && !server) { 
+                if (!_is(serverInstance, ILifecycleHandle)) { throw _Exception.InvalidArgument('serverInstance'); }
+                server = serverInstance; 
+            }
+            return server;
+        };
+    }
 
     // scripts
     this.loadScripts = (...scripts) => {

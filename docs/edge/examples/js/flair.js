@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.16.78
- *  Tue, 12 Mar 2019 21:48:53 GMT
+ *  Version: 0.16.98
+ *  Thu, 14 Mar 2019 17:47:33 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -78,10 +78,10 @@
     flair.info = Object.freeze({
         name: 'flair',
         file: currentFile,
-        version: '0.16.78',
+        version: '0.16.98',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Tue, 12 Mar 2019 21:48:53 GMT')
+        lupdate: new Date('Thu, 14 Mar 2019 17:47:33 GMT')
     });       
     flair.members = [];
     flair.options = Object.freeze(options);
@@ -255,6 +255,9 @@
     const isArrow = (fn) => {
         return (!(fn).hasOwnProperty('prototype'));
     };
+    const isASync = (fn) => {
+        return (fn.constructor.name === 'AsyncFunction');
+    };
     const findIndexByProp = (arr, propName, propValue) => {
         return arr.findIndex((item) => {
             return (item[propName] === propValue ? true : false);
@@ -351,7 +354,19 @@
             _Port('clientModule').undef(module);
         }
     };
-      
+    const forEachAsync = (items, asyncFn) => {
+        return Promise((resolve, reject) => {
+            const processItems = (items) => {
+                if (!items || items.length === 0) { resolve(); return; }
+                Promise((_resolve, _reject) => {
+                    asyncFn(_resolve, _reject, items.shift());
+                }).then(() => { processItems(items); }).catch(reject); // process one from top
+            };
+    
+            // start
+            processItems(items.slice());
+        });
+    };  
     /**
      * @name typeOf
      * @description Finds the type of given object in flair type system
@@ -1283,8 +1298,9 @@
     
             // initialize environment
             if (isServer) {
-                // load flair
-                flair = require('./flair{.min}.js');
+                // load entry point
+                require('<<entryPoint>>');
+                flair = require('flairjs');
     
                 // plumb to parent port for private port connection
                 let parentPort = require('worker_threads').parentPort;
@@ -1294,8 +1310,8 @@
                     port.on('message', onMessageFromMain);
                 });
             } else {
-                // load flair
-                _global.importScripts('<<file>>');
+                // load entry point
+                _global.importScripts('<<entryPoint>>');
                 flair = _global.flair;
     
                 // plumb to private port 
@@ -1309,7 +1325,7 @@
                 AppDomain.registerAdo(...ados);
             }        
         };
-        let remoteMessageHandlerScript = remoteMessageHandler.toString().replace('<<file>>', currentFile);
+        let remoteMessageHandlerScript = remoteMessageHandler.toString().replace('<<entryPoint>>', AppDomain.entryPoint());
         remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<isServer>>', isServer.toString());
         remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<ados>>', JSON.stringify(allADOs));
         remoteMessageHandlerScript = `(${remoteMessageHandlerScript})();`
@@ -1535,10 +1551,15 @@
             contexts = {},
             currentContexts = [],
             allADOs = [],
+            entryPoint = '',
             configFileJSON = null,
+            app = null,
+            server = null,
             defaultLoadContext = null,
             unloadDefaultContext = null,
             isUnloaded = false;
+        
+        const { ILifecycleHandle } = _ns();
     
         // default load context
         defaultLoadContext = new AssemblyLoadContext('default', this, null, currentContexts, contexts),
@@ -1552,12 +1573,18 @@
         this.name = name;
         this.isRemote = false;
         this.isUnloaded = () => { return isUnloaded; };
-        this.unload = () => {
+        this.unload = async () => {
             if (!isUnloaded) {
                 // mark unloaded
                 isUnloaded = true;
     
-                // unload all contexts of this domain, including default one
+                // stop app (sync mode)
+                if (app) { await app.stop(); _dispose(app); }
+    
+                // stop server (sync mode)
+                if (server) { await server.stop(); _dispose(server); }
+    
+                // unload all contexts of this domain, including default one (async)
                 for(let context in contexts) {
                     if (contexts.hasOwnProperty(context)) {
                         if (typeof contexts[context].unload === 'function') {
@@ -1669,9 +1696,9 @@
         };
         this.allTypes = () => { return Object.keys(asmTypes); }
     
-        // load config (can do only once)
+        // set onces, read many times
         this.config = (configFile) => {
-            if (!configFileJSON) { // load only when not already loaded
+            if (!configFileJSON && configFile) { // load only when not already loaded
                 return Promise((resolve, reject) => {
                     loadFile(configFile).then((json) => {
                         configFileJSON = json;
@@ -1679,9 +1706,35 @@
                     }).catch(reject);
                 });
             } else {
-                return Object.assign({}, configFileJSON); // return a copy
+                if (configFileJSON) {
+                    return Object.assign({}, configFileJSON); // return a copy
+                }
+                return null;
             }
         };
+        this.entryPoint = (file) => {
+            if (!entryPoint) {
+                if (typeof file !== 'string') { throw _Exception.InvalidArgument('file'); }
+                entryPoint = file || ''; // main entry point file
+            }
+            return entryPoint;
+        };
+        this.App = (appInstance) => {
+            if (appInstance && !app) { 
+                if (!_is(appInstance, ILifecycleHandle)) { throw _Exception.InvalidArgument('appInstance'); }
+                app = appInstance; 
+            }
+            return app;
+        };
+        if (isServer) {
+            this.Server = (serverInstance) => {
+                if (serverInstance && !server) { 
+                    if (!_is(serverInstance, ILifecycleHandle)) { throw _Exception.InvalidArgument('serverInstance'); }
+                    server = serverInstance; 
+                }
+                return server;
+            };
+        }
     
         // scripts
         this.loadScripts = (...scripts) => {
@@ -2291,18 +2344,30 @@
      * @params
      *  dep: string - dependency to be included
      *                NOTE: Dep can be of any type as defined for 'bring'
+     *  globalVar: string/boolean - globally added variable name by the dependency
+     *             NOTE: if dependency is a file and it emits a global variable, this should be name
+     *                   of that variable and it will return that variable itself
+     *                   if dependency is a file and does not emit any variable and it is still ok to
+     *                   assume it a valid scenario, pass true value and it will assume a successfull loading if there is no error occured
      * @returns promise - that gets resolved with given dependency
      */ 
-    const _include = (dep) => { 
+    const _include = (dep, globalVar) => { 
         return new Promise((resolve, reject) => {
             if (typeof dep !== 'string') { reject(_Exception.InvalidArgument('dep')); return; }
             try {
                 _bring([dep], (obj) => {
                     if (obj) {
                         resolve(obj);
-                    } else {
-                        reject(_Exception.OperationFailed(`Dependency could not be resolved. (${dep})`));
+                    } else if (globalVar) { // if global var is given to look at
+                        if (typeof globalVar === 'boolean') {
+                            resolve(); // since a true is passed, resolve as is
+                        } else {
+                            if (options.global[globalVar]) {
+                                resolve(options.global[globalVar]);
+                            }
+                        }
                     }
+                    reject(_Exception.OperationFailed(`Dependency could not be resolved. (${dep})`));
                 });
             } catch (err) {
                 reject(err);
@@ -2539,6 +2604,13 @@
             interface: new _attrConfig('class && (prop || func || event)')
         })
     });
+    
+    // define easy-syntax methods to be made available in assembly closure
+    for(let inbuilt_attr in _attrMeta.inbuilt) {
+        if (_attrMeta.inbuilt.hasOwnProperty(inbuilt_attr)) {
+            _$$[`$${inbuilt_attr}`] = (...args) => { _$$(inbuilt_attr, ...args); };
+        }
+    }
     
     _attr.collect = () => {
         let attrs = _attrMeta.bucket.slice(); _attr.clear();
@@ -3126,6 +3198,7 @@
                         let newFn = null;
                         if (memberType === 'func') { // func
                             newFn = appliedAttr.attr.decorateFunction(def.name, memberName, member);
+                            if (isASync(member) !== isASync(newFn)) { throw _Exception.OperationFailed(`${appliedAttr.name} decoration result is unexpected. (${memberName})`, builder); }
                         } else { // event
                             newFn = appliedAttr.attr.decorateEvent(def.name, memberName, member);
                         }
@@ -3592,25 +3665,34 @@
             }
     
             // define
+            _isASync = _isASync || isASync(memberDef); // if memberDef is an async function, mark it as async automatically
             if (_isASync) {
-                _member = function(...args) {
-                    return new Promise(function(resolve, reject) {
+                _member = async function(...args) {
+                    let wrappedMemberDef = new Promise(function(resolve, reject) {
                         if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
                         let fnArgs = [];
                         if (base) { fnArgs.push(base); }                                // base is always first, if overriding
                         if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base or as first, if injected
-                        fnArgs.push(resolve);                                           // resolve, reject follows, in async mode
-                        fnArgs.push(reject);
                         if (args_attr && args_attr.args.length > 0) {
-                            let argsObj = _Args(...args_attr.args)(...args);
-                            if (argsObj.isInvalid) { reject(argsObj.error); return; }
+                            let argsObj = _Args(...args_attr.args)(...args); 
+                            if (argsObj.error) { reject(argsObj.error, memberDef); }
                             fnArgs.push(argsObj);                                       // push a single args processor's result object
                         } else {
                             fnArgs = fnArgs.concat(args);                               // add args as is
                         }
-                        return memberDef.apply(bindingHost, fnArgs);
+                        try {
+                            let memberDefResult = memberDef.apply(bindingHost, fnArgs);
+                            if (typeof memberDefResult.then === 'function') { // send result when it comes
+                                memberDefResult.then(resolve).catch((err) => { reject(err, memberDef); });
+                            } else {
+                                resolve(memberDefResult); // send result as is
+                            }
+                        } catch (err) {
+                            reject(err, memberDef);
+                        }
                     }.bind(bindingHost));
-                }.bind(bindingHost);                 
+                    return await wrappedMemberDef();
+                }.bind(bindingHost);    
             } else {
                 _member = function(...args) {
                     if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
@@ -5657,7 +5739,7 @@
              *          "settingName1": "settingValue",
              *          "settingName2": "settingValue"
              *      }
-             *      "worker.assemblyName": { <-- this is used when assembly is loaded in worker thread
+             *      "worker:assemblyName": { <-- this is used when assembly is loaded in worker thread
              *          "settingName1": "settingValue",
              *          "settingName2": "settingValue"
              *      }
@@ -5666,7 +5748,7 @@
              * A. When assembly is being loaded in main thread:
              *      settings.json <-- appConfig/webConfig.assemblyName section
              * B. When assembly is being loaded in worker thread:
-             *      settings.json <-- appConfig/webConfig:assemblyName section <-- appConfig/webConfig:worker.assemblyName section
+             *      settings.json <-- appConfig/webConfig:assemblyName section <-- appConfig/webConfig:worker:assemblyName section
              * 
              * This means, when being loaded on worker, only differentials should be defined for worker environment
              * which can be worker specific settings
@@ -5681,8 +5763,8 @@
             if (configFileJSON && configFileJSON[asmName]) { // pick non-worker settings
                 settings = Object.assign(settings, configFileJSON[asmName]);
             }
-            if (env.isWorker && configFileJSON && configFileJSON[`worker.${asmName}`]) { // overwrite with worker section if defined
-                settings = Object.assign(settings, configFileJSON[`worker.${asmName}`]);
+            if (env.isWorker && configFileJSON && configFileJSON[`worker:${asmName}`]) { // overwrite with worker section if defined
+                settings = Object.assign(settings, configFileJSON[`worker:${asmName}`]);
             }
             return settings;
         };
@@ -6139,6 +6221,29 @@
     a2f('Reflector', _Reflector, () => {
         _Reflector.dispose();
     });    
+    /**
+     * @name utils
+     * @description Helper functions exposed.
+     * @example
+     *  utils.<...>
+     * @params
+     * @returns
+     */ 
+    const _utils = () => { };
+    _utils.forEachAsync = forEachAsync;
+    _utils.replaceAll = replaceAll;
+    _utils.splitAndTrim = splitAndTrim;
+    _utils.findIndexByProp = findIndexByProp;
+    _utils.findItemByProp = findItemByProp;
+    _utils.isArrowFunc = isArrow;
+    _utils.isASyncFunc = isASync;
+    _utils.sieve = sieve;
+    _utils.b64EncodeUnicode = b64EncodeUnicode;
+    _utils.b64DecodeUnicode = b64DecodeUnicode;
+    
+    // attach to flair
+    a2f('utils', _utils);
+        
 
     // freeze members
     flair.members = Object.freeze(flair.members);
@@ -6168,6 +6273,9 @@ const { getAssembly, getAttr, getContext, getResource, getType, ns, getTypeOf, t
 const { dispose, using } = flair;
 const { args, Exception, noop, nip, nim, nie, event } = flair;
 const { env } = flair.options;
+const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
+const { $static, $abstract, $virtual, $override, $sealed, $private, $protected, $readonly, $async } = $$;
+const { $enumerate, $dispose, $post, $on, $timer, $type, $args, $inject, $resource, $asset, $singleton, $serialize, $deprecate, $session, $state, $conditional, $noserialize, $ns } = $$;
 /* eslint-enable no-unused-vars */
 
 let settings = {}; // eslint-disable-line no-unused-vars
@@ -6360,14 +6468,32 @@ Class('Attribute', function() {
 'use strict';
 /**
  * @name IDisposable
- * @description IDisposable interface.
+ * @description IDisposable interface
  */
 $$('ns', '(root)');
 Interface('IDisposable', function() {
-    
     // dispose
     this.dispose = nim;
-    
+});
+
+})();
+
+(async () => { // ./src/flair/(root)/ILifecycleHandle.js
+'use strict';
+/**
+ * @name ILifecycleHandle
+ * @description ILifecycleHandle interface
+ */
+$$('ns', '(root)');
+Interface('ILifecycleHandle', function() {
+    // start - async
+    this.start = nim;
+
+    // stop - async
+    this.stop = nim;
+
+    // restart = async
+    this.restart = nim;
 });
 
 })();
@@ -6376,14 +6502,36 @@ Interface('IDisposable', function() {
 'use strict';
 /**
  * @name IProgressReporter
- * @description IProgressReporter interface.
+ * @description IProgressReporter interface
  */
 $$('ns', '(root)');
 Interface('IProgressReporter', function() {
-    
     // progress report
     this.progress = nie;
-    
+});
+
+})();
+
+(async () => { // ./src/flair/(root)/LifecycleHandler.js
+'use strict';
+/**
+ * @name LifecycleHandler 
+ * @description LifecycleHandle functions
+ */
+$$('ns', '(root)');
+Mixin('LifecycleHandler', function() {
+    $$('virtual');
+    $$('async');
+    this.start = noop;
+
+    $$('virtual');
+    $$('async');
+    this.stop = noop;
+
+    this.restart = async () => {
+        await this.stop();
+        await this.start();
+    };
 });
 
 })();
@@ -6448,34 +6596,33 @@ Class('Task', [IProgressReporter, IDisposable], function() {
     * @returns
     *  any - anything
     */  
-    $$('async');
-    this.run = (resolve, reject, ...args) => {
+    this.run = async (...args) => {
         if (!isRunning) {
             // mark
             isRunning = true;
 
-            const afterSetup = () => {
-                isSetupDone = true;
-                let result = this.onRun(...args);
-                if (result && typeof result.then === 'function') {
-                    result.then(resolve).catch(reject).finally(() => {
-                        isRunning = false;
-                    });
-                } else {
-                    isRunning = false;
-                    resolve(result);
-                }
-            };
+            // setup
             if (!isSetupDone) {
-                this.setup().then(afterSetup).catch((err) => {
+                try {
+                    await this.setup();
+                    isSetupDone = true;
+                } catch(err) {
                     isRunning = false;
-                    reject(err);
-                });
-            } else {
-                afterSetup();
+                    throw err;
+                }
+            }
+
+            // run
+            try {
+                let result = await this.onRun(...args);
+                return result;
+            } catch(err) {
+                throw err;
+            } finally {
+                isRunning = false;
             }
         } else {
-            reject(Exception.InvalidOperation('Task is already running', this.run));
+             throw Exception.InvalidOperation('Task is already running', this.run);
         }
     };
    
@@ -6491,7 +6638,7 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
     /** 
      * @name setup
-     * @description Task related setup, executed only once, before onRun is called
+     * @description Task related setup, executed only once, before onRun is called, - async
      * @example
      *  setup()
      * @returns
@@ -6499,11 +6646,12 @@ Class('Task', [IProgressReporter, IDisposable], function() {
      */  
     $$('virtual');
     $$('protected');
+    $$('async');
     this.setup = noop;
 
     /** 
      * @name onRun
-     * @description Task run handler, can be sync or async (returns promise)
+     * @description Task run handler - async
      * @example
      *  onRun(...args)
      * @arguments
@@ -6513,6 +6661,7 @@ Class('Task', [IProgressReporter, IDisposable], function() {
      */  
     $$('abstract');
     $$('protected');
+    $$('async');
     this.onRun = nim;
 });
 
@@ -6521,6 +6670,6 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","version":"0.16.78","lupdate":"Tue, 12 Mar 2019 21:48:53 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[]}');
+flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","version":"0.16.98","lupdate":"Thu, 14 Mar 2019 17:47:33 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","ILifecycleHandle","IProgressReporter","LifecycleHandler","Task"],"resources":[],"assets":[]}');
 
 })();
