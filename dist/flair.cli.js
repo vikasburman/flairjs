@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.16.98
- *  Thu, 14 Mar 2019 17:47:35 GMT
+ *  Version: 0.17.11
+ *  Sun, 17 Mar 2019 01:31:02 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -23,7 +23,7 @@ const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
     name: 'flair.cli',
-    version: '0.16.98',
+    version: '0.17.11',
     format: 'fasm',
     formatVersion: '1',
     contains: [
@@ -33,6 +33,7 @@ const buildInfo = {
         'enclosedTypes',    // types are places in a closure
         'resources',        // resources are bundled
         'assets',           // assets are processed and their names are added in ado
+        'routes',           // routes are collected, and added in ado
         'selfreg'           // selfreg code is bundled
     ]
 };
@@ -311,6 +312,7 @@ const build = (options, done) => {
         //      "name": "", 
         //      "file": "",
         //      "desc": "",
+        //      "title": "",
         //      "version": "",
         //      "lupdate": "",
         //      "builder": ""
@@ -318,11 +320,13 @@ const build = (options, done) => {
         //      "license": "",
         //      "types": ["", "", ...],
         //      "resources": ["", "", ...],
-        //      "assets": ["", "", ...]
+        //      "assets": ["", "", ...],
+        //      "routes": ["", "", ...]
         options.current.ado = {
             name: options.current.asmName,
             file: options.current.asmFileName.replace('.js', '{.min}.js'),
             desc: options.packageJSON.description,
+            title: options.packageJSON.title,
             version: options.packageJSON.version,
             lupdate: new Date().toUTCString(),
             builder: buildInfo,
@@ -330,7 +334,8 @@ const build = (options, done) => {
             license: options.packageJSON.license,
             types: [],
             resources: [],
-            assets: []
+            assets: [],
+            routes: []
         };
 
         if (options.skipRegistrationsFor.indexOf(options.current.asmName) === -1) { // if not to be skipped for preamble
@@ -601,12 +606,12 @@ const build = (options, done) => {
         `const { Tasks } = flair;\n` +
         `const { TaskInfo } = flair.Tasks;\n` +
         `const { as, is, isComplies, isDerivedFrom, isImplements, isInstanceOf, isMixed } = flair;\n` +
-        `const { getAssembly, getAttr, getContext, getResource, getType, ns, getTypeOf, typeOf } = flair;\n` +
+        `const { getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf, typeOf } = flair;\n` +
         `const { dispose, using } = flair;\n` +
-        `const { args, Exception, noop, nip, nim, nie, event } = flair;\n` +
+        `const { Args, Exception, noop, nip, nim, nie, event } = flair;\n` +
         `const { env } = flair.options;\n` +
         `const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;\n` +
-        `const { $static, $abstract, $virtual, $override, $sealed, $private, $protected, $readonly, $async } = $$;\n` +
+        `const { $static, $abstract, $virtual, $override, $sealed, $private, $privateSet, $protected, $protectedSet, $readonly, $async } = $$;\n` +
         `const { $enumerate, $dispose, $post, $on, $timer, $type, $args, $inject, $resource, $asset, $singleton, $serialize, $deprecate, $session, $state, $conditional, $noserialize, $ns } = $$;\n` +
         `/* eslint-enable no-unused-vars */\n` +
         `\n`; 
@@ -781,6 +786,26 @@ const build = (options, done) => {
             afterLint();
         }
     };
+    const appendRoutes = (done, justNames3) => {
+        justNames3 = justNames3 || [];
+        if (options.current.ado.routes.length === 0) { 
+            options.current.ado.routes = justNames3;
+            delete options.current.__routes;
+            done(); return; 
+        }
+        let nsRoute = options.current.ado.routes.splice(0, 1)[0]; // pick from top
+        if (!options.current.__routes) { logger(0, 'routes', ''); options.current.__routes = true; }
+        for(let route of nsRoute.data) {
+            justNames3.push(route.name); // add name of each route
+        }
+
+        logger(1, '', './' + nsRoute.file); 
+        // eslint-disable-next-line no-useless-escape
+        let dump = `\n(() => { \/\/ ${nsRoute.file}\n\tlet routes = JSON.parse('${JSON.stringify(nsRoute.data)}'); \n\tflair.AppDomain.context.current().registerRoutes(...routes);}\n)();\n`;
+        appendToFile(dump);
+
+        appendRoutes(done, justNames3); // pick next
+    };
     const appendSelfRegistration = () => {
         if (options.skipRegistrationsFor.indexOf(options.current.asmName) !== -1) { return; } // skip for special cases
 
@@ -840,7 +865,7 @@ const build = (options, done) => {
         let dump = `(() => { let ados = JSON.parse('${ados}');flair.AppDomain.registerAdo(ados);})();\n`;
         fsx.writeFileSync(options.current.preamble, dump, {flag: 'a'}); // append if already exists
     };
-    const collectTypesAndResources = () => {
+    const collectTypesAndResourcesAndRoutes = () => {
         let files = rrd(options.current.nsPath);
         for (let file of files) { 
             if (file.indexOf('/_') !== -1) { continue; } // either a folder or file name starts with '_'. skip it
@@ -851,7 +876,9 @@ const build = (options, done) => {
                 ext: path.extname(file).toLowerCase().substr(1),
                 file: file
             };
-            if (file.endsWith('.spec.js')) { continue; // ignore specs
+            if (file === 'routes.json') { // routes definition
+                nsFile.type = 'routes';
+            } else if (file.endsWith('.spec.js')) { continue; // ignore specs
             } else if (file.endsWith('.res.js')) { // js as a resource
                 nsFile.typeName = path.basename(file).replace('.res.js', '');
                 nsFile.type = 'res';
@@ -861,8 +888,8 @@ const build = (options, done) => {
             } else if (file.endsWith('.res.' + nsFile.ext)) { // resource
                 nsFile.typeName = path.basename(file).replace('.res.' + nsFile.ext, '');
                 nsFile.type = 'res';
-            }
-            if (nsFile.type) {
+            } 
+            if (nsFile.type !== 'routes') {
                 if (nsFile.typeName.indexOf('.') !== -1) { throw `Type/Resource names cannot contain dots. (${nsFile.typeName})`; }
                 nsFile.qualifiedName = (options.current.nsName !== '(root)' ? options.current.nsName + '.' : '')  + nsFile.typeName;
                 if (nsFile.type === 'res') {
@@ -870,6 +897,31 @@ const build = (options, done) => {
                 } else {
                     options.current.ado.types.push(nsFile);
                 }
+            } else {
+                let allRoutes = fsx.readJSONSync(nsFile.file, 'utf8');
+                let routes = [];
+                for(let route of allRoutes) { // add each route separately
+                    if (route.name.indexOf('.') !== -1) { throw `Route name cannot contain dots. (${route.name})`; }
+                    if (!route.path) { throw `Route path must be defined. (${route.name}`; }
+                    if (!route.handler) { throw `Route handler must be defined. (${route.name}`; }
+                    route.qualifiedName = (options.current.nsName !== '(root)' ? options.current.nsName + '.' : '')  + route.name;
+                    routes.push({ 
+                        name: route.qualifiedName,
+                        asmFile: options.current.ado.file,
+                        mount: route.mount || 'main', // by default all routes mount to main
+                        index: route.index || 0, // no index means all are at same level
+                        verb: route.verb || '', // verb, e.g., view / get / post, etc.
+                        flags: route.flags || [], // any optional flags for some custom logic
+                        path: route.path,
+                        handler: route.handler
+                    });
+                }
+                options.current.ado.routes.push({
+                    nsPath: options.current.nsPath,
+                    nsName: options.current.nsName,
+                    file: file,
+                    data: routes
+                });
             }
         }
     };
@@ -925,8 +977,8 @@ const build = (options, done) => {
         options.current.nsName = nsFolder;
         options.current.nsPath = './' + path.join(options.current.asmPath, options.current.nsName);
 
-        // collect types and resources 
-        collectTypesAndResources();
+        // collect types and resources and routes
+        collectTypesAndResourcesAndRoutes();
 
         // pick next
         processNamespaces(done); 
@@ -978,16 +1030,18 @@ const build = (options, done) => {
                 // append types, resources and self-registration
                 appendTypes(() => {
                     appendResources(() => {
-                        appendSelfRegistration();
+                        appendRoutes(() => {
+                            appendSelfRegistration();
 
-                        // end assembly content closure
-                        endClosure();
-
-                        // lint, minify and gzip assembly
-                        pack(() => {
-                            logger(0, '==>', options.current.stat); 
-        
-                            processAssemblies(done); // pick next
+                            // end assembly content closure
+                            endClosure();
+    
+                            // lint, minify and gzip assembly
+                            pack(() => {
+                                logger(0, '==>', options.current.stat); 
+            
+                                processAssemblies(done); // pick next
+                            });
                         });
                     });
                 });
@@ -1432,12 +1486,12 @@ const { Serializer } = flair;
 const { Tasks } = flair;
 const { TaskInfo } = flair.Tasks;
 const { as, is, isComplies, isDerivedFrom, isImplements, isInstanceOf, isMixed } = flair;
-const { getAssembly, getAttr, getContext, getResource, getType, ns, getTypeOf, typeOf } = flair;
+const { getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf, typeOf } = flair;
 const { dispose, using } = flair;
-const { args, Exception, noop, nip, nim, nie, event } = flair;
+const { Args, Exception, noop, nip, nim, nie, event } = flair;
 const { env } = flair.options;
 const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
-const { $static, $abstract, $virtual, $override, $sealed, $private, $protected, $readonly, $async } = $$;
+const { $static, $abstract, $virtual, $override, $sealed, $private, $privateSet, $protected, $protectedSet, $readonly, $async } = $$;
 const { $enumerate, $dispose, $post, $on, $timer, $type, $args, $inject, $resource, $asset, $singleton, $serialize, $deprecate, $session, $state, $conditional, $noserialize, $ns } = $$;
 /* eslint-enable no-unused-vars */
 

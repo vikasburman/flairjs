@@ -1,0 +1,15 @@
+{
+    "mounts": {
+        "main": "/"
+    },
+    "main-appSettings": [
+        { "name": "strict", "value": false },
+        { "name": "click", "value": false },
+        { "name": "popstate", "value": false },
+        { "name": "dispatch", "value": false },
+        { "name": "hashbang", "value": false },
+        { "name": "decodeURLComponents", "value": true }
+    ],
+    "main-middlewares": [
+    ]
+}

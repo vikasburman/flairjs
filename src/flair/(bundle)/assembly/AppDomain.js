@@ -14,7 +14,7 @@ const AppDomain = function(name) {
         entryPoint = '',
         configFileJSON = null,
         app = null,
-        server = null,
+        host = null,
         defaultLoadContext = null,
         unloadDefaultContext = null,
         isUnloaded = false;
@@ -41,8 +41,8 @@ const AppDomain = function(name) {
             // stop app (sync mode)
             if (app) { await app.stop(); _dispose(app); }
 
-            // stop server (sync mode)
-            if (server) { await server.stop(); _dispose(server); }
+            // stop host (sync mode)
+            if (host) { await host.stop(); _dispose(host); }
 
             // unload all contexts of this domain, including default one (async)
             for(let context in contexts) {
@@ -113,7 +113,7 @@ const AppDomain = function(name) {
 
             ado.file = which(ado.file, true); // min/dev contextual pick
             if (asmFiles[ado.file]) {
-                if (isThrowOnDuplicate) { throw _Exception.Duplicate(ado.file, this.registerAdo); }
+                if (isThrowOnDuplicate || isWorker) { throw _Exception.Duplicate(ado.file, this.registerAdo); } // in worker too, don't throw, because allADOs list may have same items which were loaded at worker's start time
                 return;
             } else { // register
                 asmFiles[ado.file] = Object.freeze(ado);
@@ -175,26 +175,26 @@ const AppDomain = function(name) {
     this.entryPoint = (file) => {
         if (!entryPoint) {
             if (typeof file !== 'string') { throw _Exception.InvalidArgument('file'); }
-            entryPoint = _which(file || ''); // main entry point file
+            if (!isWorker) { // when running in context of worker, this will not be needed to set, as a new appdomain cannot be created from inside worker, so it will never be read
+                entryPoint = which(file || ''); // main entry point file
+            }
         }
         return entryPoint;
     };
-    this.App = (appInstance) => {
-        if (appInstance && !app) { 
-            if (!_is(appInstance, ILifecycleHandle)) { throw _Exception.InvalidArgument('appInstance'); }
-            app = appInstance; 
+    this.app = (appObj) => {
+        if (appObj && !app) { 
+            if (!_is(appObj, ILifecycleHandle)) { throw _Exception.InvalidArgument('appObj'); }
+            app = appObj; 
         }
         return app;
     };
-    if (isServer) {
-        this.Server = (serverInstance) => {
-            if (serverInstance && !server) { 
-                if (!_is(serverInstance, ILifecycleHandle)) { throw _Exception.InvalidArgument('serverInstance'); }
-                server = serverInstance; 
-            }
-            return server;
-        };
-    }
+    this.host = (hostObj) => {
+        if (hostObj) { 
+            if (!_is(hostObj, ILifecycleHandle)) { throw _Exception.InvalidArgument('hostObj'); }
+            host = hostObj; 
+        }
+        return host;
+    };
 
     // scripts
     this.loadScripts = (...scripts) => {

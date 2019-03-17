@@ -1,6 +1,6 @@
 /**
  * @name getResource
- * @description Gets the registered resource rom default assembly load context of default appdomain
+ * @description Gets the registered resource from default assembly load context of default appdomain
  * @example
  *  getResource(qualifiedName)
  * @params

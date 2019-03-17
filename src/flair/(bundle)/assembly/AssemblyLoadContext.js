@@ -5,6 +5,7 @@
 const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentContexts, contexts) {
     let alcTypes = {},
         alcResources = {},
+        alcRoutes = {},
         instances = {},
         asmFiles = {},
         namespaces = {},
@@ -34,6 +35,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
             alcTypes = {};
             asmFiles = {};
             alcResources = {};
+            alcRoutes = {};
             instances = {};
             namespaces = {};
         }
@@ -81,7 +83,8 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
 
         // check if already registered
         if (alcTypes[name]) { throw _Exception.Duplicate(name, this.registerType); }
-        if (alcResources[name]) { throw _Exception.Duplicate(`Already registered as resource. (${name})`, this.registerType); }
+        if (alcResources[name]) { throw _Exception.Duplicate(`Already registered as Resource. (${name})`, this.registerType); }
+        if (alcRoutes[name]) { throw _Exception.Duplicate(`Already registered as Route. (${name})`, this.registerType); }
 
         // register
         alcTypes[name] = Type;
@@ -285,9 +288,9 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.getAssembly); }
         return asmFiles[file] || null;
     };
-    this.allAssemblies = () => { 
+    this.allAssemblies = (isRaw) => { 
         if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.allAssemblies); }
-        return Object.keys(asmFiles); 
+        return (isRaw ? Object.assign({}, asmFiles) : Object.keys(asmFiles));
     };
 
     // resources
@@ -309,11 +312,11 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         // check if already registered
         if (alcResources[rdo.name]) { throw _Exception.Duplicate(rdo.name, this.registerResource); }
         if (alcTypes[rdo.name]) { throw _Exception.Duplicate(`Already registered as Type. (${rdo.name})`, this.registerResource); }
+        if (alcRoutes[rdo.name]) { throw _Exception.Duplicate(`Already registered as Route. (${rdo.name})`, this.registerResource); }
 
         // register
         alcResources[rdo.name] = Object.freeze(new Resource(rdo, ns, this));
 
-        // register to namespace as well
         // register to namespace as well
         if (ns) {
             if (!namespaces[ns]) { namespaces[ns] = {}; }
@@ -330,10 +333,57 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.getResource); }
         return alcResources[qualifiedName] || null;
     };     
-    this.allResources = () => { 
+    this.allResources = (isRaw) => { 
         if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.allResources); }
-        return Object.keys(alcResources); 
-    }   
+        return (isRaw ? Object.assign({}, alcResources) : Object.keys(alcResources));
+    };
+
+    // routes
+    this.registerRoutes = (routes) => {
+        if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.registerRoutes); }
+
+        // process each route
+        for(let route of routes) {
+            if (typeof route.name !== 'string' || route.name === '' ||
+                typeof route.index !== 'number' ||
+                typeof route.mount !== 'string' || route.mount === '' ||
+                typeof route.path !== 'string' || route.path === '' ||
+                typeof route.verb !== 'string' || route.verb === '' ||
+                typeof route.handler !== 'string' || route.handler === '') {
+                throw _Exception.InvalidArgument('route: ' + route.name, this.registerRoutes);
+            }
+
+            // namespace name is already attached to it, and for all '(root)'    
+            // marked types' no namespace is added, so it will automatically go to root
+            let ns = route.name.substr(0, route.name.lastIndexOf('.')),
+                onlyName = route.name.replace(ns + '.', '');
+
+            // check if already registered
+            if (alcRoutes[route.name]) { throw _Exception.Duplicate(route.name, this.registerRoutes); }
+            if (alcTypes[route.name]) { throw _Exception.Duplicate(`Already registered as Type. (${route.name})`, this.registerRoutes); }
+            if (alcResources[route.name]) { throw _Exception.Duplicate(`Already registered as Resource. (${route.name})`, this.registerRoutes); }
+
+            // register
+            alcRoutes[route.name] = Object.freeze(new Route(route, ns, this));
+
+            // register to namespace as well
+            if (ns) {
+                if (!namespaces[ns]) { namespaces[ns] = {}; }
+                namespaces[ns][onlyName] =  alcRoutes[route.name];
+            } else { // root
+                namespaces[onlyName] =  alcRoutes[route.name];
+            }        
+        }
+    };
+    this.getRoute = (qualifiedName) => {
+        if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.getRoute); }
+        if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.getRoute); }
+        return alcRoutes[qualifiedName] || null;
+    };     
+    this.allRoutes = (isRaw) => { 
+        if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.allRoutes); }
+        return (isRaw ? Object.assign({}, alcRoutes) : Object.keys(alcRoutes));
+    };
     
     // state (just to be in sync with proxy)
     this.isBusy = () => { return false; }

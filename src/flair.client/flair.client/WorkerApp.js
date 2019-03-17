@@ -2,10 +2,14 @@ const { App } = ns('flair.boot');
 
 /**
  * @name App
- * @description Default server-side app implementation
+ * @description Default client-side worker-app implementation
  */
 $$('ns', '(auto)');
 Class('(auto)', App, function() {
+    $$('override');
+    this.construct = () => {
+    };
+
     $$('override');
     this.boot = async () => {
     };
@@ -20,5 +24,9 @@ Class('(auto)', App, function() {
 
     $$('override');
     this.ready = async () => {
+    };
+
+    $$('override');
+    this.dispose = () => {
     };
 });

@@ -26,7 +26,7 @@ const attributesAndModifiers = (def, typeDef, memberName, isTypeLevel, isCustomA
         let result = false,
             _supportedTypes = flairTypes,
             _supportedMemberTypes = ['prop', 'func', 'construct', 'dispose', 'event'],
-            _supportedModifiers = ['static', 'abstract', 'sealed', 'virtual', 'override', 'private', 'protected', 'readonly', 'async'],
+            _supportedModifiers = ['static', 'abstract', 'sealed', 'virtual', 'override', 'private', 'privateSet', 'protected', 'protectedSet', 'readonly', 'async'],
             _list = [], // { withWhat, matchType, original, name, value }
             _list2 = [], // to store all struct types, which needs to be processed at end, else replaceAll causes problem and 'struct' state is replaced on 'construct' too
             constraintsLex = appliedAttr.cfg.constraints; // logical version with filled booleans
@@ -619,6 +619,22 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                 }
                 if (isCopy) { doCopy(memberName); }
 
+                // special case of privateSet and protectedSet for properties
+                if (isCopy && modifiers.members.isProperty(memberName)) { // if property that is copied
+                    if (modifiers.members.probe('privateSet', memberName).current()) { // has private set
+                        // take setter out
+                        let propDesc = Object.getOwnPropertyDescriptor(exposed_obj, memberName);
+                        propDesc.set = _noop;
+                        Object.defineProperty(exposed_obj, memberName, propDesc);
+                    } else if (modifiers.members.probe('protectedSet', memberName).current()) { // has protected set
+                        if (!params.isNeedProtected) { // take setter out if protected is not needed
+                            let propDesc = Object.getOwnPropertyDescriptor(exposed_obj, memberName);
+                            propDesc.set = _noop;
+                            Object.defineProperty(exposed_obj, memberName, propDesc);
+                        }
+                    }
+                }
+
                 // any abstract member should not left unimplemented now
                 if (isCopy && modifiers.members.is('abstract', memberName)) {
                     throw _Exception.NotImplemented(`Abstract member is not implemented. (${memberName})`, builder);
@@ -842,7 +858,8 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         isStorageHost = false,
         _injections = null;     
 
-        // NOTE: no check for isOverriding, because properties are always fully defined
+        // NOTE: no check for isOverriding, because properties are always fully defined,
+        // when being overridden 
 
         // define or redefine
         if (memberDef && (memberDef.get || memberDef.set)) { // normal property, cannot be static because static cannot have custom getter/setter
@@ -1006,8 +1023,8 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         // override, if required
         if (_isOverriding) {
             base = obj[memberName].bind(bindingHost);
-            // handle abstract definition scenario
-            if (base.ni === true) {
+            // handle abstract definition (and no-definition) scenario
+            if (base.ni === true || base === _noop) {
                 base = null; // so it is not available
             }
         } else if (_isStatic) {

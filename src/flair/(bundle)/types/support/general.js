@@ -18,12 +18,24 @@ const which = (def, isFile) => {
         if (def.indexOf('|') !== -1) { 
             let items = def.split('|'),
                 item = '';
-            if (flair.options.env.isServer) {
+            if (options.env.isServer) {
                 item = items[0].trim();
             } else {
                 item = items[1].trim();
             }
             if (item === 'x') { item = ''; } // special case to explicitly mark absence of a type
+
+            // worker environment specific pick
+            if (item.indexOf('~') !== -1) {
+                items = item.split('~');
+                if (!options.env.isWorker) { // left is main thread
+                    item = items[0].trim();
+                } else { // right is worker thread
+                    item = items[1].trim(); 
+                }
+                if (item === 'x') { item = ''; } // special case to explicitly mark absence of a type
+            }
+
             return item;
         }            
     }

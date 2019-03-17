@@ -1,0 +1,18 @@
+{
+    "envVars": [
+    ],
+    "envVarsloadOptions": {
+        "overwrite": true
+    },
+    "mounts": {
+        "main": "/"
+    },
+    "main-appSettings": [
+        { "name": "case sensitive routing", "value": false },
+        { "name": "strict routing", "value": false }
+    ],
+    "main-middlewares": [
+    ],
+    "main-resHeaders": [
+    ]
+}

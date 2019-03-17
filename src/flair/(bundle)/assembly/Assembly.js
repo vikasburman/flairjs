@@ -51,6 +51,14 @@ const Assembly = function (ado, alc) {
         return this.context.getResource(qualifiedName);
     };
 
+    // routes
+    this.routes = () => { return ado.routes.slice(); }
+    this.getRoute = (qualifiedName) => {
+        if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.getRoute); }
+        if (ado.routes.indexOf(qualifiedName) === -1) { throw _Exception.NotFound(qualifiedName, this.getRoute); }
+        return this.context.getRoute(qualifiedName);
+    };
+
     // assets
     this.assets = () => { return ado.assets.slice(); }
     this.assetsRoot = this.file.replace('.js', '/');

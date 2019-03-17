@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.16.98
- *  Thu, 14 Mar 2019 17:47:33 GMT
+ *  Version: 0.17.11
+ *  Sun, 17 Mar 2019 01:30:59 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -78,13 +78,15 @@
     flair.info = Object.freeze({
         name: 'flair',
         file: currentFile,
-        version: '0.16.98',
+        version: '0.17.11',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Thu, 14 Mar 2019 17:47:33 GMT')
-    });       
+        lupdate: new Date('Sun, 17 Mar 2019 01:30:59 GMT')
+    });  
+    
     flair.members = [];
     flair.options = Object.freeze(options);
+    flair.env = Object.env; // direct env access as well
     const a2f = (name, obj, disposer) => {
         flair[name] = Object.freeze(obj);
         flair.members.push(name);
@@ -241,12 +243,24 @@
             if (def.indexOf('|') !== -1) { 
                 let items = def.split('|'),
                     item = '';
-                if (flair.options.env.isServer) {
+                if (options.env.isServer) {
                     item = items[0].trim();
                 } else {
                     item = items[1].trim();
                 }
                 if (item === 'x') { item = ''; } // special case to explicitly mark absence of a type
+    
+                // worker environment specific pick
+                if (item.indexOf('~') !== -1) {
+                    items = item.split('~');
+                    if (!options.env.isWorker) { // left is main thread
+                        item = items[0].trim();
+                    } else { // right is worker thread
+                        item = items[1].trim(); 
+                    }
+                    if (item === 'x') { item = ''; } // special case to explicitly mark absence of a type
+                }
+    
                 return item;
             }            
         }
@@ -771,6 +785,7 @@
     const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentContexts, contexts) {
         let alcTypes = {},
             alcResources = {},
+            alcRoutes = {},
             instances = {},
             asmFiles = {},
             namespaces = {},
@@ -800,6 +815,7 @@
                 alcTypes = {};
                 asmFiles = {};
                 alcResources = {};
+                alcRoutes = {};
                 instances = {};
                 namespaces = {};
             }
@@ -847,7 +863,8 @@
     
             // check if already registered
             if (alcTypes[name]) { throw _Exception.Duplicate(name, this.registerType); }
-            if (alcResources[name]) { throw _Exception.Duplicate(`Already registered as resource. (${name})`, this.registerType); }
+            if (alcResources[name]) { throw _Exception.Duplicate(`Already registered as Resource. (${name})`, this.registerType); }
+            if (alcRoutes[name]) { throw _Exception.Duplicate(`Already registered as Route. (${name})`, this.registerType); }
     
             // register
             alcTypes[name] = Type;
@@ -1051,9 +1068,9 @@
             if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.getAssembly); }
             return asmFiles[file] || null;
         };
-        this.allAssemblies = () => { 
+        this.allAssemblies = (isRaw) => { 
             if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.allAssemblies); }
-            return Object.keys(asmFiles); 
+            return (isRaw ? Object.assign({}, asmFiles) : Object.keys(asmFiles));
         };
     
         // resources
@@ -1075,11 +1092,11 @@
             // check if already registered
             if (alcResources[rdo.name]) { throw _Exception.Duplicate(rdo.name, this.registerResource); }
             if (alcTypes[rdo.name]) { throw _Exception.Duplicate(`Already registered as Type. (${rdo.name})`, this.registerResource); }
+            if (alcRoutes[rdo.name]) { throw _Exception.Duplicate(`Already registered as Route. (${rdo.name})`, this.registerResource); }
     
             // register
             alcResources[rdo.name] = Object.freeze(new Resource(rdo, ns, this));
     
-            // register to namespace as well
             // register to namespace as well
             if (ns) {
                 if (!namespaces[ns]) { namespaces[ns] = {}; }
@@ -1096,10 +1113,57 @@
             if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.getResource); }
             return alcResources[qualifiedName] || null;
         };     
-        this.allResources = () => { 
+        this.allResources = (isRaw) => { 
             if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.allResources); }
-            return Object.keys(alcResources); 
-        }   
+            return (isRaw ? Object.assign({}, alcResources) : Object.keys(alcResources));
+        };
+    
+        // routes
+        this.registerRoutes = (routes) => {
+            if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.registerRoutes); }
+    
+            // process each route
+            for(let route of routes) {
+                if (typeof route.name !== 'string' || route.name === '' ||
+                    typeof route.index !== 'number' ||
+                    typeof route.mount !== 'string' || route.mount === '' ||
+                    typeof route.path !== 'string' || route.path === '' ||
+                    typeof route.verb !== 'string' || route.verb === '' ||
+                    typeof route.handler !== 'string' || route.handler === '') {
+                    throw _Exception.InvalidArgument('route: ' + route.name, this.registerRoutes);
+                }
+    
+                // namespace name is already attached to it, and for all '(root)'    
+                // marked types' no namespace is added, so it will automatically go to root
+                let ns = route.name.substr(0, route.name.lastIndexOf('.')),
+                    onlyName = route.name.replace(ns + '.', '');
+    
+                // check if already registered
+                if (alcRoutes[route.name]) { throw _Exception.Duplicate(route.name, this.registerRoutes); }
+                if (alcTypes[route.name]) { throw _Exception.Duplicate(`Already registered as Type. (${route.name})`, this.registerRoutes); }
+                if (alcResources[route.name]) { throw _Exception.Duplicate(`Already registered as Resource. (${route.name})`, this.registerRoutes); }
+    
+                // register
+                alcRoutes[route.name] = Object.freeze(new Route(route, ns, this));
+    
+                // register to namespace as well
+                if (ns) {
+                    if (!namespaces[ns]) { namespaces[ns] = {}; }
+                    namespaces[ns][onlyName] =  alcRoutes[route.name];
+                } else { // root
+                    namespaces[onlyName] =  alcRoutes[route.name];
+                }        
+            }
+        };
+        this.getRoute = (qualifiedName) => {
+            if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.getRoute); }
+            if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.getRoute); }
+            return alcRoutes[qualifiedName] || null;
+        };     
+        this.allRoutes = (isRaw) => { 
+            if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.allRoutes); }
+            return (isRaw ? Object.assign({}, alcRoutes) : Object.keys(alcRoutes));
+        };
         
         // state (just to be in sync with proxy)
         this.isBusy = () => { return false; }
@@ -1159,6 +1223,14 @@
             return this.context.getResource(qualifiedName);
         };
     
+        // routes
+        this.routes = () => { return ado.routes.slice(); }
+        this.getRoute = (qualifiedName) => {
+            if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.getRoute); }
+            if (ado.routes.indexOf(qualifiedName) === -1) { throw _Exception.NotFound(qualifiedName, this.getRoute); }
+            return this.context.getRoute(qualifiedName);
+        };
+    
         // assets
         this.assets = () => { return ado.assets.slice(); }
         this.assetsRoot = this.file.replace('.js', '/');
@@ -1210,6 +1282,27 @@
         if (this.type === 'json') {
             this.data = Object.freeze(JSON.parse(this.data));
         }
+    };
+      
+    /**
+     * @name Route
+     * @description Route object.
+     */ 
+    const Route = function(route, ns, alc) {
+        this.context = alc;
+    
+        this.name = route.name;
+        this.ns = ns;
+        this.assembly = () => { return alc.getAssembly(which(route.asmFile, true)) || null; };
+        this.index = route.index;
+        this.mount = route.mount;
+        this.verb = route.verb;
+        this.path = route.path;
+        this.flags = route.flags || [];
+    
+        // load handler type, as handler must be from same assembly, so should be loaded without async call
+        this.Handler = _getType(route.handler);
+        if (!this.Handler) { throw _Exception.InvalidDefinition(route.handler, Route); }
     };
       
     /**
@@ -1554,7 +1647,7 @@
             entryPoint = '',
             configFileJSON = null,
             app = null,
-            server = null,
+            host = null,
             defaultLoadContext = null,
             unloadDefaultContext = null,
             isUnloaded = false;
@@ -1581,8 +1674,8 @@
                 // stop app (sync mode)
                 if (app) { await app.stop(); _dispose(app); }
     
-                // stop server (sync mode)
-                if (server) { await server.stop(); _dispose(server); }
+                // stop host (sync mode)
+                if (host) { await host.stop(); _dispose(host); }
     
                 // unload all contexts of this domain, including default one (async)
                 for(let context in contexts) {
@@ -1653,7 +1746,7 @@
     
                 ado.file = which(ado.file, true); // min/dev contextual pick
                 if (asmFiles[ado.file]) {
-                    if (isThrowOnDuplicate) { throw _Exception.Duplicate(ado.file, this.registerAdo); }
+                    if (isThrowOnDuplicate || isWorker) { throw _Exception.Duplicate(ado.file, this.registerAdo); } // in worker too, don't throw, because allADOs list may have same items which were loaded at worker's start time
                     return;
                 } else { // register
                     asmFiles[ado.file] = Object.freeze(ado);
@@ -1715,26 +1808,26 @@
         this.entryPoint = (file) => {
             if (!entryPoint) {
                 if (typeof file !== 'string') { throw _Exception.InvalidArgument('file'); }
-                entryPoint = file || ''; // main entry point file
+                if (!isWorker) { // when running in context of worker, this will not be needed to set, as a new appdomain cannot be created from inside worker, so it will never be read
+                    entryPoint = which(file || ''); // main entry point file
+                }
             }
             return entryPoint;
         };
-        this.App = (appInstance) => {
-            if (appInstance && !app) { 
-                if (!_is(appInstance, ILifecycleHandle)) { throw _Exception.InvalidArgument('appInstance'); }
-                app = appInstance; 
+        this.app = (appObj) => {
+            if (appObj && !app) { 
+                if (!_is(appObj, ILifecycleHandle)) { throw _Exception.InvalidArgument('appObj'); }
+                app = appObj; 
             }
             return app;
         };
-        if (isServer) {
-            this.Server = (serverInstance) => {
-                if (serverInstance && !server) { 
-                    if (!_is(serverInstance, ILifecycleHandle)) { throw _Exception.InvalidArgument('serverInstance'); }
-                    server = serverInstance; 
-                }
-                return server;
-            };
-        }
+        this.host = (hostObj) => {
+            if (hostObj) { 
+                if (!_is(hostObj, ILifecycleHandle)) { throw _Exception.InvalidArgument('hostObj'); }
+                host = hostObj; 
+            }
+            return host;
+        };
     
         // scripts
         this.loadScripts = (...scripts) => {
@@ -1888,7 +1981,7 @@
        
     /**
      * @name getResource
-     * @description Gets the registered resource rom default assembly load context of default appdomain
+     * @description Gets the registered resource from default assembly load context of default appdomain
      * @example
      *  getResource(qualifiedName)
      * @params
@@ -1904,6 +1997,23 @@
     
     // attach to flair
     a2f('getResource', _getResource);  
+    /**
+     * @name getRoute
+     * @description Gets the registered route from default assembly load context of default appdomain
+     * @example
+     *  getRoute(qualifiedName)
+     * @params
+     *  qualifiedName: string - qualified route name
+     * @returns object - route's data
+     */ 
+    const _getRoute= (qualifiedName) => { 
+        let args = _Args('qualifiedName: string')(qualifiedName); args.throwOnError(_getRoute);
+        
+        _AppDomain.context.getRoute(qualifiedName);
+    };
+    
+    // attach to flair
+    a2f('getRoute', _getRoute);
     /**
      * @name getType
      * @description Gets the flair Type from default assembly load context of default appdomain
@@ -2577,9 +2687,11 @@
             sealed: new _attrConfig(true, '(class || ((class && (prop || func || event)) && override))'), 
         
             private: new _attrConfig(true, '(class || struct) && (prop || func || event) && !($protected || @private || $static)'),
-            protected: new _attrConfig(true, '(class || struct) && (prop || func || event) && !($private|| $static)'),
+            protected: new _attrConfig(true, '(class) && (prop || func || event) && !($private || $static)'),
             readonly: new _attrConfig(true, '(class || struct) && prop && !abstract'),
             async: new _attrConfig(true, '(class || struct) && func'),
+            privateSet: new _attrConfig(true, '(class || struct) && prop && !($private || $static)'),
+            protectedSet: new _attrConfig(true, '(class) && prop && !($protected || $private || $static)'),
         
             enumerate: new _attrConfig('(class || struct) && prop || func || event'),
             dispose: new _attrConfig('class && prop'),
@@ -2664,7 +2776,7 @@
             let result = false,
                 _supportedTypes = flairTypes,
                 _supportedMemberTypes = ['prop', 'func', 'construct', 'dispose', 'event'],
-                _supportedModifiers = ['static', 'abstract', 'sealed', 'virtual', 'override', 'private', 'protected', 'readonly', 'async'],
+                _supportedModifiers = ['static', 'abstract', 'sealed', 'virtual', 'override', 'private', 'privateSet', 'protected', 'protectedSet', 'readonly', 'async'],
                 _list = [], // { withWhat, matchType, original, name, value }
                 _list2 = [], // to store all struct types, which needs to be processed at end, else replaceAll causes problem and 'struct' state is replaced on 'construct' too
                 constraintsLex = appliedAttr.cfg.constraints; // logical version with filled booleans
@@ -3257,6 +3369,22 @@
                     }
                     if (isCopy) { doCopy(memberName); }
     
+                    // special case of privateSet and protectedSet for properties
+                    if (isCopy && modifiers.members.isProperty(memberName)) { // if property that is copied
+                        if (modifiers.members.probe('privateSet', memberName).current()) { // has private set
+                            // take setter out
+                            let propDesc = Object.getOwnPropertyDescriptor(exposed_obj, memberName);
+                            propDesc.set = _noop;
+                            Object.defineProperty(exposed_obj, memberName, propDesc);
+                        } else if (modifiers.members.probe('protectedSet', memberName).current()) { // has protected set
+                            if (!params.isNeedProtected) { // take setter out if protected is not needed
+                                let propDesc = Object.getOwnPropertyDescriptor(exposed_obj, memberName);
+                                propDesc.set = _noop;
+                                Object.defineProperty(exposed_obj, memberName, propDesc);
+                            }
+                        }
+                    }
+    
                     // any abstract member should not left unimplemented now
                     if (isCopy && modifiers.members.is('abstract', memberName)) {
                         throw _Exception.NotImplemented(`Abstract member is not implemented. (${memberName})`, builder);
@@ -3480,7 +3608,8 @@
             isStorageHost = false,
             _injections = null;     
     
-            // NOTE: no check for isOverriding, because properties are always fully defined
+            // NOTE: no check for isOverriding, because properties are always fully defined,
+            // when being overridden 
     
             // define or redefine
             if (memberDef && (memberDef.get || memberDef.set)) { // normal property, cannot be static because static cannot have custom getter/setter
@@ -3644,8 +3773,8 @@
             // override, if required
             if (_isOverriding) {
                 base = obj[memberName].bind(bindingHost);
-                // handle abstract definition scenario
-                if (base.ni === true) {
+                // handle abstract definition (and no-definition) scenario
+                if (base.ni === true || base === _noop) {
                     base = null; // so it is not available
                 }
             } else if (_isStatic) {
@@ -5754,7 +5883,10 @@
              * which can be worker specific settings
              * 
              * NOTE: under every "assemblyName", all settings underneath are treated as whole object, 
-             * and all merging happens at this level, merging does not go deeper than this level
+             * and all merging happens at this level, merging does notmergin go deeper than this level
+             * 
+             * Note: merging of object properties happen via property name matching, while no merging
+             * happens for array items, they get overwritten completely
             */
     
             // return relevant settings
@@ -6269,12 +6401,12 @@ const { Serializer } = flair;
 const { Tasks } = flair;
 const { TaskInfo } = flair.Tasks;
 const { as, is, isComplies, isDerivedFrom, isImplements, isInstanceOf, isMixed } = flair;
-const { getAssembly, getAttr, getContext, getResource, getType, ns, getTypeOf, typeOf } = flair;
+const { getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf, typeOf } = flair;
 const { dispose, using } = flair;
-const { args, Exception, noop, nip, nim, nie, event } = flair;
+const { Args, Exception, noop, nip, nim, nie, event } = flair;
 const { env } = flair.options;
 const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
-const { $static, $abstract, $virtual, $override, $sealed, $private, $protected, $readonly, $async } = $$;
+const { $static, $abstract, $virtual, $override, $sealed, $private, $privateSet, $protected, $protectedSet, $readonly, $async } = $$;
 const { $enumerate, $dispose, $post, $on, $timer, $type, $args, $inject, $resource, $asset, $singleton, $serialize, $deprecate, $session, $state, $conditional, $noserialize, $ns } = $$;
 /* eslint-enable no-unused-vars */
 
@@ -6472,27 +6604,23 @@ Class('Attribute', function() {
  */
 $$('ns', '(root)');
 Interface('IDisposable', function() {
-    // dispose
     this.dispose = nim;
 });
 
 })();
 
-(async () => { // ./src/flair/(root)/ILifecycleHandle.js
+(async () => { // ./src/flair/(root)/ILifeCycleHandler.js
 'use strict';
 /**
- * @name ILifecycleHandle
- * @description ILifecycleHandle interface
+ * @name ILifeCycleHandler
+ * @description ILifeCycleHandler interface
  */
 $$('ns', '(root)');
-Interface('ILifecycleHandle', function() {
-    // start - async
+Interface('ILifeCycleHandler', function() {
     this.start = nim;
-
-    // stop - async
+    this.isStarted = nip;
+    this.isReady = nip;
     this.stop = nim;
-
-    // restart = async
     this.restart = nim;
 });
 
@@ -6508,30 +6636,6 @@ $$('ns', '(root)');
 Interface('IProgressReporter', function() {
     // progress report
     this.progress = nie;
-});
-
-})();
-
-(async () => { // ./src/flair/(root)/LifecycleHandler.js
-'use strict';
-/**
- * @name LifecycleHandler 
- * @description LifecycleHandle functions
- */
-$$('ns', '(root)');
-Mixin('LifecycleHandler', function() {
-    $$('virtual');
-    $$('async');
-    this.start = noop;
-
-    $$('virtual');
-    $$('async');
-    this.stop = noop;
-
-    this.restart = async () => {
-        await this.stop();
-        await this.start();
-    };
 });
 
 })();
@@ -6670,6 +6774,6 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","version":"0.16.98","lupdate":"Thu, 14 Mar 2019 17:47:33 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","ILifecycleHandle","IProgressReporter","LifecycleHandler","Task"],"resources":[],"assets":[]}');
+flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.17.11","lupdate":"Sun, 17 Mar 2019 01:30:59 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","ILifeCycleHandler","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
 
 })();

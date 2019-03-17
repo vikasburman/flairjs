@@ -234,7 +234,10 @@ const __settingsReader = (env) => {
          * which can be worker specific settings
          * 
          * NOTE: under every "assemblyName", all settings underneath are treated as whole object, 
-         * and all merging happens at this level, merging does not go deeper than this level
+         * and all merging happens at this level, merging does notmergin go deeper than this level
+         * 
+         * Note: merging of object properties happen via property name matching, while no merging
+         * happens for array items, they get overwritten completely
         */
 
         // return relevant settings

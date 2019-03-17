@@ -69,9 +69,11 @@
         copyright: '<<copyright>>',
         license: '<<license>>',
         lupdate: new Date('<<lupdate>>')
-    });       
+    });  
+    
     flair.members = [];
     flair.options = Object.freeze(options);
+    flair.env = Object.env; // direct env access as well
     const a2f = (name, obj, disposer) => {
         flair[name] = Object.freeze(obj);
         flair.members.push(name);
@@ -95,6 +97,7 @@
     <!-- inject: ./(bundle)/assembly/AssemblyLoadContext.js -->  
     <!-- inject: ./(bundle)/assembly/Assembly.js -->  
     <!-- inject: ./(bundle)/assembly/Resource.js -->  
+    <!-- inject: ./(bundle)/assembly/Route.js -->  
     <!-- inject: ./(bundle)/assembly/SharedChannel.js -->  
     <!-- inject: ./(bundle)/assembly/AppDomainProxy.js -->  
     <!-- inject: ./(bundle)/assembly/AssemblyLoadContextProxy.js -->  
@@ -105,6 +108,7 @@
     <!-- inject: ./(bundle)/types/get/getAssemblyOf.js -->   
     <!-- inject: ./(bundle)/types/get/getContext.js -->   
     <!-- inject: ./(bundle)/types/get/getResource.js -->  
+    <!-- inject: ./(bundle)/types/get/getRoute.js -->
     <!-- inject: ./(bundle)/types/get/getType.js -->   
     <!-- inject: ./(bundle)/types/get/getTypeOf.js -->    
     <!-- inject: ./(bundle)/types/get/ns.js -->    

@@ -1,10 +1,8 @@
 {
-    "preambles": [
+    "host": "flair.server.Server | flair.client.Client",
+    "app": "flair.server.App ~ flair.server.WorkerApp | flair.client.App ~ flair.client.WorkerApp",
+    "load": [
     ],
-    "bootwares": [
-    ],
-    "server": "flair.server.Server",
-    "app": "flair.server.App | flair.client.App",
-    "entryPoint": "./main.js | ./index.js",
-    "bootEngine": "flair.boot.BootEngine"
+    "container": {
+    }
 }

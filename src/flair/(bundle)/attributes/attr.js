@@ -118,9 +118,11 @@ const _attrMeta = _attr[meta] = Object.freeze({
         sealed: new _attrConfig(true, '(class || ((class && (prop || func || event)) && override))'), 
     
         private: new _attrConfig(true, '(class || struct) && (prop || func || event) && !($protected || @private || $static)'),
-        protected: new _attrConfig(true, '(class || struct) && (prop || func || event) && !($private|| $static)'),
+        protected: new _attrConfig(true, '(class) && (prop || func || event) && !($private || $static)'),
         readonly: new _attrConfig(true, '(class || struct) && prop && !abstract'),
         async: new _attrConfig(true, '(class || struct) && func'),
+        privateSet: new _attrConfig(true, '(class || struct) && prop && !($private || $static)'),
+        protectedSet: new _attrConfig(true, '(class) && prop && !($protected || $private || $static)'),
     
         enumerate: new _attrConfig('(class || struct) && prop || func || event'),
         dispose: new _attrConfig('class && prop'),

@@ -2,7 +2,7 @@ const { App } = ns('flair.boot');
 
 /**
  * @name App
- * @description Default server-side app implementation
+ * @description Default server-side worker-app implementation
  */
 $$('ns', '(auto)');
 Class('(auto)', App, function() {

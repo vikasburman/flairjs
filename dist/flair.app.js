@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.16.98
- *  Thu, 14 Mar 2019 17:47:35 GMT
+ *  Version: 0.17.11
+ *  Sun, 17 Mar 2019 01:31:02 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -29,16 +29,16 @@ const { Serializer } = flair;
 const { Tasks } = flair;
 const { TaskInfo } = flair.Tasks;
 const { as, is, isComplies, isDerivedFrom, isImplements, isInstanceOf, isMixed } = flair;
-const { getAssembly, getAttr, getContext, getResource, getType, ns, getTypeOf, typeOf } = flair;
+const { getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf, typeOf } = flair;
 const { dispose, using } = flair;
-const { args, Exception, noop, nip, nim, nie, event } = flair;
+const { Args, Exception, noop, nip, nim, nie, event } = flair;
 const { env } = flair.options;
 const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
-const { $static, $abstract, $virtual, $override, $sealed, $private, $protected, $readonly, $async } = $$;
+const { $static, $abstract, $virtual, $override, $sealed, $private, $privateSet, $protected, $protectedSet, $readonly, $async } = $$;
 const { $enumerate, $dispose, $post, $on, $timer, $type, $args, $inject, $resource, $asset, $singleton, $serialize, $deprecate, $session, $state, $conditional, $noserialize, $ns } = $$;
 /* eslint-enable no-unused-vars */
 
-let settings = JSON.parse('{"preambles":[],"bootwares":[],"server":"flair.server.Server","app":"flair.server.App | flair.client.App","entryPoint":"./main.js | ./index.js"}'); // eslint-disable-line no-unused-vars
+let settings = JSON.parse('{"host":"flair.server.Server | flair.client.Client","app":"flair.server.App ~ flair.server.WorkerApp | flair.client.App ~ flair.client.WorkerApp","load":[],"container":{}}'); // eslint-disable-line no-unused-vars
 
         let settingsReader = flair.Port('settingsReader');
         if (typeof settingsReader === 'function') {
@@ -48,107 +48,175 @@ let settings = JSON.parse('{"preambles":[],"bootwares":[],"server":"flair.server
         settings = Object.freeze(settings);
         flair.AppDomain.context.current().currentAssemblyBeingLoaded('./flair.app{.min}.js');
 
-(async () => { // ./src/flair.app/flair.boot/App.js
+(async () => { // ./src/flair.app/(root)/BootEngine.js
 'use strict';
-const { IDisposable, ILifecycleHandle, LifecycleHandler } = ns();
-const { Bootware } = ns('flair.boot');
-
-/**
- * @name App
- * @description App base class
- */
-$$('ns', 'flair.boot');
-Class('App', Bootware, [IDisposable, ILifecycleHandle, LifecycleHandler], function() {
-    $$('virtual');
-    this.construct = noop;
-
-    $$('virtual');
-    this.dispose = noop;
-});
-
-})();
-
-(async () => { // ./src/flair.app/flair.boot/BootEngine.js
-'use strict';
-const { IBootware } = ns('flair.boot');
+const { Bootware } = ns();
 
 /**
  * @name BootEngine
  * @description Bootstrapper functionality
  */
 $$('static');
-$$('ns', 'flair.boot');
+$$('ns', '(root)');
 Class('BootEngine', function() {
-    this.start = async () => {
-        // load preambles
-        await AppDomain.loadScripts(...settings.preambles);
-
-        // boot
-        let bootwares = [],
-            bootware = null;
-        for(let item of settings.bootwares) {
-            // get bootware
-            item = which(item); // server/client specific version
-            if (item) { // in case no item is set for either server/client
-                let Bootware = as(await include(item), IBootware);
-                if (!Bootware) { throw Exception.InvalidDefinition(item, this.start); }
-    
-                // boot
-                bootware = new Bootware();
-                bootwares.push(bootware);
-                await bootware.boot();
+    this.start = async (entryPoint) => {
+        let allBootwares = [],
+            mountSpecificBootwares = [];
+        const setEntryPoint = () => {
+            // set entry point for workers
+            AppDomain.entryPoint(entryPoint);
+        };
+        const loadFilesAndBootwares = async () => {
+            // load bootwares, scripts and preambles
+            let Item = null,
+                Bootware = null,
+                bw = null;
+            for(let item of settings.load) {
+                // get bootware (it could be a bootware, a simple script or a preamble)
+                item = which(item); // server/client specific version
+                if (item) { // in case no item is set for either server/client
+                    Item = await include(item);
+                    if (Item) {
+                        Bootware = as(Item, Bootware);
+                        if (Bootware) { // if boot
+                            bw = new Bootware(); 
+                            allBootwares.push(bw); // push in array, so boot and ready would be called for them
+                            if (bw.info.isMountSpecific) { // if bootware is mount specific bootware - means can run once for each mount
+                                mountSpecificBootwares.push(bw);
+                            }
+                        } // else ignore, this was something else, like a module which was just loaded
+                    } // else ignore, as it could just be a file loaded which does not return anything
+                }
             }
-        }
+        };
+        const runBootwares = async (method) => {
+            if (!env.isWorker) { // main env
+                let mounts = AppDomain.host().mounts,
+                    mountNames = Object.keys(mounts),
+                    mountName = '',
+                    mount = null;
+            
+                // run all bootwares for main
+                mountName = 'main';
+                mount = mounts[mountName];
+                for(let bw of allBootwares) {
+                    await bw[method](mountName, mount);
+                }
 
-        // boot server
-        if (env.isServer) {
-            let server = as(await include(settings.server), IBootware);
-            if (!server) { throw Exception.InvalidDefinition(settings.server, this.start); }
-            await server.boot();
-            AppDomain.Server(server); // set server
-        }
+                // run all bootwares which are mount specific for all other mounts (except main)
+                for(let mountName of mountNames) {
+                    if (mountName === 'main') { continue; }
+                    mount = mounts[mountName];
+                    for(let bw of mountSpecificBootwares) {
+                        await bw[method](mountName, mount);
+                    }
+                }
+            } else { // worker env
+                // in this case as per load[] setting, no nountspecific bootwares should be present
+                if (mountSpecificBootwares.length !== 0) { 
+                    console.warn('Mount specific bootwares are not supported for worker environment. Revisit worker:flair.app->load setting.'); // eslint-disable-line no-console
+                }
 
-        // boot app
-        let app = as(await include(which(settings.app)), IBootware); // pick server/client specific setting
-        if (!app) { throw Exception.InvalidDefinition(settings.app, this.start); }
-        await app.boot();
-        AppDomain.App(app); // set app
+                // run all for once (ignoring the mountspecific ones)
+                for(let bw of allBootwares) {
+                    if (!bw.info.isMountSpecific) {
+                        await bw[method]();
+                    }
+                }
+            }
+        };
+        const boot = async () => {
+            if (!env.isWorker) {
+                let host = which(settings.host), // pick server/client specific host
+                    Host = as(await include(host), Bootware),
+                    hostObj = null;
+                if (!Host) { throw Exception.InvalidDefinition(host, this.start); }
+                hostObj = new Host();
+                await hostObj.boot();
+                AppDomain.host(hostObj); // set host
+            }
+            
+            await runBootwares('boot');   
+            
+            let app = which(settings.app), // pick server/client specific host
+            App = as(await include(app), Bootware),
+            appObj = null;
+            if (!App) { throw Exception.InvalidDefinition(app, this.start); }
+            appObj = new App();
+            await appObj.boot();
+            AppDomain.app(appObj); // set app
+        };        
+        const start = async () => {
+            if (!env.isWorker) {
+                await AppDomain.host().start();
+            }
+            await AppDomain.app().start();
+        };
+        const ready = async () => {
+            if (!env.isWorker) {
+                await AppDomain.host().ready();
+            }
+            runBootwares('ready');
+            await AppDomain.app().ready();
+        };        
 
-        // start server
-        if (env.isServer) {
-            await AppDomain.Server().start();
-        }
-        
-        // start app
-        await AppDomain.App().start();
-
-        // ready
-        for(let bw of bootwares) {
-            await bw.ready();
-        }
-
-        // ready server
-        await AppDomain.Server().ready();
-
-        // finally make app ready
-        await AppDomain.App.ready();
+        setEntryPoint();
+        await loadFilesAndBootwares();
+        await boot();
+        await start();
+        await ready();
     };
 });
 
 })();
 
-(async () => { // ./src/flair.app/flair.boot/BootHandler.js
+(async () => { // ./src/flair.app/(root)/Bootware.js
 'use strict';
 /**
- * @name BootHandler 
- * @description Bootware functions
+ * @name Bootware
+ * @description Bootware base class
  */
-$$('ns', 'flair.boot');
-Mixin('BootHandler', function() {
+$$('abstract');
+$$('ns', '(root)');
+Class('Bootware', function() {
+    /**  
+     * @name construct
+     * @arguments
+     *  name: string - name of the bootware
+     *  version: string - version number of the bootware
+    */
+    $$('virtual');
+    this.construct = (name, version, isMountSpecific) => {
+        let args = Args('name: string, version: string',
+                        'name: string, version: string, isMountSpecific: boolean',
+                        'name: string, isMountSpecific: boolean',
+                        'name: string')(name, version, isMountSpecific); args.throwOnError(this.construct);
+
+        // set info
+        this.info = Object.freeze({
+            name: args.name || '',
+            version: args.version || '',
+            isMountSpecific: args.isMountSpecific || false
+        });
+    };
+
+    /**  
+     * @name boot
+     * @arguments
+     *  mount: object - mount object
+    */
     $$('virtual');
     $$('async');
     this.boot = noop;
 
+    $$('readonly');
+    this.info = null;
+
+    /**  
+     * @name ready
+     * @arguments
+     *  mount: object - mount object
+    */
     $$('virtual');
     $$('async');
     this.ready = noop;
@@ -156,52 +224,56 @@ Mixin('BootHandler', function() {
 
 })();
 
-(async () => { // ./src/flair.app/flair.boot/Bootware.js
+(async () => { // ./src/flair.app/(root)/LifeCycleHandler.js
 'use strict';
-const { IBootware } = ns('flair.boot');
-const { BootHandler } = ns('flair.boot');
 
 /**
- * @name Bootware
- * @description Bootware base class
+ * @name LifeCycleHandler 
+ * @description LifeCycleHandler Mixin
  */
-$$('abstract');
-$$('ns', 'flair.boot');
-Class('Bootware', [IBootware, BootHandler], function() {
-});
-
-})();
-
-(async () => { // ./src/flair.app/flair.boot/IBootware.js
-'use strict';
-/**
- * @name IBootware
- * @description IBootware interface
- */
-$$('ns', 'flair.boot');
-Interface('IBootware', function() {
-    // boot - async
-    this.boot = nim;
-
-    // ready - async
-    this.ready = nim;
-});
-
-})();
-
-(async () => { // ./src/flair.app/flair.boot/Server.js
-'use strict';
-const { IDisposable, ILifecycleHandle, LifecycleHandler } = ns();
-const { Bootware } = ns('flair.boot');
-
-/**
- * @name Server
- * @description Server base class
- */
-$$('ns', 'flair.boot');
-Class('Server', Bootware, [IDisposable, ILifecycleHandle, LifecycleHandler], function() {
+$$('ns', '(root)');
+Mixin('LifeCycleHandler', function() {
     $$('virtual');
-    this.construct = noop;
+    this.start = async () => {
+        this.isStarted = true;
+    };
+
+    $$('virtual');
+    this.stop = async () => {
+        this.isStarted = false;
+    };
+
+    $$('privateSet');
+    $$('type', 'boolean');
+    this.isStarted = false;
+
+    this.restart = async () => {
+        await this.stop();
+        await this.start();
+    };
+
+    $$('virtual');
+    this.dispose = noop;    
+});
+
+})();
+
+(async () => { // ./src/flair.app/flair.boot/App.js
+'use strict';
+const { IDisposable, ILifeCycleHandler, Bootware, LifeCycleHandler } = ns();
+
+/**
+ * @name App
+ * @description App base class
+ */
+$$('ns', 'flair.boot');
+Class('App', Bootware, [LifeCycleHandler, ILifeCycleHandler, IDisposable], function() {
+    $$('override');
+    this.construct = (base) => {
+        // set info
+        let asm = getAssembly(this);
+        base(asm.title, asm.version);
+    };
 
     $$('virtual');
     this.dispose = noop;
@@ -209,8 +281,69 @@ Class('Server', Bootware, [IDisposable, ILifecycleHandle, LifecycleHandler], fun
 
 })();
 
+(async () => { // ./src/flair.app/flair.boot/ClientHost.js
+'use strict';
+const { IDisposable, ILifeCycleHandler, Bootware, LifeCycleHandler } = ns();
+
+/**
+ * @name ClientHost
+ * @description Client host base class
+ */
+$$('ns', 'flair.boot');
+Class('ClientHost', Bootware, [LifeCycleHandler, ILifeCycleHandler, IDisposable], function() {
+    $$('virtual');
+    this.dispose = noop;
+});
+
+})();
+
+(async () => { // ./src/flair.app/flair.boot/ServerHost.js
+'use strict';
+const { IDisposable, ILifeCycleHandler, Bootware, LifeCycleHandler } = ns();
+
+/**
+ * @name ServerHost
+ * @description Server host base class
+ */
+$$('ns', 'flair.boot');
+Class('ServerHost', Bootware, [LifeCycleHandler, ILifeCycleHandler, IDisposable], function() {
+    $$('virtual');
+    this.dispose = noop;
+});
+
+})();
+
+(async () => { // ./src/flair.app/flair.bw/DIContainer.js
+'use strict';
+const { Bootware } = ns();
+
+/**
+ * @name DIContainer
+ * @description Initialize DI Container
+ */
+$$('sealed');
+$$('ns', 'flair.bw');
+Class('DIContainer', Bootware, function() {
+    $$('override');
+    this.construct = (base) => {
+        base('DI Container');
+    };
+
+    $$('override');
+    this.boot = async () => {
+        let containerItems = settings.container;
+        for(let alias in containerItems) {
+            if (containerItems.hasOwnProperty(alias)) {
+                Container.register(alias, containerItems[alias]);
+            }
+        }
+    };
+});
+
+})();
+
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","desc":"True Object Oriented JavaScript","version":"0.16.98","lupdate":"Thu, 14 Mar 2019 17:47:35 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.boot.App","flair.boot.BootEngine","flair.boot.BootHandler","flair.boot.Bootware","flair.boot.IBootware","flair.boot.Server"],"resources":[],"assets":[]}');
+flair.AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.17.11","lupdate":"Sun, 17 Mar 2019 01:31:02 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["BootEngine","Bootware","LifeCycleHandler","flair.boot.App","flair.boot.ClientHost","flair.boot.ServerHost","flair.bw.DIContainer"],"resources":[],"assets":[],"routes":[]}');
 
 })();
