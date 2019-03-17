@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.client
  *     File: ./flair.client.js
- *  Version: 0.17.13
- *  Sun, 17 Mar 2019 01:44:37 GMT
+ *  Version: 0.17.27
+ *  Sun, 17 Mar 2019 16:17:41 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -322,6 +322,6 @@ Class('WorkerApp', App, function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair.client","file":"./flair.client{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.17.13","lupdate":"Sun, 17 Mar 2019 01:44:37 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.bw.client.Router","flair.client.App","flair.client.Client","flair.client.WorkerApp"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair.client","file":"./flair.client{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.17.27","lupdate":"Sun, 17 Mar 2019 16:17:41 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.bw.client.Router","flair.client.App","flair.client.Client","flair.client.WorkerApp"],"resources":[],"assets":[],"routes":[]}');
 
 })();

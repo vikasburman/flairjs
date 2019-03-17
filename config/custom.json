@@ -1,12 +1,32 @@
 {
-    "copy": [
-    ],
     "build": [
     ],
-    "skipMinifyRoot": [
-    ],
-    "resolveRoot": {
-    },
-    "preambleRoot": {
+    "profiles": {
+        "server": {
+            "root": "",
+            "copy": [
+            ],
+            "build": [
+            ],
+            "skipMinifyRoot": [
+            ],
+            "resolveRoot": {
+            },
+            "preambleRoot": {
+            }
+        },
+        "client": {
+            "root": "",
+            "copy": [
+            ],
+            "build": [
+            ],
+            "skipMinifyRoot": [
+            ],
+            "resolveRoot": {
+            },
+            "preambleRoot": {
+            }
+        }
     }
 }

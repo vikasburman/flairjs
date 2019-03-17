@@ -159,28 +159,6 @@ const copyDeps = (isPost, options, done) => {
 
     processNext(deps);
 };
-const copyCustom = (options, done) => {
-    if (!options.customBuild) { done(); return; }
-
-    // copy all files or folders as is in dest
-    options.logger(0, 'copy', '', true);    
-        let src = '',
-            dest = '';
-    for(let fileOrFolder of options.customBuildConfig.copy) {
-        src = path.resolve(path.join(options.src, fileOrFolder));
-        dest = path.resolve(path.join(options.dest, fileOrFolder))
-        options.logger(1, '', './' + path.join(options.src, fileOrFolder));
-        if (fsx.lstatSync(src).isDirectory()) {
-            copyDir.sync(src, dest)
-        } else {
-            fsx.ensureDirSync(path.dirname(dest));
-            fsx.copyFileSync(src, dest);
-        }        
-    }
-
-    // done
-    done();
-};
 const injector = (base, content) => {
     // Unescaped \s*([\(\)\w@_\-.\\\/]+)\s*
     const FILENAME_PATTERN = '\\s*([\\(\\)\\w@_\\-.\\\\/]+)\\s*';
@@ -207,7 +185,7 @@ const injector = (base, content) => {
     
     return content;
 };
-const build = (options, done) => {
+const build = (options, buildDone) => {
     const logger = options.logger;
     const appendToFile = (text, isAppend = true) => {
         if (isAppend) {
@@ -218,10 +196,10 @@ const build = (options, done) => {
     };  
     const resolveRoot = (buildPath) => {
         let resolvedRoot = 'error/define/resolveRoot/for/' + buildPath;
-        for(let partialBuildPath in options.customBuildConfig.resolveRoot) {
-            if (options.customBuildConfig.resolveRoot.hasOwnProperty(partialBuildPath)) {
+        for(let partialBuildPath in options.profiles.current.resolveRoot) {
+            if (options.profiles.current.resolveRoot.hasOwnProperty(partialBuildPath)) {
                 if (buildPath.startsWith(partialBuildPath)) {
-                    resolvedRoot = buildPath.replace(options.customBuildConfig.resolveRoot[partialBuildPath], './');
+                    resolvedRoot = buildPath.replace(options.profiles.current.resolveRoot[partialBuildPath], './');
                     break;
                 }
             }
@@ -230,10 +208,10 @@ const build = (options, done) => {
     };
     const resolvePreamble = (buildPath) => {
         let preambleRoot = buildPath;
-        for(let partialBuildPath in options.customBuildConfig.preambleRoot) {
-            if (options.customBuildConfig.preambleRoot.hasOwnProperty(partialBuildPath)) {
+        for(let partialBuildPath in options.profiles.current.preambleRoot) {
+            if (options.profiles.current.preambleRoot.hasOwnProperty(partialBuildPath)) {
                 if (buildPath.startsWith(partialBuildPath)) {
-                    preambleRoot = options.customBuildConfig.preambleRoot[partialBuildPath];
+                    preambleRoot = options.profiles.current.preambleRoot[partialBuildPath];
                     break;
                 }
             }
@@ -242,7 +220,7 @@ const build = (options, done) => {
     };
     const resolveSkipMinify = (buildPath) => {
         let skip = false;
-        for(let partialBuildPath of options.customBuildConfig.skipMinifyRoot) {
+        for(let partialBuildPath of options.profiles.current.skipMinifyRoot) {
             if (buildPath.startsWith(partialBuildPath)) {
                 skip = true;
                 break;
@@ -250,6 +228,29 @@ const build = (options, done) => {
         }
         return skip;
     };
+    const copyCustom = (done) => {
+        if (!options.customBuild) { done(); return; }
+    
+        // copy all files or folders as is in dest
+        options.logger(0, 'copy', '', true);    
+            let src = '',
+                dest = '';
+        for(let fileOrFolder of options.profiles.current.copy) {
+            src = path.resolve(path.join(options.src, fileOrFolder));
+            dest = path.resolve(path.join(options.dest, fileOrFolder))
+            options.logger(1, '', './' + path.join(options.src, fileOrFolder));
+            if (fsx.lstatSync(src).isDirectory()) {
+                fsx.ensureDirSync(dest);
+                copyDir.sync(src, dest);
+            } else {
+                fsx.ensureDirSync(path.dirname(dest));
+                fsx.copyFileSync(src, dest);
+            }        
+        }
+    
+        // done
+        done();
+    };    
 
     const appendHeader = () => {
         let header = 
@@ -1070,9 +1071,64 @@ const build = (options, done) => {
             processSources(done);
         });
     };
+    const processProfiles = (done) => {
+        if (options.profiles.length === 0) { done(); return; } // when all done
 
-    // begin
-    processSources(done);
+        // pick profile
+        let profileItem = options.profiles.splice(0, 1)[0]; // pick from top
+        options.profiles.current = options.customBuildConfig.profiles[profileItem.profile];
+        let srcList = [].concat(...options.profiles.current.build);
+        options.sources = srcList;
+        // start profile
+        logger(0, 'profile', `${profileItem.profile} (start)`, true);  
+        processSources(() => {
+            copyCustom(() => {
+                // done
+                logger(0, 'profile', `${profileItem.profile} (end)`, true); 
+                options.profiles.current = null;
+                processProfiles(done);
+            });
+        });
+    };
+    const organizeProfiles = () => {
+        let source = '',
+            target = '';
+        for (let buildProfile of options.customBuildConfig.build) {
+            source = path.join(options.dest, options.customBuildConfig.profiles[buildProfile.profile].root);
+            if (buildProfile.dest && buildProfile.dest !== '' && buildProfile.dest !== '/') {
+                if (buildProfile.dest.startsWith('@')) { // move 
+                    target = buildProfile.dest.substr(1); // remove @
+                    target = options.customBuildConfig.profiles[target].root; // pick root path of given profile name in dest
+                    target = path.join(target, options.customBuildConfig.profiles[buildProfile.profile].root);
+                } else {
+                    target = buildProfile.dest; // fixed target path
+                }
+                target = path.join(options.dest, target); // fixed target path
+
+                // move
+                if (!source.endsWith('/')) { source += '/'; }
+                if (!target.endsWith('/')) { target += '/'; }
+                fsx.ensureDirSync(target);
+                fsx.moveSync(source, target, { overwrite: true });
+            }
+        }
+    };
+
+    // process sources
+    if (options.customBuild) {
+        // process each build profile
+        options.profiles = options.customBuildConfig.build.slice();
+        options.profiles.current = null;
+        processProfiles(() => {
+            organizeProfiles();
+            buildDone();
+        });
+    } else {
+        let srcList = [];
+        srcList.push(options.src);  // source itself is the folder
+        options.sources = srcList;
+        processSources(buildDone); // begin
+    }
 };
 
 /**
@@ -1090,27 +1146,41 @@ const build = (options, done) => {
  *                  false - customization can be done using a config
  *              customBuildConfig: custom folders configuration options file path, having structure
  *              {
- *                  "copy": [ ] - having path (relative to src path) to copy as is on dest folder
- *                  "build": [ ] - having path (relative to src path) to treat as assembly folder group
- *                                 all root level folders under each of these will be treated as one individual assembly
- *                                 Note: if folder name (of assembly folder under it) starts with '_', it is skipped
- *                  "skipMinifyRoot": [ ] - some of the build folders may be skipped for minify (e.g., server folders)
+ *                  "build": [
+ *                      {
+ *                          "profile": - name of the profile to build
+ *                          "dest": - relative path at destination folder where to copy distribution files of this profile
+ *                                    "" - empty (or absence of this) means copy at destination root in same name folder as root of the profile
+ *                                    "@profileName" - means copy at destination root under output of this given profile
+ *                                    "somepath/thispath" - means output folder of this profile will be moved as this path with a rename of "thispath"
+ *                      }
+ *                  ],
+ *                  "profiles": {
+ *                      "<profileName>": {
+ *                          "root": ""  - root folder name where source of this profile is kept - this is used for identification of content under dest folder only - not used for any prefixing with other paths in profile
+ *                          "copy": [ ] - having path (relative to src path) to copy as is on dest folder
+ *                          "build": [ ] - having path (relative to src path) to treat as assembly folder group
+ *                                      all root level folders under each of these will be treated as one individual assembly
+ *                                      Note: if folder name (of assembly folder under it) starts with '_', it is skipped
+ *                          "skipMinifyRoot": [ ] - some of the build folders may be skipped for minify (e.g., server folders)
  *                                      those can be defined here, any build folder that starts with the given folder path here will be skipped for minification
  *                                      e.g., "server/app/" here will skip minification for all build folders such as "server/app/group1/", "server/app/group2/", etc.
- *                  "resolveRoot": {
- *                      "<buildPath>": "<removeThisToReachRootPath>" - for each path in "build", define how this will be resolved 
+ *                          "resolveRoot": {
+ *                              "<buildPath>": "<removeThisToReachRootPath>" - for each path in "build", define how this will be resolved 
  *                                      when generating path of assemblies underneath
- *                  }
- *                      e.g., "server/app/": "server/" - means, a file at server/app/file.js will be defined as: ./app/file.js - because at runtime server will be the root folder of app
- *                      This means, the second string is replaced with "." in first string
- *                      NOTE: for many build paths that start with same partial path, only one entry may exists here and all build paths
- *                            that start with this path will use same resolveRoot path
- *                  "preambleRoot": {
- *                      "<buildPath>": "<preambleRoot>" - for each path in "build", define where this path's preamble will be created
- *                  }
- *                      e.g., "server/app/": "server/app/" - means, assembly files that exists under path that starts with "server/app/", will have their preamble generated at: "server/app/"preamble.js
- *                      NOTE: for many build paths that start with same partial path, only one entry may exists here and preambles for all build paths
+ *                          }
+ *                              e.g., "server/app/": "server/" - means, a file at server/app/file.js will be defined as: ./app/file.js - because at runtime server will be the root folder of app
+ *                              This means, the second string is replaced with "." in first string
+ *                              NOTE: for many build paths that start with same partial path, only one entry may exists here and all build paths
+ *                              that start with this path will use same resolveRoot path
+ *                          "preambleRoot": {
+ *                              "<buildPath>": "<preambleRoot>" - for each path in "build", define where this path's preamble will be created
+ *                          }
+ *                              e.g., "server/app/": "server/app/" - means, assembly files that exists under path that starts with "server/app/", will have their preamble generated at: "server/app/"preamble.js
+ *                              NOTE: for many build paths that start with same partial path, only one entry may exists here and preambles for all build paths
  *                            that start with this path will be generated at same place, in such case, preambles will be merged into one - so there will always be one preamble at one target given path
+ *                      }
+ *                  }
  *              }
  *              fullBuild: true/false   - is full build to be done
  *              skipBumpVersion: true/false - if skip bump version with build
@@ -1435,26 +1505,15 @@ exports.flairBuild = function(options, cb) {
         logger(0, 'clean', 'done');
     }
 
-    // build source list
-    let srcList = [];
-    if (options.customBuild) {
-        srcList = [].concat(options.customBuildConfig.build);
-    } else {
-        srcList.push(options.src);  // source itself is the folder
-    }
-    options.sources = srcList;
-
     // bump version number
     bump(options);
 
     // build
-    copyCustom(options, () => {
-        copyDeps(false, options, () => {
-            build(options, () => {
-                copyDeps(true, options, () => {
-                    logger(0, 'flairBuild', 'end', true, true);
-                    if (typeof cb === 'function') { cb(); } 
-                });
+    copyDeps(false, options, () => {
+        build(options, () => {
+            copyDeps(true, options, () => {
+                logger(0, 'flairBuild', 'end', true, true);
+                if (typeof cb === 'function') { cb(); } 
             });
         });
     });

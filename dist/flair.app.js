@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.17.13
- *  Sun, 17 Mar 2019 01:44:37 GMT
+ *  Version: 0.17.27
+ *  Sun, 17 Mar 2019 16:17:41 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -344,6 +344,6 @@ Class('DIContainer', Bootware, function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.17.13","lupdate":"Sun, 17 Mar 2019 01:44:37 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["BootEngine","Bootware","LifeCycleHandler","flair.boot.App","flair.boot.ClientHost","flair.boot.ServerHost","flair.bw.DIContainer"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.17.27","lupdate":"Sun, 17 Mar 2019 16:17:41 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["BootEngine","Bootware","LifeCycleHandler","flair.boot.App","flair.boot.ClientHost","flair.boot.ServerHost","flair.bw.DIContainer"],"resources":[],"assets":[],"routes":[]}');
 
 })();
