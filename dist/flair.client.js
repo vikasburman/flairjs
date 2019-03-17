@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.client
  *     File: ./flair.client.js
- *  Version: 0.17.11
- *  Sun, 17 Mar 2019 01:31:02 GMT
+ *  Version: 0.17.13
+ *  Sun, 17 Mar 2019 01:44:37 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -15,7 +15,7 @@
 'use strict';
 
 /* eslint-disable no-unused-vars */
-const flair = (typeof global !== 'undefined' ? require('flair') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));
+const flair = (typeof global !== 'undefined' ? require('flairjs') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));
 const { Class, Struct, Enum, Interface, Mixin } = flair;
 const { Aspects } = flair;
 const { AppDomain } = flair;
@@ -322,6 +322,6 @@ Class('WorkerApp', App, function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair.client","file":"./flair.client{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.17.11","lupdate":"Sun, 17 Mar 2019 01:31:02 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.bw.client.Router","flair.client.App","flair.client.Client","flair.client.WorkerApp"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair.client","file":"./flair.client{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.17.13","lupdate":"Sun, 17 Mar 2019 01:44:37 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.bw.client.Router","flair.client.App","flair.client.Client","flair.client.WorkerApp"],"resources":[],"assets":[],"routes":[]}');
 
 })();

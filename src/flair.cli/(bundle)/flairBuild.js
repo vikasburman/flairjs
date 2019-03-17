@@ -573,12 +573,14 @@ const build = (options, done) => {
         }
     };
     const startClosure = () => {
+        if (options.skipRegistrationsFor.indexOf(options.current.asmName) !== -1) { return; } // skip for special cases
+
         // append closure header
         let closureHeader = 
         `(() => {\n` + 
         `'use strict';\n\n` +
         `/* eslint-disable no-unused-vars */\n` +
-        `const flair = (typeof global !== 'undefined' ? require('flair') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));\n` +
+        `const flair = (typeof global !== 'undefined' ? require('flairjs') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));\n` +
         `const { Class, Struct, Enum, Interface, Mixin } = flair;\n` +
         `const { Aspects } = flair;\n` +
         `const { AppDomain } = flair;\n` +
@@ -604,6 +606,8 @@ const build = (options, done) => {
         appendToFile(closureHeader);        
     };
     const endClosure = () => {
+        if (options.skipRegistrationsFor.indexOf(options.current.asmName) !== -1) { return; } // skip for special cases
+
         // append closure footer
         let closureFooter = 
         `\n` + 
@@ -611,6 +615,8 @@ const build = (options, done) => {
         appendToFile(closureFooter);
     };
     const appendSettings = () => {
+        if (options.skipRegistrationsFor.indexOf(options.current.asmName) !== -1) { return; } // skip for special cases
+
         let settings = '',
             settingsContent = '';
         if (fsx.existsSync(options.current.asmSettings)) {

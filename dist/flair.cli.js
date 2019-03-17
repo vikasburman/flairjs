@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.17.11
- *  Sun, 17 Mar 2019 01:31:02 GMT
+ *  Version: 0.17.13
+ *  Sun, 17 Mar 2019 01:44:37 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -23,7 +23,7 @@ const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
     name: 'flair.cli',
-    version: '0.17.11',
+    version: '0.17.13',
     format: 'fasm',
     formatVersion: '1',
     contains: [
@@ -587,12 +587,14 @@ const build = (options, done) => {
         }
     };
     const startClosure = () => {
+        if (options.skipRegistrationsFor.indexOf(options.current.asmName) !== -1) { return; } // skip for special cases
+
         // append closure header
         let closureHeader = 
         `(() => {\n` + 
         `'use strict';\n\n` +
         `/* eslint-disable no-unused-vars */\n` +
-        `const flair = (typeof global !== 'undefined' ? require('flair') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));\n` +
+        `const flair = (typeof global !== 'undefined' ? require('flairjs') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));\n` +
         `const { Class, Struct, Enum, Interface, Mixin } = flair;\n` +
         `const { Aspects } = flair;\n` +
         `const { AppDomain } = flair;\n` +
@@ -618,6 +620,8 @@ const build = (options, done) => {
         appendToFile(closureHeader);        
     };
     const endClosure = () => {
+        if (options.skipRegistrationsFor.indexOf(options.current.asmName) !== -1) { return; } // skip for special cases
+
         // append closure footer
         let closureFooter = 
         `\n` + 
@@ -625,6 +629,8 @@ const build = (options, done) => {
         appendToFile(closureFooter);
     };
     const appendSettings = () => {
+        if (options.skipRegistrationsFor.indexOf(options.current.asmName) !== -1) { return; } // skip for special cases
+
         let settings = '',
             settingsContent = '';
         if (fsx.existsSync(options.current.asmSettings)) {
@@ -1468,40 +1474,3 @@ exports.flairBuild = function(options, cb) {
     });
 };
 
-(() => {
-'use strict';
-
-/* eslint-disable no-unused-vars */
-const flair = (typeof global !== 'undefined' ? require('flair') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));
-const { Class, Struct, Enum, Interface, Mixin } = flair;
-const { Aspects } = flair;
-const { AppDomain } = flair;
-const __currentContextName = flair.AppDomain.context.current().name;
-const { $$, attr } = flair;
-const { bring, Container, include } = flair;
-const { Port } = flair;
-const { on, post, telemetry } = flair;
-const { Reflector } = flair;
-const { Serializer } = flair;
-const { Tasks } = flair;
-const { TaskInfo } = flair.Tasks;
-const { as, is, isComplies, isDerivedFrom, isImplements, isInstanceOf, isMixed } = flair;
-const { getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf, typeOf } = flair;
-const { dispose, using } = flair;
-const { Args, Exception, noop, nip, nim, nie, event } = flair;
-const { env } = flair.options;
-const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
-const { $static, $abstract, $virtual, $override, $sealed, $private, $privateSet, $protected, $protectedSet, $readonly, $async } = $$;
-const { $enumerate, $dispose, $post, $on, $timer, $type, $args, $inject, $resource, $asset, $singleton, $serialize, $deprecate, $session, $state, $conditional, $noserialize, $ns } = $$;
-/* eslint-enable no-unused-vars */
-
-let settings = {}; // eslint-disable-line no-unused-vars
-
-        let settingsReader = flair.Port('settingsReader');
-        if (typeof settingsReader === 'function') {
-            let externalSettings = settingsReader('flair.cli');
-            if (externalSettings) { settings = Object.assign(settings, externalSettings); }
-        }
-        settings = Object.freeze(settings);
-        
-})();

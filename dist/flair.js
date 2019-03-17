@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.17.11
- *  Sun, 17 Mar 2019 01:30:59 GMT
+ *  Version: 0.17.13
+ *  Sun, 17 Mar 2019 01:44:35 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -78,10 +78,10 @@
     flair.info = Object.freeze({
         name: 'flair',
         file: currentFile,
-        version: '0.17.11',
+        version: '0.17.13',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 17 Mar 2019 01:30:59 GMT')
+        lupdate: new Date('Sun, 17 Mar 2019 01:44:35 GMT')
     });  
     
     flair.members = [];
@@ -6387,7 +6387,7 @@
 'use strict';
 
 /* eslint-disable no-unused-vars */
-const flair = (typeof global !== 'undefined' ? require('flair') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));
+const flair = (typeof global !== 'undefined' ? require('flairjs') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));
 const { Class, Struct, Enum, Interface, Mixin } = flair;
 const { Aspects } = flair;
 const { AppDomain } = flair;
@@ -6774,6 +6774,6 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.17.11","lupdate":"Sun, 17 Mar 2019 01:30:59 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","ILifeCycleHandler","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.17.13","lupdate":"Sun, 17 Mar 2019 01:44:35 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","ILifeCycleHandler","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
 
 })();
