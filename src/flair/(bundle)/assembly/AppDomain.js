@@ -19,8 +19,6 @@ const AppDomain = function(name) {
         unloadDefaultContext = null,
         isUnloaded = false;
     
-    const { ILifecycleHandle } = _ns();
-
     // default load context
     defaultLoadContext = new AssemblyLoadContext('default', this, null, currentContexts, contexts),
     unloadDefaultContext = defaultLoadContext.unload;
@@ -183,14 +181,12 @@ const AppDomain = function(name) {
     };
     this.app = (appObj) => {
         if (appObj && !app) { 
-            if (!_is(appObj, ILifecycleHandle)) { throw _Exception.InvalidArgument('appObj'); }
             app = appObj; 
         }
         return app;
     };
     this.host = (hostObj) => {
         if (hostObj) { 
-            if (!_is(hostObj, ILifecycleHandle)) { throw _Exception.InvalidArgument('hostObj'); }
             host = hostObj; 
         }
         return host;

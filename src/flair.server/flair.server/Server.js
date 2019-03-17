@@ -15,6 +15,10 @@ Class('(auto)', ServerHost, function() {
         base('Express', '4.x');
     };
 
+    // main express app
+    this.app = () => { return this.mounts['main']; }
+
+    // all mounted express apps
     this.mounts = {
         get: () => { return mountedApps; },
         set: noop
