@@ -656,11 +656,11 @@ const build = (options, buildDone) => {
             thisFile = '';
         for(let nsFile of options.current.ado.types) {
             justNames.push(nsFile.qualifiedName);
-            thisFile = './' + nsFile.file;
+            thisFile = './' + nsFile.originalFile;
             logger(1, '', nsFile.qualifiedName + ' (' + thisFile + ')'); 
 
             // read file
-            let content = fsx.readFileSync(nsFile.file, 'utf8');
+            let content = fsx.readFileSync(nsFile.originalFile, 'utf8');
 
             // find and replace namespace name if set for auto
             content = replaceAll(content, `$$('ns', '(auto)');`, `$$$('ns', '${nsFile.nsName}');`); // replace all is eating up one '$', soo added 3, 2 left after that issues
@@ -863,12 +863,29 @@ const build = (options, buildDone) => {
         for (let file of files) { 
             if (file.indexOf('/_') !== -1) { continue; } // either a folder or file name starts with '_'. skip it
 
+            // handle position first
+            let index = 999999999, // all are at bottom by default
+                filePath = path.dirname(file),
+                fileName = path.basename(file),
+                originalFile = file;
+            if (fileName.startsWith('@')) { // file name can be given @n- to help sorting a file before others - this helps in right bundeling order
+                let idx = fileName.indexOf('-');
+                if (idx !== -1) {
+                    index = parseInt(fileName.substr(1, idx-1));
+                    fileName = fileName.substr(idx+1);
+                    file = path.join(filePath, fileName);
+                }
+            }
+
             let nsFile = {
                 nsPath: options.current.nsPath,
                 nsName: options.current.nsName,
                 ext: path.extname(file).toLowerCase().substr(1),
-                file: file
+                originalFile: originalFile,
+                file: file,
+                index: index
             };
+            
             if (file === 'routes.json') { // routes definition
                 nsFile.type = 'routes';
             } else if (file.endsWith('.spec.js')) { continue; // ignore specs
@@ -961,6 +978,16 @@ const build = (options, buildDone) => {
         if (options.current.namespaces.length === 0) { 
             delete options.current.nsName;
             delete options.current.nsPath;
+
+            // sort namespace items of types by index, so they are added in right required order
+            // since only types have mutual dependency, only types are considered for sorting
+            // even if number was added by user on some other type, it is ignored for now
+            options.current.ado.types.sort((a, b) => { 
+                if (a.index < b.index) { return -1; }
+                if (a.index > b.index) { return 1; }
+                return 0;
+            });
+
             done(); return; 
         }
         let nsFolder = options.current.namespaces.splice(0, 1)[0]; // pick from top

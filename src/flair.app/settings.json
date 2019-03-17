@@ -1,8 +1,32 @@
 {
-    "host": "flair.server.Server | flair.client.Client",
-    "app": "flair.server.App ~ flair.server.WorkerApp | flair.client.App ~ flair.client.WorkerApp",
+    "host": "flair.boot.ServerHost | flair.boot.ClientHost",
+    "app": "App",
     "load": [
     ],
     "container": {
-    }
+    },
+    "envVars": [
+    ],
+    "envVarsloadOptions": {
+        "overwrite": true
+    },    
+    "mounts": {
+        "main": "/"
+    },
+    "main-appSettings": [
+    ],
+    "main-middlewares": [
+    ],
+    "server-http": {
+        "enable": false,
+        "port": 80,
+        "timeout": -1
+    },
+    "server-https": {
+        "enable": false,
+        "port": 443,
+        "timeout": -1,
+        "privateKey": "",
+        "publicCert": ""
+    }        
 }

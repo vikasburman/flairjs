@@ -1,4 +1,4 @@
-const { Bootware } = ns();
+const { Bootware } = ns('flair.boot');
 
 /**
  * @name Middlewares
