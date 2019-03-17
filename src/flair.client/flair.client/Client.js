@@ -16,13 +16,14 @@ Class('(auto)', ClientHost, function() {
         base('Page', '1.x'); // https://www.npmjs.com/package/page
     };
 
-    this.mounts = {
+    this.app = () => { return this.mounts['main']; } // main page app
+    this.mounts = { // all mounted page apps
         get: () => { return mountedApps; },
         set: noop
     };
 
     $$('override');
-    this.boot = async (base) => {
+    this.boot = async (base) => { // mount all page app and pseudo sub-apps
         base();
 
         let appOptions = null,
@@ -75,7 +76,7 @@ Class('(auto)', ClientHost, function() {
     };
 
     $$('override');
-    this.start = async (base) => {
+    this.start = async (base) => { // configure hashchange handler
         base();
 
         hashChangeHandler = () => {
@@ -100,13 +101,10 @@ Class('(auto)', ClientHost, function() {
             // run app to initiate routing
             setTimeout(() => { app(path); }, 0); 
         };
-
-        // attach event handler
-        env.global.addEventListener('hashchange', hashChangeHandler);
     };
 
     $$('override');
-    this.stop = async (base) => {
+    this.stop = async (base) => { // stop listening hashchange event
         base();
 
         // detach event handler
@@ -114,8 +112,12 @@ Class('(auto)', ClientHost, function() {
     };
 
     $$('override');
-    this.ready = async (base) => {
+    this.ready = async (base) => { // start listening hashchange event
         base();
+
+        // attach event handler
+        env.global.addEventListener('hashchange', hashChangeHandler);
+        console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version}`); // eslint-disable-line no-console        
     };
 
     $$('override');

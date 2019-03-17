@@ -14,5 +14,17 @@
     "main-middlewares": [
     ],
     "main-resHeaders": [
-    ]
+    ],
+    "server-http": {
+        "enable": false,
+        "port": 80,
+        "timeout": -1
+    },
+    "server-https": {
+        "enable": false,
+        "port": 443,
+        "timeout": -1,
+        "privateKey": "",
+        "publicCert": ""
+    }
 }

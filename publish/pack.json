@@ -1,6 +1,6 @@
 {
     "npm": {
-        "dest": "./package",
+        "dest": "./publish/package",
         "files": [
             { "src": "./dist" },
             { "src": "./package.json"},

@@ -1,3 +1,4 @@
+const env = require('node-env-file');
 const { Bootware } = ns();
 
 /**
@@ -15,7 +16,6 @@ Class('(auto)', Bootware, function() {
     $$('override');
     this.boot = async () => {
         if (settings.envVars.length > 0) {
-            const env = require('node-env-file');
             for(let envVar of settings.envVars) {
                 env(envVar, settings.envVarsLoadOptions);
             }

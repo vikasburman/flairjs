@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.17.27
- *  Sun, 17 Mar 2019 16:17:39 GMT
+ *  Version: 0.25.53
+ *  Sun, 17 Mar 2019 20:42:33 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -78,10 +78,10 @@
     flair.info = Object.freeze({
         name: 'flair',
         file: currentFile,
-        version: '0.17.27',
+        version: '0.25.53',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 17 Mar 2019 16:17:39 GMT')
+        lupdate: new Date('Sun, 17 Mar 2019 20:42:33 GMT')
     });  
     
     flair.members = [];
@@ -1652,8 +1652,6 @@
             unloadDefaultContext = null,
             isUnloaded = false;
         
-        const { ILifecycleHandle } = _ns();
-    
         // default load context
         defaultLoadContext = new AssemblyLoadContext('default', this, null, currentContexts, contexts),
         unloadDefaultContext = defaultLoadContext.unload;
@@ -1672,10 +1670,10 @@
                 isUnloaded = true;
     
                 // stop app (sync mode)
-                if (app) { await app.stop(); _dispose(app); }
+                if (app && typeof app.stop === 'function') { await app.stop(); _dispose(app); }
     
                 // stop host (sync mode)
-                if (host) { await host.stop(); _dispose(host); }
+                if (host && typeof host.stop === 'function') { await host.stop(); _dispose(host); }
     
                 // unload all contexts of this domain, including default one (async)
                 for(let context in contexts) {
@@ -1815,17 +1813,11 @@
             return entryPoint;
         };
         this.app = (appObj) => {
-            if (appObj && !app) { 
-                if (!_is(appObj, ILifecycleHandle)) { throw _Exception.InvalidArgument('appObj'); }
-                app = appObj; 
-            }
+            if (appObj && !app) { app = appObj; }
             return app;
         };
         this.host = (hostObj) => {
-            if (hostObj) { 
-                if (!_is(hostObj, ILifecycleHandle)) { throw _Exception.InvalidArgument('hostObj'); }
-                host = hostObj; 
-            }
+            if (hostObj) { host = hostObj; }
             return host;
         };
     
@@ -6609,23 +6601,6 @@ Interface('IDisposable', function() {
 
 })();
 
-(async () => { // ./src/flair/(root)/ILifeCycleHandler.js
-'use strict';
-/**
- * @name ILifeCycleHandler
- * @description ILifeCycleHandler interface
- */
-$$('ns', '(root)');
-Interface('ILifeCycleHandler', function() {
-    this.start = nim;
-    this.isStarted = nip;
-    this.isReady = nip;
-    this.stop = nim;
-    this.restart = nim;
-});
-
-})();
-
 (async () => { // ./src/flair/(root)/IProgressReporter.js
 'use strict';
 /**
@@ -6774,6 +6749,6 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.17.27","lupdate":"Sun, 17 Mar 2019 16:17:39 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","ILifeCycleHandler","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.25.53","lupdate":"Sun, 17 Mar 2019 20:42:33 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
 
 })();

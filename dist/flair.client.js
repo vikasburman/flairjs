@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.client
  *     File: ./flair.client.js
- *  Version: 0.17.27
- *  Sun, 17 Mar 2019 16:17:41 GMT
+ *  Version: 0.25.53
+ *  Sun, 17 Mar 2019 20:42:37 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -87,7 +87,7 @@ Class('Router', Bootware, function() {
                         if (!result) { next(); }
                     };
                     const onError = (err) => {
-                        throw Exception.OperationFailed(err, routeHandler[route.verb]);
+                        AppDomain.app().onError(err);
                     };
 
                     routeHandler = new route.Handler();
@@ -124,29 +124,6 @@ const { App } = ns('flair.boot');
  */
 $$('ns', 'flair.client');
 Class('App', App, function() {
-    $$('override');
-    this.construct = () => {
-    };
-
-    $$('override');
-    this.boot = async () => {
-    };
-
-    $$('override');
-    this.start = async () => {
-    };
-
-    $$('override');
-    this.stop = async () => {
-    };
-
-    $$('override');
-    this.ready = async () => {
-    };
-
-    $$('override');
-    this.dispose = () => {
-    };
 });
 
 })();
@@ -171,13 +148,14 @@ Class('Client', ClientHost, function() {
         base('Page', '1.x'); // https://www.npmjs.com/package/page
     };
 
-    this.mounts = {
+    this.app = () => { return this.mounts['main']; } // main page app
+    this.mounts = { // all mounted page apps
         get: () => { return mountedApps; },
         set: noop
     };
 
     $$('override');
-    this.boot = async (base) => {
+    this.boot = async (base) => { // mount all page app and pseudo sub-apps
         base();
 
         let appOptions = null,
@@ -230,7 +208,7 @@ Class('Client', ClientHost, function() {
     };
 
     $$('override');
-    this.start = async (base) => {
+    this.start = async (base) => { // configure hashchange handler
         base();
 
         hashChangeHandler = () => {
@@ -255,13 +233,10 @@ Class('Client', ClientHost, function() {
             // run app to initiate routing
             setTimeout(() => { app(path); }, 0); 
         };
-
-        // attach event handler
-        env.global.addEventListener('hashchange', hashChangeHandler);
     };
 
     $$('override');
-    this.stop = async (base) => {
+    this.stop = async (base) => { // stop listening hashchange event
         base();
 
         // detach event handler
@@ -269,8 +244,12 @@ Class('Client', ClientHost, function() {
     };
 
     $$('override');
-    this.ready = async (base) => {
+    this.ready = async (base) => { // start listening hashchange event
         base();
+
+        // attach event handler
+        env.global.addEventListener('hashchange', hashChangeHandler);
+        console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version}`); // eslint-disable-line no-console        
     };
 
     $$('override');
@@ -293,35 +272,12 @@ const { App } = ns('flair.boot');
  */
 $$('ns', 'flair.client');
 Class('WorkerApp', App, function() {
-    $$('override');
-    this.construct = () => {
-    };
-
-    $$('override');
-    this.boot = async () => {
-    };
-
-    $$('override');
-    this.start = async () => {
-    };
-
-    $$('override');
-    this.stop = async () => {
-    };
-
-    $$('override');
-    this.ready = async () => {
-    };
-
-    $$('override');
-    this.dispose = () => {
-    };
 });
 
 })();
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair.client","file":"./flair.client{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.17.27","lupdate":"Sun, 17 Mar 2019 16:17:41 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.bw.client.Router","flair.client.App","flair.client.Client","flair.client.WorkerApp"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair.client","file":"./flair.client{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.25.53","lupdate":"Sun, 17 Mar 2019 20:42:37 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.bw.client.Router","flair.client.App","flair.client.Client","flair.client.WorkerApp"],"resources":[],"assets":[],"routes":[]}');
 
 })();

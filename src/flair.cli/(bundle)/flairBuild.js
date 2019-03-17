@@ -1383,6 +1383,8 @@ exports.flairBuild = function(options, cb) {
     options.customBuildConfig = options.customBuildConfig || '';
 
     options.fullBuild = options.fullBuild || false;
+    options.quickBuild = (!options.fullBuild && options.quickBuild) || false;
+    options.clean = options.clean !== undefined ? options.clean : true;
     options.skipBumpVersion = options.skipBumpVersion || false;
     options.suppressLogging = options.suppressLogging || false;
 
@@ -1411,8 +1413,9 @@ exports.flairBuild = function(options, cb) {
     options.preBuildDeps = options.preBuildDeps || false;    
     options.postBuildDeps = options.postBuildDeps || false;
 
-    // full-build vs quick build settings
+    // full-build vs quick build vs default build settings
     if (options.fullBuild) { // full build - ensure these things happen, if configured, even if turned off otherwise
+        options.clean = true;
         options.lint = options.lintConfig ? true : false;
         options.minify = options.minifyConfig ? true : false;
         options.gzip = options.gzipConfig ? true : false;
@@ -1422,7 +1425,8 @@ exports.flairBuild = function(options, cb) {
         options.minifyResources = options.minify && options.minifyResources;
         options.minifyAssets = options.minify && options.minifyAssets;
         options.gzipAssets = options.gzip && options.gzipAssets;
-    } else { // quick build - suppress few things
+    } else if (options.quickBuild) { // quick build - suppress few things
+        options.clean = false;
         options.lintResources = options.lint && options.lintResources;
         options.lintTypes = ['js']; // for quick builds run lint only for JS files
         options.minify = false;
@@ -1432,7 +1436,7 @@ exports.flairBuild = function(options, cb) {
         options.minifyResources = false;
         options.preBuildDeps = false;
         options.skipBumpVersion = true;
-    }
+    } // else whatever is set in build file
 
     // exclude files from being registered
     options.skipRegistrationsFor = [
@@ -1497,10 +1501,10 @@ exports.flairBuild = function(options, cb) {
     }    
 
     // start
-    logger(0, 'flairBuild', 'start', true);    
+    logger(0, 'flairBuild', 'start ' + (options.fullBuild ? '(full)' : (options.quickBuild ? '(quick)' : '(default)')), true);
 
     // delete all dest files
-    if (options.fullBuild) {
+    if (options.clean) {
         delAll(options.dest);
         logger(0, 'clean', 'done');
     }

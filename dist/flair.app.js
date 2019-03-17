@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.17.27
- *  Sun, 17 Mar 2019 16:17:41 GMT
+ *  Version: 0.25.53
+ *  Sun, 17 Mar 2019 20:42:37 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -152,14 +152,29 @@ Class('BootEngine', function() {
             }
             await AppDomain.app().start();
         };
+        const DOMReady = () => {
+            return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
+                env.global.document.addEventListener("DOMContentLoaded", resolve);
+            });
+        };
+        const DeviceReady = () => {
+            return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
+                document.addEventListener('deviceready', resolve, false);
+            });
+        };
         const ready = async () => {
+            if (env.isClient && !env.isWorker) {
+                await DOMReady();
+                if (env.isCordova) { await DeviceReady(); }
+            }
+
             if (!env.isWorker) {
                 await AppDomain.host().ready();
             }
-            runBootwares('ready');
+            await runBootwares('ready');
             await AppDomain.app().ready();
-        };        
-
+        };
+          
         setEntryPoint();
         await loadFilesAndBootwares();
         await boot();
@@ -260,14 +275,14 @@ Mixin('LifeCycleHandler', function() {
 
 (async () => { // ./src/flair.app/flair.boot/App.js
 'use strict';
-const { IDisposable, ILifeCycleHandler, Bootware, LifeCycleHandler } = ns();
+const { IDisposable, Bootware, LifeCycleHandler } = ns();
 
 /**
  * @name App
  * @description App base class
  */
 $$('ns', 'flair.boot');
-Class('App', Bootware, [LifeCycleHandler, ILifeCycleHandler, IDisposable], function() {
+Class('App', Bootware, [LifeCycleHandler, IDisposable], function() {
     $$('override');
     this.construct = (base) => {
         // set info
@@ -277,20 +292,25 @@ Class('App', Bootware, [LifeCycleHandler, ILifeCycleHandler, IDisposable], funct
 
     $$('virtual');
     this.dispose = noop;
+
+    $$('virtual');
+    this.onError = (err) => {
+        throw Exception.OperationFailed(err, this.onError);
+    };
 });
 
 })();
 
 (async () => { // ./src/flair.app/flair.boot/ClientHost.js
 'use strict';
-const { IDisposable, ILifeCycleHandler, Bootware, LifeCycleHandler } = ns();
+const { IDisposable, Bootware, LifeCycleHandler } = ns();
 
 /**
  * @name ClientHost
  * @description Client host base class
  */
 $$('ns', 'flair.boot');
-Class('ClientHost', Bootware, [LifeCycleHandler, ILifeCycleHandler, IDisposable], function() {
+Class('ClientHost', Bootware, [LifeCycleHandler, IDisposable], function() {
     $$('virtual');
     this.dispose = noop;
 });
@@ -299,14 +319,14 @@ Class('ClientHost', Bootware, [LifeCycleHandler, ILifeCycleHandler, IDisposable]
 
 (async () => { // ./src/flair.app/flair.boot/ServerHost.js
 'use strict';
-const { IDisposable, ILifeCycleHandler, Bootware, LifeCycleHandler } = ns();
+const { IDisposable, Bootware, LifeCycleHandler } = ns();
 
 /**
  * @name ServerHost
  * @description Server host base class
  */
 $$('ns', 'flair.boot');
-Class('ServerHost', Bootware, [LifeCycleHandler, ILifeCycleHandler, IDisposable], function() {
+Class('ServerHost', Bootware, [LifeCycleHandler, IDisposable], function() {
     $$('virtual');
     this.dispose = noop;
 });
@@ -344,6 +364,6 @@ Class('DIContainer', Bootware, function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.17.27","lupdate":"Sun, 17 Mar 2019 16:17:41 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["BootEngine","Bootware","LifeCycleHandler","flair.boot.App","flair.boot.ClientHost","flair.boot.ServerHost","flair.bw.DIContainer"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.25.53","lupdate":"Sun, 17 Mar 2019 20:42:37 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["BootEngine","Bootware","LifeCycleHandler","flair.boot.App","flair.boot.ClientHost","flair.boot.ServerHost","flair.bw.DIContainer"],"resources":[],"assets":[],"routes":[]}');
 
 })();

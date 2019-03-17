@@ -37,10 +37,10 @@ const AppDomain = function(name) {
             isUnloaded = true;
 
             // stop app (sync mode)
-            if (app) { await app.stop(); _dispose(app); }
+            if (app && typeof app.stop === 'function') { await app.stop(); _dispose(app); }
 
             // stop host (sync mode)
-            if (host) { await host.stop(); _dispose(host); }
+            if (host && typeof host.stop === 'function') { await host.stop(); _dispose(host); }
 
             // unload all contexts of this domain, including default one (async)
             for(let context in contexts) {
@@ -180,15 +180,11 @@ const AppDomain = function(name) {
         return entryPoint;
     };
     this.app = (appObj) => {
-        if (appObj && !app) { 
-            app = appObj; 
-        }
+        if (appObj && !app) { app = appObj; }
         return app;
     };
     this.host = (hostObj) => {
-        if (hostObj) { 
-            host = hostObj; 
-        }
+        if (hostObj) { host = hostObj; }
         return host;
     };
 

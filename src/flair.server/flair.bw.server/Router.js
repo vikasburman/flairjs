@@ -40,7 +40,7 @@ Class('(auto)', Bootware, function() {
                     };
                     const onError = (err) => {
                         res.status(500).end();
-                        throw Exception.OperationFailed(err, routeHandler[route.verb]);
+                        AppDomain.app().onError(err);
                     };
 
                     routeHandler = new route.Handler();

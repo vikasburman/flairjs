@@ -100,14 +100,29 @@ Class('(auto)', function() {
             }
             await AppDomain.app().start();
         };
+        const DOMReady = () => {
+            return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
+                env.global.document.addEventListener("DOMContentLoaded", resolve);
+            });
+        };
+        const DeviceReady = () => {
+            return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
+                document.addEventListener('deviceready', resolve, false);
+            });
+        };
         const ready = async () => {
+            if (env.isClient && !env.isWorker) {
+                await DOMReady();
+                if (env.isCordova) { await DeviceReady(); }
+            }
+
             if (!env.isWorker) {
                 await AppDomain.host().ready();
             }
-            runBootwares('ready');
+            await runBootwares('ready');
             await AppDomain.app().ready();
-        };        
-
+        };
+          
         setEntryPoint();
         await loadFilesAndBootwares();
         await boot();

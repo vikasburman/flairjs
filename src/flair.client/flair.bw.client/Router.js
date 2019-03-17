@@ -35,7 +35,7 @@ Class('(auto)', Bootware, function() {
                         if (!result) { next(); }
                     };
                     const onError = (err) => {
-                        throw Exception.OperationFailed(err, routeHandler[route.verb]);
+                        AppDomain.app().onError(err);
                     };
 
                     routeHandler = new route.Handler();

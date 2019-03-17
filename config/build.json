@@ -9,6 +9,7 @@
     "customBuildConfig": "./config/custom.json",
 
     "fullBuild": false,
+    "clean": true,
     "skipBumpVersion": false,
     "suppressLogging": false,
 
@@ -21,7 +22,7 @@
     "minifyTypes": ["js", "css", "html"],
     "generateJSSourceMap": true,
 
-    "gzip": true,
+    "gzip": false,
     "gzipConfig": "./config/gzip.json",
     "gzipTypes": ["js", "css", "html", "txt", "xml", "md", "json", "svg", "jpg", "jpeg", "gif", "png"],
 

@@ -1,11 +1,11 @@
-const { IDisposable, ILifeCycleHandler, Bootware, LifeCycleHandler } = ns();
+const { IDisposable, Bootware, LifeCycleHandler } = ns();
 
 /**
  * @name ServerHost
  * @description Server host base class
  */
 $$('ns', '(auto)');
-Class('(auto)', Bootware, [LifeCycleHandler, ILifeCycleHandler, IDisposable], function() {
+Class('(auto)', Bootware, [LifeCycleHandler, IDisposable], function() {
     $$('virtual');
     this.dispose = noop;
 });

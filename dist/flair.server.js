@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.server
  *     File: ./flair.server.js
- *  Version: 0.17.27
- *  Sun, 17 Mar 2019 16:17:41 GMT
+ *  Version: 0.25.53
+ *  Sun, 17 Mar 2019 20:42:37 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -38,7 +38,7 @@ const { $static, $abstract, $virtual, $override, $sealed, $private, $privateSet,
 const { $enumerate, $dispose, $post, $on, $timer, $type, $args, $inject, $resource, $asset, $singleton, $serialize, $deprecate, $session, $state, $conditional, $noserialize, $ns } = $$;
 /* eslint-enable no-unused-vars */
 
-let settings = JSON.parse('{"envVars":[],"envVarsloadOptions":{"overwrite":true},"mounts":{"main":"/"},"main-appSettings":[{"name":"case sensitive routing","value":false},{"name":"strict routing","value":false}],"main-middlewares":[],"main-resHeaders":[]}'); // eslint-disable-line no-unused-vars
+let settings = JSON.parse('{"envVars":[],"envVarsloadOptions":{"overwrite":true},"mounts":{"main":"/"},"main-appSettings":[{"name":"case sensitive routing","value":false},{"name":"strict routing","value":false}],"main-middlewares":[],"main-resHeaders":[],"server-http":{"enable":false,"port":80,"timeout":-1},"server-https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""}}'); // eslint-disable-line no-unused-vars
 
         let settingsReader = flair.Port('settingsReader');
         if (typeof settingsReader === 'function') {
@@ -131,6 +131,7 @@ Class('Middlewares', Bootware, function() {
 
 (async () => { // ./src/flair.server/flair.bw.server/NodeEnv.js
 'use strict';
+const env = require('node-env-file');
 const { Bootware } = ns();
 
 /**
@@ -148,7 +149,6 @@ Class('NodeEnv', Bootware, function() {
     $$('override');
     this.boot = async () => {
         if (settings.envVars.length > 0) {
-            const env = require('node-env-file');
             for(let envVar of settings.envVars) {
                 env(envVar, settings.envVarsLoadOptions);
             }
@@ -237,7 +237,7 @@ Class('Router', Bootware, function() {
                     };
                     const onError = (err) => {
                         res.status(500).end();
-                        throw Exception.OperationFailed(err, routeHandler[route.verb]);
+                        AppDomain.app().onError(err);
                     };
 
                     routeHandler = new route.Handler();
@@ -274,21 +274,6 @@ const { App } = ns('flair.boot');
  */
 $$('ns', 'flair.server');
 Class('App', App, function() {
-    $$('override');
-    this.boot = async () => {
-    };
-
-    $$('override');
-    this.start = async () => {
-    };
-
-    $$('override');
-    this.stop = async () => {
-    };
-
-    $$('override');
-    this.ready = async () => {
-    };
 });
 
 })();
@@ -296,6 +281,11 @@ Class('App', App, function() {
 (async () => { // ./src/flair.server/flair.server/Server.js
 'use strict';
 const express = require('express');
+const fs = require('fs');
+const http = require('http');
+const https = require('https');
+const httpShutdown = require('http-shutdown');
+
 const { ServerHost } = ns('flair.boot');
 
 /**
@@ -305,20 +295,25 @@ const { ServerHost } = ns('flair.boot');
 $$('sealed');
 $$('ns', 'flair.server');
 Class('Server', ServerHost, function() {
-    let mountedApps = {};
+    let mountedApps = {},
+        httpServer = null,
+        httpsServer = null,
+        httpsSettings = settings['server-https'],
+        httpSettings = settings['server-http'];
     
     $$('override');
     this.construct = (base) => {
         base('Express', '4.x');
     };
 
-    this.mounts = {
+    this.app = () => { return this.mounts['main']; }  // main express app
+    this.mounts = { // all mounted express apps
         get: () => { return mountedApps; },
         set: noop
     };
 
     $$('override');
-    this.boot = async (base) => {
+    this.boot = async (base) => { // mount all express app and sub-apps
         base();
 
         const applySettings = (mountName, mount) => {
@@ -369,21 +364,85 @@ Class('Server', ServerHost, function() {
     };
 
     $$('override');
-    this.start = async (base) => {
+    this.start = async (base) => { // configure http and https server
         base();
 
+        // configure http server
+        if (httpSettings.enable) { 
+            httpServer = http.createServer(this.app());
+            httpServer = httpShutdown(httpServer); // wrap
+            httpServer.on('error', AppDomain.app().onError);
+            if (httpSettings.timeout !== -1) { httpServer.timeout = httpSettings.timeout; } // timeout must be in milliseconds
+        }
+
+        // configure httpS server
+        if (httpsSettings.enable) { 
+            // SSL Certificate
+            // NOTE: For creating test certificate:
+            //  > Goto http://www.cert-depot.com/
+            //  > Create another test certificate
+            //  > Download KEY+PEM files
+            //  > Rename *.private.pem as key.pem
+            //  > Rename *.public.pem as cert.pem
+            //  > Update these files at private folder
+            const privateKey  = fs.readFileSync(httpsSettings.privateKey, 'utf8');
+            const publicCert = fs.readFileSync(httpsSettings.publicCert, 'utf8');
+            const credentials = { key: privateKey, cert: publicCert };
+
+            httpsServer = https.createServer(credentials, this.app());
+            httpsServer = httpShutdown(httpsServer); // wrap
+            httpsServer.on('error', AppDomain.app().onError);
+            if (httpsSettings.timeout !== -1) { httpsServer.timeout = httpsSettings.timeout; } // timeout must be in milliseconds
+        }
     };
 
     $$('override');
-    this.stop = async (base) => {
+    this.stop = async (base) => { // graceful shutdown http and https servers
         base();
 
+        // stop http server gracefully
+        if (httpServer) {
+            console.log('http server is shutting down...'); // eslint-disable-line no-console
+            httpServer.shutdown(() => {
+                httpServer = null;
+                console.log('http server is cleanly shutdown!'); // eslint-disable-line no-console
+            });
+        }
+
+        // stop https server gracefully
+        if (httpsServer) {
+            console.log('https server is shutting down...'); // eslint-disable-line no-console
+            httpsServer.shutdown(() => {
+                httpsServer = null;
+                console.log('https server is cleanly shutdown!'); // eslint-disable-line no-console
+            });
+        }
     };
 
     $$('override');
-    this.ready = async (base) => {
+    this.ready = async (base) => { // start listening http and https servers
         base();
 
+        // start server
+        let httpPort = httpSettings.port || 80,
+            httpsPort = process.env.PORT || httpsSettings.port || 443;
+        if (httpServer && httpsServer) {
+            httpServer.listen(httpPort, () => {
+                httpServer.listen(httpsPort, () => {
+                    console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version} (http: ${httpPort}, https: ${httpsPort})`); // eslint-disable-line no-console
+                });
+            });
+        } else if (httpServer) {
+            httpServer.listen(httpPort, () => {
+                console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version} (http: ${httpPort})`); // eslint-disable-line no-console
+            });
+        } else if (httpsServer) {
+            httpsServer.listen(httpsPort, () => {
+                console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version} (https: ${httpsPort})`); // eslint-disable-line no-console
+            });
+        } else {
+            console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version}`); // eslint-disable-line no-console
+        }
     };
 
     $$('override');
@@ -406,27 +465,12 @@ const { App } = ns('flair.boot');
  */
 $$('ns', 'flair.server');
 Class('WorkerApp', App, function() {
-    $$('override');
-    this.boot = async () => {
-    };
-
-    $$('override');
-    this.start = async () => {
-    };
-
-    $$('override');
-    this.stop = async () => {
-    };
-
-    $$('override');
-    this.ready = async () => {
-    };
 });
 
 })();
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair.server","file":"./flair.server{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.17.27","lupdate":"Sun, 17 Mar 2019 16:17:41 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.bw.server.Middlewares","flair.bw.server.NodeEnv","flair.bw.server.ResHeaders","flair.bw.server.Router","flair.server.App","flair.server.Server","flair.server.WorkerApp"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair.server","file":"./flair.server{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.25.53","lupdate":"Sun, 17 Mar 2019 20:42:37 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.bw.server.Middlewares","flair.bw.server.NodeEnv","flair.bw.server.ResHeaders","flair.bw.server.Router","flair.server.App","flair.server.Server","flair.server.WorkerApp"],"resources":[],"assets":[],"routes":[]}');
 
 })();

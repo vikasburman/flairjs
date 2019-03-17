@@ -6,27 +6,4 @@ const { App } = ns('flair.boot');
  */
 $$('ns', '(auto)');
 Class('(auto)', App, function() {
-    $$('override');
-    this.construct = () => {
-    };
-
-    $$('override');
-    this.boot = async () => {
-    };
-
-    $$('override');
-    this.start = async () => {
-    };
-
-    $$('override');
-    this.stop = async () => {
-    };
-
-    $$('override');
-    this.ready = async () => {
-    };
-
-    $$('override');
-    this.dispose = () => {
-    };
 });

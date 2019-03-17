@@ -1,11 +1,11 @@
-const { IDisposable, ILifeCycleHandler, Bootware, LifeCycleHandler } = ns();
+const { IDisposable, Bootware, LifeCycleHandler } = ns();
 
 /**
  * @name App
  * @description App base class
  */
 $$('ns', '(auto)');
-Class('(auto)', Bootware, [LifeCycleHandler, ILifeCycleHandler, IDisposable], function() {
+Class('(auto)', Bootware, [LifeCycleHandler, IDisposable], function() {
     $$('override');
     this.construct = (base) => {
         // set info
@@ -15,4 +15,9 @@ Class('(auto)', Bootware, [LifeCycleHandler, ILifeCycleHandler, IDisposable], fu
 
     $$('virtual');
     this.dispose = noop;
+
+    $$('virtual');
+    this.onError = (err) => {
+        throw Exception.OperationFailed(err, this.onError);
+    };
 });

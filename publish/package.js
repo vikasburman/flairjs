@@ -3,6 +3,7 @@ const fsx = require('fs-extra');
 const del = require('del');
 const copyDir = require('copy-dir');
 const argv = require('minimist')(process.argv.slice(2));
+const open = require('open');
 
 const delAll = (root) => {
     del.sync([root + '/**', '!' + root]);
