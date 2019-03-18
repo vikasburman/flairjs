@@ -3,7 +3,7 @@ const fs = require('fs');
 const http = require('http');
 const https = require('https');
 const httpShutdown = require('http-shutdown');
-const { App } = ns();
+const { Host } = ns('flair.app');
 
 /**
  * @name Server
@@ -11,7 +11,7 @@ const { App } = ns();
  */
 $$('sealed');
 $$('ns', '(auto)');
-Class('(auto)', App, function() {
+Class('(auto)', Host, function() {
     let mountedApps = {},
         httpServer = null,
         httpsServer = null,
@@ -88,7 +88,7 @@ Class('(auto)', App, function() {
         if (httpSettings.enable) { 
             httpServer = http.createServer(this.app());
             httpServer = httpShutdown(httpServer); // wrap
-            httpServer.on('error', AppDomain.app().onError);
+            httpServer.on('error', this.error); // pass-through event
             if (httpSettings.timeout !== -1) { httpServer.timeout = httpSettings.timeout; } // timeout must be in milliseconds
         }
 
@@ -108,31 +108,8 @@ Class('(auto)', App, function() {
 
             httpsServer = https.createServer(credentials, this.app());
             httpsServer = httpShutdown(httpsServer); // wrap
-            httpsServer.on('error', AppDomain.app().onError);
+            httpsServer.on('error', this.error); // pass-through event
             if (httpsSettings.timeout !== -1) { httpsServer.timeout = httpsSettings.timeout; } // timeout must be in milliseconds
-        }
-    };
-
-    $$('override');
-    this.stop = async (base) => { // graceful shutdown http and https servers
-        base();
-
-        // stop http server gracefully
-        if (httpServer) {
-            console.log('http server is shutting down...'); // eslint-disable-line no-console
-            httpServer.shutdown(() => {
-                httpServer = null;
-                console.log('http server is cleanly shutdown!'); // eslint-disable-line no-console
-            });
-        }
-
-        // stop https server gracefully
-        if (httpsServer) {
-            console.log('https server is shutting down...'); // eslint-disable-line no-console
-            httpsServer.shutdown(() => {
-                httpsServer = null;
-                console.log('https server is cleanly shutdown!'); // eslint-disable-line no-console
-            });
         }
     };
 
@@ -161,6 +138,29 @@ Class('(auto)', App, function() {
             console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version}`); // eslint-disable-line no-console
         }
     };
+
+    $$('override');
+    this.stop = async (base) => { // graceful shutdown http and https servers
+        base();
+
+        // stop http server gracefully
+        if (httpServer) {
+            console.log('http server is shutting down...'); // eslint-disable-line no-console
+            httpServer.shutdown(() => {
+                httpServer = null;
+                console.log('http server is cleanly shutdown!'); // eslint-disable-line no-console
+            });
+        }
+
+        // stop https server gracefully
+        if (httpsServer) {
+            console.log('https server is shutting down...'); // eslint-disable-line no-console
+            httpsServer.shutdown(() => {
+                httpsServer = null;
+                console.log('https server is cleanly shutdown!'); // eslint-disable-line no-console
+            });
+        }
+    };    
 
     $$('override');
     this.dispose = (base) => {

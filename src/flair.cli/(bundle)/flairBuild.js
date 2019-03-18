@@ -230,6 +230,7 @@ const build = (options, buildDone) => {
     };
     const copyCustom = (done) => {
         if (!options.customBuild) { done(); return; }
+        if (options.profiles.current.copy.length === 0) { done(); return; }
     
         // copy all files or folders as is in dest
         options.logger(0, 'copy', '', true);    
@@ -246,6 +247,25 @@ const build = (options, buildDone) => {
                 fsx.ensureDirSync(path.dirname(dest));
                 fsx.copyFileSync(src, dest);
             }        
+        }
+    
+        // done
+        done();
+    };    
+    const copyModules = (done) => {
+        if (!options.customBuild) { done(); return; }
+        if (options.profiles.current.modules.length === 0) { done(); return; }
+
+        // copy all defined modules from node_modules to destination's "modules" folder at root
+        options.logger(0, 'modules', '', true);    
+            let src = '',
+                dest = '';
+        for(let module of options.profiles.current.modules) {
+            src = path.resolve(path.join('node_modules', module));
+            dest = path.resolve(path.join(options.dest, options.profiles.current.root, 'modules', module));
+            options.logger(1, '', module);
+            fsx.ensureDirSync(dest);
+            copyDir.sync(src, dest);
         }
     
         // done
@@ -1110,10 +1130,12 @@ const build = (options, buildDone) => {
         logger(0, 'profile', `${profileItem.profile} (start)`, true);  
         processSources(() => {
             copyCustom(() => {
-                // done
-                logger(0, 'profile', `${profileItem.profile} (end)`, true); 
-                options.profiles.current = null;
-                processProfiles(done);
+                copyModules(() => {
+                    // done
+                    logger(0, 'profile', `${profileItem.profile} (end)`, true); 
+                    options.profiles.current = null;
+                    processProfiles(done);
+                });
             });
         });
     };
@@ -1186,6 +1208,8 @@ const build = (options, buildDone) => {
  *                      "<profileName>": {
  *                          "root": ""  - root folder name where source of this profile is kept - this is used for identification of content under dest folder only - not used for any prefixing with other paths in profile
  *                          "copy": [ ] - having path (relative to src path) to copy as is on dest folder
+ *                          "modules": [ ] - copy all specified "node_modules" to a root "modules" folder as is, - to handle some modules at client-side
+ *                                           NOTE: unlike broserify, it does not check dependencies, therefore only those modules which work independently, are suited for this
  *                          "build": [ ] - having path (relative to src path) to treat as assembly folder group
  *                                      all root level folders under each of these will be treated as one individual assembly
  *                                      Note: if folder name (of assembly folder under it) starts with '_', it is skipped

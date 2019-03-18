@@ -1,4 +1,4 @@
-const { Bootware } = ns('flair.boot');
+const { Bootware } = ns('flair.app');
 
 /**
  * @name BootEngine
@@ -7,7 +7,7 @@ const { Bootware } = ns('flair.boot');
 $$('static');
 $$('ns', '(auto)');
 Class('(auto)', function() {
-    this.start = async (entryPoint) => {
+    this.start = async function (entryPoint) {
         let allBootwares = [],
             mountSpecificBootwares = [];
         const setEntryPoint = () => {

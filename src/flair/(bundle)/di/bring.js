@@ -8,7 +8,8 @@
  *    'my.namespace.MyStruct',
  *    '[IBase]'
  *    'myServerClass | myClientClass'
- *    'fs | '
+ *    'fs | x'
+ *    'x | page/page.js'
  *    './abc.mjs'
  *    './somepath/somefile.css'
  *  ], (MyStruct, IBase, MyClass, fs, abc, someCSS) => {
@@ -32,18 +33,24 @@
  *          >> <name>
  *              >> e.g., 'fs'
  *              >> this can be a NodeJS module name (on server side) or a JavaScript module name (on client side)
+ *              >> on server, it uses require('moduleName') to resolve
+ *              >> on client-side it look for this in './modules/moduleName/?' file
+ *                  >> to get on the file 
  * 
  *          >> <path>/<file>.js|.mjs
- *              >> e.g., '/my/path/somefile.js'
+ *              >> e.g., './my/path/somefile.js'
  *              >> this can be a bare file to load to
  *              >> path is always treated in context of the root path - full, relative paths from current place are not supported
  *              >> to handle PRODUCTION and DEBUG scenarios automatically, use <path>/<file>{.min}.js|.mjs format. 
  *              >> it PROD symbol is available, it will use it as <path>/<file>.min.js otherwise it will use <path>/<file>.js
  * 
  *          >> <path>/<file.css|json|html|...>
- *              >> e.g., '/my/path/somefile.css'
+ *              >> e.g., './my/path/somefile.css'
  *              >>  if ths is not a js|mjs file, it will treat it as a resource file and will use fetch/require, as applicable
  *      
+ *          NOTE: <path> for a file MUST start with './' to represent this is a file path from root
+ *                if ./ is not used in path - it will be assumed to be a path inside a module and on client ./modules/ will be prefixed to reach to the file inside module
+ * 
  *          NOTE: Each dep definition can also be defined for contextual consideration as:
  *          '<depA> | <depB>'
  *          when running on server, <depA> would be considered, and when running on client <depB> will be used
@@ -91,25 +98,31 @@ const _bring = (deps, fn) => {
 
             // check if it is available in any namespace
             let option2 = (done) => {
-                _resolved = _getType(_dep); 
-                if (!_resolved) { // check as resource
-                    _resolved = _getResource(_dep); 
+                if (_dep.indexOf('/') === -1) { // type name may not have '.' when on root, but will never have '/'
+                    _resolved = _getType(_dep); 
+                    if (!_resolved) { // check as resource
+                        _resolved = _getResource(_dep);
+                    }
                 }
                 done();
             };
 
             // check if it is available in any unloaded assembly
             let option3 = (done) => {
-                let asmFile = _getAssemblyOf(_dep);
-                if (asmFile) { // if type exists in an assembly
-                    _AppDomain.context.loadAssembly(asmFile).then(() => {
-                        _resolved = _getType(_dep); 
-                        if (!_resolved) { // check as resource
-                            _resolved = _getResource(_dep); 
-                        }
-                    }).catch((err) => {
-                        throw _Exception.OperationFailed(`Assembly could not be loaded. (${asmFile})`, err, _bring);
-                    });
+                if (_dep.indexOf('/') === -1) { // type name may not have '.' when on root, but will never have '/'                
+                    let asmFile = _getAssemblyOf(_dep);
+                    if (asmFile) { // if type exists in an assembly
+                        _AppDomain.context.loadAssembly(asmFile).then(() => {
+                            _resolved = _getType(_dep); 
+                            if (!_resolved) { // check as resource
+                                _resolved = _getResource(_dep); 
+                            }
+                        }).catch((err) => {
+                            throw _Exception.OperationFailed(`Assembly could not be loaded. (${asmFile})`, err, _bring);
+                        });
+                    } else {
+                        done();
+                    }
                 } else {
                     done();
                 }
@@ -117,20 +130,28 @@ const _bring = (deps, fn) => {
 
             // check if this is a file
             let option4 = (done) => {
-                let ext = _dep.substr(_dep.lastIndexOf('.') + 1).toLowerCase();
-                if (ext) {
-                    if (ext === 'js' || ext === 'mjs') {
-                        // pick contextual file for DEBUG/PROD
-                        _dep = which(_dep, true);
-                        
-                        // this will be loaded as module in next option as a module
+                if (_dep.startsWith('./')) { // all files must start with ./
+                    let ext = _dep.substr(_dep.lastIndexOf('.') + 1).toLowerCase();
+                    if (ext) {
+                        if (ext === 'js' || ext === 'mjs') {
+                            // pick contextual file for DEBUG/PROD
+                            _dep = which(_dep, true);
+
+                            // load as module, since this is a js file and we need is executed and not the content as such
+                            loadModule(_dep).then((content) => { 
+                                _resolved = content; done(); // it may or may not give a content
+                            }).catch((err) => {
+                                throw _Exception.OperationFailed(`Module could not be loaded. (${_dep})`, err, _bring);
+                            });
+                        } else { // some other file (could be json, css, html, etc.)
+                            loadFile(_dep).then((content) => {
+                                _resolved = content; done();
+                            }).catch((err) => {
+                                throw _Exception.OperationFailed(`File could not be loaded. (${_dep})`, err, _bring);
+                            });
+                        }
+                    } else { // not a file
                         done();
-                    } else { // some other file (could be json, css, html, etc.)
-                        loadFile(_dep).then((content) => {
-                            _resolved = content; done();
-                        }).catch((err) => {
-                            throw _Exception.OperationFailed(`File could not be loaded. (${_dep})`, err, _bring);
-                        });
                     }
                 } else { // not a file
                     done();
@@ -139,11 +160,18 @@ const _bring = (deps, fn) => {
 
             // check if this is a module
             let option5 = (done) => {
-                loadModule(_dep).then((content) => { // as last option, try to load it as module
-                    _resolved = content; done();
-                }).catch((err) => {
-                    throw _Exception.OperationFailed(`Module could not be loaded. (${_dep})`, err, _bring);
-                });
+                if (!_dep.startsWith('./')) { // all modules (or a file inside a module) must start with ./
+                    // on server require() finds modules automatically
+                    // on client modules are supposed to be inside ./modules/ folder, therefore prefix it
+                    if (!isServer) { _dep = `./${modulesRootFolder}/${_dep}`; }
+                    loadModule(_dep).then((content) => { 
+                        _resolved = content; done();
+                    }).catch((err) => {
+                        throw _Exception.OperationFailed(`Module could not be loaded. (${_dep})`, err, _bring);
+                    });
+                } else { // not a module
+                    done();
+                }
             };
 
             // done

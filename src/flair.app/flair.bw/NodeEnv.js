@@ -1,5 +1,5 @@
 const env = require('node-env-file');
-const { Bootware } = ns('flair.boot');
+const { Bootware } = ns('flair.app');
 
 /**
  * @name NodeEnv

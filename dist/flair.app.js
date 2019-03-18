@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.25.63
- *  Sun, 17 Mar 2019 23:58:26 GMT
+ *  Version: 0.25.76
+ *  Mon, 18 Mar 2019 22:04:59 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -51,7 +51,7 @@ let settings = JSON.parse('{"host":"flair.boot.ServerHost | flair.boot.ClientHos
 (async () => { // ./src/flair.app/flair.boot/ClientHost.js
 'use strict';
 const page = await include('[Page]', 'page'); // express style routing: https://visionmedia.github.io/page.js/
-const { App } = ns();
+const { Host } = ns('flair.app');
 
 /**
  * @name Client
@@ -59,7 +59,7 @@ const { App } = ns();
  */
 $$('sealed');
 $$('ns', 'flair.boot');
-Class('ClientHost', App, function() {
+Class('ClientHost', Host, function() {
     let mountedApps = {},
         hashChangeHandler = null;
 
@@ -159,16 +159,14 @@ Class('ClientHost', App, function() {
             if (!app) { app = this.mounts['main']; } // when nothing matches, give it to main
             
             // run app to initiate routing
-            setTimeout(() => { app(path); }, 0); 
+            setTimeout(() => { 
+                try {
+                    app(path); 
+                } catch (err) {
+                    this.error(err); // pass-through event
+                }
+            }, 0); 
         };
-    };
-
-    $$('override');
-    this.stop = async (base) => { // stop listening hashchange event
-        base();
-
-        // detach event handler
-        env.global.removeEventListener('hashchange', hashChangeHandler);
     };
 
     $$('override');
@@ -178,6 +176,14 @@ Class('ClientHost', App, function() {
         // attach event handler
         env.global.addEventListener('hashchange', hashChangeHandler);
         console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version}`); // eslint-disable-line no-console        
+    };
+
+    $$('override');
+    this.stop = async (base) => { // stop listening hashchange event
+        base();
+
+        // detach event handler
+        env.global.removeEventListener('hashchange', hashChangeHandler);
     };
 
     $$('override');
@@ -197,7 +203,7 @@ const fs = require('fs');
 const http = require('http');
 const https = require('https');
 const httpShutdown = require('http-shutdown');
-const { App } = ns();
+const { Host } = ns('flair.app');
 
 /**
  * @name Server
@@ -205,7 +211,7 @@ const { App } = ns();
  */
 $$('sealed');
 $$('ns', 'flair.boot');
-Class('ServerHost', App, function() {
+Class('ServerHost', Host, function() {
     let mountedApps = {},
         httpServer = null,
         httpsServer = null,
@@ -282,7 +288,7 @@ Class('ServerHost', App, function() {
         if (httpSettings.enable) { 
             httpServer = http.createServer(this.app());
             httpServer = httpShutdown(httpServer); // wrap
-            httpServer.on('error', AppDomain.app().onError);
+            httpServer.on('error', this.error); // pass-through event
             if (httpSettings.timeout !== -1) { httpServer.timeout = httpSettings.timeout; } // timeout must be in milliseconds
         }
 
@@ -302,31 +308,8 @@ Class('ServerHost', App, function() {
 
             httpsServer = https.createServer(credentials, this.app());
             httpsServer = httpShutdown(httpsServer); // wrap
-            httpsServer.on('error', AppDomain.app().onError);
+            httpsServer.on('error', this.error); // pass-through event
             if (httpsSettings.timeout !== -1) { httpsServer.timeout = httpsSettings.timeout; } // timeout must be in milliseconds
-        }
-    };
-
-    $$('override');
-    this.stop = async (base) => { // graceful shutdown http and https servers
-        base();
-
-        // stop http server gracefully
-        if (httpServer) {
-            console.log('http server is shutting down...'); // eslint-disable-line no-console
-            httpServer.shutdown(() => {
-                httpServer = null;
-                console.log('http server is cleanly shutdown!'); // eslint-disable-line no-console
-            });
-        }
-
-        // stop https server gracefully
-        if (httpsServer) {
-            console.log('https server is shutting down...'); // eslint-disable-line no-console
-            httpsServer.shutdown(() => {
-                httpsServer = null;
-                console.log('https server is cleanly shutdown!'); // eslint-disable-line no-console
-            });
         }
     };
 
@@ -357,6 +340,29 @@ Class('ServerHost', App, function() {
     };
 
     $$('override');
+    this.stop = async (base) => { // graceful shutdown http and https servers
+        base();
+
+        // stop http server gracefully
+        if (httpServer) {
+            console.log('http server is shutting down...'); // eslint-disable-line no-console
+            httpServer.shutdown(() => {
+                httpServer = null;
+                console.log('http server is cleanly shutdown!'); // eslint-disable-line no-console
+            });
+        }
+
+        // stop https server gracefully
+        if (httpsServer) {
+            console.log('https server is shutting down...'); // eslint-disable-line no-console
+            httpsServer.shutdown(() => {
+                httpsServer = null;
+                console.log('https server is cleanly shutdown!'); // eslint-disable-line no-console
+            });
+        }
+    };    
+
+    $$('override');
     this.dispose = (base) => {
         base();
 
@@ -368,7 +374,7 @@ Class('ServerHost', App, function() {
 
 (async () => { // ./src/flair.app/flair.bw/DIContainer.js
 'use strict';
-const { Bootware } = ns('flair.boot');
+const { Bootware } = ns('flair.app');
 
 /**
  * @name DIContainer
@@ -397,7 +403,7 @@ Class('DIContainer', Bootware, function() {
 
 (async () => { // ./src/flair.app/flair.bw/Middlewares.js
 'use strict';
-const { Bootware } = ns('flair.boot');
+const { Bootware } = ns('flair.app');
 
 /**
  * @name Middlewares
@@ -479,7 +485,7 @@ Class('Middlewares', Bootware, function() {
 (async () => { // ./src/flair.app/flair.bw/NodeEnv.js
 'use strict';
 const env = require('node-env-file');
-const { Bootware } = ns('flair.boot');
+const { Bootware } = ns('flair.app');
 
 /**
  * @name NodeEnv
@@ -507,7 +513,7 @@ Class('NodeEnv', Bootware, function() {
 
 (async () => { // ./src/flair.app/flair.bw/ResHeaders.js
 'use strict';
-const { Bootware } = ns('flair.boot');
+const { Bootware } = ns('flair.app');
 
 /**
  * @name ResHeaders
@@ -542,7 +548,7 @@ Class('ResHeaders', Bootware, function() {
 
 (async () => { // ./src/flair.app/flair.bw/Router.js
 'use strict';
-const { Bootware } = ns('flair.boot');
+const { Bootware } = ns('flair.app');
 
 /**
  * @name Router
@@ -585,7 +591,7 @@ Class('Router', Bootware, function() {
                         };
                         const onError = (err) => {
                             res.status(500).end();
-                            AppDomain.app().onError(err);
+                            AppDomain.host().raiseError(err)
                         };
 
                         try {
@@ -617,7 +623,7 @@ Class('Router', Bootware, function() {
                             if (!result) { next(); }
                         };
                         const onError = (err) => {
-                            AppDomain.app().onError(err);
+                            AppDomain.host().raiseError(err);
                         };
 
                         try {
@@ -653,6 +659,6 @@ Class('Router', Bootware, function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.25.63","lupdate":"Sun, 17 Mar 2019 23:58:26 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.boot.ClientHost","flair.boot.ServerHost","flair.bw.DIContainer","flair.bw.Middlewares","flair.bw.NodeEnv","flair.bw.ResHeaders","flair.bw.Router"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.25.76","lupdate":"Mon, 18 Mar 2019 22:04:59 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.boot.ClientHost","flair.boot.ServerHost","flair.bw.DIContainer","flair.bw.Middlewares","flair.bw.NodeEnv","flair.bw.ResHeaders","flair.bw.Router"],"resources":[],"assets":[],"routes":[]}');
 
 })();

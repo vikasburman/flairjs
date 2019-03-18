@@ -1,4 +1,4 @@
-const { Bootware } = ns('flair.boot');
+const { Bootware } = ns('flair.app');
 
 /**
  * @name ResHeaders

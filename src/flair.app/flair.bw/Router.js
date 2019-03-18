@@ -1,4 +1,4 @@
-const { Bootware } = ns('flair.boot');
+const { Bootware } = ns('flair.app');
 
 /**
  * @name Router
@@ -41,7 +41,7 @@ Class('(auto)', Bootware, function() {
                         };
                         const onError = (err) => {
                             res.status(500).end();
-                            AppDomain.app().onError(err);
+                            AppDomain.host().raiseError(err)
                         };
 
                         try {
@@ -73,7 +73,7 @@ Class('(auto)', Bootware, function() {
                             if (!result) { next(); }
                         };
                         const onError = (err) => {
-                            AppDomain.app().onError(err);
+                            AppDomain.host().raiseError(err);
                         };
 
                         try {

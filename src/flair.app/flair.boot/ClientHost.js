@@ -1,5 +1,5 @@
 const page = await include('[Page]', 'page'); // express style routing: https://visionmedia.github.io/page.js/
-const { App } = ns();
+const { Host } = ns('flair.app');
 
 /**
  * @name Client
@@ -7,7 +7,7 @@ const { App } = ns();
  */
 $$('sealed');
 $$('ns', '(auto)');
-Class('(auto)', App, function() {
+Class('(auto)', Host, function() {
     let mountedApps = {},
         hashChangeHandler = null;
 
@@ -107,16 +107,14 @@ Class('(auto)', App, function() {
             if (!app) { app = this.mounts['main']; } // when nothing matches, give it to main
             
             // run app to initiate routing
-            setTimeout(() => { app(path); }, 0); 
+            setTimeout(() => { 
+                try {
+                    app(path); 
+                } catch (err) {
+                    this.error(err); // pass-through event
+                }
+            }, 0); 
         };
-    };
-
-    $$('override');
-    this.stop = async (base) => { // stop listening hashchange event
-        base();
-
-        // detach event handler
-        env.global.removeEventListener('hashchange', hashChangeHandler);
     };
 
     $$('override');
@@ -126,6 +124,14 @@ Class('(auto)', App, function() {
         // attach event handler
         env.global.addEventListener('hashchange', hashChangeHandler);
         console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version}`); // eslint-disable-line no-console        
+    };
+
+    $$('override');
+    this.stop = async (base) => { // stop listening hashchange event
+        base();
+
+        // detach event handler
+        env.global.removeEventListener('hashchange', hashChangeHandler);
     };
 
     $$('override');

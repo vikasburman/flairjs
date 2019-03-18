@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.25.63
- *  Sun, 17 Mar 2019 23:58:24 GMT
+ *  Version: 0.25.76
+ *  Mon, 18 Mar 2019 22:04:56 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -39,6 +39,7 @@
         currentFile = (isServer ? __filename : _global.document.currentScript.src),
         sym = [],
         meta = Symbol('[meta]'),
+        modulesRootFolder = 'modules',
         disposers = [],
         options = {},
         flairTypes = ['class', 'enum', 'interface', 'mixin', 'struct'],
@@ -78,10 +79,10 @@
     flair.info = Object.freeze({
         name: 'flair',
         file: currentFile,
-        version: '0.25.63',
+        version: '0.25.76',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 17 Mar 2019 23:58:24 GMT')
+        lupdate: new Date('Mon, 18 Mar 2019 22:04:56 GMT')
     });  
     
     flair.members = [];
@@ -2255,7 +2256,8 @@
      *    'my.namespace.MyStruct',
      *    '[IBase]'
      *    'myServerClass | myClientClass'
-     *    'fs | '
+     *    'fs | x'
+     *    'x | page/page.js'
      *    './abc.mjs'
      *    './somepath/somefile.css'
      *  ], (MyStruct, IBase, MyClass, fs, abc, someCSS) => {
@@ -2279,18 +2281,24 @@
      *          >> <name>
      *              >> e.g., 'fs'
      *              >> this can be a NodeJS module name (on server side) or a JavaScript module name (on client side)
+     *              >> on server, it uses require('moduleName') to resolve
+     *              >> on client-side it look for this in './modules/moduleName/?' file
+     *                  >> to get on the file 
      * 
      *          >> <path>/<file>.js|.mjs
-     *              >> e.g., '/my/path/somefile.js'
+     *              >> e.g., './my/path/somefile.js'
      *              >> this can be a bare file to load to
      *              >> path is always treated in context of the root path - full, relative paths from current place are not supported
      *              >> to handle PRODUCTION and DEBUG scenarios automatically, use <path>/<file>{.min}.js|.mjs format. 
      *              >> it PROD symbol is available, it will use it as <path>/<file>.min.js otherwise it will use <path>/<file>.js
      * 
      *          >> <path>/<file.css|json|html|...>
-     *              >> e.g., '/my/path/somefile.css'
+     *              >> e.g., './my/path/somefile.css'
      *              >>  if ths is not a js|mjs file, it will treat it as a resource file and will use fetch/require, as applicable
      *      
+     *          NOTE: <path> for a file MUST start with './' to represent this is a file path from root
+     *                if ./ is not used in path - it will be assumed to be a path inside a module and on client ./modules/ will be prefixed to reach to the file inside module
+     * 
      *          NOTE: Each dep definition can also be defined for contextual consideration as:
      *          '<depA> | <depB>'
      *          when running on server, <depA> would be considered, and when running on client <depB> will be used
@@ -2338,25 +2346,31 @@
     
                 // check if it is available in any namespace
                 let option2 = (done) => {
-                    _resolved = _getType(_dep); 
-                    if (!_resolved) { // check as resource
-                        _resolved = _getResource(_dep); 
+                    if (_dep.indexOf('/') === -1) { // type name may not have '.' when on root, but will never have '/'
+                        _resolved = _getType(_dep); 
+                        if (!_resolved) { // check as resource
+                            _resolved = _getResource(_dep);
+                        }
                     }
                     done();
                 };
     
                 // check if it is available in any unloaded assembly
                 let option3 = (done) => {
-                    let asmFile = _getAssemblyOf(_dep);
-                    if (asmFile) { // if type exists in an assembly
-                        _AppDomain.context.loadAssembly(asmFile).then(() => {
-                            _resolved = _getType(_dep); 
-                            if (!_resolved) { // check as resource
-                                _resolved = _getResource(_dep); 
-                            }
-                        }).catch((err) => {
-                            throw _Exception.OperationFailed(`Assembly could not be loaded. (${asmFile})`, err, _bring);
-                        });
+                    if (_dep.indexOf('/') === -1) { // type name may not have '.' when on root, but will never have '/'                
+                        let asmFile = _getAssemblyOf(_dep);
+                        if (asmFile) { // if type exists in an assembly
+                            _AppDomain.context.loadAssembly(asmFile).then(() => {
+                                _resolved = _getType(_dep); 
+                                if (!_resolved) { // check as resource
+                                    _resolved = _getResource(_dep); 
+                                }
+                            }).catch((err) => {
+                                throw _Exception.OperationFailed(`Assembly could not be loaded. (${asmFile})`, err, _bring);
+                            });
+                        } else {
+                            done();
+                        }
                     } else {
                         done();
                     }
@@ -2364,20 +2378,28 @@
     
                 // check if this is a file
                 let option4 = (done) => {
-                    let ext = _dep.substr(_dep.lastIndexOf('.') + 1).toLowerCase();
-                    if (ext) {
-                        if (ext === 'js' || ext === 'mjs') {
-                            // pick contextual file for DEBUG/PROD
-                            _dep = which(_dep, true);
-                            
-                            // this will be loaded as module in next option as a module
+                    if (_dep.startsWith('./')) { // all files must start with ./
+                        let ext = _dep.substr(_dep.lastIndexOf('.') + 1).toLowerCase();
+                        if (ext) {
+                            if (ext === 'js' || ext === 'mjs') {
+                                // pick contextual file for DEBUG/PROD
+                                _dep = which(_dep, true);
+    
+                                // load as module, since this is a js file and we need is executed and not the content as such
+                                loadModule(_dep).then((content) => { 
+                                    _resolved = content; done(); // it may or may not give a content
+                                }).catch((err) => {
+                                    throw _Exception.OperationFailed(`Module could not be loaded. (${_dep})`, err, _bring);
+                                });
+                            } else { // some other file (could be json, css, html, etc.)
+                                loadFile(_dep).then((content) => {
+                                    _resolved = content; done();
+                                }).catch((err) => {
+                                    throw _Exception.OperationFailed(`File could not be loaded. (${_dep})`, err, _bring);
+                                });
+                            }
+                        } else { // not a file
                             done();
-                        } else { // some other file (could be json, css, html, etc.)
-                            loadFile(_dep).then((content) => {
-                                _resolved = content; done();
-                            }).catch((err) => {
-                                throw _Exception.OperationFailed(`File could not be loaded. (${_dep})`, err, _bring);
-                            });
                         }
                     } else { // not a file
                         done();
@@ -2386,11 +2408,18 @@
     
                 // check if this is a module
                 let option5 = (done) => {
-                    loadModule(_dep).then((content) => { // as last option, try to load it as module
-                        _resolved = content; done();
-                    }).catch((err) => {
-                        throw _Exception.OperationFailed(`Module could not be loaded. (${_dep})`, err, _bring);
-                    });
+                    if (!_dep.startsWith('./')) { // all modules (or a file inside a module) must start with ./
+                        // on server require() finds modules automatically
+                        // on client modules are supposed to be inside ./modules/ folder, therefore prefix it
+                        if (!isServer) { _dep = `./${modulesRootFolder}/${_dep}`; }
+                        loadModule(_dep).then((content) => { 
+                            _resolved = content; done();
+                        }).catch((err) => {
+                            throw _Exception.OperationFailed(`Module could not be loaded. (${_dep})`, err, _bring);
+                        });
+                    } else { // not a module
+                        done();
+                    }
                 };
     
                 // done
@@ -6425,14 +6454,14 @@ Interface('IDisposable', function() {
 
 })();
 
-(async () => { // ./src/flair/flair.boot/@2-Bootware.js
+(async () => { // ./src/flair/flair.app/@2-Bootware.js
 'use strict';
 /**
  * @name Bootware
  * @description Bootware base class
  */
 $$('abstract');
-$$('ns', 'flair.boot');
+$$('ns', 'flair.app');
 Class('Bootware', function() {
     /**  
      * @name construct
@@ -6479,23 +6508,19 @@ Class('Bootware', function() {
 
 })();
 
-(async () => { // ./src/flair/(root)/@3-App.js
+(async () => { // ./src/flair/flair.app/@3-Host.js
 'use strict';
 const { IDisposable } = ns();
-const { Bootware } = ns('flair.boot');
+const { Bootware } = ns('flair.app');
 
 /**
  * @name App
  * @description App base class
  */
-$$('ns', '(root)');
-Class('App', Bootware, [IDisposable], function() {
-    $$('override');
-    this.construct = (base) => {
-        // set info
-        let asm = getAssembly(this);
-        base(asm.title, asm.version);
-    };
+$$('ns', 'flair.app');
+Class('Host', Bootware, [IDisposable], function() {
+    $$('privateSet');
+    this.isStarted = false;
 
     $$('virtual');
     this.start = async () => {
@@ -6507,22 +6532,63 @@ Class('App', Bootware, [IDisposable], function() {
         this.isStarted = false;
     };
 
-    $$('privateSet');
-    $$('type', 'boolean');
-    this.isStarted = false;
-
     this.restart = async () => {
         await this.stop();
         await this.start();
     };
 
-    $$('virtual');
-    this.onError = (err) => {
-        throw Exception.OperationFailed(err, this.onError);
+    this.error = event((err) => {
+        return { error: err };
+    });
+    
+    this.raiseError = (err) => {
+        this.error(err);
+    };
+});
+
+})();
+
+(async () => { // ./src/flair/flair.app/@4-App.js
+'use strict';
+const { IDisposable } = ns();
+const { Bootware } = ns('flair.app');
+
+/**
+ * @name App
+ * @description App base class
+ */
+$$('ns', 'flair.app');
+Class('App', Bootware, [IDisposable], function() {
+    $$('override');
+    this.construct = (base) => {
+        // set info
+        let asm = getAssembly(this);
+        base(asm.title, asm.version);
+    };
+    
+    $$('override');
+    this.boot = async (base) => {
+        base();
+        AppDomain.host().error.add(this.onError); // host's errors are handled here
     };
 
     $$('virtual');
-    this.dispose = noop;   
+    $$('async');
+    this.start = noop;
+
+    $$('virtual');
+    $$('async');
+    this.stop = noop;
+
+    $$('virtual');
+    this.onError = (e) => {
+        throw Exception.OperationFailed(e.error, this.onError);
+    };
+
+    $$('virtual');
+    this.dispose = () => {
+        AppDomain.host().error.remove(this.onError); // remove error handler
+    };
 });
 
 })();
@@ -6703,143 +6769,6 @@ Class('Attribute', function() {
 
 })();
 
-(async () => { // ./src/flair/(root)/BootEngine.js
-'use strict';
-const { Bootware } = ns('flair.boot');
-
-/**
- * @name BootEngine
- * @description Bootstrapper functionality
- */
-$$('static');
-$$('ns', '(root)');
-Class('BootEngine', function() {
-    this.start = async (entryPoint) => {
-        let allBootwares = [],
-            mountSpecificBootwares = [];
-        const setEntryPoint = () => {
-            // set entry point for workers
-            AppDomain.entryPoint(entryPoint);
-        };
-        const loadFilesAndBootwares = async () => {
-            // load bootwares, scripts and preambles
-            let Item = null,
-                Bootware = null,
-                bw = null;
-            for(let item of settings.load) {
-                // get bootware (it could be a bootware, a simple script or a preamble)
-                item = which(item); // server/client specific version
-                if (item) { // in case no item is set for either server/client
-                    Item = await include(item);
-                    if (Item) {
-                        Bootware = as(Item, Bootware);
-                        if (Bootware) { // if boot
-                            bw = new Bootware(); 
-                            allBootwares.push(bw); // push in array, so boot and ready would be called for them
-                            if (bw.info.isMountSpecific) { // if bootware is mount specific bootware - means can run once for each mount
-                                mountSpecificBootwares.push(bw);
-                            }
-                        } // else ignore, this was something else, like a module which was just loaded
-                    } // else ignore, as it could just be a file loaded which does not return anything
-                }
-            }
-        };
-        const runBootwares = async (method) => {
-            if (!env.isWorker) { // main env
-                let mounts = AppDomain.host().mounts,
-                    mountNames = Object.keys(mounts),
-                    mountName = '',
-                    mount = null;
-            
-                // run all bootwares for main
-                mountName = 'main';
-                mount = mounts[mountName];
-                for(let bw of allBootwares) {
-                    await bw[method](mountName, mount);
-                }
-
-                // run all bootwares which are mount specific for all other mounts (except main)
-                for(let mountName of mountNames) {
-                    if (mountName === 'main') { continue; }
-                    mount = mounts[mountName];
-                    for(let bw of mountSpecificBootwares) {
-                        await bw[method](mountName, mount);
-                    }
-                }
-            } else { // worker env
-                // in this case as per load[] setting, no nountspecific bootwares should be present
-                if (mountSpecificBootwares.length !== 0) { 
-                    console.warn('Mount specific bootwares are not supported for worker environment. Revisit worker:flair.app->load setting.'); // eslint-disable-line no-console
-                }
-
-                // run all for once (ignoring the mountspecific ones)
-                for(let bw of allBootwares) {
-                    if (!bw.info.isMountSpecific) {
-                        await bw[method]();
-                    }
-                }
-            }
-        };
-        const boot = async () => {
-            if (!env.isWorker) {
-                let host = which(settings.host), // pick server/client specific host
-                    Host = as(await include(host), Bootware),
-                    hostObj = null;
-                if (!Host) { throw Exception.InvalidDefinition(host, this.start); }
-                hostObj = new Host();
-                await hostObj.boot();
-                AppDomain.host(hostObj); // set host
-            }
-            
-            await runBootwares('boot');   
-            
-            let app = which(settings.app), // pick server/client specific host
-            App = as(await include(app), Bootware),
-            appObj = null;
-            if (!App) { throw Exception.InvalidDefinition(app, this.start); }
-            appObj = new App();
-            await appObj.boot();
-            AppDomain.app(appObj); // set app
-        };        
-        const start = async () => {
-            if (!env.isWorker) {
-                await AppDomain.host().start();
-            }
-            await AppDomain.app().start();
-        };
-        const DOMReady = () => {
-            return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
-                env.global.document.addEventListener("DOMContentLoaded", resolve);
-            });
-        };
-        const DeviceReady = () => {
-            return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
-                document.addEventListener('deviceready', resolve, false);
-            });
-        };
-        const ready = async () => {
-            if (env.isClient && !env.isWorker) {
-                await DOMReady();
-                if (env.isCordova) { await DeviceReady(); }
-            }
-
-            if (!env.isWorker) {
-                await AppDomain.host().ready();
-            }
-            await runBootwares('ready');
-            await AppDomain.app().ready();
-        };
-          
-        setEntryPoint();
-        await loadFilesAndBootwares();
-        await boot();
-        await start();
-        await ready();
-    };
-});
-
-})();
-
 (async () => { // ./src/flair/(root)/IProgressReporter.js
 'use strict';
 /**
@@ -6986,8 +6915,145 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 })();
 
+(async () => { // ./src/flair/flair.app/BootEngine.js
+'use strict';
+const { Bootware } = ns('flair.app');
+
+/**
+ * @name BootEngine
+ * @description Bootstrapper functionality
+ */
+$$('static');
+$$('ns', 'flair.app');
+Class('BootEngine', function() {
+    this.start = async function (entryPoint) {
+        let allBootwares = [],
+            mountSpecificBootwares = [];
+        const setEntryPoint = () => {
+            // set entry point for workers
+            AppDomain.entryPoint(entryPoint);
+        };
+        const loadFilesAndBootwares = async () => {
+            // load bootwares, scripts and preambles
+            let Item = null,
+                Bootware = null,
+                bw = null;
+            for(let item of settings.load) {
+                // get bootware (it could be a bootware, a simple script or a preamble)
+                item = which(item); // server/client specific version
+                if (item) { // in case no item is set for either server/client
+                    Item = await include(item);
+                    if (Item) {
+                        Bootware = as(Item, Bootware);
+                        if (Bootware) { // if boot
+                            bw = new Bootware(); 
+                            allBootwares.push(bw); // push in array, so boot and ready would be called for them
+                            if (bw.info.isMountSpecific) { // if bootware is mount specific bootware - means can run once for each mount
+                                mountSpecificBootwares.push(bw);
+                            }
+                        } // else ignore, this was something else, like a module which was just loaded
+                    } // else ignore, as it could just be a file loaded which does not return anything
+                }
+            }
+        };
+        const runBootwares = async (method) => {
+            if (!env.isWorker) { // main env
+                let mounts = AppDomain.host().mounts,
+                    mountNames = Object.keys(mounts),
+                    mountName = '',
+                    mount = null;
+            
+                // run all bootwares for main
+                mountName = 'main';
+                mount = mounts[mountName];
+                for(let bw of allBootwares) {
+                    await bw[method](mountName, mount);
+                }
+
+                // run all bootwares which are mount specific for all other mounts (except main)
+                for(let mountName of mountNames) {
+                    if (mountName === 'main') { continue; }
+                    mount = mounts[mountName];
+                    for(let bw of mountSpecificBootwares) {
+                        await bw[method](mountName, mount);
+                    }
+                }
+            } else { // worker env
+                // in this case as per load[] setting, no nountspecific bootwares should be present
+                if (mountSpecificBootwares.length !== 0) { 
+                    console.warn('Mount specific bootwares are not supported for worker environment. Revisit worker:flair.app->load setting.'); // eslint-disable-line no-console
+                }
+
+                // run all for once (ignoring the mountspecific ones)
+                for(let bw of allBootwares) {
+                    if (!bw.info.isMountSpecific) {
+                        await bw[method]();
+                    }
+                }
+            }
+        };
+        const boot = async () => {
+            if (!env.isWorker) {
+                let host = which(settings.host), // pick server/client specific host
+                    Host = as(await include(host), Bootware),
+                    hostObj = null;
+                if (!Host) { throw Exception.InvalidDefinition(host, this.start); }
+                hostObj = new Host();
+                await hostObj.boot();
+                AppDomain.host(hostObj); // set host
+            }
+            
+            await runBootwares('boot');   
+            
+            let app = which(settings.app), // pick server/client specific host
+            App = as(await include(app), Bootware),
+            appObj = null;
+            if (!App) { throw Exception.InvalidDefinition(app, this.start); }
+            appObj = new App();
+            await appObj.boot();
+            AppDomain.app(appObj); // set app
+        };        
+        const start = async () => {
+            if (!env.isWorker) {
+                await AppDomain.host().start();
+            }
+            await AppDomain.app().start();
+        };
+        const DOMReady = () => {
+            return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
+                env.global.document.addEventListener("DOMContentLoaded", resolve);
+            });
+        };
+        const DeviceReady = () => {
+            return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
+                document.addEventListener('deviceready', resolve, false);
+            });
+        };
+        const ready = async () => {
+            if (env.isClient && !env.isWorker) {
+                await DOMReady();
+                if (env.isCordova) { await DeviceReady(); }
+            }
+
+            if (!env.isWorker) {
+                await AppDomain.host().ready();
+            }
+            await runBootwares('ready');
+            await AppDomain.app().ready();
+        };
+          
+        setEntryPoint();
+        await loadFilesAndBootwares();
+        await boot();
+        await start();
+        await ready();
+    };
+});
+
+})();
+
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.25.63","lupdate":"Sun, 17 Mar 2019 23:58:24 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["IDisposable","flair.boot.Bootware","App","Aspect","Attribute","BootEngine","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.25.76","lupdate":"Mon, 18 Mar 2019 22:04:56 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["IDisposable","flair.app.Bootware","flair.app.Host","flair.app.App","Aspect","Attribute","IProgressReporter","Task","flair.app.BootEngine"],"resources":[],"assets":[],"routes":[]}');
 
 })();

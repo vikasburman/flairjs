@@ -1,5 +1,5 @@
 const { IDisposable } = ns();
-const { Bootware } = ns('flair.boot');
+const { Bootware } = ns('flair.app');
 
 /**
  * @name App
@@ -7,12 +7,8 @@ const { Bootware } = ns('flair.boot');
  */
 $$('ns', '(auto)');
 Class('(auto)', Bootware, [IDisposable], function() {
-    $$('override');
-    this.construct = (base) => {
-        // set info
-        let asm = getAssembly(this);
-        base(asm.title, asm.version);
-    };
+    $$('privateSet');
+    this.isStarted = false;
 
     $$('virtual');
     this.start = async () => {
@@ -24,20 +20,16 @@ Class('(auto)', Bootware, [IDisposable], function() {
         this.isStarted = false;
     };
 
-    $$('privateSet');
-    $$('type', 'boolean');
-    this.isStarted = false;
-
     this.restart = async () => {
         await this.stop();
         await this.start();
     };
 
-    $$('virtual');
-    this.onError = (err) => {
-        throw Exception.OperationFailed(err, this.onError);
+    this.error = event((err) => {
+        return { error: err };
+    });
+    
+    this.raiseError = (err) => {
+        this.error(err);
     };
-
-    $$('virtual');
-    this.dispose = noop;   
 });
