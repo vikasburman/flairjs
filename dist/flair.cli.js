@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.25.76
- *  Mon, 18 Mar 2019 22:05:00 GMT
+ *  Version: 0.25.90
+ *  Tue, 19 Mar 2019 00:18:11 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -23,7 +23,7 @@ const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
     name: 'flair.cli',
-    version: '0.25.76',
+    version: '0.25.90',
     format: 'fasm',
     formatVersion: '1',
     contains: [
@@ -132,6 +132,7 @@ const copyDeps = (isPost, options, done) => {
                     minFile = '';
                 if (fsx.lstatSync(src).isDirectory()) {
                     delAll(dest); // delete all content inside
+                    fsx.ensureDirSync(dest);
                     copyDir.sync(src, dest, (state, filepath, filename) => { // copy
                         let result = true;
                         // maps
@@ -162,6 +163,7 @@ const copyDeps = (isPost, options, done) => {
                         return result;
                     }); 
                 } else {
+                    fsx.ensureDirSync(path.dirname(dest));
                     fsx.copyFileSync(src, dest); // overwrite
                 }
                 processNext(items);
@@ -1006,7 +1008,26 @@ const build = (options, buildDone) => {
         }
         delete options.current.libsSrc;
         delete options.current.libsDest;
-    };    
+    };  
+    const copyToRoot = () => {
+        options.current.rootSrc = './' + path.join(options.current.asmPath, '(..)');
+        options.current.rootDest = options.current.dest;
+        if (fsx.existsSync(options.current.rootSrc)) {
+            logger(0, 'root', options.current.rootSrc); 
+            let rootFiles = rrd(options.current.rootSrc);
+            for (let rootFile of rootFiles) {
+                if (rootFile.indexOf('/_') !== -1) { continue; } // either a folder or file name starts with '_'. skip it
+                let rFile = {
+                    ext: path.extname(rootFile).toLowerCase().substr(1),
+                    src: './' + rootFile,
+                    dest: './' + path.join(options.current.rootDest, rootFile.replace(options.current.rootSrc.replace('./', ''), ''))
+                };
+                fsx.copySync(rFile.src, rFile.dest, { errorOnExist: true })
+            }
+        }
+        delete options.current.rootSrc;
+        delete options.current.rootDest;
+    };      
   
     const processNamespaces = (done) => {
         if (options.current.namespaces.length === 0) { 
@@ -1026,7 +1047,7 @@ const build = (options, buildDone) => {
         }
         let nsFolder = options.current.namespaces.splice(0, 1)[0]; // pick from top
         if (nsFolder.startsWith('_')) { processNamespaces(done); return; } // ignore if starts with '_'
-        if (['(assets)', '(libs)', '(bundle)'].indexOf(nsFolder) !== -1) { processNamespaces(done); return; } // skip special folders at namespace level
+        if (['(assets)', '(libs)', '(bundle)', '(..)'].indexOf(nsFolder) !== -1) { processNamespaces(done); return; } // skip special folders at namespace level
 
         options.current.nsName = nsFolder;
         options.current.nsPath = './' + path.join(options.current.asmPath, options.current.nsName);
@@ -1074,6 +1095,9 @@ const build = (options, buildDone) => {
             processAssets(() => {
                 // copy libs over assets
                 copyLibs();
+
+                // copy to root
+                copyToRoot();
 
                 // start assembly content closure
                 startClosure();
@@ -1365,6 +1389,9 @@ const build = (options, buildDone) => {
  *                                      <assembly folder>.min.js    - the assembly file (minified)
  *                                      <assembly folder>/          - the assembly's assets folder content here under (this is created only if assets are defined)
  *                                  > note, '(assets)' folder itself is not copied, but all contents underneath are copied
+ *                          (..)     - dest root folder
+ *                                  > this special folder is used to put files at the root where assembly itself is being copied
+ *                                  > this means, files from multiple assemblies can be placed at root and merged in same folder - may overwrite as well, (it will warn)
  *                          (libs)   - libs folder
  *                                  > this special folder can be used to place all external third-party libraries, etc.
  *                                  > it can have any structure underneath

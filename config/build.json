@@ -35,6 +35,6 @@
     "utf8EncodeResourceTypes": ["txt", "xml", "js", "md", "json", "css", "html", "svg"],
 
     "depsConfig": "./config/deps.json",
-    "preBuildDeps": false,
+    "preBuildDeps": true,
     "postBuildDeps": true
 }

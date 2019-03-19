@@ -3,7 +3,7 @@
     "title": "Flair.js",
     "description": "True Object Oriented JavaScript",
     "copyright": "(c) 2017-2019 Vikas Burman",
-    "version": "0.25.76",
+    "version": "0.25.90",
     "author": "Vikas Burman <vikasburman@gmail.com>",
     "keywords": [
         "javascript",
@@ -49,6 +49,7 @@
         "jasmine": "^3.3.1",
         "minimist": "^1.2.0",
         "open": "^0.0.5",
+        "page": "^1.11.4",
         "recursive-readdir-sync": "^1.0.6",
         "stylelint": "^9.10.1",
         "uglify-es": "^3.3.9"

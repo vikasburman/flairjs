@@ -1,4 +1,3 @@
-const page = await include('[Page]', 'page'); // express style routing: https://visionmedia.github.io/page.js/
 const { Host } = ns('flair.app');
 
 /**
@@ -9,6 +8,7 @@ $$('sealed');
 $$('ns', '(auto)');
 Class('(auto)', Host, function() {
     let mountedApps = {},
+        page = env.global.page,
         hashChangeHandler = null;
 
     $$('override');
@@ -53,6 +53,7 @@ Class('(auto)', Host, function() {
         };
 
         // create main app instance of page
+        // 'page' variable is already loaded, as page.js is bundled in fliar.app
         appOptions = getOptions('main');
         let mainApp = page.create(appOptions);
         mainApp.strict(appOptions.strict);
