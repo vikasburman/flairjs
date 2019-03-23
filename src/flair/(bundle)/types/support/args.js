@@ -8,6 +8,7 @@
  *                        each pattern set can take following forms:
  *                        'type, type, type, ...' OR 'name: type, name: type, name: type, ...'
  *                          type: can be following:
+ *                              > special types: 'undefined' - for absence of a passed value
  *                              > expected native javascript data types like 'string', 'number', 'function', 'array', etc.
  *                              > 'function' - any function, cfunction' - constructor function and 'afunction - arrow function
  *                              > inbuilt flair object types like 'class', 'struct', 'enum', etc.
@@ -34,6 +35,8 @@ const _Args = (...patterns) => {
      *  raw: (array) - original arguments as passed
      *  index: (number) - index of pattern-set that matches for given arguments, -1 if no match found
      *                    if more than one patterns may match, it will stop at first match
+     *  types: (string) - types which matched - e.g., string_string
+     *                    this is the '_' joint string of all type definition part from the matching pattern-set
      *  isInvalid: (boolean) - to check if any match could not be achieved
      *  <name(s)>: <value(s)> - argument name as given in pattern having corresponding argument value
      *                          if a name was not given in pattern, a default unique name will be created

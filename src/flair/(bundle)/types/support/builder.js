@@ -521,6 +521,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         _constructName = '_construct',
         _disposeName = '_dispose',
         _props = {}, // plain property values storage inside this closure
+        _overloads = {}, // each named (funcName_type_type_...) overload of any function will be added here
         _previousDef = null,
         def = { 
             name: cfg.params.typeName,
@@ -755,7 +756,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         
         // abstract check
         if (cfg.inheritance && modifiers.members.probe('abstract', memberName).current() && memberDef.ni !== true) {
-            throw _Exception.InvalidDefinition(`Abstract member must point to nip, nim or nie values. (${memberName})`, builder);
+            throw _Exception.InvalidDefinition(`Abstract member must not be implemented. (${memberName})`, builder);
         }
 
         // for a static type, constructor arguments check and dispose check
@@ -783,7 +784,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             throw _Exception.InvalidDefinition(`Destructor method cannot have arguments. (dispose)`, builder);
         }
         
-        // duplicate check, if not overriding 
+        // duplicate check, if not overriding
         if (typeof obj[memberName] !== 'undefined' && 
             (!cfg.inheritance || (cfg.inheritance && !modifiers.members.probe('override', memberName).current()))) {
                 throw _Exception.Duplicate(memberName, builder); 
@@ -1004,6 +1005,43 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         // return
         return _member;
     };
+    const handleOverload = (memberName, memberType, memberDef) => {
+        if (memberType === 'func') {
+            let overload_attr = _attr.get('overload'); // peek
+            if (overload_attr) {
+                let _isStatic = (cfg.static && modifiers.members.probe('static', memberName).current()),
+                bindingHost = (_isStatic ? params.staticInterface : obj);
+                setOverloadFunc(memberName, memberDef, overload_attr); // define overload at central place
+
+                // 2nd overload onwards, don't go via normal definition route,
+                if (bindingHost[memberName]) { 
+                    // throw, if any other attribute is defined other than overload
+                    if (_attr.count() > 1) { throw _Exception.InvalidDefinition(`Overloaded function cannot define additional modifiers or attributes. (${memberName})`, builder); }
+                    return true; // handled, don't go normal definition route
+                }
+            }
+        }
+        return false;
+    };
+    const setOverloadFunc = (memberName, memberDef, overload_attr) => {
+        let _isStatic = (cfg.static && modifiers.members.probe('static', memberName).current()),
+            bindingHost = (_isStatic ? params.staticInterface : obj),
+            func_overloads = (_isStatic ? bindingHost[meta].overloads : _overloads),
+            type_def_items = splitAndTrim(overload_attr.args[0]), // type, type, type, type, ...
+            func_def = memberName + '_' + type_def_items.join('_');
+        func_overloads[func_def] = memberDef; // store member for calling later
+    };
+    const getOverloadFunc = (memberName, ...args) => {
+        let _isStatic = (cfg.static && modifiers.members.probe('static', memberName).current()),
+            bindingHost = (_isStatic ? params.staticInterface : obj),
+            func_overloads = (_isStatic ? bindingHost[meta].overloads : _overloads),
+            type_def_items = '',
+            func_def = '';
+        for(let arg of args) { type_def_items += '_' + typeof(arg); }
+        if (type_def_items.startsWith('_')) { type_def_items = type_def_items.substr(1); }
+        func_def = memberName + '_' + type_def_items;
+        return func_overloads[func_def] || null;
+    };
     const buildFunc = (memberName, memberType, memberDef) => {
         let _member = null,
             bindingHost = obj,
@@ -1013,8 +1051,9 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             _deprecate_attr = attrs.members.probe('deprecate', memberName).current(),
             inject_attr = attrs.members.probe('inject', memberName).current(),
             on_attr = attrs.members.probe('on', memberName).current(),              // always look for current on, inherited case would already be baked in
-            timer_attr = attrs.members.probe('timer', memberName).current(),          // always look for current auto
+            timer_attr = attrs.members.probe('timer', memberName).current(),          // always look for current timer
             args_attr = attrs.members.probe('args', memberName).current(),
+            overload_attr = attrs.members.probe('overload', memberName).current(),
             _isDeprecate = (_deprecate_attr !== null),
             _deprecate_message = (_isDeprecate ? (_deprecate_attr.args[0] || `Function is marked as deprecate. (${memberName})`) : ''),
             base = null,
@@ -1059,6 +1098,10 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                     } else {
                         fnArgs = fnArgs.concat(args);                               // add args as is
                     }
+                    // get correct overload memberDef
+                    if (overload_attr) {
+                        memberDef = getOverloadFunc(memberName, ...fnArgs); // this may return null also, in that case it will throw below
+                    }
                     try {
                         let memberDefResult = memberDef.apply(bindingHost, fnArgs);
                         if (typeof memberDefResult.then === 'function') { // send result when it comes
@@ -1071,10 +1114,10 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                     }
                 }.bind(bindingHost));
                 return await wrappedMemberDef();
-            }.bind(bindingHost);    
+            }.bind(bindingHost);
         } else {
             _member = function(...args) {
-                if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
+                if (_isDeprecate) { console.log(_deprecate_message); }          // eslint-disable-line no-console
                 let fnArgs = [];
                 if (base) { fnArgs.push(base); }                                // base is always first, if overriding
                 if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base or as first, if injected
@@ -1084,6 +1127,10 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                 } else {
                     fnArgs = fnArgs.concat(args);                               // add args as is
                 }
+                // get correct overload memberDef
+                if (overload_attr) {
+                    memberDef = getOverloadFunc(memberName, ...fnArgs); // this may return null also, in that case it will throw below
+                }                   
                 return memberDef.apply(bindingHost, fnArgs);
             }.bind(bindingHost);                  
         }
@@ -1205,6 +1252,10 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     const addMember = (memberName, memberType, memberDef) => {
         // validate pre-definition feasibility of member definition - throw when failed - else return updated or same memberType
         memberType = validatePreMemberDefinitionFeasibility(memberName, memberType, memberDef); 
+
+        // overload is defined only once, rest all times, it is just configured for the overload state
+        // any attributes or modifiers are ignored the second time - and settings with first definition are taken
+        if (handleOverload(memberName, memberType, memberDef)) { return; } // skip defining this member
 
         // set/update member meta
         // NOTE: This also means, when a mixed member is being overwritten either
@@ -1699,6 +1750,7 @@ const builder = (cfg) => {
     if (cfg.static) {
         _ObjectMeta.isStatic = () => { return modifiers.type.probe('static').current() ? true : false; };
         _ObjectMeta.props = {}; // static property values host
+        _ObjectMeta.overloads = {}; // static overload functions host
     }
     if (cfg.singleton) {
         _ObjectMeta.isSingleton = () => { return attrs.type.probe('singleton').current() ? true : false; };
@@ -1800,5 +1852,4 @@ const builder = (cfg) => {
 
     // return 
     return _finalObject;
-
 };

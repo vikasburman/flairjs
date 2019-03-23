@@ -124,13 +124,14 @@ const _attrMeta = _attr[meta] = Object.freeze({
         privateSet: new _attrConfig(true, '(class || struct) && prop && !($private || $static)'),
         protectedSet: new _attrConfig(true, '(class) && prop && !($protected || $private || $static)'),
     
+        overload: new _attrConfig('((class || struct) && (func || construct) && !($virtual || $abstract || $override || $args))'),
         enumerate: new _attrConfig('(class || struct) && prop || func || event'),
         dispose: new _attrConfig('class && prop'),
         post: new _attrConfig('(class || struct) && event'),
-        on: new _attrConfig('class && func && !(event || $async || $args || $inject || $static)'),
+        on: new _attrConfig('class && func && !(event || $async || $args || $overload || $inject || $static)'),
         timer: new _attrConfig('class && func && !(event || $async || $args || $inject || @timer || $static)'),
         type: new _attrConfig('(class || struct) && prop'),
-        args: new _attrConfig('(class || struct) && (func || construct) && !$on'),
+        args: new _attrConfig('(class || struct) && (func || construct) && !$on && !$overload'),
         inject: new _attrConfig('class && (prop || func || construct) && !(static || session || state)'),
         resource: new _attrConfig('class && prop && !(session || state || inject || asset)'),
         asset: new _attrConfig('class && prop && !(session || state || inject || resource)'),
@@ -170,6 +171,9 @@ _attr.get = (name) => {
     let idx = _attrMeta.bucket.findIndex(item => item.name === name);
     if (idx !== -1) { return _attrMeta.bucket[idx]; }
     return null;
+};
+_attr.count = () => {
+    return _attrMeta.bucket.length;
 };
 _attr.clear = () => {
     _attrMeta.bucket.length = 0; // remove all

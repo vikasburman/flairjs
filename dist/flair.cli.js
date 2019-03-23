@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.25.91
- *  Tue, 19 Mar 2019 00:19:34 GMT
+ *  Version: 0.25.94
+ *  Sat, 23 Mar 2019 21:36:09 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -23,7 +23,7 @@ const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
     name: 'flair.cli',
-    version: '0.25.91',
+    version: '0.25.94',
     format: 'fasm',
     formatVersion: '1',
     contains: [
@@ -637,7 +637,7 @@ const build = (options, buildDone) => {
         `const { env } = flair.options;\n` +
         `const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;\n` +
         `const { $static, $abstract, $virtual, $override, $sealed, $private, $privateSet, $protected, $protectedSet, $readonly, $async } = $$;\n` +
-        `const { $enumerate, $dispose, $post, $on, $timer, $type, $args, $inject, $resource, $asset, $singleton, $serialize, $deprecate, $session, $state, $conditional, $noserialize, $ns } = $$;\n` +
+        `const { $overload, $enumerate, $dispose, $post, $on, $timer, $type, $args, $inject, $resource, $asset, $singleton, $serialize, $deprecate, $session, $state, $conditional, $noserialize, $ns } = $$;\n` +
         `/* eslint-enable no-unused-vars */\n` +
         `\n`; 
         appendToFile(closureHeader);        

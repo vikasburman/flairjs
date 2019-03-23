@@ -59,8 +59,9 @@ const findItemByProp = (arr, propName, propValue) => {
     if (idx !== -1) { return arr[idx]; }
     return null;
 };
-const splitAndTrim = (str) => {
-    return str.split(',').map((item) => { return item.trim(); });
+const splitAndTrim = (str, splitChar) => {
+    if (!splitChar) { splitChar = ','; }
+    return str.split(splitChar).map((item) => { return item.trim(); });
 };
 const escapeRegExp = (string) => {
     return string.replace(/([.*+?\^=!:${}()|\[\]\/\\])/g, '\\$1'); // eslint-disable-line no-useless-escape
