@@ -1400,9 +1400,6 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         }
     }
 
-    // building started
-    isBuildingObj = true; 
-
     // define proxy for clean syntax inside factory
     proxy = new Proxy({}, {
         get: (_obj, name) => { 
@@ -1446,6 +1443,9 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         }
     });
 
+    // building started
+    isBuildingObj = true; 
+
     // apply mixins
     if (cfg.mixins && def.mixins && !typeDef.staticConstructionCycle) { 
         for(let mixin of def.mixins) {
@@ -1463,6 +1463,9 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
 
     // clear any (by user's error left out) attributes, so that are not added by mistake elsewhere
     _attr.clear();
+
+    // building ends
+    isBuildingObj = false;    
 
     // move constructor and dispose out of main object
     if (params.isTopLevelInstance) { // so that till now, a normal override behavior can be applied to these functions as well
@@ -1546,9 +1549,6 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         exposed_objMeta = Object.freeze(exposed_objMeta); // freeze meta information
         exposed_obj = Object.seal(exposed_obj);
     }
-
-    // building ends
-    isBuildingObj = false;     
 
     // return
     return exposed_obj;
