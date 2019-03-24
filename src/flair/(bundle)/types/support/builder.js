@@ -164,7 +164,7 @@ const attributesAndModifiers = (def, typeDef, memberName, isTypeLevel, isCustomA
         result = (new Function("try {return (" + constraintsLex + ");}catch(e){return false;}")());
         if (!result) {
             // TODO: send telemetry of _list, so it can be debugged
-            throw _Exception.InvalidOperation(`${appliedAttr.cfg.isModifier ? 'Modifier' : 'Attribute'} ${appliedAttr.name} could not be applied. (${memberName})`, builder);
+            throw _Exception.InvalidOperation(`${appliedAttr.cfg.isModifier ? 'Modifier' : 'Attribute'} ${appliedAttr.name} could not be applied. (${def.type}::${memberName})`, builder);
         }
 
         // return
