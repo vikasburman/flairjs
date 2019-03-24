@@ -65,6 +65,7 @@
     // flair
     flair.info = Object.freeze({
         name: '<<name>>',
+        title: '<<title>>',
         file: currentFile,
         version: '<<version>>',
         copyright: '<<copyright>>',
