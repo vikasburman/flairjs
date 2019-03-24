@@ -10,7 +10,8 @@
             { "id": "basic/rjvpc39e", "title": "Class", "tabs": "js", 
                 "desc": "Simple class definition, the flair way.", 
                 "tips": ["Flair keywords are available when code is bundled inside flair assembly, for other uses, include all required keywords as <br/><code>const { Class, typeOf } = flair;</code> before their use.",
-                "Note <code>Class</code> starts with capital 'C', and 'O' in <code>typeOf</code> is capital as well. Therefore no conflict with ES6's 'class' and javascript's 'typeof'."] }
+                "Note <code>Class</code> starts with capital 'C', and 'O' in <code>typeOf</code> is capital as well. Therefore no conflict with ES6's 'class' and javascript's 'typeof'.",
+                "logger() is not a flair keyword, but a helper method to show result value here"] }
             ]},
         { "id": "advanced", "title": "Advanced", "list": [
         ]}
