@@ -10,7 +10,8 @@
             { "id": "basic/rjvpc39e", "title": "Class", "tabs": "js", 
                 "desc": "Simple class definition, the flair way.", 
                 "tips": ["Note <code>Class</code> starts with capital C, and therefore does not conflict with ES6 keyword 'class'.",
-                "Note 'O' in <code>typeOf</code> is capital, and therefore does not conflict with Javascript keyword 'typeof'."] }
+                "Note 'O' in <code>typeOf</code> is capital, and therefore does not conflict with Javascript keyword 'typeof'.",
+                "Flair keywords are available when code is bundled inside flair assembly, for other uses, include keywords as <code>const { Class, typeOf } = flair; // include all required keywords inside</code>"] }
             ]},
         { "id": "advanced", "title": "Advanced", "list": [
         ]}
