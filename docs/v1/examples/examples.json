@@ -9,8 +9,7 @@
             "Use <code>flair.info</code> to check version details."] },
             { "id": "basic/rjvpc39e", "title": "Class", "tabs": "js,html", 
                 "desc": "Simple class definition, the flair way.", 
-                "tips": ["When code is bundled inside a flair assembly, <code>Class</code> and other flair keywords are available without being manually defined.",
-                "Note <code>Class</code> starts with capital C, and therefore does not conflicts with ES6 keyword 'class'."] }
+                "tips": ["Note <code>Class</code> starts with capital C, and therefore does not conflicts with ES6 keyword 'class'."] }
             ]},
         { "id": "advanced", "title": "Advanced", "list": [
         ]}
