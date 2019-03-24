@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.26.3
- *  Sun, 24 Mar 2019 19:36:01 GMT
+ *  Version: 0.26.4
+ *  Sun, 24 Mar 2019 22:01:09 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -23,7 +23,7 @@ const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
     name: 'flair.cli',
-    version: '0.26.3',
+    version: '0.26.4',
     format: 'fasm',
     formatVersion: '1',
     contains: [
@@ -636,13 +636,13 @@ const build = (options, buildDone) => {
         `const { Tasks } = flair;\n` +
         `const { TaskInfo } = flair.Tasks;\n` +
         `const { as, is, isComplies, isDerivedFrom, isImplements, isInstanceOf, isMixed } = flair;\n` +
-        `const { getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf, typeOf } = flair;\n` +
+        `const { getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf, getTypeName, typeOf } = flair;\n` +
         `const { dispose, using } = flair;\n` +
         `const { Args, Exception, noop, nip, nim, nie, event } = flair;\n` +
         `const { env } = flair.options;\n` +
         `const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;\n` +
-        `const { $static, $abstract, $virtual, $override, $sealed, $private, $privateSet, $protected, $protectedSet, $readonly, $async } = $$;\n` +
-        `const { $overload, $enumerate, $dispose, $post, $on, $timer, $type, $args, $inject, $resource, $asset, $singleton, $serialize, $deprecate, $session, $state, $conditional, $noserialize, $ns } = $$;\n` +
+        `const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async } = $$;\n` +
+        `const { $$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$args, $$inject, $$resource, $$asset, $$singleton, $$serialize, $$deprecate, $$session, $$state, $$conditional, $$noserialize, $$ns } = $$;\n` +
         `/* eslint-enable no-unused-vars */\n` +
         `\n`; 
         appendToFile(closureHeader);        

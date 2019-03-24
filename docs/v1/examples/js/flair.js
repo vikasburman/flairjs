@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.26.3
- *  Sun, 24 Mar 2019 19:35:58 GMT
+ *  Version: 0.26.4
+ *  Sun, 24 Mar 2019 22:01:05 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -80,10 +80,10 @@
         name: 'flair',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.26.3',
+        version: '0.26.4',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 24 Mar 2019 19:35:58 GMT')
+        lupdate: new Date('Sun, 24 Mar 2019 22:01:05 GMT')
     });  
     
     flair.members = [];
@@ -2766,7 +2766,7 @@
     // define easy-syntax methods to be made available in assembly closure
     for(let inbuilt_attr in _attrMeta.inbuilt) {
         if (_attrMeta.inbuilt.hasOwnProperty(inbuilt_attr)) {
-            _$$[`$${inbuilt_attr}`] = (...args) => { _$$(inbuilt_attr, ...args); };
+            _$$[`$$${inbuilt_attr}`] = (...args) => { _$$(inbuilt_attr, ...args); };
         }
     }
     
@@ -6501,13 +6501,13 @@ const { Serializer } = flair;
 const { Tasks } = flair;
 const { TaskInfo } = flair.Tasks;
 const { as, is, isComplies, isDerivedFrom, isImplements, isInstanceOf, isMixed } = flair;
-const { getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf, typeOf } = flair;
+const { getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf, getTypeName, typeOf } = flair;
 const { dispose, using } = flair;
 const { Args, Exception, noop, nip, nim, nie, event } = flair;
 const { env } = flair.options;
 const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
-const { $static, $abstract, $virtual, $override, $sealed, $private, $privateSet, $protected, $protectedSet, $readonly, $async } = $$;
-const { $overload, $enumerate, $dispose, $post, $on, $timer, $type, $args, $inject, $resource, $asset, $singleton, $serialize, $deprecate, $session, $state, $conditional, $noserialize, $ns } = $$;
+const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async } = $$;
+const { $$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$args, $$inject, $$resource, $$asset, $$singleton, $$serialize, $$deprecate, $$session, $$state, $$conditional, $$noserialize, $$ns } = $$;
 /* eslint-enable no-unused-vars */
 
 let settings = {}; // eslint-disable-line no-unused-vars
@@ -6857,6 +6857,6 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.3","lupdate":"Sun, 24 Mar 2019 19:35:58 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.4","lupdate":"Sun, 24 Mar 2019 22:01:05 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
 
 })();
