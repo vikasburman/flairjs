@@ -637,8 +637,15 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                 }
 
                 // any abstract member should not left unimplemented now on top level instance
-                if (isCopy && !params.isNeedProtected && modifiers.members.is('abstract', memberName)) {
-                    throw _Exception.NotImplemented(`Abstract member is not implemented. (${memberName})`, builder);
+                // and if present at lower levels, those types must be marked as abstract
+                if (isCopy && modifiers.members.is('abstract', memberName)) {
+                    if (!params.isNeedProtected) {
+                        throw _Exception.NotImplemented(`Abstract member is not implemented. (${memberName})`, builder);
+                    } else {
+                        if (!modifiers.type.probe('abstract').current()) {
+                            throw _Exception.InvalidDefinition(`Abstract member can exists only in abstract type. (${memberName})`, builder);
+                        }
+                    }
                 }
 
                 // apply enumerate attribute now
