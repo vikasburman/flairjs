@@ -1,7 +1,7 @@
 // define logging ui
 let el = document.createElement('div');
 el.id = 'demo';
-el.innerHTML = '<ul style="list-style: none;"><li v-for="line in log">{{ line }}</li></ul>';
+el.innerHTML = '<ul style="margin: 0; list-style: none;"><li v-for="line in log">{{ line }}</li></ul>';
 document.firstElementChild.append(el)
 
 // define logging bucket
