@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.26.16
- *  Sun, 24 Mar 2019 23:56:39 GMT
+ *  Version: 0.26.17
+ *  Sun, 24 Mar 2019 23:59:46 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -80,10 +80,10 @@
         name: 'flair',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.26.16',
+        version: '0.26.17',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 24 Mar 2019 23:56:39 GMT')
+        lupdate: new Date('Sun, 24 Mar 2019 23:59:46 GMT')
     });  
     
     flair.members = [];
@@ -3665,30 +3665,30 @@
             if (the_attr && cfg.static) {
                 if (TypeMeta.isStatic()) {
                     if (cfg.construct && memberName === _constructName && memberDef.length !== 0) {
-                        throw _Exception.InvalidDefinition(`Static constructors cannot have arguments. (construct)`, builder);
+                        throw _Exception.InvalidDefinition(`Static constructors cannot have arguments. (${def.name}::construct)`, builder);
                     }
                     if (cfg.dispose && memberName === _disposeName) {
-                        throw _Exception.InvalidDefinition(`Static types cannot have destructors. (dispose)`, builder);
+                        throw _Exception.InvalidDefinition(`Static types cannot have destructors. (${def.name}::dispose)`, builder);
                     }        
                 } else {
                     if (cfg.construct && memberName === _constructName) {
-                        throw _Exception.InvalidDefinition(`Non-static types cannot have static constructors. (construct)`, builder);
+                        throw _Exception.InvalidDefinition(`Non-static types cannot have static constructors. (${def.name}::construct)`, builder);
                     }
                     if (cfg.dispose && memberName === _disposeName) {
-                        throw _Exception.InvalidDefinition(`Static destructors cannot be defined. (dispose)`, builder);
+                        throw _Exception.InvalidDefinition(`Static destructors cannot be defined. (${def.name}::dispose)`, builder);
                     }        
                 }
             }
     
             // dispose arguments check always
             if (cfg.dispose && memberName === _disposeName && memberDef.length !== 0) {
-                throw _Exception.InvalidDefinition(`Destructor method cannot have arguments. (dispose)`, builder);
+                throw _Exception.InvalidDefinition(`Destructor method cannot have arguments. (${def.name}::dispose)`, builder);
             }
             
             // duplicate check, if not overriding
             if (Object.keys(obj).indexOf(memberName) !== -1 && 
                 (!cfg.inheritance || (cfg.inheritance && !modifiers.members.probe('override', memberName).current()))) {
-                    throw _Exception.Duplicate(memberName, builder); 
+                    throw _Exception.Duplicate(def.name + '::' + memberName, builder); 
             }
     
             // overriding member must be present and of the same type
@@ -6964,6 +6964,6 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.16","lupdate":"Sun, 24 Mar 2019 23:56:39 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.17","lupdate":"Sun, 24 Mar 2019 23:59:46 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
 
 })();

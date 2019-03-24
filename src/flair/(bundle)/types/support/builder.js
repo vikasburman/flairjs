@@ -771,30 +771,30 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         if (the_attr && cfg.static) {
             if (TypeMeta.isStatic()) {
                 if (cfg.construct && memberName === _constructName && memberDef.length !== 0) {
-                    throw _Exception.InvalidDefinition(`Static constructors cannot have arguments. (construct)`, builder);
+                    throw _Exception.InvalidDefinition(`Static constructors cannot have arguments. (${def.name}::construct)`, builder);
                 }
                 if (cfg.dispose && memberName === _disposeName) {
-                    throw _Exception.InvalidDefinition(`Static types cannot have destructors. (dispose)`, builder);
+                    throw _Exception.InvalidDefinition(`Static types cannot have destructors. (${def.name}::dispose)`, builder);
                 }        
             } else {
                 if (cfg.construct && memberName === _constructName) {
-                    throw _Exception.InvalidDefinition(`Non-static types cannot have static constructors. (construct)`, builder);
+                    throw _Exception.InvalidDefinition(`Non-static types cannot have static constructors. (${def.name}::construct)`, builder);
                 }
                 if (cfg.dispose && memberName === _disposeName) {
-                    throw _Exception.InvalidDefinition(`Static destructors cannot be defined. (dispose)`, builder);
+                    throw _Exception.InvalidDefinition(`Static destructors cannot be defined. (${def.name}::dispose)`, builder);
                 }        
             }
         }
 
         // dispose arguments check always
         if (cfg.dispose && memberName === _disposeName && memberDef.length !== 0) {
-            throw _Exception.InvalidDefinition(`Destructor method cannot have arguments. (dispose)`, builder);
+            throw _Exception.InvalidDefinition(`Destructor method cannot have arguments. (${def.name}::dispose)`, builder);
         }
         
         // duplicate check, if not overriding
         if (Object.keys(obj).indexOf(memberName) !== -1 && 
             (!cfg.inheritance || (cfg.inheritance && !modifiers.members.probe('override', memberName).current()))) {
-                throw _Exception.Duplicate(memberName, builder); 
+                throw _Exception.Duplicate(def.name + '::' + memberName, builder); 
         }
 
         // overriding member must be present and of the same type
