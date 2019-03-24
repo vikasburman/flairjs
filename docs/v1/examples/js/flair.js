@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.26.15
- *  Sun, 24 Mar 2019 23:48:48 GMT
+ *  Version: 0.26.16
+ *  Sun, 24 Mar 2019 23:56:39 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -80,10 +80,10 @@
         name: 'flair',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.26.15',
+        version: '0.26.16',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 24 Mar 2019 23:48:48 GMT')
+        lupdate: new Date('Sun, 24 Mar 2019 23:56:39 GMT')
     });  
     
     flair.members = [];
@@ -3449,20 +3449,20 @@
                             newSet.set = newSet.set.bind(bindingHost);
                             member = newSet; // update for next attribute application
                         } else {
-                            throw _Exception.OperationFailed(`${appliedAttr.name} decoration result is unexpected. (${memberName})`, builder);
+                            throw _Exception.OperationFailed(`${appliedAttr.name} decoration result is unexpected. (${def.name}::${memberName})`, builder);
                         }
                     } else { // func or event
                         let newFn = null;
                         if (memberType === 'func') { // func
                             newFn = appliedAttr.attr.decorateFunction(def.name, memberName, member);
-                            if (isASync(member) !== isASync(newFn)) { throw _Exception.OperationFailed(`${appliedAttr.name} decoration result is unexpected. (${memberName})`, builder); }
+                            if (isASync(member) !== isASync(newFn)) { throw _Exception.OperationFailed(`${appliedAttr.name} decoration result is unexpected. (${def.name}::${memberName})`, builder); }
                         } else { // event
                             newFn = appliedAttr.attr.decorateEvent(def.name, memberName, member);
                         }
                         if (newFn) {
                             member = newFn.bind(bindingHost); // update for next attribute application
                         } else {
-                            throw _Exception.OperationFailed(`${appliedAttr.name} decoration result is unexpected. (${memberName})`, builder);
+                            throw _Exception.OperationFailed(`${appliedAttr.name} decoration result is unexpected. (${def.name}::${memberName})`, builder);
                         }
                     }
     
@@ -3534,7 +3534,7 @@
                     // and if present at lower levels, those types must be marked as abstract
                     if (isCopy && modifiers.members.is('abstract', memberName)) {
                         if (!params.isNeedProtected) {
-                            throw _Exception.NotImplemented(`Abstract member is not implemented. (${memberName})`, builder);
+                            throw _Exception.NotImplemented(`Abstract member is not implemented. (${def.name}::${memberName})`, builder);
                         } else {
                             if (!modifiers.type.probe('abstract').current()) {
                                 throw _Exception.InvalidDefinition(`Abstract member can exists only in abstract type. (${def.name}::${memberName})`, builder);
@@ -3611,7 +3611,7 @@
             }
         };
         const validatePreMemberDefinitionFeasibility = (memberName, memberType, memberDef) => { // eslint-disable-line no-unused-vars
-            if (['func', 'prop', 'event'].indexOf(memberType) !== -1 && memberName.startsWith('_')) { new _Exception('InvalidName', `Name is not valid. (${memberName})`); } // this is for some future usage, where internal names can be added starting with '_'
+            if (['func', 'prop', 'event'].indexOf(memberType) !== -1 && memberName.startsWith('_')) { new _Exception('InvalidName', `Name is not valid. (${def.name}::${memberName})`); } // this is for some future usage, where internal names can be added starting with '_'
             switch(memberType) {
                 case 'func':
                     if (!cfg.func) { throw _Exception.InvalidOperation(`Function cannot be defined on this type. (${def.name})`, builder); }
@@ -3657,7 +3657,7 @@
             
             // abstract check
             if (cfg.inheritance && modifiers.members.probe('abstract', memberName).current() && memberDef.ni !== true) {
-                throw _Exception.InvalidDefinition(`Abstract member must not be implemented. (${memberName})`, builder);
+                throw _Exception.InvalidDefinition(`Abstract member must not be implemented. (${def.name}::${memberName})`, builder);
             }
     
             // for a static type, constructor arguments check and dispose check
@@ -3694,9 +3694,9 @@
             // overriding member must be present and of the same type
             if (cfg.inheritance && modifiers.members.probe('override', memberName).current()) {
                 if (Object.keys(obj).indexOf(memberName) === -1) {
-                    throw _Exception.InvalidDefinition(`Member not found to override. (${memberName})`, builder); 
+                    throw _Exception.InvalidDefinition(`Member not found to override. (${def.name}::${memberName})`, builder); 
                 } else if (modifiers.members.type(memberName) !== memberType) {
-                    throw _Exception.InvalidDefinition(`Overriding member type is invalid. (${memberName})`, builder); 
+                    throw _Exception.InvalidDefinition(`Overriding member type is invalid. (${def.name}::${memberName})`, builder); 
                 }
             }
     
@@ -3704,17 +3704,17 @@
             if (cfg.static && (modifiers.members.probe('static', memberName).current() || TypeMeta.isStatic())) {
                 if (memberType === 'func') {
                     if (isArrow(memberDef)) { 
-                        throw _Exception.InvalidDefinition(`Static functions cannot be defined as an arrow function. (${memberName})`, builder); 
+                        throw _Exception.InvalidDefinition(`Static functions cannot be defined as an arrow function. (${def.name}::${memberName})`, builder); 
                     }
                 } else if (memberType === 'prop') {
                     if (memberDef.get && typeof memberDef.get === 'function') {
                         if (isArrow(memberDef)) { 
-                            throw _Exception.InvalidDefinition(`Static property getters cannot be defined as an arrow function. (${memberName})`, builder); 
+                            throw _Exception.InvalidDefinition(`Static property getters cannot be defined as an arrow function. (${def.name}::${memberName})`, builder); 
                         }
                     }
                     if (memberDef.set && typeof memberDef.set === 'function') {
                         if (isArrow(memberDef)) { 
-                            throw _Exception.InvalidDefinition(`Static property setters cannot be defined as an arrow function. (${memberName})`, builder); 
+                            throw _Exception.InvalidDefinition(`Static property setters cannot be defined as an arrow function. (${def.name}::${memberName})`, builder); 
                         }
                     }
                 }
@@ -3723,12 +3723,12 @@
             // session/state properties cannot have custom getter/setter and also relevant port must be configured
             if (cfg.storage && attrs.members.probe('session', memberName).current()) {
                 if (memberDef.get && typeof memberDef.get === 'function') {
-                    throw _Exception.InvalidDefinition(`Session properties cannot be defined with a custom getter/setter. (${memberName})`, builder); 
+                    throw _Exception.InvalidDefinition(`Session properties cannot be defined with a custom getter/setter. (${def.name}::${memberName})`, builder); 
                 }
             }
             if (cfg.storage && attrs.members.probe('state', memberName).current()) {
                 if (memberDef.get && typeof memberDef.get === 'function') {
-                    throw _Exception.InvalidDefinition(`State properties cannot be defined with a custom getter/setter. (${memberName})`, builder); 
+                    throw _Exception.InvalidDefinition(`State properties cannot be defined with a custom getter/setter. (${def.name}::${memberName})`, builder); 
                 }
                 if (!_localStorage) { throw _Exception.InvalidOperation('Port is not configured. (localStorage)', builder); }
             }
@@ -3753,7 +3753,7 @@
             resource_attr = attrs.members.probe('resource', memberName).current(),
             type_attr = attrs.members.probe('type', memberName).current(),
             _isDeprecate = (_deprecate_attr !== null),
-            _deprecate_message = (_isDeprecate ? (_deprecate_attr.args[0] || `Event is marked as deprecate. (${memberName})`) : ''),
+            _deprecate_message = (_isDeprecate ? (_deprecate_attr.args[0] || `Event is marked as deprecate. (${def.name}::${memberName})`) : ''),
             propHost = _props, // default place to store property values inside closure
             bindingHost = obj,
             uniqueName = def.name + '_' + memberName,
@@ -3766,7 +3766,7 @@
             // define or redefine
             if (memberDef && (memberDef.get || memberDef.set)) { // normal property, cannot be static because static cannot have custom getter/setter
                 if (!cfg.propGetterSetter) {
-                    throw _Exception.InvalidDefinition(`Getter/Setter are not allowed. (${memberName})`, builder);
+                    throw _Exception.InvalidDefinition(`Getter/Setter are not allowed. (${def.name}::${memberName})`, builder);
                 }
                 if (memberDef.get && typeof memberDef.get === 'function') {
                     _getter = memberDef.get;
@@ -3783,7 +3783,7 @@
                 }.bind(bindingHost);
                 _member.set = function(value) {
                     if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
-                    if (_isReadOnly && !bindingHost[meta].constructing) { throw _Exception.InvalidOperation(`Property is readonly. (${memberName})`, builder); } // readonly props can be set only when object is being constructed 
+                    if (_isReadOnly && !bindingHost[meta].constructing) { throw _Exception.InvalidOperation(`Property is readonly. (${def.name}::${memberName})`, builder); } // readonly props can be set only when object is being constructed 
                     if (type_attr && type_attr.args[0] && !_is(value, type_attr.args[0])) { throw _Exception.InvalidArgument('value', builder); } // type attribute is defined
                     return _setter.apply(bindingHost, [value]);
                 }.bind(bindingHost);
@@ -3819,7 +3819,7 @@
                 }.bind(bindingHost);
                 _member.set = function(value) {
                     if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
-                    if (_isReadOnly && !bindingHost[meta].constructing) { throw _Exception.InvalidOperation(`Property is readonly. (${memberName})`, builder); } // readonly props can be set only when object is being constructed 
+                    if (_isReadOnly && !bindingHost[meta].constructing) { throw _Exception.InvalidOperation(`Property is readonly. (${def.name}::${memberName})`, builder); } // readonly props can be set only when object is being constructed 
                     if (type_attr && type_attr.args[0] && !_is(value, type_attr.args[0])) { throw _Exception.InvalidArgument('value', builder); } // type attribute is defined
                     if (isStorageHost) {
                         propHost.setItem(uniqueName, JSON.stringify({value: value}));
@@ -3917,7 +3917,7 @@
                     // 2nd overload onwards, don't go via normal definition route,
                     if (bindingHost[memberName]) { 
                         // throw, if any other attribute is defined other than overload
-                        if (_attr.count() > 1) { throw _Exception.InvalidDefinition(`Overloaded function cannot define additional modifiers or attributes. (${memberName})`, builder); }
+                        if (_attr.count() > 1) { throw _Exception.InvalidDefinition(`Overloaded function cannot define additional modifiers or attributes. (${def.name}::${memberName})`, builder); }
                         return true; // handled, don't go normal definition route
                     }
                 }
@@ -3956,7 +3956,7 @@
                 args_attr = attrs.members.probe('args', memberName).current(),
                 overload_attr = attrs.members.probe('overload', memberName).current(),
                 _isDeprecate = (_deprecate_attr !== null),
-                _deprecate_message = (_isDeprecate ? (_deprecate_attr.args[0] || `Function is marked as deprecate. (${memberName})`) : ''),
+                _deprecate_message = (_isDeprecate ? (_deprecate_attr.args[0] || `Function is marked as deprecate. (${def.name}::${memberName})`) : ''),
                 base = null,
                 _injections = [];
     
@@ -4078,7 +4078,7 @@
                 _deprecate_attr = attrs.members.probe('deprecate', memberName).current(),
                 _post_attr = attrs.members.probe('post', memberName).current(), // always post as per what is defined here, in case of overriding
                 _isDeprecate = (_deprecate_attr !== null),
-                _deprecate_message = (_isDeprecate ? (_deprecate_attr.args[0] || `Event is marked as deprecate. (${memberName})`) : ''),
+                _deprecate_message = (_isDeprecate ? (_deprecate_attr.args[0] || `Event is marked as deprecate. (${def.name}::${memberName})`) : ''),
                 bindingHost = obj;
     
             // create dispatcher, if not already created
@@ -6964,6 +6964,6 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.15","lupdate":"Sun, 24 Mar 2019 23:48:48 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.16","lupdate":"Sun, 24 Mar 2019 23:56:39 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
 
 })();
