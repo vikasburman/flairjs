@@ -676,7 +676,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     };
     const validateMember = (memberName, interface_being_validated) => {
         // member must exists check + member type must match
-        if (typeof exposed_obj[memberName] === 'undefined' || modifiers.members.type(memberName) !== interface_being_validated[meta].modifiers.members.type(memberName)) {
+        if (exposed_obj.keys().indexOf(memberName) === -1 || modifiers.members.type(memberName) !== interface_being_validated[meta].modifiers.members.type(memberName)) {
             if (memberName === 'dispose' && (typeof exposed_obj[_disposeName] === 'function' || 
                                              typeof exposed_objMeta.dispose === 'function')) {
                 // its ok, continue below
@@ -785,14 +785,14 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         }
         
         // duplicate check, if not overriding
-        if (typeof obj[memberName] !== 'undefined' && 
+        if (obj.keys().indexOf(memberName) !== -1 && 
             (!cfg.inheritance || (cfg.inheritance && !modifiers.members.probe('override', memberName).current()))) {
                 throw _Exception.Duplicate(memberName, builder); 
         }
 
         // overriding member must be present and of the same type
         if (cfg.inheritance && modifiers.members.probe('override', memberName).current()) {
-            if (typeof obj[memberName] === 'undefined') {
+            if (obj.keys().indexOf(memberName) === -1) {
                 throw _Exception.InvalidDefinition(`Member not found to override. (${memberName})`, builder); 
             } else if (modifiers.members.type(memberName) !== memberType) {
                 throw _Exception.InvalidDefinition(`Overriding member type is invalid. (${memberName})`, builder); 

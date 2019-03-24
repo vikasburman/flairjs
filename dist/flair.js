@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.26.6
- *  Sun, 24 Mar 2019 22:41:55 GMT
+ *  Version: 0.26.7
+ *  Sun, 24 Mar 2019 22:59:45 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -80,10 +80,10 @@
         name: 'flair',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.26.6',
+        version: '0.26.7',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 24 Mar 2019 22:41:55 GMT')
+        lupdate: new Date('Sun, 24 Mar 2019 22:59:45 GMT')
     });  
     
     flair.members = [];
@@ -3475,7 +3475,7 @@
         };
         const validateMember = (memberName, interface_being_validated) => {
             // member must exists check + member type must match
-            if (typeof exposed_obj[memberName] === 'undefined' || modifiers.members.type(memberName) !== interface_being_validated[meta].modifiers.members.type(memberName)) {
+            if (exposed_obj.keys().indexOf(memberName) === -1 || modifiers.members.type(memberName) !== interface_being_validated[meta].modifiers.members.type(memberName)) {
                 if (memberName === 'dispose' && (typeof exposed_obj[_disposeName] === 'function' || 
                                                  typeof exposed_objMeta.dispose === 'function')) {
                     // its ok, continue below
@@ -3584,14 +3584,14 @@
             }
             
             // duplicate check, if not overriding
-            if (typeof obj[memberName] !== 'undefined' && 
+            if (obj.keys().indexOf(memberName) !== -1 && 
                 (!cfg.inheritance || (cfg.inheritance && !modifiers.members.probe('override', memberName).current()))) {
                     throw _Exception.Duplicate(memberName, builder); 
             }
     
             // overriding member must be present and of the same type
             if (cfg.inheritance && modifiers.members.probe('override', memberName).current()) {
-                if (typeof obj[memberName] === 'undefined') {
+                if (obj.keys().indexOf(memberName) === -1) {
                     throw _Exception.InvalidDefinition(`Member not found to override. (${memberName})`, builder); 
                 } else if (modifiers.members.type(memberName) !== memberType) {
                     throw _Exception.InvalidDefinition(`Overriding member type is invalid. (${memberName})`, builder); 
@@ -6857,6 +6857,6 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.6","lupdate":"Sun, 24 Mar 2019 22:41:55 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.7","lupdate":"Sun, 24 Mar 2019 22:59:45 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
 
 })();
