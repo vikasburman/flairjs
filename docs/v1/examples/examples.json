@@ -7,7 +7,7 @@
             "desc": "The customary, there-you-go example.", 
             "tips": ["<code>flair</code> is a global variable added by loading flair.js library.",
             "Use <code>flair.info</code> to check version details."] },
-            { "id": "basic/rjvpc39e", "title": "Class", "tabs": "js,html", 
+            { "id": "basic/rjvpc39e", "title": "Class", "tabs": "js", 
                 "desc": "Simple class definition, the flair way.", 
                 "tips": ["Note <code>Class</code> starts with capital C, and therefore does not conflict with ES6 keyword 'class'.",
                 "Note 'O' in <code>typeOf</code> is capital, and therefore does not conflict with Javascript keyword 'typeof'."] }
