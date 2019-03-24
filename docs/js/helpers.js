@@ -3,7 +3,7 @@ $(document).ready(function() { $('body').bootstrapMaterialDesign(); });
 
 // apply hyperlinks
 $(document).ready(function() { 
-    let currentVersion = 'edge',
+    let currentVersion = 'v1',
         host = location.origin;
     $(".medium").attr("href", "https://medium.com/have-a-flair");
     $(".github").attr("href", "https://github.com/vikasburman/flairjs");

@@ -1,17 +1,14 @@
 {
-    "version": { "title": "Edge", "path": "edge" },
+    "version": { "title": "1.x", "path": "v1" },
     "path": "//jsfiddle.net/vikasburman/",
     "groups": [
         { "id": "basic", "title": "Basic", "list": [
             {
-                "id": "basic/qh4batz1",
-                "tabs": "js,html",
-                "title": "Hello World!",
+                "id": "basic/qh4batz1", "title": "Hello World!", "tabs": "html,js",
                 "desc": "The customary, there-you-go example.",
                 "tips": [
                     "<code>flair</code> is a global variable added by loading flair.js library.",
-                    "Use <code>flair.info</code> to check version details.",
-                    "Vue is used for data binding in examples. This is not needed by flair.js"
+                    "Use <code>flair.info</code> to check version details."
                 ]
             }
         ]},
