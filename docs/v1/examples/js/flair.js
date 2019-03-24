@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.26.1
- *  Sun, 24 Mar 2019 18:56:42 GMT
+ *  Version: 0.26.2
+ *  Sun, 24 Mar 2019 19:29:31 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -80,10 +80,10 @@
         name: 'flair',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.26.1',
+        version: '0.26.2',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 24 Mar 2019 18:56:42 GMT')
+        lupdate: new Date('Sun, 24 Mar 2019 19:29:31 GMT')
     });  
     
     flair.members = [];
@@ -2048,6 +2048,25 @@
     
     // attach to flair
     a2f('getTypeOf', _getTypeOf);
+        
+    /**
+     * @name getTypeName
+     * @description Gets the name of the underlying type which was used to construct this object
+     * @example
+     *  getTypeName(obj)
+     * @params
+     *  obj: object - object that needs to be checked
+     * @returns string - name of the type of given object
+     */ 
+    const _getTypeName = (obj) => {
+        let args = _Args('obj: flair')(obj); args.throwOnError(_getTypeName);
+    
+        let objMeta = obj[meta];
+        return (objMeta ? (objMeta.name || '') : '');
+    };
+    
+    // attach to flair
+    a2f('getTypeName', _getTypeName);
         
     /**
      * @name ns
@@ -6838,6 +6857,6 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.1","lupdate":"Sun, 24 Mar 2019 18:56:42 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.2","lupdate":"Sun, 24 Mar 2019 19:29:31 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
 
 })();

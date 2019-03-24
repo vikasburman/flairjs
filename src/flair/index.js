@@ -113,6 +113,7 @@
     <!-- inject: ./(bundle)/types/get/getRoute.js -->
     <!-- inject: ./(bundle)/types/get/getType.js -->   
     <!-- inject: ./(bundle)/types/get/getTypeOf.js -->    
+    <!-- inject: ./(bundle)/types/get/getTypeName.js -->    
     <!-- inject: ./(bundle)/types/get/ns.js -->    
     <!-- inject: ./(bundle)/types/check/isDerivedFrom.js --> 
     <!-- inject: ./(bundle)/types/check/isInstanceOf.js -->  
