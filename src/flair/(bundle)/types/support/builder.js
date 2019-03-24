@@ -354,11 +354,11 @@ const modifierOrAttrRefl = (isModifier, def, typeDef) => {
                 case 'static': 
                     return _probe.anywhere(); 
                 case 'abstract':
-                    return _probe.anywhere() && !(members_probe.anywhere('virtual', memberName) || members_probe.anywhere('override', memberName)); 
+                    return _probe.anywhere() && !(members_probe('virtual', memberName).anywhere() || members_probe('override', memberName).anywhere()); 
                 case 'virtual':
-                    return _probe.anywhere() && !members_probe.anywhere('override', memberName); 
+                    return _probe.anywhere() && !members_probe('override', memberName).anywhere(); 
                 case 'override':
-                    return _probe.anywhere() && !members_probe.anywhere('sealed', memberName); 
+                    return _probe.anywhere() && !members_probe('sealed', memberName).anywhere(); 
                 case 'sealed':
                     return _probe.anywhere(); 
                 case 'private':

@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.26.4
- *  Sun, 24 Mar 2019 22:01:05 GMT
+ *  Version: 0.26.5
+ *  Sun, 24 Mar 2019 22:37:37 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -80,10 +80,10 @@
         name: 'flair',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.26.4',
+        version: '0.26.5',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 24 Mar 2019 22:01:05 GMT')
+        lupdate: new Date('Sun, 24 Mar 2019 22:37:37 GMT')
     });  
     
     flair.members = [];
@@ -3153,11 +3153,11 @@
                     case 'static': 
                         return _probe.anywhere(); 
                     case 'abstract':
-                        return _probe.anywhere() && !(members_probe.anywhere('virtual', memberName) || members_probe.anywhere('override', memberName)); 
+                        return _probe.anywhere() && !(members_probe('virtual', memberName).anywhere() || members_probe('override', memberName).anywhere()); 
                     case 'virtual':
-                        return _probe.anywhere() && !members_probe.anywhere('override', memberName); 
+                        return _probe.anywhere() && !members_probe('override', memberName).anywhere(); 
                     case 'override':
-                        return _probe.anywhere() && !members_probe.anywhere('sealed', memberName); 
+                        return _probe.anywhere() && !members_probe('sealed', memberName).anywhere(); 
                     case 'sealed':
                         return _probe.anywhere(); 
                     case 'private':
@@ -6857,6 +6857,6 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.4","lupdate":"Sun, 24 Mar 2019 22:01:05 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.5","lupdate":"Sun, 24 Mar 2019 22:37:37 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
 
 })();
