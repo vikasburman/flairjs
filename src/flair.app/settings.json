@@ -1,6 +1,6 @@
 {
     "host": "flair.boot.ServerHost | flair.boot.ClientHost",
-    "app": "App",
+    "app": "flair.app.App",
     "load": [
     ],
     "container": {

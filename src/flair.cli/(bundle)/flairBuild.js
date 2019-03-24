@@ -220,6 +220,11 @@ const build = (options, buildDone) => {
         }
         return path.join(options.dest, preambleRoot);
     };
+    const resolveRootNS = (isAddDot) => {
+        let rootNS = (options.current.asmName === 'flair' ? '' : options.current.asmName); 
+        if (rootNS && isAddDot) { rootNS += '.'; }
+        return rootNS;
+    };
     const resolveSkipMinify = (buildPath) => {
         let skip = false;
         for(let partialBuildPath of options.profiles.current.skipMinifyRoot) {
@@ -923,7 +928,7 @@ const build = (options, buildDone) => {
             } 
             if (nsFile.type !== 'routes') {
                 if (nsFile.typeName.indexOf('.') !== -1) { throw `Type/Resource names cannot contain dots. (${nsFile.typeName})`; }
-                nsFile.qualifiedName = (options.current.nsName !== '(root)' ? options.current.nsName + '.' : '')  + nsFile.typeName;
+                nsFile.qualifiedName = (options.current.nsName !== '(root)' ? options.current.nsName + '.' : resolveRootNS(true))  + nsFile.typeName;
                 if (nsFile.type === 'res') {
                     options.current.ado.resources.push(nsFile);
                 } else {
@@ -936,7 +941,7 @@ const build = (options, buildDone) => {
                     if (route.name.indexOf('.') !== -1) { throw `Route name cannot contain dots. (${route.name})`; }
                     if (!route.path) { throw `Route path must be defined. (${route.name}`; }
                     if (!route.handler) { throw `Route handler must be defined. (${route.name}`; }
-                    route.qualifiedName = (options.current.nsName !== '(root)' ? options.current.nsName + '.' : '')  + route.name;
+                    route.qualifiedName = (options.current.nsName !== '(root)' ? options.current.nsName + '.' : resolveRootNS(true))  + route.name;
                     routes.push({ 
                         name: route.qualifiedName,
                         asmFile: options.current.ado.file,
@@ -1364,8 +1369,8 @@ const build = (options, buildDone) => {
  *                              > the reason former approach is chosen, is because it shows up all namespaces neatly under
  *                                <assembly folder>
  *                          (root)     - root namespace folder, is a special folder, that contains special members
- *                                       which are placed on root only. Should be avoided, as this is for flair's own
- *                                       system types
+ *                                       which are placed on root of the assembly namespace - i.e., assembly name itself is used as namespace
+ *                                       (except in case of flair - where namespace is omitted altogether) 
  *                          (assets)   - assets folder
  *                                  > this special folder can be used to place all external assets like images, css, js, fonts, etc.
  *                                  > it can have any structure underneath

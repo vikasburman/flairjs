@@ -22,7 +22,7 @@
     "minifyTypes": ["js", "css", "html"],
     "generateJSSourceMap": false,
 
-    "gzip": false,
+    "gzip": true,
     "gzipConfig": "./config/gzip.json",
     "gzipTypes": ["js", "css", "html", "txt", "xml", "md", "json", "svg", "jpg", "jpeg", "gif", "png"],
 
