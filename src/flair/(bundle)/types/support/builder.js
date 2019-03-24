@@ -643,7 +643,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                         throw _Exception.NotImplemented(`Abstract member is not implemented. (${memberName})`, builder);
                     } else {
                         if (!modifiers.type.probe('abstract').current()) {
-                            throw _Exception.InvalidDefinition(`Abstract member can exists only in abstract type. (${memberName})`, builder);
+                            throw _Exception.InvalidDefinition(`Abstract member can exists only in abstract type. (${def.name}::${memberName})`, builder);
                         }
                     }
                 }
