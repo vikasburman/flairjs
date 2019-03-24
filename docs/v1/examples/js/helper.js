@@ -2,7 +2,7 @@
 let el = document.createElement('div');
 el.id = 'demo';
 el.innerHTML = '<ul style="list-style: none;"><li v-for="line in log">{{ line }}</li></ul>';
-document.body.append(el);
+document.firstElementChild.append(el)
 
 // define logging bucket
 let viewlog = [];
