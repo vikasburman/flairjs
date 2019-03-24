@@ -1,7 +1,7 @@
 // define logging ui
 let el = document.createElement('div');
 el.id = 'demo';
-el.innerHTML = '<ul><li v-for="line in log">{{ line }}</li></ul>';
+el.innerHTML = '<ul style="list-style: none;"><li v-for="line in log">{{ line }}</li></ul>';
 document.firstElementChild.append(el)
 
 // define logging bucket
@@ -9,7 +9,7 @@ let viewlog = [];
 
 // logger function
 const logger = function(msg, addBreak) {
-  if (addBreak) { viewlog.push(' '); }
+  if (addBreak) { viewlog.push('\t'); }
 	viewlog.push(msg);
 }
 
