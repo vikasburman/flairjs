@@ -636,8 +636,8 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                     }
                 }
 
-                // any abstract member should not left unimplemented now
-                if (isCopy && modifiers.members.is('abstract', memberName)) {
+                // any abstract member should not left unimplemented now on top level instance
+                if (isCopy && !params.isNeedProtected && modifiers.members.is('abstract', memberName)) {
                     throw _Exception.NotImplemented(`Abstract member is not implemented. (${memberName})`, builder);
                 }
 

@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.26.5
- *  Sun, 24 Mar 2019 22:37:37 GMT
+ *  Version: 0.26.6
+ *  Sun, 24 Mar 2019 22:41:55 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -80,10 +80,10 @@
         name: 'flair',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.26.5',
+        version: '0.26.6',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 24 Mar 2019 22:37:37 GMT')
+        lupdate: new Date('Sun, 24 Mar 2019 22:41:55 GMT')
     });  
     
     flair.members = [];
@@ -3435,8 +3435,8 @@
                         }
                     }
     
-                    // any abstract member should not left unimplemented now
-                    if (isCopy && modifiers.members.is('abstract', memberName)) {
+                    // any abstract member should not left unimplemented now on top level instance
+                    if (isCopy && !params.isNeedProtected && modifiers.members.is('abstract', memberName)) {
                         throw _Exception.NotImplemented(`Abstract member is not implemented. (${memberName})`, builder);
                     }
     
@@ -6857,6 +6857,6 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.5","lupdate":"Sun, 24 Mar 2019 22:37:37 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.6","lupdate":"Sun, 24 Mar 2019 22:41:55 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
 
 })();
