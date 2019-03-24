@@ -14,8 +14,8 @@
                 "<code>logger()</code> is not a flair keyword, but a helper function to show result value here."] },
             { "id": "basic/do40h239", "title": "Derived Class", "tabs": "js", 
                 "desc": "Single parent inheritance with controlled member overriding.", 
-                "tips": ["<code>$$<keyword></code> and <code>$$()</code> function defines the scope identifiers and attributes for following member.",
-                "<code>abstract</code> and <code>virtual</code> members can be overridden in derived class.",
+                "tips": ["<code>$$(...)</code> function defines the scope identifiers and attributes for following member definition.",
+                "<code>abstract</code> and <code>virtual</code> members can be overridden in derived class using <code>override</code>.",
                 "Further overriding of a member can be stopped using <code>sealed</code> when overriding."] }
             ]},
         { "id": "advanced", "title": "Advanced", "list": [
