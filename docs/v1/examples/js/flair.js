@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.26.10
- *  Sun, 24 Mar 2019 23:17:26 GMT
+ *  Version: 0.26.12
+ *  Sun, 24 Mar 2019 23:41:45 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -80,10 +80,10 @@
         name: 'flair',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.26.10',
+        version: '0.26.12',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 24 Mar 2019 23:17:26 GMT')
+        lupdate: new Date('Sun, 24 Mar 2019 23:41:45 GMT')
     });  
     
     flair.members = [];
@@ -2109,6 +2109,101 @@
     
     // attach to flair
     a2f('isDerivedFrom', _isDerivedFrom);
+     
+    /**
+     * @name isAbstract
+     * @description Checks if given flair class type is abstract.
+     * @example
+     *  isAbstract(type)
+     * @params
+     *  Type: class - flair class type that needs to be checked
+     * @returns boolean - true/false
+     */ 
+    const _isAbstract = (Type) => {
+        // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
+        if (_typeOf(Type) !== 'class') { throw _Exception.InvalidArgument('Type', _isAbstract); }
+    
+        return Type[meta].isAbstract();
+    }; 
+    
+    // attach to flair
+    a2f('isAbstract', _isAbstract);
+     
+    /**
+     * @name isSealed
+     * @description Checks if given flair class type is sealed.
+     * @example
+     *  isSealed(type)
+     * @params
+     *  Type: class - flair class type that needs to be checked
+     * @returns boolean - true/false
+     */ 
+    const _isSealed = (Type) => {
+        // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
+        if (_typeOf(Type) !== 'class') { throw _Exception.InvalidArgument('Type', _isSealed); }
+    
+        return Type[meta].isSealed();
+    }; 
+    
+    // attach to flair
+    a2f('isSealed', _isSealed);
+     
+    /**
+     * @name isStatic
+     * @description Checks if given flair class type is static.
+     * @example
+     *  isStatic(type)
+     * @params
+     *  Type: class - flair class type that needs to be checked
+     * @returns boolean - true/false
+     */ 
+    const _isStatic = (Type) => {
+        // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
+        if (_typeOf(Type) !== 'class') { throw _Exception.InvalidArgument('Type', _isStatic); }
+    
+        return Type[meta].isStatic();
+    }; 
+    
+    // attach to flair
+    a2f('isStatic', _isStatic);
+     
+    /**
+     * @name isSingleton
+     * @description Checks if given flair class type is singleton.
+     * @example
+     *  isSingleton(type)
+     * @params
+     *  Type: class - flair class type that needs to be checked
+     * @returns boolean - true/false
+     */ 
+    const _isSingleton = (Type) => {
+        // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
+        if (_typeOf(Type) !== 'class') { throw _Exception.InvalidArgument('Type', _isSingleton); }
+    
+        return Type[meta].isSingleton();
+    }; 
+    
+    // attach to flair
+    a2f('isSingleton', _isSingleton);
+     
+    /**
+     * @name isDeprecated
+     * @description Checks if given flair class type is deprecated.
+     * @example
+     *  isDeprecated(type)
+     * @params
+     *  Type: class - flair class type that needs to be checked
+     * @returns boolean - true/false
+     */ 
+    const _isDeprecated = (Type) => {
+        // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
+        if (_typeOf(Type) !== 'class') { throw _Exception.InvalidArgument('Type', _isDeprecated); }
+    
+        return Type[meta].isDeprecated();
+    }; 
+    
+    // attach to flair
+    a2f('isDeprecated', _isDeprecated);
      
     /**
      * @name isInstanceOf
@@ -4474,6 +4569,11 @@
             _ObjectMeta = null;
         if (cfg.new) { // class, struct
             if (cfg.inheritance) { // class
+                if (cfg.params.inherits) {
+                    if (_isStatic(cfg.params.inherits) || _isSingleton(cfg.params.inherits) || _isSealed(cfg.params.inherits)) {
+                        throw _Exception.InvalidDefinition(`Cannot inherit from a sealed, static or singleton type. (${cfg.params.inherits[meta].name})`, builder); 
+                    }
+                }
                 _Object = function(_flag, _static, ...args) {
                     return buildTypeInstance(cfg, _Object, {}, _flag, _static, ...args);
                 };
@@ -6507,7 +6607,7 @@ const { Reflector } = flair;
 const { Serializer } = flair;
 const { Tasks } = flair;
 const { TaskInfo } = flair.Tasks;
-const { as, is, isComplies, isDerivedFrom, isImplements, isInstanceOf, isMixed } = flair;
+const { as, is, isComplies, isDerivedFrom, isAbstract, isSealed, isStatic, isSingleton, isDeprecated, isImplements, isInstanceOf, isMixed } = flair;
 const { getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf, getTypeName, typeOf } = flair;
 const { dispose, using } = flair;
 const { Args, Exception, noop, nip, nim, nie, event } = flair;
@@ -6864,6 +6964,6 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.10","lupdate":"Sun, 24 Mar 2019 23:17:26 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.12","lupdate":"Sun, 24 Mar 2019 23:41:45 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
 
 })();

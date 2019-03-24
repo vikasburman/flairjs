@@ -116,6 +116,11 @@
     <!-- inject: ./(bundle)/types/get/getTypeName.js -->    
     <!-- inject: ./(bundle)/types/get/ns.js -->    
     <!-- inject: ./(bundle)/types/check/isDerivedFrom.js --> 
+    <!-- inject: ./(bundle)/types/check/isAbstract.js --> 
+    <!-- inject: ./(bundle)/types/check/isSealed.js --> 
+    <!-- inject: ./(bundle)/types/check/isStatic.js --> 
+    <!-- inject: ./(bundle)/types/check/isSingleton.js --> 
+    <!-- inject: ./(bundle)/types/check/isDeprecated.js --> 
     <!-- inject: ./(bundle)/types/check/isInstanceOf.js -->  
     <!-- inject: ./(bundle)/types/check/as.js --> 
     <!-- inject: ./(bundle)/types/check/isComplies.js -->  

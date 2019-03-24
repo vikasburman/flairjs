@@ -1675,6 +1675,11 @@ const builder = (cfg) => {
         _ObjectMeta = null;
     if (cfg.new) { // class, struct
         if (cfg.inheritance) { // class
+            if (cfg.params.inherits) {
+                if (_isStatic(cfg.params.inherits) || _isSingleton(cfg.params.inherits) || _isSealed(cfg.params.inherits)) {
+                    throw _Exception.InvalidDefinition(`Cannot inherit from a sealed, static or singleton type. (${cfg.params.inherits[meta].name})`, builder); 
+                }
+            }
             _Object = function(_flag, _static, ...args) {
                 return buildTypeInstance(cfg, _Object, {}, _flag, _static, ...args);
             };
