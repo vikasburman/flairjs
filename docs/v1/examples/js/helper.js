@@ -25,7 +25,6 @@ new Vue({
 const { Class, Struct, Enum, Interface, Mixin } = flair;
 const { Aspects } = flair;
 const { AppDomain } = flair;
-const __currentContextName = flair.AppDomain.context.current().name;
 const { $$, attr } = flair;
 const { bring, Container, include } = flair;
 const { Port } = flair;
