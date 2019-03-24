@@ -622,7 +622,7 @@ const build = (options, buildDone) => {
         `const { Tasks } = flair;\n` +
         `const { TaskInfo } = flair.Tasks;\n` +
         `const { as, is, isComplies, isDerivedFrom, isImplements, isInstanceOf, isMixed } = flair;\n` +
-        `const { getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf, typeOf } = flair;\n` +
+        `const { getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf, getTypeName, typeOf } = flair;\n` +
         `const { dispose, using } = flair;\n` +
         `const { Args, Exception, noop, nip, nim, nie, event } = flair;\n` +
         `const { env } = flair.options;\n` +
