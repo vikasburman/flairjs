@@ -5,7 +5,7 @@
   ],
     "post": [
         { "src": "./dist/flair.js", 
-          "dest": "./docs/edge/examples/js/flair.js",
+          "dest": "./docs/v1/examples/js/flair.js",
           "exclude": {}
         }
     ]

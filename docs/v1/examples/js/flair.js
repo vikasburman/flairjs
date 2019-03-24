@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.25.98
- *  Sun, 24 Mar 2019 13:59:37 GMT
+ *  Version: 0.26.0
+ *  Sun, 24 Mar 2019 18:30:21 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -80,10 +80,10 @@
         name: 'flair',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.25.98',
+        version: '0.26.0',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 24 Mar 2019 13:59:37 GMT')
+        lupdate: new Date('Sun, 24 Mar 2019 18:30:21 GMT')
     });  
     
     flair.members = [];
@@ -4180,9 +4180,6 @@
             }
         }
     
-        // building started
-        isBuildingObj = true; 
-    
         // define proxy for clean syntax inside factory
         proxy = new Proxy({}, {
             get: (_obj, name) => { 
@@ -4226,6 +4223,9 @@
             }
         });
     
+        // building started
+        isBuildingObj = true; 
+    
         // apply mixins
         if (cfg.mixins && def.mixins && !typeDef.staticConstructionCycle) { 
             for(let mixin of def.mixins) {
@@ -4243,6 +4243,9 @@
     
         // clear any (by user's error left out) attributes, so that are not added by mistake elsewhere
         _attr.clear();
+    
+        // building ends
+        isBuildingObj = false;    
     
         // move constructor and dispose out of main object
         if (params.isTopLevelInstance) { // so that till now, a normal override behavior can be applied to these functions as well
@@ -4326,9 +4329,6 @@
             exposed_objMeta = Object.freeze(exposed_objMeta); // freeze meta information
             exposed_obj = Object.seal(exposed_obj);
         }
-    
-        // building ends
-        isBuildingObj = false;     
     
         // return
         return exposed_obj;
@@ -6838,6 +6838,6 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.25.98","lupdate":"Sun, 24 Mar 2019 13:59:37 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.0","lupdate":"Sun, 24 Mar 2019 18:30:21 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
 
 })();
