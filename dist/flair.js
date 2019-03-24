@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.26.14
- *  Sun, 24 Mar 2019 23:47:35 GMT
+ *  Version: 0.26.15
+ *  Sun, 24 Mar 2019 23:48:48 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -80,10 +80,10 @@
         name: 'flair',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.26.14',
+        version: '0.26.15',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 24 Mar 2019 23:47:35 GMT')
+        lupdate: new Date('Sun, 24 Mar 2019 23:48:48 GMT')
     });  
     
     flair.members = [];
@@ -3058,7 +3058,7 @@
             result = (new Function("try {return (" + constraintsLex + ");}catch(e){return false;}")());
             if (!result) {
                 // TODO: send telemetry of _list, so it can be debugged
-                throw _Exception.InvalidOperation(`${appliedAttr.cfg.isModifier ? 'Modifier' : 'Attribute'} ${appliedAttr.name} could not be applied. (${def.typeName}::${memberName})`, builder);
+                throw _Exception.InvalidOperation(`${appliedAttr.cfg.isModifier ? 'Modifier' : 'Attribute'} ${appliedAttr.name} could not be applied. (${def.name}::${memberName})`, builder);
             }
     
             // return
@@ -6964,6 +6964,6 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.14","lupdate":"Sun, 24 Mar 2019 23:47:35 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.15","lupdate":"Sun, 24 Mar 2019 23:48:48 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
 
 })();
