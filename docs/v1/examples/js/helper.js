@@ -9,7 +9,7 @@ let viewlog = [];
 
 // logger function
 const logger = function(msg, addBreak) {
-  if (addBreak) { viewlog.push('\t'); }
+  if (addBreak) { viewlog.push('\n'); viewlog.push('\n'); viewlog.push('\n'); }
 	viewlog.push(msg);
 }
 
