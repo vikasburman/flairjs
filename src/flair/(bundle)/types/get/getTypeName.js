@@ -10,8 +10,8 @@
 const _getTypeName = (obj) => {
     let args = _Args('obj: flair')(obj); args.throwOnError(_getTypeName);
 
-    let objMeta = obj[meta];
-    return (objMeta ? (objMeta.name || '') : '');
+    let typeMeta = obj[meta].Type ? obj[meta].Type[meta] : obj[meta];
+    return (typeMeta ? (typeMeta.name || '') : '');
 };
 
 // attach to flair
