@@ -17,7 +17,7 @@
             
             { "id": "basic/qowbu3tj", "title": "Derived Class", "tabs": "js", 
             "desc": "Single parent inheritance with member overriding.", 
-            "tips": ["<code>$$(...)</code> function defines the scope identifiers and attributes for following member definition.",
+            "tips": ["<code>$$(...)</code> function defines the scope identifiers and attributes for member definition following it.",
             "<code>virtual</code> members can be overridden in derived class using <code>override</code>."] },
             
             { "id": "basic/do40h239", "title": "Abstract Class and Members", "tabs": "js", 
