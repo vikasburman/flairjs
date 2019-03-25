@@ -3,23 +3,28 @@
     "path": "//jsfiddle.net/vikasburman/",
     "groups": [
         { "id": "basic", "title": "Basic", "list": [
+            
             { "id": "basic/qh4batz1", "title": "Hello World!", "tabs": "html,js", 
             "desc": "The customary, there-you-go example.", 
             "tips": ["<code>flair</code> is a global variable added by loading flair.js library.",
             "Use <code>flair.info</code> to check version details."] },
+            
             { "id": "basic/rjvpc39e", "title": "Class", "tabs": "js", 
-                "desc": "Simple class definition, the flair way.", 
-                "tips": ["Flair keywords are available when code is bundled inside flair assembly, for other uses, include all required keywords as <br/><code>const { Class, typeOf } = flair;</code> before their use.",
-                "Note <code>Class</code> starts with capital 'C', and 'O' in <code>typeOf</code> is capital as well. Therefore no conflict with ES6's 'class' and javascript's 'typeof'.",
-                "<code>logger()</code> is not a flair keyword, but a helper function to show result value here."] },
+            "desc": "Simple class definition, the flair way.", 
+            "tips": ["Flair keywords are available when code is bundled inside flair assembly, for other uses, include all required keywords as <br/><code>const { Class, typeOf } = flair;</code> before their use.",
+            "Note <code>Class</code> starts with capital 'C', and 'O' in <code>typeOf</code> is capital as well. Therefore no conflict with ES6's 'class' and javascript's 'typeof'.",
+            "<code>logger()</code> is not a flair keyword, but a helper function to show result value here."] },
+            
             { "id": "basic/qowbu3tj", "title": "Derived Class", "tabs": "js", 
-                "desc": "Single parent inheritance with member overriding.", 
-                "tips": ["<code>$$(...)</code> function defines the scope identifiers and attributes for following member definition.",
-                "<code>abstract</code> and <code>virtual</code> members can be overridden in derived class using <code>override</code>.",
-                "Further overriding of a member can be stopped using <code>sealed</code> when overriding."] },
+            "desc": "Single parent inheritance with member overriding.", 
+            "tips": ["<code>$$(...)</code> function defines the scope identifiers and attributes for following member definition.",
+            "<code>abstract</code> and <code>virtual</code> members can be overridden in derived class using <code>override</code>.",
+            "Further overriding of a member can be stopped using <code>sealed</code> when overriding."] },
+            
             { "id": "basic/do40h239", "title": "Abstract Class and Members", "tabs": "js", 
-                "desc": "Abstract class and/or abstract members with controlled overriding.", 
-                "tips": ["Further deriving from a class can be stopped using <code>sealed</code> on class."] }
+            "desc": "Abstract class and/or abstract members with controlled overriding.", 
+            "tips": ["Further deriving from a class can be stopped using <code>sealed</code> on class."] }
+            
             ]},
         { "id": "advanced", "title": "Advanced", "list": [
         ]}
