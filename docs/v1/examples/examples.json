@@ -13,7 +13,7 @@
                 "Note <code>Class</code> starts with capital 'C', and 'O' in <code>typeOf</code> is capital as well. Therefore no conflict with ES6's 'class' and javascript's 'typeof'.",
                 "<code>logger()</code> is not a flair keyword, but a helper function to show result value here."] },
             { "id": "basic/qowbu3tj", "title": "Derived Class", "tabs": "js", 
-                "desc": "Single parent inheritance with controlled member overriding.", 
+                "desc": "Single parent inheritance with member overriding.", 
                 "tips": ["<code>$$(...)</code> function defines the scope identifiers and attributes for following member definition.",
                 "<code>abstract</code> and <code>virtual</code> members can be overridden in derived class using <code>override</code>.",
                 "Further overriding of a member can be stopped using <code>sealed</code> when overriding."] },
