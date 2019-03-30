@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.26.27
- *  Sat, 30 Mar 2019 19:33:00 GMT
+ *  Version: 0.26.28
+ *  Sat, 30 Mar 2019 19:42:54 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -80,10 +80,10 @@
         name: 'flair',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.26.27',
+        version: '0.26.28',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sat, 30 Mar 2019 19:33:00 GMT')
+        lupdate: new Date('Sat, 30 Mar 2019 19:42:54 GMT')
     });  
     
     flair.members = [];
@@ -7241,6 +7241,6 @@ Class('BootEngine', function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.27","lupdate":"Sat, 30 Mar 2019 19:33:00 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Host","flair.app.App","Aspect","Attribute","IDisposable","IProgressReporter","Task","flair.app.BootEngine"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.28","lupdate":"Sat, 30 Mar 2019 19:42:54 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Host","flair.app.App","Aspect","Attribute","IDisposable","IProgressReporter","Task","flair.app.BootEngine"],"resources":[],"assets":[],"routes":[]}');
 
 })();
