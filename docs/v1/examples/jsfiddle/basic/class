@@ -1,5 +1,11 @@
+INCLUDE:
+https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.8/vue.min.js
+https://flairjs.com/v1/examples/js/flair.js
+https://flairjs.com/v1/examples/js/helper.js
+
 CSS:
 HTML:
+
 JS:
 
 let Vehicle = Class('Vehicle', function() {

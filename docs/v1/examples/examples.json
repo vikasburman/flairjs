@@ -13,7 +13,7 @@
             "desc": "Simple class definition, the flair way.", 
             "tips": ["Flair keywords are available when code is bundled inside flair assembly, for other uses, include all required keywords as <br/><code>const { Class, typeOf } = flair;</code> before their use.",
             "Note <code>Class</code> starts with capital 'C', and 'O' in <code>typeOf</code> is capital as well. Therefore no conflict with ES6's 'class' and javascript's 'typeof'.",
-            "<code>logger()</code> is not a flair keyword, but a helper function to show result value here."] },
+            "<code>pr()</code> is not a flair keyword, but a helper function to print lines in result area here."] },
             
             { "id": "basic/qowbu3tj", "title": "Derived Class", "tabs": "js", 
             "desc": "Single parent inheritance with member overriding.", 
