@@ -84,7 +84,7 @@ Here is a quick example:
 
 ```javascript
 
-const { Class, $$, event } = flair;
+const { Class, $$, event, using } = flair;
 
 // define Vehicle class
 let Vehicle = Class('Vehicle', function() {
