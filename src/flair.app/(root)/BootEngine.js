@@ -10,6 +10,7 @@ Class('(auto)', function() {
     this.start = async function (entryPoint) {
         let allBootwares = [],
             mountSpecificBootwares = [];
+        entryPoint = (env.isServer ? (env.isWorker ? '' : entryPoint) : (env.isWorker ? '' : env.global.document.currentScript));
         const setEntryPoint = () => {
             // set entry point for workers
             AppDomain.entryPoint(entryPoint);

@@ -8,10 +8,11 @@ document.firstElementChild.append(el)
 let viewlog = [];
 
 // logger function
-const logger = function(msg, addBreak) {
+const pr = function(msg, addBreak) {
   if (addBreak) { viewlog.push('-'); }
 	viewlog.push(msg);
-}
+};
+
 
 // data binding
 new Vue({
