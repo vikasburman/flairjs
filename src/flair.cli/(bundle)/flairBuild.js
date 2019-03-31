@@ -611,32 +611,29 @@ const build = (options, buildDone) => {
         `'use strict';\n\n` +
         `/* eslint-disable no-unused-vars */\n` +
         `const flair = (typeof global !== 'undefined' ? require('flairjs') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));\n` +
-        `const { Class, Struct, Enum, Interface, Mixin } = flair;\n` +
-        `const { Aspects } = flair;\n` +
-        `const { AppDomain } = flair;\n` +
-        `const __currentContextName = flair.AppDomain.context.current().name;\n` +
-        `const { $$, attr } = flair;\n` +
-        `const { bring, Container, include } = flair;\n` +
-        `const { Port } = flair;\n` +
-        `const { on, post, telemetry } = flair;\n` +
-        `const { Reflector } = flair;\n` +
-        `const { Serializer } = flair;\n` +
-        `const { Tasks } = flair;\n` +
+        `const { Class, Struct, Enum, Interface, Mixin, Aspects, AppDomain, $$, attr, bring, Container, include, Port, on, post, telemetry,\n` +
+        `\t\t\t\tReflector, Serializer, Tasks, as, is, isComplies, isDerivedFrom, isAbstract, isSealed, isStatic, isSingleton, isDeprecated,\n` +
+        `\t\t\t\tisImplements, isInstanceOf, isMixed, getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf,\n` +
+        `\t\t\t\tgetTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;\n` +
         `const { TaskInfo } = flair.Tasks;\n` +
-        `const { as, is, isComplies, isDerivedFrom, isAbstract, isSealed, isStatic, isSingleton, isDeprecated, isImplements, isInstanceOf, isMixed } = flair;\n` +
-        `const { getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf, getTypeName, typeOf } = flair;\n` +
-        `const { dispose, using } = flair;\n` +
-        `const { Args, Exception, noop, nip, nim, nie, event } = flair;\n` +
         `const { env } = flair.options;\n` +
-        `const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;\n` +
-        `const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async } = $$;\n` +
-        `const { $$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$args, $$inject, $$resource, $$asset, $$singleton, $$serialize, $$deprecate, $$session, $$state, $$conditional, $$noserialize, $$ns } = $$;\n` +
-        `/* eslint-enable no-unused-vars */\n` +
+        `const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve,\n` +
+        `\t\t\t\tb64EncodeUnicode, b64DecodeUnicode } = flair.utils;\n` +
+        `const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,\n` +
+        `\t\t\t\t$$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$args, $$inject, $$resource, $$asset, $$singleton, $$serialize,\n` +
+        `\t\t\t\t$$deprecate, $$session, $$state, $$conditional, $$noserialize, $$ns } = $$;\n` +
+        `\n` +
+        `// define current context name\n` +
+        `const __currentContextName = AppDomain.context.current().name;\n` +
         `\n` +
         `// define loadPathOf this assembly\n` +
         `let __currentFile = (env.isServer ? __filename : window.document.currentScript.src.replace(window.document.location.href, './'));\n` +
         `let __currentPath = __currentFile.substr(0, __currentFile.lastIndexOf('/') + 1);\n` +
         `AppDomain.loadPathOf('${options.current.asmName}', __currentPath)\n` +
+        `\n` +
+        `// assembly level error handler\n` +
+        `const __asmError = (err) => { AppDomain.onError(err); };\n` +
+        `/* eslint-enable no-unused-vars */\n` +
         `\n`; 
         appendToFile(closureHeader);        
     };
@@ -660,20 +657,17 @@ const build = (options, buildDone) => {
         }
         // settings is a closure variable of each assembly separately
         if (settings) { 
-            settingsContent = `let settings = JSON.parse('${settings}'); // eslint-disable-line no-unused-vars\n`;
+            settingsContent = `//load assembly settings from config file\nlet settings = JSON.parse('${settings}'); // eslint-disable-line no-unused-vars\n`;
         } else {
             settingsContent = `let settings = {}; // eslint-disable-line no-unused-vars\n`;
         }
         // settings can be defined outside as well, new also
         // default values given in these settings will be overwritten by what is defined in external config file
-        settingsContent += `
-        let settingsReader = flair.Port('settingsReader');
-        if (typeof settingsReader === 'function') {
-            let externalSettings = settingsReader('${options.current.asmName}');
-            if (externalSettings) { settings = Object.assign(settings, externalSettings); }
-        }
-        settings = Object.freeze(settings);
-        `;
+        settingsContent += `let settingsReader = flair.Port('settingsReader');\n`;
+        settingsContent += `if (typeof settingsReader === 'function') {\n`;
+        settingsContent += `let externalSettings = settingsReader('${options.current.asmName}');\n`;
+        settingsContent += `if (externalSettings) { settings = Object.assign(settings, externalSettings); }}\n`;
+        settingsContent += `settings = Object.freeze(settings);\n`;
         appendToFile(settingsContent);
     };
     const appendTypes = (done) => {
@@ -682,7 +676,7 @@ const build = (options, buildDone) => {
         logger(0, 'types', '');
 
         // activate current file name
-        let dump = `flair.AppDomain.context.current().currentAssemblyBeingLoaded('${options.current.ado.file}');\n`;
+        let dump = `AppDomain.context.current().currentAssemblyBeingLoaded('${options.current.ado.file}');\n`;
         appendToFile(dump);
 
         // append types
@@ -721,7 +715,8 @@ const build = (options, buildDone) => {
 
             // wrap type in its own closure, so it's own constants etc defind on top of file
             // does not conflict with some other type's constants
-            content = `\n(async () => { // ${thisFile}\n'use strict';\n${content}\n})();\n`;
+            //content = `\n(async () => { // ${thisFile}\n${content}\n})();\n`;
+            content = `\n(async () => { // ${thisFile}\ntry{\n${content}} catch(err) {\n\t__asmError(err);\n}\n})();\n`;
 
             // append content to file
             appendToFile(content);
@@ -729,7 +724,7 @@ const build = (options, buildDone) => {
         options.current.ado.types = justNames; // update types list
 
         // deactivate current file name
-        dump = `\nflair.AppDomain.context.current().currentAssemblyBeingLoaded('');\n`;
+        dump = `\nAppDomain.context.current().currentAssemblyBeingLoaded('');\n`;
         appendToFile(dump);
 
         // done
@@ -774,7 +769,7 @@ const build = (options, buildDone) => {
             };
 
             // eslint-disable-next-line no-useless-escape
-            let dump = `\n(() => { \/\/ ${rdo.file}\n\tlet rdo = JSON.parse('${JSON.stringify(rdo)}'); \n\tflair.AppDomain.context.current().registerResource(rdo);}\n)();\n`;
+            let dump = `\n(() => { \/\/ ${rdo.file}\n\tlet rdo = JSON.parse('${JSON.stringify(rdo)}'); \n\tAppDomain.context.current().registerResource(rdo);}\n)();\n`;
             appendToFile(dump);
 
             appendResources(done, justNames2); // pick next
@@ -828,7 +823,7 @@ const build = (options, buildDone) => {
 
         logger(1, '', './' + nsRoute.file); 
         // eslint-disable-next-line no-useless-escape
-        let dump = `\n(() => { \/\/ ${nsRoute.file}\n\tlet routes = JSON.parse('${JSON.stringify(nsRoute.data)}'); \n\tflair.AppDomain.context.current().registerRoutes(...routes);}\n)();\n`;
+        let dump = `\n(() => { \/\/ ${nsRoute.file}\n\tlet routes = JSON.parse('${JSON.stringify(nsRoute.data)}'); \n\tAppDomain.context.current().registerRoutes(...routes);}\n)();\n`;
         appendToFile(dump);
 
         appendRoutes(done, justNames3); // pick next
@@ -837,7 +832,7 @@ const build = (options, buildDone) => {
         if (options.skipRegistrationsFor.indexOf(options.current.asmName) !== -1) { return; } // skip for special cases
 
         logger(0, 'self-reg', 'yes'); 
-        let dump = `\nflair.AppDomain.registerAdo('${JSON.stringify(options.current.ado)}');\n`;
+        let dump = `\nAppDomain.registerAdo('${JSON.stringify(options.current.ado)}');\n`;
         appendToFile(dump);
     };
     const pack = (done) => {

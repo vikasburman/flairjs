@@ -7,29 +7,23 @@ const { Bootware } = ns('flair.app');
 $$('static');
 $$('ns', '(auto)');
 Class('(auto)', function() {
-    this.start = async function (entryPoint) {
+    this.start = async function () {
         let allBootwares = [],
-            mountSpecificBootwares = [],
-            currentScript = (env.isServer ? '' : window.document.scripts[window.document.scripts.length - 1].src);
-        entryPoint = (env.isServer ? (env.isWorker ? '' : entryPoint) : (env.isWorker ? '' : currentScript));
-        const setEntryPoint = () => {
-            // set entry point for workers
-            AppDomain.entryPoint(entryPoint);
-        };
+            mountSpecificBootwares = [];
         const loadFilesAndBootwares = async () => {
             // load bootwares, scripts and preambles
             let Item = null,
-                Bootware = null,
+                Bw = null,
                 bw = null;
             for(let item of settings.load) {
                 // get bootware (it could be a bootware, a simple script or a preamble)
                 item = which(item); // server/client specific version
                 if (item) { // in case no item is set for either server/client
                     Item = await include(item);
-                    if (Item) {
-                        Bootware = as(Item, Bootware);
-                        if (Bootware) { // if boot
-                            bw = new Bootware(); 
+                    if (Item && typeof Item !== 'boolean') {
+                        Bw = as(Item, Bootware);
+                        if (Bw) { // if boot
+                            bw = new Bw(); 
                             allBootwares.push(bw); // push in array, so boot and ready would be called for them
                             if (bw.info.isMountSpecific) { // if bootware is mount specific bootware - means can run once for each mount
                                 mountSpecificBootwares.push(bw);
@@ -134,7 +128,6 @@ Class('(auto)', function() {
             await AppDomain.app().ready();
         };
           
-        setEntryPoint();
         await loadFilesAndBootwares();
         await boot();
         await start();

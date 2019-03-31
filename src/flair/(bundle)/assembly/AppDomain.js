@@ -13,6 +13,7 @@ const AppDomain = function(name) {
         allADOs = [],
         loadPaths = {},
         entryPoint = '',
+        rootPath = '',
         configFileJSON = null,
         app = null,
         host = null,
@@ -66,6 +67,8 @@ const AppDomain = function(name) {
             contexts = {};
             domains = {};
             loadPaths = {};
+            entryPoint = '';
+            rootPath = '';
             allADOs = [];
         }
     };
@@ -164,7 +167,7 @@ const AppDomain = function(name) {
     this.config = (configFile) => {
         if (!configFileJSON && configFile) { // load only when not already loaded
             return new Promise((resolve, reject) => {
-                loadFile(configFile).then((json) => {
+                _include(configFile).then((json) => {
                     configFileJSON = json;
                     resolve(Object.assign({}, configFileJSON)); // return a copy
                 }).catch(reject);
@@ -202,6 +205,18 @@ const AppDomain = function(name) {
         }
         return loadPaths[file] || '';
     };
+    this.root = (path) => {
+        if (!rootPath) {
+            if (typeof path !== 'string') { throw _Exception.InvalidArgument('path', this.root); }
+            rootPath = path;
+            if (!rootPath.endsWith('/')) { rootPath += '/'; }
+        }
+        return rootPath;
+    };
+    this.resolvePath = (path) => {
+        if (typeof path !== 'string') { throw _Exception.InvalidArgument('path', this.resolvePath); }
+        return path.replace('./', this.root());
+    };
 
     // scripts
     this.loadScripts = (...scripts) => {
@@ -214,6 +229,15 @@ const AppDomain = function(name) {
                 reject(err);
             }
         });
+    };
+
+    // error router
+    this.onError = (err) => {
+        if (app) {
+            app.onError(err);
+        } else {
+            throw err;
+        }
     };
 };
 

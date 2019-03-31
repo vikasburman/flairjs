@@ -50,6 +50,7 @@
  *      
  *          NOTE: <path> for a file MUST start with './' to represent this is a file path from root
  *                if ./ is not used in path - it will be assumed to be a path inside a module and on client ./modules/ will be prefixed to reach to the file inside module
+ *                on server if file started with './', it will be replaced with '' instead of './' to represents root
  * 
  *          NOTE: Each dep definition can also be defined for contextual consideration as:
  *          '<depA> | <depB>'
@@ -133,6 +134,7 @@ const _bring = (deps, fn) => {
             let option4 = (done) => {
                 if (_dep.startsWith('./')) { // all files must start with ./
                     let ext = _dep.substr(_dep.lastIndexOf('.') + 1).toLowerCase();
+                    _dep = _AppDomain.resolvePath(_dep);
                     if (ext) {
                         if (ext === 'js' || ext === 'mjs') {
                             // pick contextual file for DEBUG/PROD
@@ -145,11 +147,29 @@ const _bring = (deps, fn) => {
                                 throw _Exception.OperationFailed(`Module/File could not be loaded. (${_dep})`, err, _bring);
                             });
                         } else { // some other file (could be json, css, html, etc.)
-                            loadFile(_dep).then((content) => {
-                                _resolved = content; done();
-                            }).catch((err) => {
-                                throw _Exception.OperationFailed(`File could not be loaded. (${_dep})`, err, _bring);
-                            });
+                            if (isServer) {
+                                if (ext === 'json') {
+                                    loadModule(_dep).then((content) => { 
+                                        _resolved = content || true; done(); // it may or may not give a content
+                                    }).catch((err) => {
+                                        throw _Exception.OperationFailed(`Local Module/File could not be loaded. (${_dep})`, err, _bring);
+                                    });
+                                } else { // read it as file
+                                    let fs = require('fs');
+                                    try {
+                                        _resolved = fs.readFileSync(_dep);
+                                        done();
+                                    } catch (err) {
+                                        throw _Exception.OperationFailed(`Local File could not be read. (${_dep})`, err, _bring);
+                                    }
+                                }
+                            } else {
+                                loadFile(_dep).then((content) => {
+                                    _resolved = content; done();
+                                }).catch((err) => {
+                                    throw _Exception.OperationFailed(`File could not be loaded. (${_dep})`, err, _bring);
+                                });
+                            }
                         }
                     } else { // not a file
                         done();

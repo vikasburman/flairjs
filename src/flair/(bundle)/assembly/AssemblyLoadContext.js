@@ -298,7 +298,14 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
     };
     this.allAssemblies = (isRaw) => { 
         if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.allAssemblies); }
-        return (isRaw ? Object.assign({}, asmFiles) : Object.keys(asmFiles));
+        if (isRaw) {
+            let all = [],
+                keys = Object.keys(asmFiles);
+            for(let r in keys) { all.push(asmFiles[r]); }
+            return all;
+        } else {
+            return Object.keys(asmFiles);
+        }
     };
 
     // resources
@@ -343,7 +350,14 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
     };     
     this.allResources = (isRaw) => { 
         if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.allResources); }
-        return (isRaw ? Object.assign({}, alcResources) : Object.keys(alcResources));
+        if (isRaw) {
+            let all = [],
+                keys = Object.keys(alcResources);
+            for(let r in keys) { all.push(alcResources[r]); }
+            return all;
+        } else {
+            return Object.keys(alcResources);
+        }
     };
 
     // routes
@@ -390,7 +404,14 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
     };     
     this.allRoutes = (isRaw) => { 
         if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.allRoutes); }
-        return (isRaw ? Object.assign({}, alcRoutes) : Object.keys(alcRoutes));
+        if (isRaw) {
+            let all = [],
+                keys = Object.keys(alcRoutes);
+            for(let r in keys) { all.push(alcRoutes[r]); }
+            return all;
+        } else {
+            return Object.keys(alcRoutes);
+        }
     };
     
     // state (just to be in sync with proxy)

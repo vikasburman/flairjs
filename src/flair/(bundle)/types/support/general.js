@@ -8,7 +8,7 @@ const which = (def, isFile) => {
     if (isFile) { // debug/prod specific decision
         // pick minified or dev version
         if (def.indexOf('{.min}') !== -1) {
-            if (flair.options.env.isProd) {
+            if (options.env.isProd) {
                 return def.replace('{.min}', '.min'); // a{.min}.js => a.min.js
             } else {
                 return def.replace('{.min}', ''); // a{.min}.js => a.js

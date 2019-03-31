@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.27.26
- *  Sun, 31 Mar 2019 17:20:11 GMT
+ *  Version: 0.30.10
+ *  Sun, 31 Mar 2019 23:55:44 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -34,7 +34,6 @@
     // locals
     let isServer = new Function("try {return this===global;}catch(e){return false;}")(),
         isWorker = isServer ? (!require('worker_threads').isMainThread) : (typeof WorkerGlobalScope !== 'undefined' ? true : false),
-        flair = {},
         currentFile = (isServer ? __filename : window.document.currentScript.src),
         sym = [],
         meta = Symbol('[meta]'),
@@ -43,7 +42,35 @@
         options = {},
         flairTypes = ['class', 'enum', 'interface', 'mixin', 'struct'],
         flairInstances = ['instance', 'sinstance'],
-        argsString = '';
+        argsString = '',
+        isAppStarted = false;
+
+    // flairapp bootstrapper
+    let flair = async (configFile, entryPoint) => {
+        if (!isAppStarted) {
+            isAppStarted = true;
+
+            // settings
+            const { AppDomain, include, env } = flair;
+            let __currentScript = (env.isServer ? '' : window.document.scripts[window.document.scripts.length - 1].src),
+                __entryPoint = (env.isServer ? (env.isWorker ? '' : entryPoint) : (env.isWorker ? '' : __currentScript)),
+                __rootPath = (env.isServer ? (__entryPoint.substr(0, __entryPoint.lastIndexOf('/') + 1)) : './'),
+                __preamble = 'flairjs/preamble.js',
+                __config = configFile,
+                __BootEngine = 'flair.app.BootEngine',
+                be = null;
+
+            // initialize
+            AppDomain.root(__rootPath);
+            AppDomain.entryPoint(__entryPoint);
+            await AppDomain.config(__config);
+            await include(__preamble);
+            be = await include(__BootEngine);
+
+            // start boot engine
+            be.start();
+        }
+    };
 
     // read symbols from environment
     if (isServer) {
@@ -82,10 +109,10 @@
         name: 'flair',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.27.26',
+        version: '0.30.10',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 31 Mar 2019 17:20:11 GMT')
+        lupdate: new Date('Sun, 31 Mar 2019 23:55:44 GMT')
     });  
     
     flair.members = [];
@@ -242,7 +269,7 @@
         if (isFile) { // debug/prod specific decision
             // pick minified or dev version
             if (def.indexOf('{.min}') !== -1) {
-                if (flair.options.env.isProd) {
+                if (options.env.isProd) {
                     return def.replace('{.min}', '.min'); // a{.min}.js => a.min.js
                 } else {
                     return def.replace('{.min}', ''); // a{.min}.js => a.js
@@ -1095,7 +1122,14 @@
         };
         this.allAssemblies = (isRaw) => { 
             if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.allAssemblies); }
-            return (isRaw ? Object.assign({}, asmFiles) : Object.keys(asmFiles));
+            if (isRaw) {
+                let all = [],
+                    keys = Object.keys(asmFiles);
+                for(let r in keys) { all.push(asmFiles[r]); }
+                return all;
+            } else {
+                return Object.keys(asmFiles);
+            }
         };
     
         // resources
@@ -1140,7 +1174,14 @@
         };     
         this.allResources = (isRaw) => { 
             if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.allResources); }
-            return (isRaw ? Object.assign({}, alcResources) : Object.keys(alcResources));
+            if (isRaw) {
+                let all = [],
+                    keys = Object.keys(alcResources);
+                for(let r in keys) { all.push(alcResources[r]); }
+                return all;
+            } else {
+                return Object.keys(alcResources);
+            }
         };
     
         // routes
@@ -1187,7 +1228,14 @@
         };     
         this.allRoutes = (isRaw) => { 
             if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.allRoutes); }
-            return (isRaw ? Object.assign({}, alcRoutes) : Object.keys(alcRoutes));
+            if (isRaw) {
+                let all = [],
+                    keys = Object.keys(alcRoutes);
+                for(let r in keys) { all.push(alcRoutes[r]); }
+                return all;
+            } else {
+                return Object.keys(alcRoutes);
+            }
         };
         
         // state (just to be in sync with proxy)
@@ -1673,6 +1721,7 @@
             allADOs = [],
             loadPaths = {},
             entryPoint = '',
+            rootPath = '',
             configFileJSON = null,
             app = null,
             host = null,
@@ -1726,6 +1775,8 @@
                 contexts = {};
                 domains = {};
                 loadPaths = {};
+                entryPoint = '';
+                rootPath = '';
                 allADOs = [];
             }
         };
@@ -1824,7 +1875,7 @@
         this.config = (configFile) => {
             if (!configFileJSON && configFile) { // load only when not already loaded
                 return new Promise((resolve, reject) => {
-                    loadFile(configFile).then((json) => {
+                    _include(configFile).then((json) => {
                         configFileJSON = json;
                         resolve(Object.assign({}, configFileJSON)); // return a copy
                     }).catch(reject);
@@ -1862,6 +1913,18 @@
             }
             return loadPaths[file] || '';
         };
+        this.root = (path) => {
+            if (!rootPath) {
+                if (typeof path !== 'string') { throw _Exception.InvalidArgument('path', this.root); }
+                rootPath = path;
+                if (!rootPath.endsWith('/')) { rootPath += '/'; }
+            }
+            return rootPath;
+        };
+        this.resolvePath = (path) => {
+            if (typeof path !== 'string') { throw _Exception.InvalidArgument('path', this.resolvePath); }
+            return path.replace('./', this.root());
+        };
     
         // scripts
         this.loadScripts = (...scripts) => {
@@ -1874,6 +1937,15 @@
                     reject(err);
                 }
             });
+        };
+    
+        // error router
+        this.onError = (err) => {
+            if (app) {
+                app.onError(err);
+            } else {
+                throw err;
+            }
         };
     };
     
@@ -2450,6 +2522,7 @@
      *      
      *          NOTE: <path> for a file MUST start with './' to represent this is a file path from root
      *                if ./ is not used in path - it will be assumed to be a path inside a module and on client ./modules/ will be prefixed to reach to the file inside module
+     *                on server if file started with './', it will be replaced with '' instead of './' to represents root
      * 
      *          NOTE: Each dep definition can also be defined for contextual consideration as:
      *          '<depA> | <depB>'
@@ -2533,6 +2606,7 @@
                 let option4 = (done) => {
                     if (_dep.startsWith('./')) { // all files must start with ./
                         let ext = _dep.substr(_dep.lastIndexOf('.') + 1).toLowerCase();
+                        _dep = _AppDomain.resolvePath(_dep);
                         if (ext) {
                             if (ext === 'js' || ext === 'mjs') {
                                 // pick contextual file for DEBUG/PROD
@@ -2545,11 +2619,29 @@
                                     throw _Exception.OperationFailed(`Module/File could not be loaded. (${_dep})`, err, _bring);
                                 });
                             } else { // some other file (could be json, css, html, etc.)
-                                loadFile(_dep).then((content) => {
-                                    _resolved = content; done();
-                                }).catch((err) => {
-                                    throw _Exception.OperationFailed(`File could not be loaded. (${_dep})`, err, _bring);
-                                });
+                                if (isServer) {
+                                    if (ext === 'json') {
+                                        loadModule(_dep).then((content) => { 
+                                            _resolved = content || true; done(); // it may or may not give a content
+                                        }).catch((err) => {
+                                            throw _Exception.OperationFailed(`Local Module/File could not be loaded. (${_dep})`, err, _bring);
+                                        });
+                                    } else { // read it as file
+                                        let fs = require('fs');
+                                        try {
+                                            _resolved = fs.readFileSync(_dep);
+                                            done();
+                                        } catch (err) {
+                                            throw _Exception.OperationFailed(`Local File could not be read. (${_dep})`, err, _bring);
+                                        }
+                                    }
+                                } else {
+                                    loadFile(_dep).then((content) => {
+                                        _resolved = content; done();
+                                    }).catch((err) => {
+                                        throw _Exception.OperationFailed(`File could not be loaded. (${_dep})`, err, _bring);
+                                    });
+                                }
                             }
                         } else { // not a file
                             done();
@@ -6637,45 +6729,40 @@
 
 /* eslint-disable no-unused-vars */
 const flair = (typeof global !== 'undefined' ? require('flairjs') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));
-const { Class, Struct, Enum, Interface, Mixin } = flair;
-const { Aspects } = flair;
-const { AppDomain } = flair;
-const __currentContextName = flair.AppDomain.context.current().name;
-const { $$, attr } = flair;
-const { bring, Container, include } = flair;
-const { Port } = flair;
-const { on, post, telemetry } = flair;
-const { Reflector } = flair;
-const { Serializer } = flair;
-const { Tasks } = flair;
+const { Class, Struct, Enum, Interface, Mixin, Aspects, AppDomain, $$, attr, bring, Container, include, Port, on, post, telemetry,
+				Reflector, Serializer, Tasks, as, is, isComplies, isDerivedFrom, isAbstract, isSealed, isStatic, isSingleton, isDeprecated,
+				isImplements, isInstanceOf, isMixed, getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf,
+				getTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;
 const { TaskInfo } = flair.Tasks;
-const { as, is, isComplies, isDerivedFrom, isAbstract, isSealed, isStatic, isSingleton, isDeprecated, isImplements, isInstanceOf, isMixed } = flair;
-const { getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf, getTypeName, typeOf } = flair;
-const { dispose, using } = flair;
-const { Args, Exception, noop, nip, nim, nie, event } = flair;
 const { env } = flair.options;
-const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
-const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async } = $$;
-const { $$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$args, $$inject, $$resource, $$asset, $$singleton, $$serialize, $$deprecate, $$session, $$state, $$conditional, $$noserialize, $$ns } = $$;
-/* eslint-enable no-unused-vars */
+const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve,
+				b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
+const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,
+				$$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$args, $$inject, $$resource, $$asset, $$singleton, $$serialize,
+				$$deprecate, $$session, $$state, $$conditional, $$noserialize, $$ns } = $$;
+
+// define current context name
+const __currentContextName = AppDomain.context.current().name;
 
 // define loadPathOf this assembly
 let __currentFile = (env.isServer ? __filename : window.document.currentScript.src.replace(window.document.location.href, './'));
 let __currentPath = __currentFile.substr(0, __currentFile.lastIndexOf('/') + 1);
 AppDomain.loadPathOf('flair', __currentPath)
 
-let settings = {}; // eslint-disable-line no-unused-vars
+// assembly level error handler
+const __asmError = (err) => { AppDomain.onError(err); };
+/* eslint-enable no-unused-vars */
 
-        let settingsReader = flair.Port('settingsReader');
-        if (typeof settingsReader === 'function') {
-            let externalSettings = settingsReader('flair');
-            if (externalSettings) { settings = Object.assign(settings, externalSettings); }
-        }
-        settings = Object.freeze(settings);
-        flair.AppDomain.context.current().currentAssemblyBeingLoaded('./flair{.min}.js');
+let settings = {}; // eslint-disable-line no-unused-vars
+let settingsReader = flair.Port('settingsReader');
+if (typeof settingsReader === 'function') {
+let externalSettings = settingsReader('flair');
+if (externalSettings) { settings = Object.assign(settings, externalSettings); }}
+settings = Object.freeze(settings);
+AppDomain.context.current().currentAssemblyBeingLoaded('./flair{.min}.js');
 
 (async () => { // ./src/flair/(root)/@1-IDisposable.js
-'use strict';
+try{
 /**
  * @name IDisposable
  * @description IDisposable interface
@@ -6684,11 +6771,13 @@ $$('ns', '(root)');
 Interface('IDisposable', function() {
     this.dispose = nim;
 });
-
+} catch(err) {
+	__asmError(err);
+}
 })();
 
 (async () => { // ./src/flair/(root)/Aspect.js
-'use strict';
+try{
 /**
  * @name Aspect
  * @description Aspect base class.
@@ -6748,11 +6837,13 @@ Class('Aspect', function() {
     $$('virtual');
     this.after = nim;
 });
-
+} catch(err) {
+	__asmError(err);
+}
 })();
 
 (async () => { // ./src/flair/(root)/Attribute.js
-'use strict';
+try{
 /**
  * @name Attribute
  * @description Attribute base class.
@@ -6860,11 +6951,13 @@ Class('Attribute', function() {
     this.decorateEvent = nim;
 });
 
-
+} catch(err) {
+	__asmError(err);
+}
 })();
 
 (async () => { // ./src/flair/(root)/IProgressReporter.js
-'use strict';
+try{
 /**
  * @name IProgressReporter
  * @description IProgressReporter interface
@@ -6874,11 +6967,13 @@ Interface('IProgressReporter', function() {
     // progress report
     this.progress = nie;
 });
-
+} catch(err) {
+	__asmError(err);
+}
 })();
 
 (async () => { // ./src/flair/(root)/Task.js
-'use strict';
+try{
 const { IProgressReporter, IDisposable } = ns();
 
 /**
@@ -7006,11 +7101,13 @@ Class('Task', [IProgressReporter, IDisposable], function() {
     this.onRun = nim;
 });
 
-
+} catch(err) {
+	__asmError(err);
+}
 })();
 
-flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
+AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.27.26","lupdate":"Sun, 31 Mar 2019 17:20:11 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["IDisposable","Aspect","Attribute","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.30.10","lupdate":"Sun, 31 Mar 2019 23:55:44 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["IDisposable","Aspect","Attribute","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
 
 })();

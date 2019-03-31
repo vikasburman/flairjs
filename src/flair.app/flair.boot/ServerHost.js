@@ -23,7 +23,7 @@ Class('(auto)', Host, function() {
         base('Express', '4.x');
     };
 
-    this.app = () => { return this.mounts['main']; }  // main express app
+    this.app = () => { return this.mounts['main'].app; }  // main express app
     this.mounts = { // all mounted express apps
         get: () => { return mountedApps; },
         set: noop
@@ -88,7 +88,9 @@ Class('(auto)', Host, function() {
         if (httpSettings.enable) { 
             httpServer = http.createServer(this.app());
             httpServer = httpShutdown(httpServer); // wrap
-            httpServer.on('error', this.error); // pass-through event
+            httpServer.on('error', (err) => {
+                this.error(err);
+            }); // pass-through event
             if (httpSettings.timeout !== -1) { httpServer.timeout = httpSettings.timeout; } // timeout must be in milliseconds
         }
 
@@ -102,41 +104,49 @@ Class('(auto)', Host, function() {
             //  > Rename *.private.pem as key.pem
             //  > Rename *.public.pem as cert.pem
             //  > Update these files at private folder
-            const privateKey  = fs.readFileSync(httpsSettings.privateKey, 'utf8');
-            const publicCert = fs.readFileSync(httpsSettings.publicCert, 'utf8');
+            const privateKey  = fs.readFileSync(AppDomain.resolvePath(httpsSettings.privateKey), 'utf8');
+            const publicCert = fs.readFileSync(AppDomain.resolvePath(httpsSettings.publicCert), 'utf8');
             const credentials = { key: privateKey, cert: publicCert };
 
             httpsServer = https.createServer(credentials, this.app());
             httpsServer = httpShutdown(httpsServer); // wrap
-            httpsServer.on('error', this.error); // pass-through event
+            httpsServer.on('error', (err) => {
+                this.error(err);
+            }); // pass-through event
             if (httpsSettings.timeout !== -1) { httpsServer.timeout = httpsSettings.timeout; } // timeout must be in milliseconds
         }
     };
 
     $$('override');
-    this.ready = async (base) => { // start listening http and https servers
-        base();
+    this.ready = (base) => { // start listening http and https servers
+        return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
+            base();
 
-        // start server
-        let httpPort = httpSettings.port || 80,
-            httpsPort = process.env.PORT || httpsSettings.port || 443;
-        if (httpServer && httpsServer) {
-            httpServer.listen(httpPort, () => {
-                httpServer.listen(httpsPort, () => {
-                    console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version} (http: ${httpPort}, https: ${httpsPort})`); // eslint-disable-line no-console
+            // start server
+            let httpPort = httpSettings.port || 80,
+                httpsPort = process.env.PORT || httpsSettings.port || 443;
+            if (httpServer && httpsServer) {
+                httpServer.listen(httpPort, () => {
+                    httpsServer.listen(httpsPort, () => {
+                        console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version} (http: ${httpPort}, https: ${httpsPort})`); // eslint-disable-line no-console
+                        resolve();
+                    });
                 });
-            });
-        } else if (httpServer) {
-            httpServer.listen(httpPort, () => {
-                console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version} (http: ${httpPort})`); // eslint-disable-line no-console
-            });
-        } else if (httpsServer) {
-            httpsServer.listen(httpsPort, () => {
-                console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version} (https: ${httpsPort})`); // eslint-disable-line no-console
-            });
-        } else {
-            console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version}`); // eslint-disable-line no-console
-        }
+            } else if (httpServer) {
+                httpServer.listen(httpPort, () => {
+                    console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version} (http: ${httpPort})`); // eslint-disable-line no-console
+                    resolve();
+                });
+            } else if (httpsServer) {
+                httpsServer.listen(httpsPort, () => {
+                    console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version} (https: ${httpsPort})`); // eslint-disable-line no-console
+                    resolve();
+                });
+            } else {
+                console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version}`); // eslint-disable-line no-console
+                resolve();
+            }
+        });
     };
 
     $$('override');

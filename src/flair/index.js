@@ -21,7 +21,6 @@
     // locals
     let isServer = new Function("try {return this===global;}catch(e){return false;}")(),
         isWorker = isServer ? (!require('worker_threads').isMainThread) : (typeof WorkerGlobalScope !== 'undefined' ? true : false),
-        flair = {},
         currentFile = (isServer ? __filename : window.document.currentScript.src),
         sym = [],
         meta = Symbol('[meta]'),
@@ -30,7 +29,35 @@
         options = {},
         flairTypes = ['class', 'enum', 'interface', 'mixin', 'struct'],
         flairInstances = ['instance', 'sinstance'],
-        argsString = '';
+        argsString = '',
+        isAppStarted = false;
+
+    // flairapp bootstrapper
+    let flair = async (configFile, entryPoint) => {
+        if (!isAppStarted) {
+            isAppStarted = true;
+
+            // settings
+            const { AppDomain, include, env } = flair;
+            let __currentScript = (env.isServer ? '' : window.document.scripts[window.document.scripts.length - 1].src),
+                __entryPoint = (env.isServer ? (env.isWorker ? '' : entryPoint) : (env.isWorker ? '' : __currentScript)),
+                __rootPath = (env.isServer ? (__entryPoint.substr(0, __entryPoint.lastIndexOf('/') + 1)) : './'),
+                __preamble = 'flairjs/preamble.js',
+                __config = configFile,
+                __BootEngine = 'flair.app.BootEngine',
+                be = null;
+
+            // initialize
+            AppDomain.root(__rootPath);
+            AppDomain.entryPoint(__entryPoint);
+            await AppDomain.config(__config);
+            await include(__preamble);
+            be = await include(__BootEngine);
+
+            // start boot engine
+            be.start();
+        }
+    };
 
     // read symbols from environment
     if (isServer) {

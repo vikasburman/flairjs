@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.27.26
- *  Sun, 31 Mar 2019 17:20:14 GMT
+ *  Version: 0.30.10
+ *  Sun, 31 Mar 2019 23:55:46 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -1235,45 +1235,41 @@ return page_js;
 
 /* eslint-disable no-unused-vars */
 const flair = (typeof global !== 'undefined' ? require('flairjs') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));
-const { Class, Struct, Enum, Interface, Mixin } = flair;
-const { Aspects } = flair;
-const { AppDomain } = flair;
-const __currentContextName = flair.AppDomain.context.current().name;
-const { $$, attr } = flair;
-const { bring, Container, include } = flair;
-const { Port } = flair;
-const { on, post, telemetry } = flair;
-const { Reflector } = flair;
-const { Serializer } = flair;
-const { Tasks } = flair;
+const { Class, Struct, Enum, Interface, Mixin, Aspects, AppDomain, $$, attr, bring, Container, include, Port, on, post, telemetry,
+				Reflector, Serializer, Tasks, as, is, isComplies, isDerivedFrom, isAbstract, isSealed, isStatic, isSingleton, isDeprecated,
+				isImplements, isInstanceOf, isMixed, getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf,
+				getTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;
 const { TaskInfo } = flair.Tasks;
-const { as, is, isComplies, isDerivedFrom, isAbstract, isSealed, isStatic, isSingleton, isDeprecated, isImplements, isInstanceOf, isMixed } = flair;
-const { getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf, getTypeName, typeOf } = flair;
-const { dispose, using } = flair;
-const { Args, Exception, noop, nip, nim, nie, event } = flair;
 const { env } = flair.options;
-const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
-const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async } = $$;
-const { $$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$args, $$inject, $$resource, $$asset, $$singleton, $$serialize, $$deprecate, $$session, $$state, $$conditional, $$noserialize, $$ns } = $$;
-/* eslint-enable no-unused-vars */
+const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve,
+				b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
+const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,
+				$$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$args, $$inject, $$resource, $$asset, $$singleton, $$serialize,
+				$$deprecate, $$session, $$state, $$conditional, $$noserialize, $$ns } = $$;
+
+// define current context name
+const __currentContextName = AppDomain.context.current().name;
 
 // define loadPathOf this assembly
 let __currentFile = (env.isServer ? __filename : window.document.currentScript.src.replace(window.document.location.href, './'));
 let __currentPath = __currentFile.substr(0, __currentFile.lastIndexOf('/') + 1);
 AppDomain.loadPathOf('flair.app', __currentPath)
 
-let settings = JSON.parse('{"host":"flair.boot.ServerHost | flair.boot.ClientHost","app":"flair.app.App","load":[],"container":{},"envVars":[],"envVarsloadOptions":{"overwrite":true},"mounts":{"main":"/"},"main-appSettings":[],"main-middlewares":[],"server-http":{"enable":false,"port":80,"timeout":-1},"server-https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""}}'); // eslint-disable-line no-unused-vars
+// assembly level error handler
+const __asmError = (err) => { AppDomain.onError(err); };
+/* eslint-enable no-unused-vars */
 
-        let settingsReader = flair.Port('settingsReader');
-        if (typeof settingsReader === 'function') {
-            let externalSettings = settingsReader('flair.app');
-            if (externalSettings) { settings = Object.assign(settings, externalSettings); }
-        }
-        settings = Object.freeze(settings);
-        flair.AppDomain.context.current().currentAssemblyBeingLoaded('./flair.app{.min}.js');
+//load assembly settings from config file
+let settings = JSON.parse('{"host":"flair.boot.ServerHost | flair.boot.ClientHost","app":"flair.app.App","load":[],"container":{},"envVars":[],"envVarsloadOptions":{"overwrite":true},"mounts":{"main":"/"},"main-appSettings":[],"main-middlewares":[],"server-http":{"enable":false,"port":80,"timeout":-1},"server-https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""}}'); // eslint-disable-line no-unused-vars
+let settingsReader = flair.Port('settingsReader');
+if (typeof settingsReader === 'function') {
+let externalSettings = settingsReader('flair.app');
+if (externalSettings) { settings = Object.assign(settings, externalSettings); }}
+settings = Object.freeze(settings);
+AppDomain.context.current().currentAssemblyBeingLoaded('./flair.app{.min}.js');
 
 (async () => { // ./src/flair.app/flair.app/@1-Bootware.js
-'use strict';
+try{
 /**
  * @name Bootware
  * @description Bootware base class
@@ -1326,11 +1322,13 @@ Class('Bootware', function() {
     $$('virtual');
     this.dispose = noop;
 });
-
+} catch(err) {
+	__asmError(err);
+}
 })();
 
 (async () => { // ./src/flair.app/flair.app/@2-App.js
-'use strict';
+try{
 const { IDisposable } = ns();
 const { Bootware } = ns('flair.app');
 
@@ -1371,11 +1369,13 @@ Class('App', Bootware, [IDisposable], function() {
         AppDomain.host().error.remove(this.onError); // remove error handler
     };
 });
-
+} catch(err) {
+	__asmError(err);
+}
 })();
 
 (async () => { // ./src/flair.app/flair.app/@3-Host.js
-'use strict';
+try{
 const { IDisposable } = ns();
 const { Bootware } = ns('flair.app');
 
@@ -1411,11 +1411,13 @@ Class('Host', Bootware, [IDisposable], function() {
         this.error(err);
     };
 });
-
+} catch(err) {
+	__asmError(err);
+}
 })();
 
 (async () => { // ./src/flair.app/flair.app/BootEngine.js
-'use strict';
+try{
 const { Bootware } = ns('flair.app');
 
 /**
@@ -1425,29 +1427,23 @@ const { Bootware } = ns('flair.app');
 $$('static');
 $$('ns', 'flair.app');
 Class('BootEngine', function() {
-    this.start = async function (entryPoint) {
+    this.start = async function () {
         let allBootwares = [],
-            mountSpecificBootwares = [],
-            currentScript = (env.isServer ? '' : window.document.scripts[window.document.scripts.length - 1].src);
-        entryPoint = (env.isServer ? (env.isWorker ? '' : entryPoint) : (env.isWorker ? '' : currentScript));
-        const setEntryPoint = () => {
-            // set entry point for workers
-            AppDomain.entryPoint(entryPoint);
-        };
+            mountSpecificBootwares = [];
         const loadFilesAndBootwares = async () => {
             // load bootwares, scripts and preambles
             let Item = null,
-                Bootware = null,
+                Bw = null,
                 bw = null;
             for(let item of settings.load) {
                 // get bootware (it could be a bootware, a simple script or a preamble)
                 item = which(item); // server/client specific version
                 if (item) { // in case no item is set for either server/client
                     Item = await include(item);
-                    if (Item) {
-                        Bootware = as(Item, Bootware);
-                        if (Bootware) { // if boot
-                            bw = new Bootware(); 
+                    if (Item && typeof Item !== 'boolean') {
+                        Bw = as(Item, Bootware);
+                        if (Bw) { // if boot
+                            bw = new Bw(); 
                             allBootwares.push(bw); // push in array, so boot and ready would be called for them
                             if (bw.info.isMountSpecific) { // if bootware is mount specific bootware - means can run once for each mount
                                 mountSpecificBootwares.push(bw);
@@ -1552,7 +1548,6 @@ Class('BootEngine', function() {
             await AppDomain.app().ready();
         };
           
-        setEntryPoint();
         await loadFilesAndBootwares();
         await boot();
         await start();
@@ -1560,11 +1555,13 @@ Class('BootEngine', function() {
         console.log('ready!'); // eslint-disable-line no-console
     };
 });
-
+} catch(err) {
+	__asmError(err);
+}
 })();
 
 (async () => { // ./src/flair.app/flair.boot/ClientHost.js
-'use strict';
+try{
 const { Host } = ns('flair.app');
 
 /**
@@ -1709,11 +1706,13 @@ Class('ClientHost', Host, function() {
         mountedApps = null;
     };
 });
-
+} catch(err) {
+	__asmError(err);
+}
 })();
 
 (async () => { // ./src/flair.app/flair.boot/ServerHost.js
-'use strict';
+try{
 const express = await include('express | x');
 const fs = await include('fs | x');
 const http = await include('http | x');
@@ -1739,7 +1738,7 @@ Class('ServerHost', Host, function() {
         base('Express', '4.x');
     };
 
-    this.app = () => { return this.mounts['main']; }  // main express app
+    this.app = () => { return this.mounts['main'].app; }  // main express app
     this.mounts = { // all mounted express apps
         get: () => { return mountedApps; },
         set: noop
@@ -1804,7 +1803,9 @@ Class('ServerHost', Host, function() {
         if (httpSettings.enable) { 
             httpServer = http.createServer(this.app());
             httpServer = httpShutdown(httpServer); // wrap
-            httpServer.on('error', this.error); // pass-through event
+            httpServer.on('error', (err) => {
+                this.error(err);
+            }); // pass-through event
             if (httpSettings.timeout !== -1) { httpServer.timeout = httpSettings.timeout; } // timeout must be in milliseconds
         }
 
@@ -1818,41 +1819,49 @@ Class('ServerHost', Host, function() {
             //  > Rename *.private.pem as key.pem
             //  > Rename *.public.pem as cert.pem
             //  > Update these files at private folder
-            const privateKey  = fs.readFileSync(httpsSettings.privateKey, 'utf8');
-            const publicCert = fs.readFileSync(httpsSettings.publicCert, 'utf8');
+            const privateKey  = fs.readFileSync(AppDomain.resolvePath(httpsSettings.privateKey), 'utf8');
+            const publicCert = fs.readFileSync(AppDomain.resolvePath(httpsSettings.publicCert), 'utf8');
             const credentials = { key: privateKey, cert: publicCert };
 
             httpsServer = https.createServer(credentials, this.app());
             httpsServer = httpShutdown(httpsServer); // wrap
-            httpsServer.on('error', this.error); // pass-through event
+            httpsServer.on('error', (err) => {
+                this.error(err);
+            }); // pass-through event
             if (httpsSettings.timeout !== -1) { httpsServer.timeout = httpsSettings.timeout; } // timeout must be in milliseconds
         }
     };
 
     $$('override');
-    this.ready = async (base) => { // start listening http and https servers
-        base();
+    this.ready = (base) => { // start listening http and https servers
+        return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
+            base();
 
-        // start server
-        let httpPort = httpSettings.port || 80,
-            httpsPort = process.env.PORT || httpsSettings.port || 443;
-        if (httpServer && httpsServer) {
-            httpServer.listen(httpPort, () => {
-                httpServer.listen(httpsPort, () => {
-                    console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version} (http: ${httpPort}, https: ${httpsPort})`); // eslint-disable-line no-console
+            // start server
+            let httpPort = httpSettings.port || 80,
+                httpsPort = process.env.PORT || httpsSettings.port || 443;
+            if (httpServer && httpsServer) {
+                httpServer.listen(httpPort, () => {
+                    httpsServer.listen(httpsPort, () => {
+                        console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version} (http: ${httpPort}, https: ${httpsPort})`); // eslint-disable-line no-console
+                        resolve();
+                    });
                 });
-            });
-        } else if (httpServer) {
-            httpServer.listen(httpPort, () => {
-                console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version} (http: ${httpPort})`); // eslint-disable-line no-console
-            });
-        } else if (httpsServer) {
-            httpsServer.listen(httpsPort, () => {
-                console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version} (https: ${httpsPort})`); // eslint-disable-line no-console
-            });
-        } else {
-            console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version}`); // eslint-disable-line no-console
-        }
+            } else if (httpServer) {
+                httpServer.listen(httpPort, () => {
+                    console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version} (http: ${httpPort})`); // eslint-disable-line no-console
+                    resolve();
+                });
+            } else if (httpsServer) {
+                httpsServer.listen(httpsPort, () => {
+                    console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version} (https: ${httpsPort})`); // eslint-disable-line no-console
+                    resolve();
+                });
+            } else {
+                console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version}`); // eslint-disable-line no-console
+                resolve();
+            }
+        });
     };
 
     $$('override');
@@ -1885,11 +1894,13 @@ Class('ServerHost', Host, function() {
         mountedApps = null;
     };
 });
-
+} catch(err) {
+	__asmError(err);
+}
 })();
 
 (async () => { // ./src/flair.app/flair.bw/DIContainer.js
-'use strict';
+try{
 const { Bootware } = ns('flair.app');
 
 /**
@@ -1914,11 +1925,13 @@ Class('DIContainer', Bootware, function() {
         }
     };
 });
-
+} catch(err) {
+	__asmError(err);
+}
 })();
 
 (async () => { // ./src/flair.app/flair.bw/Middlewares.js
-'use strict';
+try{
 const { Bootware } = ns('flair.app');
 
 /**
@@ -1995,11 +2008,13 @@ Class('Middlewares', Bootware, function() {
         }
     };
 });
-
+} catch(err) {
+	__asmError(err);
+}
 })();
 
 (async () => { // ./src/flair.app/flair.bw/NodeEnv.js
-'use strict';
+try{
 const nodeEnv = await include('node-env-file | x');
 const { Bootware } = ns('flair.app');
 
@@ -2019,16 +2034,18 @@ Class('NodeEnv', Bootware, function() {
     this.boot = async () => {
         if (settings.envVars.length > 0) {
             for(let envVar of settings.envVars) {
-                nodeEnv(envVar, settings.envVarsLoadOptions);
+                nodeEnv(AppDomain.resolvePath(envVar), settings.envVarsLoadOptions);
             }
         }
     };
 });
-
+} catch(err) {
+	__asmError(err);
+}
 })();
 
 (async () => { // ./src/flair.app/flair.bw/ResHeaders.js
-'use strict';
+try{
 const { Bootware } = ns('flair.app');
 
 /**
@@ -2059,11 +2076,13 @@ Class('ResHeaders', Bootware, function() {
         }
     };
 });
-
+} catch(err) {
+	__asmError(err);
+}
 })();
 
 (async () => { // ./src/flair.app/flair.bw/Router.js
-'use strict';
+try{
 const { Bootware } = ns('flair.app');
 
 /**
@@ -2170,11 +2189,13 @@ Class('Router', Bootware, function() {
         }
     };
 });
-
+} catch(err) {
+	__asmError(err);
+}
 })();
 
-flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
+AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.27.26","lupdate":"Sun, 31 Mar 2019 17:20:14 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.App","flair.app.Host","flair.app.BootEngine","flair.boot.ClientHost","flair.boot.ServerHost","flair.bw.DIContainer","flair.bw.Middlewares","flair.bw.NodeEnv","flair.bw.ResHeaders","flair.bw.Router"],"resources":[],"assets":[],"routes":[]}');
+AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.30.10","lupdate":"Sun, 31 Mar 2019 23:55:46 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.App","flair.app.Host","flair.app.BootEngine","flair.boot.ClientHost","flair.boot.ServerHost","flair.bw.DIContainer","flair.bw.Middlewares","flair.bw.NodeEnv","flair.bw.ResHeaders","flair.bw.Router"],"resources":[],"assets":[],"routes":[]}');
 
 })();
