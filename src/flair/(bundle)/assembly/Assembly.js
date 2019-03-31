@@ -7,7 +7,9 @@ const Assembly = function (ado, alc) {
 
     this.name = ado.name;
     this.file = ado.file;
+    this.mainAssembly = ado.mainAssembly;
     this.desc = ado.desc;
+    this.title = ado.title;
     this.version = ado.version;
     this.copyright = ado.copyright;
     this.license = ado.license;

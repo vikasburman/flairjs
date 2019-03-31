@@ -114,7 +114,7 @@ const _attrMeta = _attr[meta] = Object.freeze({
     
         abstract: new _attrConfig(true, '(class && !$sealed && !$static) || ((class && (prop || func || event)) && !($override || $sealed || $static))'),
         virtual: new _attrConfig(true, 'class && (prop || func || construct || dispose || event) && !($abstract || $override || $sealed || $static)'),
-        override: new _attrConfig(true, '(class && (prop || func || construct || dispose || event) && ((@virtual || @abstract) && !(virtual || abstract)) && !($sealed || $static))'),
+        override: new _attrConfig(true, '(class && (prop || func || construct || dispose || event) && ((@virtual || @abstract || @override) && !(virtual || abstract)) && !(@sealed || $static))'),
         sealed: new _attrConfig(true, '(class || ((class && (prop || func || event)) && override))'), 
     
         private: new _attrConfig(true, '(class || struct) && (prop || func || event) && !($protected || @private || $static)'),

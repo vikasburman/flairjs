@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.26.99
- *  Sun, 31 Mar 2019 12:35:45 GMT
+ *  Version: 0.27.25
+ *  Sun, 31 Mar 2019 17:19:50 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -82,10 +82,10 @@
         name: 'flair',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.26.99',
+        version: '0.27.25',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 31 Mar 2019 12:35:45 GMT')
+        lupdate: new Date('Sun, 31 Mar 2019 17:19:50 GMT')
     });  
     
     flair.members = [];
@@ -212,7 +212,7 @@
     
         // add hint of error
         if (_this.error) {
-            _this.message += '[' + this.error + ']';
+            _this.message += '[' + _this.error + ']';
         }
     
         // return
@@ -463,55 +463,59 @@
         if (type[meta]) { type = type[meta].name; } // since it can be a type as well
         if (_typeOf(type) !== 'string') { throw _Exception.InvalidArgument('type', _is); }
         
-        let isMatched = false, 
-            _typ = '';
+        let isMatched = false;
     
-        // undefined
-        if (type === 'undefined') { isMatched = (typeof obj === 'undefined'); }
-    
-        // null
-        if (!isMatched && type === 'null') { isMatched = (obj === null); }
-    
-        // NaN
-        if (!isMatched && type === 'NaN') { isMatched = isNaN(obj); }
-    
-        // infinity
-        if (!isMatched && type === 'infinity') { isMatched = (typeof obj === 'number' && isFinite(obj) === false); }
-    
-        // array
-        if (!isMatched && (type === 'array' || type === 'Array')) { isMatched = Array.isArray(obj); }
-    
-        // date
-        if (!isMatched && (type === 'date' || type === 'Date')) { isMatched = (obj instanceof Date); }
-    
-        // flair
-        if (!isMatched && (type === 'flairtype' && obj[meta] && flairTypes.indexOf(obj[meta].type) !== -1)) { isMatched = true; }
-        if (!isMatched && (type === 'flairinstance' && obj[meta] && flairInstances.indexOf(obj[meta].type) !== -1)) { isMatched = true; }
-        if (!isMatched && (type === 'flair' && obj[meta])) { isMatched = true; } // presence ot meta symbol means it is flair type/instance
-    
-        // special function types
-        if (!isMatched && (type === 'cfunction')) { isMatched = (typeof obj === 'function' && !isArrow(obj)); }
-        if (!isMatched && (type === 'afunction')) { isMatched = (typeof obj === 'function' && isArrow(obj)); }
-    
-        // native javascript types (including simple 'function')
-        if (!isMatched) { isMatched = (typeof obj === type); }
-    
-        // flair types
-        if (!isMatched) {
-            if (obj[meta]) { 
-                _typ = obj[meta].type;
-                isMatched = _typ === type; 
+        if (obj) {
+            switch(type) {
+                case 'NaN': 
+                    isMatched = isNaN(obj); break;
+                case 'infinity': 
+                    isMatched = (typeof obj === 'number' && isFinite(obj) === false); break;
+                case 'array':
+                case 'Array':
+                    isMatched = Array.isArray(obj); break;
+                case 'date':
+                case 'Date':
+                    isMatched = (obj instanceof Date); break;
+                case 'flairtype':
+                    isMatched = (obj[meta] && flairTypes.indexOf(obj[meta].type) !== -1); break;
+                case 'flairinstance':
+                    isMatched = (obj[meta] && flairInstances.indexOf(obj[meta].type) !== -1); break;
+                case 'flair':
+                    // presence ot meta symbol means it is flair type/instance
+                    isMatched = typeof obj[meta] !== 'undefined'; break;
+                case 'cfunction':
+                    isMatched = (typeof obj === 'function' && !isArrow(obj)); break;
+                case 'afunction':
+                    isMatched = (typeof obj === 'function' && isArrow(obj)); break;
+                default:
+                    // native javascript types (including simple 'function')
+                    if (!isMatched) { isMatched = (typeof obj === type); }
+        
+                    if (!isMatched && obj[meta]) {
+                        // flair types
+                        if (!isMatched) { isMatched = (type === obj[meta].type); }
+        
+                        // flair instance check (instance)
+                        if (!isMatched && flairInstances.indexOf(obj[meta].type) !== -1) { isMatched = _isInstanceOf(obj, type); }
+        
+                        // flair type check (derived from)
+                        if (!isMatched && obj[meta].type === 'class') { isMatched = _isDerivedFrom(obj, type); }
+                        
+                        // flair type check (direct name)
+                        if (!isMatched && flairTypes.indexOf(obj[meta].type) !== -1) { isMatched = (obj[meta].name === type); }
+                    }
+            }
+        } else {
+            switch(type) {
+                case 'undefined': 
+                    isMatched = (typeof obj === 'undefined'); break;
+                case 'null': 
+                    isMatched = (obj === null); break;
+                case 'NaN': 
+                    isMatched = isNaN(obj); break;
             }
         }
-        
-        // flair flair types - instance check (i.e., class or struct type names)
-        if (!isMatched && _typ && flairInstances.indexOf(_typ) !== -1) { isMatched = _isInstanceOf(obj, type); }
-    
-        // flair flair types - type check (i.e., class or names)
-        if (!isMatched && _typ && _typ === 'class') { isMatched = _isDerivedFrom(obj, type); }
-    
-        // flair flair types - type check (i.e., direct name)
-        if (!isMatched && _typ && flairTypes.indexOf(_typ) !== -1) { isMatched = (obj[meta].name === type); }
     
         // return
         return isMatched;
@@ -1200,7 +1204,9 @@
     
         this.name = ado.name;
         this.file = ado.file;
+        this.mainAssembly = ado.mainAssembly;
         this.desc = ado.desc;
+        this.title = ado.title;
         this.version = ado.version;
         this.copyright = ado.copyright;
         this.license = ado.license;
@@ -2511,6 +2517,7 @@
                                 if (!_resolved) { // check as resource
                                     _resolved = _getResource(_dep); 
                                 }
+                                done();
                             }).catch((err) => {
                                 throw _Exception.OperationFailed(`Assembly could not be loaded. (${asmFile})`, err, _bring);
                             });
@@ -2535,7 +2542,7 @@
                                 loadModule(_dep).then((content) => { 
                                     _resolved = content || true; done(); // it may or may not give a content
                                 }).catch((err) => {
-                                    throw _Exception.OperationFailed(`Module could not be loaded. (${_dep})`, err, _bring);
+                                    throw _Exception.OperationFailed(`Module/File could not be loaded. (${_dep})`, err, _bring);
                                 });
                             } else { // some other file (could be json, css, html, etc.)
                                 loadFile(_dep).then((content) => {
@@ -2554,7 +2561,7 @@
     
                 // check if this is a module
                 let option5 = (done) => {
-                    if (!_dep.startsWith('./')) { // all modules (or a file inside a module) must start with ./
+                    if (!_dep.startsWith('./')) { // all modules (or a file inside a module) must not start with ./
                         // on server require() finds modules automatically
                         // on client modules are supposed to be inside ./modules/ folder, therefore prefix it
                         if (!isServer) { _dep = `./${modulesRootFolder}/${_dep}`; }
@@ -2850,7 +2857,7 @@
         
             abstract: new _attrConfig(true, '(class && !$sealed && !$static) || ((class && (prop || func || event)) && !($override || $sealed || $static))'),
             virtual: new _attrConfig(true, 'class && (prop || func || construct || dispose || event) && !($abstract || $override || $sealed || $static)'),
-            override: new _attrConfig(true, '(class && (prop || func || construct || dispose || event) && ((@virtual || @abstract) && !(virtual || abstract)) && !($sealed || $static))'),
+            override: new _attrConfig(true, '(class && (prop || func || construct || dispose || event) && ((@virtual || @abstract || @override) && !(virtual || abstract)) && !(@sealed || $static))'),
             sealed: new _attrConfig(true, '(class || ((class && (prop || func || event)) && override))'), 
         
             private: new _attrConfig(true, '(class || struct) && (prop || func || event) && !($protected || @private || $static)'),
@@ -3085,7 +3092,7 @@
             result = (new Function("try {return (" + constraintsLex + ");}catch(e){return false;}")());
             if (!result) {
                 // TODO: send telemetry of _list, so it can be debugged
-                throw _Exception.InvalidOperation(`${appliedAttr.cfg.isModifier ? 'Modifier' : 'Attribute'} ${appliedAttr.name} could not be applied. (${def.name}::${memberName})`, builder);
+                throw _Exception.InvalidOperation(`${appliedAttr.cfg.isModifier ? 'Modifier' : 'Attribute'} ${appliedAttr.name} could not be applied. (${def.name}::${memberName} --> [${constraintsLex}])`, builder);
             }
     
             // return
@@ -3709,7 +3716,9 @@
     
             // dispose arguments check always
             if (cfg.dispose && memberName === _disposeName && memberDef.length !== 0) {
-                throw _Exception.InvalidDefinition(`Destructor method cannot have arguments. (${def.name}::dispose)`, builder);
+                if (memberDef.length > 1 || (memberDef.length === 1 && !modifiers.members.probe('override', memberName).current())) { // in case of override (base will be passed as param
+                    throw _Exception.InvalidDefinition(`Destructor method cannot have arguments. (${def.name}::dispose)`, builder);
+                }
             }
             
             // duplicate check, if not overriding
@@ -4032,7 +4041,7 @@
                         }
                         try {
                             let memberDefResult = memberDef.apply(bindingHost, fnArgs);
-                            if (typeof memberDefResult.then === 'function') { // send result when it comes
+                            if (memberDefResult && typeof memberDefResult.then === 'function') { // send result when it comes
                                 memberDefResult.then(resolve).catch((err) => { reject(err, memberDef); });
                             } else {
                                 resolve(memberDefResult); // send result as is
@@ -5923,7 +5932,6 @@
     // localStorage factory
     const __localStorage = (env) => {
         if (env.isServer) {
-            console.warn("Use of 'state' is not support on server. Using 'session' instead."); // eslint-disable-line no-console
             return __sessionStorage(env);
         } else { // client
             return window.localStorage;
@@ -6012,7 +6020,7 @@
                 if (_requireJs) { // if requirejs library is available
                     _requireJs.undef(module);
                 } else {
-                    console.warn("No approach is available to undef a loaded module. Connect clientModule port to an external handler."); // eslint-disable-line no-console
+                    // console.warn("No approach is available to undef a loaded module. Connect clientModule port to an external handler."); // eslint-disable-line no-console
                 }
             }
         };
@@ -6607,6 +6615,7 @@
     _utils.splitAndTrim = splitAndTrim;
     _utils.findIndexByProp = findIndexByProp;
     _utils.findItemByProp = findItemByProp;
+    _utils.which = which;
     _utils.isArrowFunc = isArrow;
     _utils.isASyncFunc = isASync;
     _utils.sieve = sieve;
@@ -7002,6 +7011,6 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.99","lupdate":"Sun, 31 Mar 2019 12:35:45 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["IDisposable","Aspect","Attribute","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.27.25","lupdate":"Sun, 31 Mar 2019 17:19:50 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["IDisposable","Aspect","Attribute","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
 
 })();

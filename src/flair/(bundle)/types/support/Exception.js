@@ -68,7 +68,7 @@ const _Exception = function(arg1, arg2, arg3, arg4) {
 
     // add hint of error
     if (_this.error) {
-        _this.message += '[' + this.error + ']';
+        _this.message += '[' + _this.error + ']';
     }
 
     // return

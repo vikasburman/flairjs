@@ -104,12 +104,21 @@ Class('(auto)', function() {
         };
         const DOMReady = () => {
             return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
-                window.document.addEventListener("DOMContentLoaded", resolve);
+                if( document.readyState !== 'loading' ) {
+                    resolve();
+                } else {
+                    window.document.addEventListener("DOMContentLoaded", () => {
+                        resolve();
+                    });
+                }
             });
         };
         const DeviceReady = () => {
             return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
-                window.document.addEventListener('deviceready', resolve, false);
+                window.document.addEventListener('deviceready', () => {
+                    // NOTE: even if the device was already ready, registering for this event will immediately fire it
+                    resolve();
+                }, false);
             });
         };
         const ready = async () => {
@@ -130,5 +139,6 @@ Class('(auto)', function() {
         await boot();
         await start();
         await ready();
+        console.log('ready!'); // eslint-disable-line no-console
     };
 });

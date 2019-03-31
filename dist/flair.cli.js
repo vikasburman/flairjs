@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.26.99
- *  Sun, 31 Mar 2019 12:35:48 GMT
+ *  Version: 0.27.25
+ *  Sun, 31 Mar 2019 17:19:53 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -23,7 +23,7 @@ const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
     name: 'flair.cli',
-    version: '0.26.99',
+    version: '0.27.25',
     format: 'fasm',
     formatVersion: '1',
     contains: [
@@ -903,7 +903,10 @@ const build = (options, buildDone) => {
 
         logger(0, 'preamble', options.current.preamble.replace(options.dest, '.'), true);
         let ados = JSON.stringify(options.current.adosJSON);
-        let dump = `(() => { let ados = JSON.parse('${ados}');flair.AppDomain.registerAdo(...ados);})();\n`;
+        let dump = `(() => { let ados = JSON.parse('${ados}');\n`;
+        dump += `const flair = (typeof global !== 'undefined' ? require('flairjs') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));\n`;
+        dump += `flair.AppDomain.registerAdo(...ados);}\n`;
+        dump += `)();\n`;
         fsx.writeFileSync(options.current.preamble, dump, {flag: 'a'}); // append if already exists
     };
     const collectTypesAndResourcesAndRoutes = () => {

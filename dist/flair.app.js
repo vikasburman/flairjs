@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.26.99
- *  Sun, 31 Mar 2019 12:35:47 GMT
+ *  Version: 0.27.25
+ *  Sun, 31 Mar 2019 17:19:52 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -1296,9 +1296,9 @@ Class('Bootware', function() {
 
         // set info
         this.info = Object.freeze({
-            name: args.name || '',
-            version: args.version || '',
-            isMountSpecific: args.isMountSpecific || false
+            name: args.values.name || '',
+            version: args.values.version || '',
+            isMountSpecific: args.values.isMountSpecific || false
         });
     };
 
@@ -1322,6 +1322,9 @@ Class('Bootware', function() {
     $$('virtual');
     $$('async');
     this.ready = noop;
+
+    $$('virtual');
+    this.dispose = noop;
 });
 
 })();
@@ -1363,7 +1366,7 @@ Class('App', Bootware, [IDisposable], function() {
         throw Exception.OperationFailed(e.error, this.onError);
     };
 
-    $$('virtual');
+    $$('override');
     this.dispose = () => {
         AppDomain.host().error.remove(this.onError); // remove error handler
     };
@@ -1519,12 +1522,21 @@ Class('BootEngine', function() {
         };
         const DOMReady = () => {
             return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
-                window.document.addEventListener("DOMContentLoaded", resolve);
+                if( document.readyState !== 'loading' ) {
+                    resolve();
+                } else {
+                    window.document.addEventListener("DOMContentLoaded", () => {
+                        resolve();
+                    });
+                }
             });
         };
         const DeviceReady = () => {
             return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
-                window.document.addEventListener('deviceready', resolve, false);
+                window.document.addEventListener('deviceready', () => {
+                    // NOTE: even if the device was already ready, registering for this event will immediately fire it
+                    resolve();
+                }, false);
             });
         };
         const ready = async () => {
@@ -1545,6 +1557,7 @@ Class('BootEngine', function() {
         await boot();
         await start();
         await ready();
+        console.log('ready!'); // eslint-disable-line no-console
     };
 });
 
@@ -2162,6 +2175,6 @@ Class('Router', Bootware, function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.99","lupdate":"Sun, 31 Mar 2019 12:35:47 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.App","flair.app.Host","flair.app.BootEngine","flair.boot.ClientHost","flair.boot.ServerHost","flair.bw.DIContainer","flair.bw.Middlewares","flair.bw.NodeEnv","flair.bw.ResHeaders","flair.bw.Router"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.27.25","lupdate":"Sun, 31 Mar 2019 17:19:52 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.App","flair.app.Host","flair.app.BootEngine","flair.boot.ClientHost","flair.boot.ServerHost","flair.bw.DIContainer","flair.bw.Middlewares","flair.bw.NodeEnv","flair.bw.ResHeaders","flair.bw.Router"],"resources":[],"assets":[],"routes":[]}');
 
 })();

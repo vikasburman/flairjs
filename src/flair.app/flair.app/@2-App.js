@@ -33,7 +33,7 @@ Class('(auto)', Bootware, [IDisposable], function() {
         throw Exception.OperationFailed(e.error, this.onError);
     };
 
-    $$('virtual');
+    $$('override');
     this.dispose = () => {
         AppDomain.host().error.remove(this.onError); // remove error handler
     };

@@ -889,7 +889,10 @@ const build = (options, buildDone) => {
 
         logger(0, 'preamble', options.current.preamble.replace(options.dest, '.'), true);
         let ados = JSON.stringify(options.current.adosJSON);
-        let dump = `(() => { let ados = JSON.parse('${ados}');flair.AppDomain.registerAdo(...ados);})();\n`;
+        let dump = `(() => { let ados = JSON.parse('${ados}');\n`;
+        dump += `const flair = (typeof global !== 'undefined' ? require('flairjs') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));\n`;
+        dump += `flair.AppDomain.registerAdo(...ados);}\n`;
+        dump += `)();\n`;
         fsx.writeFileSync(options.current.preamble, dump, {flag: 'a'}); // append if already exists
     };
     const collectTypesAndResourcesAndRoutes = () => {

@@ -41,7 +41,6 @@ _Port.define('sessionStorage', ['key', 'getItem', 'setItem', 'removeItem', 'clea
 // localStorage factory
 const __localStorage = (env) => {
     if (env.isServer) {
-        console.warn("Use of 'state' is not support on server. Using 'session' instead."); // eslint-disable-line no-console
         return __sessionStorage(env);
     } else { // client
         return window.localStorage;
@@ -130,7 +129,7 @@ const __clientModule = (env) => {
             if (_requireJs) { // if requirejs library is available
                 _requireJs.undef(module);
             } else {
-                console.warn("No approach is available to undef a loaded module. Connect clientModule port to an external handler."); // eslint-disable-line no-console
+                // console.warn("No approach is available to undef a loaded module. Connect clientModule port to an external handler."); // eslint-disable-line no-console
             }
         }
     };

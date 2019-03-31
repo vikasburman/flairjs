@@ -117,6 +117,7 @@ const _bring = (deps, fn) => {
                             if (!_resolved) { // check as resource
                                 _resolved = _getResource(_dep); 
                             }
+                            done();
                         }).catch((err) => {
                             throw _Exception.OperationFailed(`Assembly could not be loaded. (${asmFile})`, err, _bring);
                         });
@@ -141,7 +142,7 @@ const _bring = (deps, fn) => {
                             loadModule(_dep).then((content) => { 
                                 _resolved = content || true; done(); // it may or may not give a content
                             }).catch((err) => {
-                                throw _Exception.OperationFailed(`Module could not be loaded. (${_dep})`, err, _bring);
+                                throw _Exception.OperationFailed(`Module/File could not be loaded. (${_dep})`, err, _bring);
                             });
                         } else { // some other file (could be json, css, html, etc.)
                             loadFile(_dep).then((content) => {
@@ -160,7 +161,7 @@ const _bring = (deps, fn) => {
 
             // check if this is a module
             let option5 = (done) => {
-                if (!_dep.startsWith('./')) { // all modules (or a file inside a module) must start with ./
+                if (!_dep.startsWith('./')) { // all modules (or a file inside a module) must not start with ./
                     // on server require() finds modules automatically
                     // on client modules are supposed to be inside ./modules/ folder, therefore prefix it
                     if (!isServer) { _dep = `./${modulesRootFolder}/${_dep}`; }

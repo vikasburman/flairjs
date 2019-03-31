@@ -164,7 +164,7 @@ const attributesAndModifiers = (def, typeDef, memberName, isTypeLevel, isCustomA
         result = (new Function("try {return (" + constraintsLex + ");}catch(e){return false;}")());
         if (!result) {
             // TODO: send telemetry of _list, so it can be debugged
-            throw _Exception.InvalidOperation(`${appliedAttr.cfg.isModifier ? 'Modifier' : 'Attribute'} ${appliedAttr.name} could not be applied. (${def.name}::${memberName})`, builder);
+            throw _Exception.InvalidOperation(`${appliedAttr.cfg.isModifier ? 'Modifier' : 'Attribute'} ${appliedAttr.name} could not be applied. (${def.name}::${memberName} --> [${constraintsLex}])`, builder);
         }
 
         // return
@@ -788,7 +788,9 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
 
         // dispose arguments check always
         if (cfg.dispose && memberName === _disposeName && memberDef.length !== 0) {
-            throw _Exception.InvalidDefinition(`Destructor method cannot have arguments. (${def.name}::dispose)`, builder);
+            if (memberDef.length > 1 || (memberDef.length === 1 && !modifiers.members.probe('override', memberName).current())) { // in case of override (base will be passed as param
+                throw _Exception.InvalidDefinition(`Destructor method cannot have arguments. (${def.name}::dispose)`, builder);
+            }
         }
         
         // duplicate check, if not overriding
@@ -1111,7 +1113,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                     }
                     try {
                         let memberDefResult = memberDef.apply(bindingHost, fnArgs);
-                        if (typeof memberDefResult.then === 'function') { // send result when it comes
+                        if (memberDefResult && typeof memberDefResult.then === 'function') { // send result when it comes
                             memberDefResult.then(resolve).catch((err) => { reject(err, memberDef); });
                         } else {
                             resolve(memberDefResult); // send result as is

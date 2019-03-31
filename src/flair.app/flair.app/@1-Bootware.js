@@ -20,9 +20,9 @@ Class('(auto)', function() {
 
         // set info
         this.info = Object.freeze({
-            name: args.name || '',
-            version: args.version || '',
-            isMountSpecific: args.isMountSpecific || false
+            name: args.values.name || '',
+            version: args.values.version || '',
+            isMountSpecific: args.values.isMountSpecific || false
         });
     };
 
@@ -46,4 +46,7 @@ Class('(auto)', function() {
     $$('virtual');
     $$('async');
     this.ready = noop;
+
+    $$('virtual');
+    this.dispose = noop;
 });

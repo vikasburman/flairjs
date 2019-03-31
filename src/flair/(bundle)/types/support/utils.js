@@ -12,6 +12,7 @@ _utils.replaceAll = replaceAll;
 _utils.splitAndTrim = splitAndTrim;
 _utils.findIndexByProp = findIndexByProp;
 _utils.findItemByProp = findItemByProp;
+_utils.which = which;
 _utils.isArrowFunc = isArrow;
 _utils.isASyncFunc = isASync;
 _utils.sieve = sieve;

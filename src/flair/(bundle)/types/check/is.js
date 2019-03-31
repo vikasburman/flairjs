@@ -26,55 +26,59 @@ const _is = (obj, type) => {
     if (type[meta]) { type = type[meta].name; } // since it can be a type as well
     if (_typeOf(type) !== 'string') { throw _Exception.InvalidArgument('type', _is); }
     
-    let isMatched = false, 
-        _typ = '';
+    let isMatched = false;
 
-    // undefined
-    if (type === 'undefined') { isMatched = (typeof obj === 'undefined'); }
-
-    // null
-    if (!isMatched && type === 'null') { isMatched = (obj === null); }
-
-    // NaN
-    if (!isMatched && type === 'NaN') { isMatched = isNaN(obj); }
-
-    // infinity
-    if (!isMatched && type === 'infinity') { isMatched = (typeof obj === 'number' && isFinite(obj) === false); }
-
-    // array
-    if (!isMatched && (type === 'array' || type === 'Array')) { isMatched = Array.isArray(obj); }
-
-    // date
-    if (!isMatched && (type === 'date' || type === 'Date')) { isMatched = (obj instanceof Date); }
-
-    // flair
-    if (!isMatched && (type === 'flairtype' && obj[meta] && flairTypes.indexOf(obj[meta].type) !== -1)) { isMatched = true; }
-    if (!isMatched && (type === 'flairinstance' && obj[meta] && flairInstances.indexOf(obj[meta].type) !== -1)) { isMatched = true; }
-    if (!isMatched && (type === 'flair' && obj[meta])) { isMatched = true; } // presence ot meta symbol means it is flair type/instance
-
-    // special function types
-    if (!isMatched && (type === 'cfunction')) { isMatched = (typeof obj === 'function' && !isArrow(obj)); }
-    if (!isMatched && (type === 'afunction')) { isMatched = (typeof obj === 'function' && isArrow(obj)); }
-
-    // native javascript types (including simple 'function')
-    if (!isMatched) { isMatched = (typeof obj === type); }
-
-    // flair types
-    if (!isMatched) {
-        if (obj[meta]) { 
-            _typ = obj[meta].type;
-            isMatched = _typ === type; 
+    if (obj) {
+        switch(type) {
+            case 'NaN': 
+                isMatched = isNaN(obj); break;
+            case 'infinity': 
+                isMatched = (typeof obj === 'number' && isFinite(obj) === false); break;
+            case 'array':
+            case 'Array':
+                isMatched = Array.isArray(obj); break;
+            case 'date':
+            case 'Date':
+                isMatched = (obj instanceof Date); break;
+            case 'flairtype':
+                isMatched = (obj[meta] && flairTypes.indexOf(obj[meta].type) !== -1); break;
+            case 'flairinstance':
+                isMatched = (obj[meta] && flairInstances.indexOf(obj[meta].type) !== -1); break;
+            case 'flair':
+                // presence ot meta symbol means it is flair type/instance
+                isMatched = typeof obj[meta] !== 'undefined'; break;
+            case 'cfunction':
+                isMatched = (typeof obj === 'function' && !isArrow(obj)); break;
+            case 'afunction':
+                isMatched = (typeof obj === 'function' && isArrow(obj)); break;
+            default:
+                // native javascript types (including simple 'function')
+                if (!isMatched) { isMatched = (typeof obj === type); }
+    
+                if (!isMatched && obj[meta]) {
+                    // flair types
+                    if (!isMatched) { isMatched = (type === obj[meta].type); }
+    
+                    // flair instance check (instance)
+                    if (!isMatched && flairInstances.indexOf(obj[meta].type) !== -1) { isMatched = _isInstanceOf(obj, type); }
+    
+                    // flair type check (derived from)
+                    if (!isMatched && obj[meta].type === 'class') { isMatched = _isDerivedFrom(obj, type); }
+                    
+                    // flair type check (direct name)
+                    if (!isMatched && flairTypes.indexOf(obj[meta].type) !== -1) { isMatched = (obj[meta].name === type); }
+                }
+        }
+    } else {
+        switch(type) {
+            case 'undefined': 
+                isMatched = (typeof obj === 'undefined'); break;
+            case 'null': 
+                isMatched = (obj === null); break;
+            case 'NaN': 
+                isMatched = isNaN(obj); break;
         }
     }
-    
-    // flair flair types - instance check (i.e., class or struct type names)
-    if (!isMatched && _typ && flairInstances.indexOf(_typ) !== -1) { isMatched = _isInstanceOf(obj, type); }
-
-    // flair flair types - type check (i.e., class or names)
-    if (!isMatched && _typ && _typ === 'class') { isMatched = _isDerivedFrom(obj, type); }
-
-    // flair flair types - type check (i.e., direct name)
-    if (!isMatched && _typ && flairTypes.indexOf(_typ) !== -1) { isMatched = (obj[meta].name === type); }
 
     // return
     return isMatched;
