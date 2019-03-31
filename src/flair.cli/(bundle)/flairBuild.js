@@ -634,7 +634,7 @@ const build = (options, buildDone) => {
         `/* eslint-enable no-unused-vars */\n` +
         `\n` +
         `// define loadPathOf this assembly\n` +
-        `let __currentFile = (env.isServer ? __filename : env.global.document.currentScript.src.replace(env.global.document.location.href, './'));\n` +
+        `let __currentFile = (env.isServer ? __filename : window.document.currentScript.src.replace(window.document.location.href, './'));\n` +
         `let __currentPath = __currentFile.substr(0, __currentFile.lastIndexOf('/') + 1);\n` +
         `AppDomain.loadPathOf('${options.current.asmName}', __currentPath)\n` +
         `\n`; 

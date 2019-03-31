@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.26.67
- *  Sun, 31 Mar 2019 02:15:16 GMT
+ *  Version: 0.26.99
+ *  Sun, 31 Mar 2019 12:35:48 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -23,7 +23,7 @@ const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
     name: 'flair.cli',
-    version: '0.26.67',
+    version: '0.26.99',
     format: 'fasm',
     formatVersion: '1',
     contains: [
@@ -648,7 +648,7 @@ const build = (options, buildDone) => {
         `/* eslint-enable no-unused-vars */\n` +
         `\n` +
         `// define loadPathOf this assembly\n` +
-        `let __currentFile = (env.isServer ? __filename : env.global.document.currentScript.src.replace(env.global.document.location.href, './'));\n` +
+        `let __currentFile = (env.isServer ? __filename : window.document.currentScript.src.replace(window.document.location.href, './'));\n` +
         `let __currentPath = __currentFile.substr(0, __currentFile.lastIndexOf('/') + 1);\n` +
         `AppDomain.loadPathOf('${options.current.asmName}', __currentPath)\n` +
         `\n`; 

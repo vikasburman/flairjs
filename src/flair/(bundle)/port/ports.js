@@ -3,7 +3,7 @@
 // sessionStorage factory
 const __sessionStorage = (env) => {
     if (env.isServer) {
-        if (!env.global._sessionStorage) { 
+        if (!global.sessionStorage) { 
             // the way, on browser sessionStorage is different for each tab, 
             // here 'sessionStorage' property on global is different for each node instance in a cluster
             const nodeSessionStorage = function() {
@@ -29,11 +29,11 @@ const __sessionStorage = (env) => {
                     keys = {};
                 };                        
             };
-            env.global._sessionStorage = new nodeSessionStorage();
+            global.sessionStorage = new nodeSessionStorage();
         }
-        return env.global._sessionStorage;
+        return global.sessionStorage;
     } else { // client
-        return env.global.sessionStorage;
+        return window.sessionStorage;
     }
 };
 _Port.define('sessionStorage', ['key', 'getItem', 'setItem', 'removeItem', 'clear'], __sessionStorage);
@@ -44,7 +44,7 @@ const __localStorage = (env) => {
         console.warn("Use of 'state' is not support on server. Using 'session' instead."); // eslint-disable-line no-console
         return __sessionStorage(env);
     } else { // client
-        return env.global.localStorage;
+        return window.localStorage;
     }
 };
 _Port.define('localStorage', ['key', 'getItem', 'setItem', 'removeItem', 'clear'], __localStorage);
@@ -86,18 +86,18 @@ const __clientModule = (env) => {
 
                 let ext = module.substr(module.lastIndexOf('.') + 1).toLowerCase();
                 try {
-                    if (typeof env.global.require !== 'undefined') { // if requirejs is available
-                        env.global.require([module], resolve, reject);
+                    if (typeof require !== 'undefined') { // if requirejs is available
+                        require([module], resolve, reject);
                     } else { // load it as file on browser or in web worker
                         if (env.isWorker) {
                             try {
-                                env.global.importScripts(module); // sync call
+                                importScripts(module); // sync call
                                 resolve(); // TODO: Check how we can pass the loaded 'exported' object of module to this resolve.
                             } catch (err) {
                                 reject(new _Exception(err));
                             }
                         } else { // browser
-                            let js = env.global.document.createElement('script');
+                            let js = window.document.createElement('script');
                             if (ext === 'mjs') {
                                 js.type = 'module';
                             } else {
@@ -111,7 +111,7 @@ const __clientModule = (env) => {
                             js.onerror = (err) => {
                                 reject(new _Exception(err));
                             };
-                            env.global.document.head.appendChild(js);
+                            window.document.head.appendChild(js);
                         }
                     }
                 } catch(err) {
@@ -121,8 +121,14 @@ const __clientModule = (env) => {
         },
         undef: (module) => {
             if (typeof module !== 'string') { throw _Exception.InvalidArgument('module', funcs.undef); }
-            if (typeof env.global.requirejs !== 'undefined') { // if requirejs library is available
-                env.global.requirejs.undef(module);
+            let _requireJs = null;
+            if (isWorker) {
+                _requireJs = WorkerGlobalScope.requirejs || null;
+            } else {
+                _requireJs = window.requirejs || null;
+            }
+            if (_requireJs) { // if requirejs library is available
+                _requireJs.undef(module);
             } else {
                 console.warn("No approach is available to undef a loaded module. Connect clientModule port to an external handler."); // eslint-disable-line no-console
             }

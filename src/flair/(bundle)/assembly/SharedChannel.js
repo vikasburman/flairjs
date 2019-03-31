@@ -97,8 +97,8 @@ const SharedChannel = function(allADOs, onError) {
             });
         } else {
             // load entry point
-            _global.importScripts('<<entryPoint>>');
-            flair = _global.flair;
+            importScripts('<<entryPoint>>');
+            flair = WorkerGlobalScope.flair;
 
             // plumb to private port 
             port = this;
@@ -188,10 +188,10 @@ const SharedChannel = function(allADOs, onError) {
         subChannel.port2.on('message', onMessageFromWorker);
     } else { // client
         let blob = new Blob([remoteMessageHandlerScript]),
-            blobURL = _global.URL.createObjectURL(blob, {
+            blobURL = window.URL.createObjectURL(blob, {
                 type: 'application/javascript; charset=utf-8'
             });
-        wk = new _global.Worker(blobURL);
+        wk = new window.Worker(blobURL);
         wk.onmessage = onMessageFromWorker;
         wk.onerror = onError;
     }

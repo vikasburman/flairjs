@@ -21,9 +21,8 @@
     // locals
     let isServer = new Function("try {return this===global;}catch(e){return false;}")(),
         isWorker = isServer ? (!require('worker_threads').isMainThread) : (typeof WorkerGlobalScope !== 'undefined' ? true : false),
-        _global = (isServer ? global : (isWorker ? WorkerGlobalScope : window)),
         flair = {},
-        currentFile = (isServer ? __filename : _global.document.currentScript.src),
+        currentFile = (isServer ? __filename : window.document.currentScript.src),
         sym = [],
         meta = Symbol('[meta]'),
         modulesRootFolder = 'modules',
@@ -42,21 +41,24 @@
         let idx = argv.findIndex((item) => { return (item.startsWith('--flairSymbols') ? true : false); });
         if (idx !== -1) { argsString = argv[idx].substr(2).split('=')[1]; }
     } else {
-        argsString = (typeof _global.flairSymbols !== 'undefined') ? _global.flairSymbols : '';
+        if (isWorker) {
+            argsString = WorkerGlobalScope.flairSymbols || '';
+        } else {
+            argsString = window.flairSymbols || '';
+        }
     }
     if (argsString) { sym = argsString.split(',').map(item => item.trim()); }
 
     options.symbols = Object.freeze(sym);
     options.env = Object.freeze({
         type: (isServer ? 'server' : 'client'),
-        global: _global,
         isTesting: (sym.indexOf('TEST') !== -1),
         isServer: isServer,
         isClient: !isServer,
         isWorker : isWorker,
         isMain: !isWorker,
-        cores: ((isServer ? (require('os').cpus().length) : _global.navigator.hardwareConcurrency) || 4),
-        isCordova: (!isServer && !!_global.cordova),
+        cores: ((isServer ? (require('os').cpus().length) : window.navigator.hardwareConcurrency) || 4),
+        isCordova: (!isServer && !!window.cordova),
         isNodeWebkit: (isServer && process.versions['node-webkit']),
         isProd: (sym.indexOf('DEBUG') === -1 && sym.indexOf('PROD') !== -1),
         isDebug: (sym.indexOf('DEBUG') !== -1)

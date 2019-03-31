@@ -14,7 +14,10 @@
             "passes": 1,
             "global_defs": {
                 "global": true,
-                "window": true        
+                "window": true,
+                "WorkerGlobalScope": true,
+                "flair": true,
+                "define": true      
             }
         }
     },

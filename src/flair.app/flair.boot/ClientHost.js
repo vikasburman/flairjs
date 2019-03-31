@@ -8,7 +8,7 @@ $$('sealed');
 $$('ns', '(auto)');
 Class('(auto)', Host, function() {
     let mountedApps = {},
-        page = env.global.page,
+        page = window.page,
         hashChangeHandler = null;
 
     $$('override');
@@ -90,7 +90,7 @@ Class('(auto)', Host, function() {
 
         hashChangeHandler = () => {
             // get clean path
-            let path = env.global.location.hash;
+            let path = window.location.hash;
             if (path.substr(0, 3) === '#!/') { path = path.substr(3); }
             if (path.substr(0, 2) === '#!') { path = path.substr(2); }
             if (path.substr(0, 2) === '#/') { path = path.substr(2); }
@@ -123,7 +123,7 @@ Class('(auto)', Host, function() {
         base();
 
         // attach event handler
-        env.global.addEventListener('hashchange', hashChangeHandler);
+        window.addEventListener('hashchange', hashChangeHandler);
         console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version}`); // eslint-disable-line no-console        
     };
 
@@ -132,7 +132,7 @@ Class('(auto)', Host, function() {
         base();
 
         // detach event handler
-        env.global.removeEventListener('hashchange', hashChangeHandler);
+        window.removeEventListener('hashchange', hashChangeHandler);
     };
 
     $$('override');

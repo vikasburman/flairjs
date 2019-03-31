@@ -10,7 +10,7 @@ Class('(auto)', function() {
     this.start = async function (entryPoint) {
         let allBootwares = [],
             mountSpecificBootwares = [],
-            currentScript = (env.isServer ? '' : env.global.document.scripts[env.global.document.scripts.length - 1].src);
+            currentScript = (env.isServer ? '' : window.document.scripts[window.document.scripts.length - 1].src);
         entryPoint = (env.isServer ? (env.isWorker ? '' : entryPoint) : (env.isWorker ? '' : currentScript));
         const setEntryPoint = () => {
             // set entry point for workers
@@ -104,12 +104,12 @@ Class('(auto)', function() {
         };
         const DOMReady = () => {
             return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
-                env.global.document.addEventListener("DOMContentLoaded", resolve);
+                window.document.addEventListener("DOMContentLoaded", resolve);
             });
         };
         const DeviceReady = () => {
             return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
-                document.addEventListener('deviceready', resolve, false);
+                window.document.addEventListener('deviceready', resolve, false);
             });
         };
         const ready = async () => {

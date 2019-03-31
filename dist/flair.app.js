@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.26.67
- *  Sun, 31 Mar 2019 02:15:16 GMT
+ *  Version: 0.26.99
+ *  Sun, 31 Mar 2019 12:35:47 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -1258,7 +1258,7 @@ const { $$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$arg
 /* eslint-enable no-unused-vars */
 
 // define loadPathOf this assembly
-let __currentFile = (env.isServer ? __filename : env.global.document.currentScript.src.replace(env.global.document.location.href, './'));
+let __currentFile = (env.isServer ? __filename : window.document.currentScript.src.replace(window.document.location.href, './'));
 let __currentPath = __currentFile.substr(0, __currentFile.lastIndexOf('/') + 1);
 AppDomain.loadPathOf('flair.app', __currentPath)
 
@@ -1425,7 +1425,7 @@ Class('BootEngine', function() {
     this.start = async function (entryPoint) {
         let allBootwares = [],
             mountSpecificBootwares = [],
-            currentScript = (env.isServer ? '' : env.global.document.scripts[env.global.document.scripts.length - 1].src);
+            currentScript = (env.isServer ? '' : window.document.scripts[window.document.scripts.length - 1].src);
         entryPoint = (env.isServer ? (env.isWorker ? '' : entryPoint) : (env.isWorker ? '' : currentScript));
         const setEntryPoint = () => {
             // set entry point for workers
@@ -1519,12 +1519,12 @@ Class('BootEngine', function() {
         };
         const DOMReady = () => {
             return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
-                env.global.document.addEventListener("DOMContentLoaded", resolve);
+                window.document.addEventListener("DOMContentLoaded", resolve);
             });
         };
         const DeviceReady = () => {
             return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
-                document.addEventListener('deviceready', resolve, false);
+                window.document.addEventListener('deviceready', resolve, false);
             });
         };
         const ready = async () => {
@@ -1562,7 +1562,7 @@ $$('sealed');
 $$('ns', 'flair.boot');
 Class('ClientHost', Host, function() {
     let mountedApps = {},
-        page = env.global.page,
+        page = window.page,
         hashChangeHandler = null;
 
     $$('override');
@@ -1644,7 +1644,7 @@ Class('ClientHost', Host, function() {
 
         hashChangeHandler = () => {
             // get clean path
-            let path = env.global.location.hash;
+            let path = window.location.hash;
             if (path.substr(0, 3) === '#!/') { path = path.substr(3); }
             if (path.substr(0, 2) === '#!') { path = path.substr(2); }
             if (path.substr(0, 2) === '#/') { path = path.substr(2); }
@@ -1677,7 +1677,7 @@ Class('ClientHost', Host, function() {
         base();
 
         // attach event handler
-        env.global.addEventListener('hashchange', hashChangeHandler);
+        window.addEventListener('hashchange', hashChangeHandler);
         console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version}`); // eslint-disable-line no-console        
     };
 
@@ -1686,7 +1686,7 @@ Class('ClientHost', Host, function() {
         base();
 
         // detach event handler
-        env.global.removeEventListener('hashchange', hashChangeHandler);
+        window.removeEventListener('hashchange', hashChangeHandler);
     };
 
     $$('override');
@@ -2162,6 +2162,6 @@ Class('Router', Bootware, function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.67","lupdate":"Sun, 31 Mar 2019 02:15:16 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.App","flair.app.Host","flair.app.BootEngine","flair.boot.ClientHost","flair.boot.ServerHost","flair.bw.DIContainer","flair.bw.Middlewares","flair.bw.NodeEnv","flair.bw.ResHeaders","flair.bw.Router"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.99","lupdate":"Sun, 31 Mar 2019 12:35:47 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.App","flair.app.Host","flair.app.BootEngine","flair.boot.ClientHost","flair.boot.ServerHost","flair.bw.DIContainer","flair.bw.Middlewares","flair.bw.NodeEnv","flair.bw.ResHeaders","flair.bw.Router"],"resources":[],"assets":[],"routes":[]}');
 
 })();

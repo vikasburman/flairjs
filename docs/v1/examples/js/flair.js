@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.26.67
- *  Sun, 31 Mar 2019 02:15:14 GMT
+ *  Version: 0.26.99
+ *  Sun, 31 Mar 2019 12:35:45 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -34,9 +34,8 @@
     // locals
     let isServer = new Function("try {return this===global;}catch(e){return false;}")(),
         isWorker = isServer ? (!require('worker_threads').isMainThread) : (typeof WorkerGlobalScope !== 'undefined' ? true : false),
-        _global = (isServer ? global : (isWorker ? WorkerGlobalScope : window)),
         flair = {},
-        currentFile = (isServer ? __filename : _global.document.currentScript.src),
+        currentFile = (isServer ? __filename : window.document.currentScript.src),
         sym = [],
         meta = Symbol('[meta]'),
         modulesRootFolder = 'modules',
@@ -55,21 +54,24 @@
         let idx = argv.findIndex((item) => { return (item.startsWith('--flairSymbols') ? true : false); });
         if (idx !== -1) { argsString = argv[idx].substr(2).split('=')[1]; }
     } else {
-        argsString = (typeof _global.flairSymbols !== 'undefined') ? _global.flairSymbols : '';
+        if (isWorker) {
+            argsString = WorkerGlobalScope.flairSymbols || '';
+        } else {
+            argsString = window.flairSymbols || '';
+        }
     }
     if (argsString) { sym = argsString.split(',').map(item => item.trim()); }
 
     options.symbols = Object.freeze(sym);
     options.env = Object.freeze({
         type: (isServer ? 'server' : 'client'),
-        global: _global,
         isTesting: (sym.indexOf('TEST') !== -1),
         isServer: isServer,
         isClient: !isServer,
         isWorker : isWorker,
         isMain: !isWorker,
-        cores: ((isServer ? (require('os').cpus().length) : _global.navigator.hardwareConcurrency) || 4),
-        isCordova: (!isServer && !!_global.cordova),
+        cores: ((isServer ? (require('os').cpus().length) : window.navigator.hardwareConcurrency) || 4),
+        isCordova: (!isServer && !!window.cordova),
         isNodeWebkit: (isServer && process.versions['node-webkit']),
         isProd: (sym.indexOf('DEBUG') === -1 && sym.indexOf('PROD') !== -1),
         isDebug: (sym.indexOf('DEBUG') !== -1)
@@ -80,10 +82,10 @@
         name: 'flair',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.26.67',
+        version: '0.26.99',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 31 Mar 2019 02:15:14 GMT')
+        lupdate: new Date('Sun, 31 Mar 2019 12:35:45 GMT')
     });  
     
     flair.members = [];
@@ -1423,8 +1425,8 @@
                 });
             } else {
                 // load entry point
-                _global.importScripts('<<entryPoint>>');
-                flair = _global.flair;
+                importScripts('<<entryPoint>>');
+                flair = WorkerGlobalScope.flair;
     
                 // plumb to private port 
                 port = this;
@@ -1514,10 +1516,10 @@
             subChannel.port2.on('message', onMessageFromWorker);
         } else { // client
             let blob = new Blob([remoteMessageHandlerScript]),
-                blobURL = _global.URL.createObjectURL(blob, {
+                blobURL = window.URL.createObjectURL(blob, {
                     type: 'application/javascript; charset=utf-8'
                 });
-            wk = new _global.Worker(blobURL);
+            wk = new window.Worker(blobURL);
             wk.onmessage = onMessageFromWorker;
             wk.onerror = onError;
         }
@@ -2620,11 +2622,9 @@
      * @params
      *  dep: string - dependency to be included
      *                NOTE: Dep can be of any type as defined for 'bring'
-     *  globalVar: string/boolean - globally added variable name by the dependency
+     *  globalVar: string - globally added variable name by the dependency
      *             NOTE: if dependency is a file and it emits a global variable, this should be name
      *                   of that variable and it will return that variable itself
-     *                   if dependency is a file and does not emit any variable and it is still ok to
-     *                   assume it a valid scenario, pass true value and it will assume a successfull loading if there is no error occured
      * @returns promise - that gets resolved with given dependency
      */ 
     const _include = (dep, globalVar) => { 
@@ -2632,15 +2632,19 @@
             if (typeof dep !== 'string') { reject(_Exception.InvalidArgument('dep')); return; }
             try {
                 _bring([dep], (obj) => {
-                    if (!obj) { reject(_Exception.OperationFailed(`Dependency could not be resolved. (${dep})`)); }
-                    if (obj) {
-                        resolve(obj); 
-                    } else if (globalVar) { // if global var is given to look at
-                        if (options.global[globalVar]) {
-                            resolve(options.global[globalVar]); 
+                    if (!obj) {
+                        reject(_Exception.OperationFailed(`Dependency could not be resolved. (${dep})`)); 
+                        return;
+                    } else {
+                        if (typeof obj === 'boolean' && typeof globalVar === 'string') { // was resolved w true, but not an object AND if global var is given to look at
+                            obj = (isServer ? global[globalVar] : (isWorker ? WorkerGlobalScope[globalVar] : window[globalVar]));
+                            if (!obj) {
+                                reject(_Exception.OperationFailed(`Dependency object could not be located. (${dep})`)); 
+                                return;
+                            }
                         }
                     }
-                    resolve(); // since obj was some value, may be just true, resolve it
+                    resolve(obj); // this may be resolved object OR object picked from global scope OR TRUE value
                 });
             } catch (err) {
                 reject(err);
@@ -5881,7 +5885,7 @@
     // sessionStorage factory
     const __sessionStorage = (env) => {
         if (env.isServer) {
-            if (!env.global._sessionStorage) { 
+            if (!global.sessionStorage) { 
                 // the way, on browser sessionStorage is different for each tab, 
                 // here 'sessionStorage' property on global is different for each node instance in a cluster
                 const nodeSessionStorage = function() {
@@ -5907,11 +5911,11 @@
                         keys = {};
                     };                        
                 };
-                env.global._sessionStorage = new nodeSessionStorage();
+                global.sessionStorage = new nodeSessionStorage();
             }
-            return env.global._sessionStorage;
+            return global.sessionStorage;
         } else { // client
-            return env.global.sessionStorage;
+            return window.sessionStorage;
         }
     };
     _Port.define('sessionStorage', ['key', 'getItem', 'setItem', 'removeItem', 'clear'], __sessionStorage);
@@ -5922,7 +5926,7 @@
             console.warn("Use of 'state' is not support on server. Using 'session' instead."); // eslint-disable-line no-console
             return __sessionStorage(env);
         } else { // client
-            return env.global.localStorage;
+            return window.localStorage;
         }
     };
     _Port.define('localStorage', ['key', 'getItem', 'setItem', 'removeItem', 'clear'], __localStorage);
@@ -5964,18 +5968,18 @@
     
                     let ext = module.substr(module.lastIndexOf('.') + 1).toLowerCase();
                     try {
-                        if (typeof env.global.require !== 'undefined') { // if requirejs is available
-                            env.global.require([module], resolve, reject);
+                        if (typeof require !== 'undefined') { // if requirejs is available
+                            require([module], resolve, reject);
                         } else { // load it as file on browser or in web worker
                             if (env.isWorker) {
                                 try {
-                                    env.global.importScripts(module); // sync call
+                                    importScripts(module); // sync call
                                     resolve(); // TODO: Check how we can pass the loaded 'exported' object of module to this resolve.
                                 } catch (err) {
                                     reject(new _Exception(err));
                                 }
                             } else { // browser
-                                let js = env.global.document.createElement('script');
+                                let js = window.document.createElement('script');
                                 if (ext === 'mjs') {
                                     js.type = 'module';
                                 } else {
@@ -5989,7 +5993,7 @@
                                 js.onerror = (err) => {
                                     reject(new _Exception(err));
                                 };
-                                env.global.document.head.appendChild(js);
+                                window.document.head.appendChild(js);
                             }
                         }
                     } catch(err) {
@@ -5999,8 +6003,14 @@
             },
             undef: (module) => {
                 if (typeof module !== 'string') { throw _Exception.InvalidArgument('module', funcs.undef); }
-                if (typeof env.global.requirejs !== 'undefined') { // if requirejs library is available
-                    env.global.requirejs.undef(module);
+                let _requireJs = null;
+                if (isWorker) {
+                    _requireJs = WorkerGlobalScope.requirejs || null;
+                } else {
+                    _requireJs = window.requirejs || null;
+                }
+                if (_requireJs) { // if requirejs library is available
+                    _requireJs.undef(module);
                 } else {
                     console.warn("No approach is available to undef a loaded module. Connect clientModule port to an external handler."); // eslint-disable-line no-console
                 }
@@ -6641,7 +6651,7 @@ const { $$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$arg
 /* eslint-enable no-unused-vars */
 
 // define loadPathOf this assembly
-let __currentFile = (env.isServer ? __filename : env.global.document.currentScript.src.replace(env.global.document.location.href, './'));
+let __currentFile = (env.isServer ? __filename : window.document.currentScript.src.replace(window.document.location.href, './'));
 let __currentPath = __currentFile.substr(0, __currentFile.lastIndexOf('/') + 1);
 AppDomain.loadPathOf('flair', __currentPath)
 
@@ -6992,6 +7002,6 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.67","lupdate":"Sun, 31 Mar 2019 02:15:14 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["IDisposable","Aspect","Attribute","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.99","lupdate":"Sun, 31 Mar 2019 12:35:45 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["IDisposable","Aspect","Attribute","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
 
 })();
