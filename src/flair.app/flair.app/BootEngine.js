@@ -9,8 +9,9 @@ $$('ns', '(auto)');
 Class('(auto)', function() {
     this.start = async function (entryPoint) {
         let allBootwares = [],
-            mountSpecificBootwares = [];
-        entryPoint = (env.isServer ? (env.isWorker ? '' : entryPoint) : (env.isWorker ? '' : env.global.document.currentScript));
+            mountSpecificBootwares = [],
+            currentScript = (env.isServer ? '' : env.global.document.scripts[env.global.document.scripts.length - 1].src);
+        entryPoint = (env.isServer ? (env.isWorker ? '' : entryPoint) : (env.isWorker ? '' : currentScript));
         const setEntryPoint = () => {
             // set entry point for workers
             AppDomain.entryPoint(entryPoint);

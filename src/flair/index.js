@@ -75,7 +75,7 @@
     
     flair.members = [];
     flair.options = Object.freeze(options);
-    flair.env = Object.env; // direct env access as well
+    flair.env = flair.options.env; // direct env access as well
     const a2f = (name, obj, disposer) => {
         flair[name] = Object.freeze(obj);
         flair.members.push(name);

@@ -139,7 +139,7 @@ const _bring = (deps, fn) => {
 
                             // load as module, since this is a js file and we need is executed and not the content as such
                             loadModule(_dep).then((content) => { 
-                                _resolved = content; done(); // it may or may not give a content
+                                _resolved = content || true; done(); // it may or may not give a content
                             }).catch((err) => {
                                 throw _Exception.OperationFailed(`Module could not be loaded. (${_dep})`, err, _bring);
                             });
@@ -165,7 +165,7 @@ const _bring = (deps, fn) => {
                     // on client modules are supposed to be inside ./modules/ folder, therefore prefix it
                     if (!isServer) { _dep = `./${modulesRootFolder}/${_dep}`; }
                     loadModule(_dep).then((content) => { 
-                        _resolved = content; done();
+                        _resolved = content || true; done();
                     }).catch((err) => {
                         throw _Exception.OperationFailed(`Module could not be loaded. (${_dep})`, err, _bring);
                     });
@@ -183,6 +183,7 @@ const _bring = (deps, fn) => {
 
             // process
             if (_dep === '') { // nothing is defined to process
+                _resolved = true;
                 resolved(true); return;
             } else {
                 // cycle break check

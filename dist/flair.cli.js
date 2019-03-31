@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.26.28
- *  Sat, 30 Mar 2019 19:42:56 GMT
+ *  Version: 0.26.64
+ *  Sun, 31 Mar 2019 01:27:34 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -23,7 +23,7 @@ const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
     name: 'flair.cli',
-    version: '0.26.28',
+    version: '0.26.64',
     format: 'fasm',
     formatVersion: '1',
     contains: [
@@ -235,7 +235,7 @@ const build = (options, buildDone) => {
         return path.join(options.dest, preambleRoot);
     };
     const resolveRootNS = (isAddDot) => {
-        let rootNS = (options.current.asmName === 'flair' ? '' : options.current.asmName); 
+        let rootNS = ''; // root namespace is always without any name, no matter which assembly
         if (rootNS && isAddDot) { rootNS += '.'; }
         return rootNS;
     };
@@ -339,6 +339,7 @@ const build = (options, buildDone) => {
         // each ADO object has:
         //      "name": "", 
         //      "file": "",
+        //      "mainAssembly": "",
         //      "desc": "",
         //      "title": "",
         //      "version": "",
@@ -353,6 +354,7 @@ const build = (options, buildDone) => {
         options.current.ado = {
             name: options.current.asmName,
             file: options.current.asmFileName.replace('.js', '{.min}.js'),
+            mainAssembly: options.mainAssembly,
             desc: options.packageJSON.description,
             title: options.packageJSON.title,
             version: options.packageJSON.version,
@@ -366,7 +368,7 @@ const build = (options, buildDone) => {
             routes: []
         };
 
-        if (options.skipRegistrationsFor.indexOf(options.current.asmName) === -1) { // if not to be skipped for preamble
+        if (options.skipPreambleFor.indexOf(options.current.asmName) === -1) { // if not to be skipped for preamble
             options.current.adosJSON.push(options.current.ado);
         }
     };
@@ -644,6 +646,11 @@ const build = (options, buildDone) => {
         `const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async } = $$;\n` +
         `const { $$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$args, $$inject, $$resource, $$asset, $$singleton, $$serialize, $$deprecate, $$session, $$state, $$conditional, $$noserialize, $$ns } = $$;\n` +
         `/* eslint-enable no-unused-vars */\n` +
+        `\n` +
+        `// define loadPathOf this assembly\n` +
+        `let __currentFile = (env.isServer ? __filename : env.global.document.currentScript.src.replace(env.global.document.location.href, './'));\n` +
+        `let __currentPath = __currentFile.substr(0, __currentFile.lastIndexOf('/') + 1);\n` +
+        `AppDomain.loadPathOf('${options.current.asmName}', __currentPath)\n` +
         `\n`; 
         appendToFile(closureHeader);        
     };
@@ -896,7 +903,7 @@ const build = (options, buildDone) => {
 
         logger(0, 'preamble', options.current.preamble.replace(options.dest, '.'), true);
         let ados = JSON.stringify(options.current.adosJSON);
-        let dump = `(() => { let ados = JSON.parse('${ados}');flair.AppDomain.registerAdo(ados);})();\n`;
+        let dump = `(() => { let ados = JSON.parse('${ados}');flair.AppDomain.registerAdo(...ados);})();\n`;
         fsx.writeFileSync(options.current.preamble, dump, {flag: 'a'}); // append if already exists
     };
     const collectTypesAndResourcesAndRoutes = () => {
@@ -943,6 +950,7 @@ const build = (options, buildDone) => {
             if (nsFile.type !== 'routes') {
                 if (nsFile.typeName.indexOf('.') !== -1) { throw `Type/Resource names cannot contain dots. (${nsFile.typeName})`; }
                 nsFile.qualifiedName = (options.current.nsName !== '(root)' ? options.current.nsName + '.' : resolveRootNS(true))  + nsFile.typeName;
+
                 if (nsFile.type === 'res') {
                     options.current.ado.resources.push(nsFile);
                 } else {
@@ -1276,6 +1284,8 @@ const build = (options, buildDone) => {
  *                      }
  *                  }
  *              }
+ *              mainAssembly: string - name of the mainAssembly, whose load location will be dynamically used as reference to load other assemblies
+ *                            This is ignored in custom build, where resolveRoot setting is statically used for resolving assembly paths
  *              fullBuild: true/false   - is full build to be done
  *              skipBumpVersion: true/false - if skip bump version with build
  *              suppressLogging: true/false  - if build time log is to be shown on terminal
@@ -1479,6 +1489,8 @@ exports.flairBuild = function(options, cb) {
     options.customBuild = options.customBuild || false; 
     options.customBuildConfig = options.customBuildConfig || '';
 
+    options.mainAssembly = options.customBuild ? '' : (options.mainAssembly || '');
+    
     options.fullBuild = options.fullBuild || false;
     options.quickBuild = (!options.fullBuild && options.quickBuild) || false;
     options.clean = options.clean !== undefined ? options.clean : true;
@@ -1539,6 +1551,11 @@ exports.flairBuild = function(options, cb) {
     options.skipRegistrationsFor = [
         'flair.cli'
     ];
+    // exclude files from being added to preamble
+    options.skipPreambleFor = [
+        'flair',
+        'flair.cli'
+    ];    
 
     // define logger
     const logger = (level, msg, data, prlf, polf) => {

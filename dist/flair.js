@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.26.28
- *  Sat, 30 Mar 2019 19:42:54 GMT
+ *  Version: 0.26.64
+ *  Sun, 31 Mar 2019 01:27:30 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -80,15 +80,15 @@
         name: 'flair',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.26.28',
+        version: '0.26.64',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sat, 30 Mar 2019 19:42:54 GMT')
+        lupdate: new Date('Sun, 31 Mar 2019 01:27:30 GMT')
     });  
     
     flair.members = [];
     flair.options = Object.freeze(options);
-    flair.env = Object.env; // direct env access as well
+    flair.env = flair.options.env; // direct env access as well
     const a2f = (name, obj, disposer) => {
         flair[name] = Object.freeze(obj);
         flair.members.push(name);
@@ -269,7 +269,7 @@
         return def; // as is
     };
     const isArrow = (fn) => {
-        return (!(fn).hasOwnProperty('prototype'));
+        return (!(fn).hasOwnProperty('prototype') && fn.constructor.name === 'Function');
     };
     const isASync = (fn) => {
         return (fn.constructor.name === 'AsyncFunction');
@@ -372,7 +372,7 @@
         }
     };
     const forEachAsync = (items, asyncFn) => {
-        return Promise((resolve, reject) => {
+        return new Promise((resolve, reject) => {
             const processItems = (items) => {
                 if (!items || items.length === 0) { resolve(); return; }
                 Promise((_resolve, _reject) => {
@@ -706,7 +706,7 @@
      *              as per usage requirements
      * @example
      *  Port(name)                     // @returns handler/null - if connected returns handler else null
-     *  Port.define(name, type, intf)  // @returns void
+     *  Port.define(name, members, intf)  // @returns void
      *  Port.connect(name, handler)    // @returns void
      *  Port.disconnect(name)          // @returns void
      *  Port.disconnect.all()          // @returns void
@@ -729,10 +729,10 @@
         return null;
     };
     _Port.define = (name, members, inbuilt) => {
-        let args = _Args('name: string',
+        let args = _Args('name: string, members: array, inbuilt: afunction',
+                         'name: string, inbuilt: afunction',
                          'name: string, members: array',
-                         'name: string, members: array, inbuilt: afunction',
-                         'name: string, inbuilt: afunction')(name, members, inbuilt); args.throwOnError(_Port.define);
+                         'name: string')(name, members, inbuilt); args.throwOnError(_Port.define);
     
         if (ports_registry[name]) { throw _Exception.Duplicate(name, _Port.define); }
         ports_registry[name] = {
@@ -1047,13 +1047,21 @@
                     // uncache module, so it's types get to register again with this new context
                     uncacheModule(file);
     
+                    // get resolved file name of this assembly, in relation to mainAssembly
+                    let asmADO = this.domain.getAdo(file),
+                        file2 = file;
+                    if (asmADO && asmADO.mainAssembly) {
+                        if (file2.startsWith('./')) { file2 = file2.substr(2); }
+                        file2 = this.domain.loadPathOf(asmADO.mainAssembly) + file2;
+                    }
+    
                     // load module
-                    loadModule(file).then(() => {
+                    loadModule(file2).then(() => {
                         // remove this from current context list
                         currentContexts.pop();
     
                         // add to list
-                        asmFiles[file] = Object.freeze(new Assembly(this.domain.getADO(file), this));
+                        asmFiles[file] = Object.freeze(new Assembly(asmADO, this));
     
                         // resolve
                         resolve();
@@ -1650,6 +1658,7 @@
             contexts = {},
             currentContexts = [],
             allADOs = [],
+            loadPaths = {},
             entryPoint = '',
             configFileJSON = null,
             app = null,
@@ -1703,6 +1712,7 @@
                 asmTypes = {};
                 contexts = {};
                 domains = {};
+                loadPaths = {};
                 allADOs = [];
             }
         };
@@ -1734,7 +1744,11 @@
             let isThrowOnDuplicate = true;
             if (ados.length === 1 && typeof ados[0] === 'string') { 
                 let ado = JSON.parse(ados[0]);
-                ados = [ado];
+                if (Array.isArray(ado)) {
+                    ados = ado;
+                } else {
+                    ados = [ado];
+                }
                 isThrowOnDuplicate = false;   
             }
     
@@ -1796,7 +1810,7 @@
         // set onces, read many times
         this.config = (configFile) => {
             if (!configFileJSON && configFile) { // load only when not already loaded
-                return Promise((resolve, reject) => {
+                return new Promise((resolve, reject) => {
                     loadFile(configFile).then((json) => {
                         configFileJSON = json;
                         resolve(Object.assign({}, configFileJSON)); // return a copy
@@ -1811,7 +1825,7 @@
         };
         this.entryPoint = (file) => {
             if (!entryPoint) {
-                if (typeof file !== 'string') { throw _Exception.InvalidArgument('file'); }
+                if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.entryPoint); }
                 if (!isWorker) { // when running in context of worker, this will not be needed to set, as a new appdomain cannot be created from inside worker, so it will never be read
                     entryPoint = which(file || ''); // main entry point file
                 }
@@ -1825,6 +1839,15 @@
         this.host = (hostObj) => {
             if (hostObj) { host = hostObj; }
             return host;
+        };
+        this.loadPathOf = (file, path) => {
+            if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.loadPath); }
+            if (path) { // set
+                if (!loadPaths[file]) {
+                    loadPaths[file] = path;
+                }
+            }
+            return loadPaths[file] || '';
         };
     
         // scripts
@@ -1943,17 +1966,14 @@
      * @example
      *  _getAssemblyOf(Type)
      * @params
-     *  Type: type/instance/string - flair type or instance whose assembly file is required
-     *                               qualified type name, if it is needed to know in which assembly file this exists
+     *  Type: string - qualified type name, if it is needed to know in which assembly file this exists
+     *                               
      * @returns string - assembly file name which contains this type
      */ 
     const _getAssemblyOf = (Type) => { 
-        let args = _Args('Type: flairtype',
-                         'Type: flairinstance',
-                         'Type: string')(Type); args.throwOnError(_getAssemblyOf);
+        let args = _Args('Type: string')(Type); args.throwOnError(_getAssemblyOf);
     
-        let asm = _getAssembly(Type);
-        return (asm ? asm.file : '');
+        return _AppDomain.resolve(Type);
     };
     
     // attach to flair
@@ -2506,7 +2526,7 @@
     
                                 // load as module, since this is a js file and we need is executed and not the content as such
                                 loadModule(_dep).then((content) => { 
-                                    _resolved = content; done(); // it may or may not give a content
+                                    _resolved = content || true; done(); // it may or may not give a content
                                 }).catch((err) => {
                                     throw _Exception.OperationFailed(`Module could not be loaded. (${_dep})`, err, _bring);
                                 });
@@ -2532,7 +2552,7 @@
                         // on client modules are supposed to be inside ./modules/ folder, therefore prefix it
                         if (!isServer) { _dep = `./${modulesRootFolder}/${_dep}`; }
                         loadModule(_dep).then((content) => { 
-                            _resolved = content; done();
+                            _resolved = content || true; done();
                         }).catch((err) => {
                             throw _Exception.OperationFailed(`Module could not be loaded. (${_dep})`, err, _bring);
                         });
@@ -2550,6 +2570,7 @@
     
                 // process
                 if (_dep === '') { // nothing is defined to process
+                    _resolved = true;
                     resolved(true); return;
                 } else {
                     // cycle break check
@@ -2606,18 +2627,15 @@
             if (typeof dep !== 'string') { reject(_Exception.InvalidArgument('dep')); return; }
             try {
                 _bring([dep], (obj) => {
+                    if (!obj) { reject(_Exception.OperationFailed(`Dependency could not be resolved. (${dep})`)); }
                     if (obj) {
-                        resolve(obj);
+                        resolve(obj); 
                     } else if (globalVar) { // if global var is given to look at
-                        if (typeof globalVar === 'boolean') {
-                            resolve(); // since a true is passed, resolve as is
-                        } else {
-                            if (options.global[globalVar]) {
-                                resolve(options.global[globalVar]);
-                            }
+                        if (options.global[globalVar]) {
+                            resolve(options.global[globalVar]); 
                         }
                     }
-                    reject(_Exception.OperationFailed(`Dependency could not be resolved. (${dep})`));
+                    resolve(); // since obj was some value, may be just true, resolve it
                 });
             } catch (err) {
                 reject(err);
@@ -3889,7 +3907,7 @@
                         if (astPath.startsWith('../')) { astPath = astPath.substr(3); }
                         if (astPath.startsWith('./')) { astPath = astPath.substr(2); }
                         if (astPath.startsWith('/')) { astPath = astPath.substr(1); }
-                        resOrAssetData= _getAssemblyOf(def.name) + '/' + astPath;
+                        resOrAssetData = _getAssemblyOf(def.name) + '/' + astPath;
                     }
                 }
                 if (resOrAssetData) {
@@ -3987,7 +4005,7 @@
             _isASync = _isASync || isASync(memberDef); // if memberDef is an async function, mark it as async automatically
             if (_isASync) {
                 _member = async function(...args) {
-                    let wrappedMemberDef = new Promise(function(resolve, reject) {
+                    return new Promise(function(resolve, reject) {
                         if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
                         let fnArgs = [];
                         if (base) { fnArgs.push(base); }                                // base is always first, if overriding
@@ -4014,7 +4032,6 @@
                             reject(err, memberDef);
                         }
                     }.bind(bindingHost));
-                    return await wrappedMemberDef();
                 }.bind(bindingHost);
             } else {
                 _member = function(...args) {
@@ -5984,6 +6001,7 @@
                 }
             }
         };
+        return funcs;
     };
     _Port.define('clientModule', ['require', 'undef'], __clientModule);
     
@@ -6026,7 +6044,7 @@
             });
         };
     };
-    _Port.define('serverFile', null, __serverFile);
+    _Port.define('serverFile', __serverFile);
     
     // clientFile factory
     const __clientFile = (env) => { // eslint-disable-line no-unused-vars
@@ -6056,7 +6074,7 @@
             });
         };
     };
-    _Port.define('clientFile', null, __clientFile);
+    _Port.define('clientFile', __clientFile);
     
     // settingsReader factory
     const __settingsReader = (env) => {
@@ -6108,7 +6126,7 @@
             return settings;
         };
     };
-    _Port.define('settingsReader', null, __settingsReader);
+    _Port.define('settingsReader', __settingsReader);
      
     /**
      * @name Reflector
@@ -6617,6 +6635,11 @@ const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$priv
 const { $$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$args, $$inject, $$resource, $$asset, $$singleton, $$serialize, $$deprecate, $$session, $$state, $$conditional, $$noserialize, $$ns } = $$;
 /* eslint-enable no-unused-vars */
 
+// define loadPathOf this assembly
+let __currentFile = (env.isServer ? __filename : env.global.document.currentScript.src.replace(env.global.document.location.href, './'));
+let __currentPath = __currentFile.substr(0, __currentFile.lastIndexOf('/') + 1);
+AppDomain.loadPathOf('flair', __currentPath)
+
 let settings = {}; // eslint-disable-line no-unused-vars
 
         let settingsReader = flair.Port('settingsReader');
@@ -6627,141 +6650,15 @@ let settings = {}; // eslint-disable-line no-unused-vars
         settings = Object.freeze(settings);
         flair.AppDomain.context.current().currentAssemblyBeingLoaded('./flair{.min}.js');
 
-(async () => { // ./src/flair/flair.app/@1-Bootware.js
+(async () => { // ./src/flair/(root)/@1-IDisposable.js
 'use strict';
 /**
- * @name Bootware
- * @description Bootware base class
+ * @name IDisposable
+ * @description IDisposable interface
  */
-$$('abstract');
-$$('ns', 'flair.app');
-Class('Bootware', function() {
-    /**  
-     * @name construct
-     * @arguments
-     *  name: string - name of the bootware
-     *  version: string - version number of the bootware
-    */
-    $$('virtual');
-    this.construct = (name, version, isMountSpecific) => {
-        let args = Args('name: string, version: string',
-                        'name: string, version: string, isMountSpecific: boolean',
-                        'name: string, isMountSpecific: boolean',
-                        'name: string')(name, version, isMountSpecific); args.throwOnError(this.construct);
-
-        // set info
-        this.info = Object.freeze({
-            name: args.name || '',
-            version: args.version || '',
-            isMountSpecific: args.isMountSpecific || false
-        });
-    };
-
-    /**  
-     * @name boot
-     * @arguments
-     *  mount: object - mount object
-    */
-    $$('virtual');
-    $$('async');
-    this.boot = noop;
-
-    $$('readonly');
-    this.info = null;
-
-    /**  
-     * @name ready
-     * @arguments
-     *  mount: object - mount object
-    */
-    $$('virtual');
-    $$('async');
-    this.ready = noop;
-});
-
-})();
-
-(async () => { // ./src/flair/flair.app/@2-Host.js
-'use strict';
-const { IDisposable } = ns();
-const { Bootware } = ns('flair.app');
-
-/**
- * @name App
- * @description App base class
- */
-$$('ns', 'flair.app');
-Class('Host', Bootware, [IDisposable], function() {
-    $$('privateSet');
-    this.isStarted = false;
-
-    $$('virtual');
-    this.start = async () => {
-        this.isStarted = true;
-    };
-
-    $$('virtual');
-    this.stop = async () => {
-        this.isStarted = false;
-    };
-
-    this.restart = async () => {
-        await this.stop();
-        await this.start();
-    };
-
-    this.error = event((err) => {
-        return { error: err };
-    });
-    
-    this.raiseError = (err) => {
-        this.error(err);
-    };
-});
-
-})();
-
-(async () => { // ./src/flair/flair.app/@3-App.js
-'use strict';
-const { IDisposable } = ns();
-const { Bootware } = ns('flair.app');
-
-/**
- * @name App
- * @description App base class
- */
-$$('ns', 'flair.app');
-Class('App', Bootware, [IDisposable], function() {
-    $$('override');
-    this.construct = (base) => {
-        // set info
-        let asm = getAssembly(this);
-        base(asm.title, asm.version);
-    };
-    
-    $$('override');
-    this.boot = async (base) => {
-        base();
-        AppDomain.host().error.add(this.onError); // host's errors are handled here
-    };
-
-    $$('virtual');
-    $$('async');
-    this.start = noop;
-
-    $$('virtual');
-    $$('async');
-    this.stop = noop;
-
-    $$('virtual');
-    this.onError = (e) => {
-        throw Exception.OperationFailed(e.error, this.onError);
-    };
-
-    $$('virtual');
-    this.dispose = () => {
-        AppDomain.host().error.remove(this.onError); // remove error handler
-    };
+$$('ns', '(root)');
+Interface('IDisposable', function() {
+    this.dispose = nim;
 });
 
 })();
@@ -6942,19 +6839,6 @@ Class('Attribute', function() {
 
 })();
 
-(async () => { // ./src/flair/(root)/IDisposable.js
-'use strict';
-/**
- * @name IDisposable
- * @description IDisposable interface
- */
-$$('ns', '(root)');
-Interface('IDisposable', function() {
-    this.dispose = nim;
-});
-
-})();
-
 (async () => { // ./src/flair/(root)/IProgressReporter.js
 'use strict';
 /**
@@ -7101,146 +6985,8 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 })();
 
-(async () => { // ./src/flair/flair.app/BootEngine.js
-'use strict';
-const { Bootware } = ns('flair.app');
-
-/**
- * @name BootEngine
- * @description Bootstrapper functionality
- */
-$$('static');
-$$('ns', 'flair.app');
-Class('BootEngine', function() {
-    this.start = async function (entryPoint) {
-        let allBootwares = [],
-            mountSpecificBootwares = [];
-        entryPoint = (env.isServer ? (env.isWorker ? '' : entryPoint) : (env.isWorker ? '' : env.global.document.currentScript));
-        const setEntryPoint = () => {
-            // set entry point for workers
-            AppDomain.entryPoint(entryPoint);
-        };
-        const loadFilesAndBootwares = async () => {
-            // load bootwares, scripts and preambles
-            let Item = null,
-                Bootware = null,
-                bw = null;
-            for(let item of settings.load) {
-                // get bootware (it could be a bootware, a simple script or a preamble)
-                item = which(item); // server/client specific version
-                if (item) { // in case no item is set for either server/client
-                    Item = await include(item);
-                    if (Item) {
-                        Bootware = as(Item, Bootware);
-                        if (Bootware) { // if boot
-                            bw = new Bootware(); 
-                            allBootwares.push(bw); // push in array, so boot and ready would be called for them
-                            if (bw.info.isMountSpecific) { // if bootware is mount specific bootware - means can run once for each mount
-                                mountSpecificBootwares.push(bw);
-                            }
-                        } // else ignore, this was something else, like a module which was just loaded
-                    } // else ignore, as it could just be a file loaded which does not return anything
-                }
-            }
-        };
-        const runBootwares = async (method) => {
-            if (!env.isWorker) { // main env
-                let mounts = AppDomain.host().mounts,
-                    mountNames = Object.keys(mounts),
-                    mountName = '',
-                    mount = null;
-            
-                // run all bootwares for main
-                mountName = 'main';
-                mount = mounts[mountName];
-                for(let bw of allBootwares) {
-                    await bw[method](mountName, mount);
-                }
-
-                // run all bootwares which are mount specific for all other mounts (except main)
-                for(let mountName of mountNames) {
-                    if (mountName === 'main') { continue; }
-                    mount = mounts[mountName];
-                    for(let bw of mountSpecificBootwares) {
-                        await bw[method](mountName, mount);
-                    }
-                }
-            } else { // worker env
-                // in this case as per load[] setting, no nountspecific bootwares should be present
-                if (mountSpecificBootwares.length !== 0) { 
-                    console.warn('Mount specific bootwares are not supported for worker environment. Revisit worker:flair.app->load setting.'); // eslint-disable-line no-console
-                }
-
-                // run all for once (ignoring the mountspecific ones)
-                for(let bw of allBootwares) {
-                    if (!bw.info.isMountSpecific) {
-                        await bw[method]();
-                    }
-                }
-            }
-        };
-        const boot = async () => {
-            if (!env.isWorker) {
-                let host = which(settings.host), // pick server/client specific host
-                    Host = as(await include(host), Bootware),
-                    hostObj = null;
-                if (!Host) { throw Exception.InvalidDefinition(host, this.start); }
-                hostObj = new Host();
-                await hostObj.boot();
-                AppDomain.host(hostObj); // set host
-            }
-            
-            await runBootwares('boot');   
-            
-            let app = which(settings.app), // pick server/client specific host
-            App = as(await include(app), Bootware),
-            appObj = null;
-            if (!App) { throw Exception.InvalidDefinition(app, this.start); }
-            appObj = new App();
-            await appObj.boot();
-            AppDomain.app(appObj); // set app
-        };        
-        const start = async () => {
-            if (!env.isWorker) {
-                await AppDomain.host().start();
-            }
-            await AppDomain.app().start();
-        };
-        const DOMReady = () => {
-            return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
-                env.global.document.addEventListener("DOMContentLoaded", resolve);
-            });
-        };
-        const DeviceReady = () => {
-            return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
-                document.addEventListener('deviceready', resolve, false);
-            });
-        };
-        const ready = async () => {
-            if (env.isClient && !env.isWorker) {
-                await DOMReady();
-                if (env.isCordova) { await DeviceReady(); }
-            }
-
-            if (!env.isWorker) {
-                await AppDomain.host().ready();
-            }
-            await runBootwares('ready');
-            await AppDomain.app().ready();
-        };
-          
-        setEntryPoint();
-        await loadFilesAndBootwares();
-        await boot();
-        await start();
-        await ready();
-    };
-});
-
-})();
-
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.28","lupdate":"Sat, 30 Mar 2019 19:42:54 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Host","flair.app.App","Aspect","Attribute","IDisposable","IProgressReporter","Task","flair.app.BootEngine"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.64","lupdate":"Sun, 31 Mar 2019 01:27:30 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["IDisposable","Aspect","Attribute","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
 
 })();

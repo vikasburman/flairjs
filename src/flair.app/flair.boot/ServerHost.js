@@ -1,8 +1,8 @@
-const express = require('express');
-const fs = require('fs');
-const http = require('http');
-const https = require('https');
-const httpShutdown = require('http-shutdown');
+const express = await include('express | x');
+const fs = await include('fs | x');
+const http = await include('http | x');
+const https = await include('https | x');
+const httpShutdown = await include('http-shutdown | x');
 const { Host } = ns('flair.app');
 
 /**

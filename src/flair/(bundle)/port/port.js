@@ -7,7 +7,7 @@
  *              as per usage requirements
  * @example
  *  Port(name)                     // @returns handler/null - if connected returns handler else null
- *  Port.define(name, type, intf)  // @returns void
+ *  Port.define(name, members, intf)  // @returns void
  *  Port.connect(name, handler)    // @returns void
  *  Port.disconnect(name)          // @returns void
  *  Port.disconnect.all()          // @returns void
@@ -30,10 +30,10 @@ const _Port = (name) => {
     return null;
 };
 _Port.define = (name, members, inbuilt) => {
-    let args = _Args('name: string',
+    let args = _Args('name: string, members: array, inbuilt: afunction',
+                     'name: string, inbuilt: afunction',
                      'name: string, members: array',
-                     'name: string, members: array, inbuilt: afunction',
-                     'name: string, inbuilt: afunction')(name, members, inbuilt); args.throwOnError(_Port.define);
+                     'name: string')(name, members, inbuilt); args.throwOnError(_Port.define);
 
     if (ports_registry[name]) { throw _Exception.Duplicate(name, _Port.define); }
     ports_registry[name] = {

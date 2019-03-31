@@ -261,13 +261,21 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
                 // uncache module, so it's types get to register again with this new context
                 uncacheModule(file);
 
+                // get resolved file name of this assembly, in relation to mainAssembly
+                let asmADO = this.domain.getAdo(file),
+                    file2 = file;
+                if (asmADO && asmADO.mainAssembly) {
+                    if (file2.startsWith('./')) { file2 = file2.substr(2); }
+                    file2 = this.domain.loadPathOf(asmADO.mainAssembly) + file2;
+                }
+
                 // load module
-                loadModule(file).then(() => {
+                loadModule(file2).then(() => {
                     // remove this from current context list
                     currentContexts.pop();
 
                     // add to list
-                    asmFiles[file] = Object.freeze(new Assembly(this.domain.getADO(file), this));
+                    asmFiles[file] = Object.freeze(new Assembly(asmADO, this));
 
                     // resolve
                     resolve();

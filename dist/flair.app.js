@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.26.28
- *  Sat, 30 Mar 2019 19:42:56 GMT
+ *  Version: 0.26.64
+ *  Sun, 31 Mar 2019 01:27:33 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -14,6 +14,7 @@
  // members
 
 /* eslint-disable */
+/* page.js - start */
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
 	typeof define === 'function' && define.amd ? define(factory) :
@@ -1226,6 +1227,7 @@ return page_js;
 
 })));
 
+/* page.js - end */
 /* eslint-enable */
 
 (() => {
@@ -1255,6 +1257,11 @@ const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$priv
 const { $$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$args, $$inject, $$resource, $$asset, $$singleton, $$serialize, $$deprecate, $$session, $$state, $$conditional, $$noserialize, $$ns } = $$;
 /* eslint-enable no-unused-vars */
 
+// define loadPathOf this assembly
+let __currentFile = (env.isServer ? __filename : env.global.document.currentScript.src.replace(env.global.document.location.href, './'));
+let __currentPath = __currentFile.substr(0, __currentFile.lastIndexOf('/') + 1);
+AppDomain.loadPathOf('flair.app', __currentPath)
+
 let settings = JSON.parse('{"host":"flair.boot.ServerHost | flair.boot.ClientHost","app":"flair.app.App","load":[],"container":{},"envVars":[],"envVarsloadOptions":{"overwrite":true},"mounts":{"main":"/"},"main-appSettings":[],"main-middlewares":[],"server-http":{"enable":false,"port":80,"timeout":-1},"server-https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""}}'); // eslint-disable-line no-unused-vars
 
         let settingsReader = flair.Port('settingsReader');
@@ -1264,6 +1271,284 @@ let settings = JSON.parse('{"host":"flair.boot.ServerHost | flair.boot.ClientHos
         }
         settings = Object.freeze(settings);
         flair.AppDomain.context.current().currentAssemblyBeingLoaded('./flair.app{.min}.js');
+
+(async () => { // ./src/flair.app/flair.app/@1-Bootware.js
+'use strict';
+/**
+ * @name Bootware
+ * @description Bootware base class
+ */
+$$('abstract');
+$$('ns', 'flair.app');
+Class('Bootware', function() {
+    /**  
+     * @name construct
+     * @arguments
+     *  name: string - name of the bootware
+     *  version: string - version number of the bootware
+    */
+    $$('virtual');
+    this.construct = (name, version, isMountSpecific) => {
+        let args = Args('name: string, version: string',
+                        'name: string, version: string, isMountSpecific: boolean',
+                        'name: string, isMountSpecific: boolean',
+                        'name: string')(name, version, isMountSpecific); args.throwOnError(this.construct);
+
+        // set info
+        this.info = Object.freeze({
+            name: args.name || '',
+            version: args.version || '',
+            isMountSpecific: args.isMountSpecific || false
+        });
+    };
+
+    /**  
+     * @name boot
+     * @arguments
+     *  mount: object - mount object
+    */
+    $$('virtual');
+    $$('async');
+    this.boot = noop;
+
+    $$('readonly');
+    this.info = null;
+
+    /**  
+     * @name ready
+     * @arguments
+     *  mount: object - mount object
+    */
+    $$('virtual');
+    $$('async');
+    this.ready = noop;
+});
+
+})();
+
+(async () => { // ./src/flair.app/flair.app/@2-App.js
+'use strict';
+const { IDisposable } = ns();
+const { Bootware } = ns('flair.app');
+
+/**
+ * @name App
+ * @description App base class
+ */
+$$('ns', 'flair.app');
+Class('App', Bootware, [IDisposable], function() {
+    $$('override');
+    this.construct = (base) => {
+        // set info
+        let asm = getAssembly(this);
+        base(asm.title, asm.version);
+    };
+    
+    $$('override');
+    this.boot = async (base) => {
+        base();
+        AppDomain.host().error.add(this.onError); // host's errors are handled here
+    };
+
+    $$('virtual');
+    $$('async');
+    this.start = noop;
+
+    $$('virtual');
+    $$('async');
+    this.stop = noop;
+
+    $$('virtual');
+    this.onError = (e) => {
+        throw Exception.OperationFailed(e.error, this.onError);
+    };
+
+    $$('virtual');
+    this.dispose = () => {
+        AppDomain.host().error.remove(this.onError); // remove error handler
+    };
+});
+
+})();
+
+(async () => { // ./src/flair.app/flair.app/@3-Host.js
+'use strict';
+const { IDisposable } = ns();
+const { Bootware } = ns('flair.app');
+
+/**
+ * @name App
+ * @description App base class
+ */
+$$('ns', 'flair.app');
+Class('Host', Bootware, [IDisposable], function() {
+    $$('privateSet');
+    this.isStarted = false;
+
+    $$('virtual');
+    this.start = async () => {
+        this.isStarted = true;
+    };
+
+    $$('virtual');
+    this.stop = async () => {
+        this.isStarted = false;
+    };
+
+    this.restart = async () => {
+        await this.stop();
+        await this.start();
+    };
+
+    this.error = event((err) => {
+        return { error: err };
+    });
+    
+    this.raiseError = (err) => {
+        this.error(err);
+    };
+});
+
+})();
+
+(async () => { // ./src/flair.app/flair.app/BootEngine.js
+'use strict';
+const { Bootware } = ns('flair.app');
+
+/**
+ * @name BootEngine
+ * @description Bootstrapper functionality
+ */
+$$('static');
+$$('ns', 'flair.app');
+Class('BootEngine', function() {
+    this.start = async function (entryPoint) {
+        let allBootwares = [],
+            mountSpecificBootwares = [],
+            currentScript = (env.isServer ? '' : env.global.document.scripts[env.global.document.scripts.length - 1].src);
+        entryPoint = (env.isServer ? (env.isWorker ? '' : entryPoint) : (env.isWorker ? '' : currentScript));
+        const setEntryPoint = () => {
+            // set entry point for workers
+            AppDomain.entryPoint(entryPoint);
+        };
+        const loadFilesAndBootwares = async () => {
+            // load bootwares, scripts and preambles
+            let Item = null,
+                Bootware = null,
+                bw = null;
+            for(let item of settings.load) {
+                // get bootware (it could be a bootware, a simple script or a preamble)
+                item = which(item); // server/client specific version
+                if (item) { // in case no item is set for either server/client
+                    Item = await include(item);
+                    if (Item) {
+                        Bootware = as(Item, Bootware);
+                        if (Bootware) { // if boot
+                            bw = new Bootware(); 
+                            allBootwares.push(bw); // push in array, so boot and ready would be called for them
+                            if (bw.info.isMountSpecific) { // if bootware is mount specific bootware - means can run once for each mount
+                                mountSpecificBootwares.push(bw);
+                            }
+                        } // else ignore, this was something else, like a module which was just loaded
+                    } // else ignore, as it could just be a file loaded which does not return anything
+                }
+            }
+        };
+        const runBootwares = async (method) => {
+            if (!env.isWorker) { // main env
+                let mounts = AppDomain.host().mounts,
+                    mountNames = Object.keys(mounts),
+                    mountName = '',
+                    mount = null;
+            
+                // run all bootwares for main
+                mountName = 'main';
+                mount = mounts[mountName];
+                for(let bw of allBootwares) {
+                    await bw[method](mountName, mount);
+                }
+
+                // run all bootwares which are mount specific for all other mounts (except main)
+                for(let mountName of mountNames) {
+                    if (mountName === 'main') { continue; }
+                    mount = mounts[mountName];
+                    for(let bw of mountSpecificBootwares) {
+                        await bw[method](mountName, mount);
+                    }
+                }
+            } else { // worker env
+                // in this case as per load[] setting, no nountspecific bootwares should be present
+                if (mountSpecificBootwares.length !== 0) { 
+                    console.warn('Mount specific bootwares are not supported for worker environment. Revisit worker:flair.app->load setting.'); // eslint-disable-line no-console
+                }
+
+                // run all for once (ignoring the mountspecific ones)
+                for(let bw of allBootwares) {
+                    if (!bw.info.isMountSpecific) {
+                        await bw[method]();
+                    }
+                }
+            }
+        };
+        const boot = async () => {
+            if (!env.isWorker) {
+                let host = which(settings.host), // pick server/client specific host
+                    Host = as(await include(host), Bootware),
+                    hostObj = null;
+                if (!Host) { throw Exception.InvalidDefinition(host, this.start); }
+                hostObj = new Host();
+                await hostObj.boot();
+                AppDomain.host(hostObj); // set host
+            }
+            
+            await runBootwares('boot');   
+            
+            let app = which(settings.app), // pick server/client specific host
+            App = as(await include(app), Bootware),
+            appObj = null;
+            if (!App) { throw Exception.InvalidDefinition(app, this.start); }
+            appObj = new App();
+            await appObj.boot();
+            AppDomain.app(appObj); // set app
+        };        
+        const start = async () => {
+            if (!env.isWorker) {
+                await AppDomain.host().start();
+            }
+            await AppDomain.app().start();
+        };
+        const DOMReady = () => {
+            return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
+                env.global.document.addEventListener("DOMContentLoaded", resolve);
+            });
+        };
+        const DeviceReady = () => {
+            return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
+                document.addEventListener('deviceready', resolve, false);
+            });
+        };
+        const ready = async () => {
+            if (env.isClient && !env.isWorker) {
+                await DOMReady();
+                if (env.isCordova) { await DeviceReady(); }
+            }
+
+            if (!env.isWorker) {
+                await AppDomain.host().ready();
+            }
+            await runBootwares('ready');
+            await AppDomain.app().ready();
+        };
+          
+        setEntryPoint();
+        await loadFilesAndBootwares();
+        await boot();
+        await start();
+        await ready();
+    };
+});
+
+})();
 
 (async () => { // ./src/flair.app/flair.boot/ClientHost.js
 'use strict';
@@ -1416,11 +1701,11 @@ Class('ClientHost', Host, function() {
 
 (async () => { // ./src/flair.app/flair.boot/ServerHost.js
 'use strict';
-const express = require('express');
-const fs = require('fs');
-const http = require('http');
-const https = require('https');
-const httpShutdown = require('http-shutdown');
+const express = await include('express | x');
+const fs = await include('fs | x');
+const http = await include('http | x');
+const https = await include('https | x');
+const httpShutdown = await include('http-shutdown | x');
 const { Host } = ns('flair.app');
 
 /**
@@ -1702,7 +1987,7 @@ Class('Middlewares', Bootware, function() {
 
 (async () => { // ./src/flair.app/flair.bw/NodeEnv.js
 'use strict';
-const env = require('node-env-file');
+const nodeEnv = await include('node-env-file | x');
 const { Bootware } = ns('flair.app');
 
 /**
@@ -1721,7 +2006,7 @@ Class('NodeEnv', Bootware, function() {
     this.boot = async () => {
         if (settings.envVars.length > 0) {
             for(let envVar of settings.envVars) {
-                env(envVar, settings.envVarsLoadOptions);
+                nodeEnv(envVar, settings.envVarsLoadOptions);
             }
         }
     };
@@ -1877,6 +2162,6 @@ Class('Router', Bootware, function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.28","lupdate":"Sat, 30 Mar 2019 19:42:56 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.boot.ClientHost","flair.boot.ServerHost","flair.bw.DIContainer","flair.bw.Middlewares","flair.bw.NodeEnv","flair.bw.ResHeaders","flair.bw.Router"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.64","lupdate":"Sun, 31 Mar 2019 01:27:33 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.App","flair.app.Host","flair.app.BootEngine","flair.boot.ClientHost","flair.boot.ServerHost","flair.bw.DIContainer","flair.bw.Middlewares","flair.bw.NodeEnv","flair.bw.ResHeaders","flair.bw.Router"],"resources":[],"assets":[],"routes":[]}');
 
 })();

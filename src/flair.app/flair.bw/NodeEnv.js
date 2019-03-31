@@ -1,4 +1,4 @@
-const env = require('node-env-file');
+const nodeEnv = await include('node-env-file | x');
 const { Bootware } = ns('flair.app');
 
 /**
@@ -17,7 +17,7 @@ Class('(auto)', Bootware, function() {
     this.boot = async () => {
         if (settings.envVars.length > 0) {
             for(let envVar of settings.envVars) {
-                env(envVar, settings.envVarsLoadOptions);
+                nodeEnv(envVar, settings.envVarsLoadOptions);
             }
         }
     };

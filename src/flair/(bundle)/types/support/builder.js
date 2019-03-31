@@ -995,7 +995,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                     if (astPath.startsWith('../')) { astPath = astPath.substr(3); }
                     if (astPath.startsWith('./')) { astPath = astPath.substr(2); }
                     if (astPath.startsWith('/')) { astPath = astPath.substr(1); }
-                    resOrAssetData= _getAssemblyOf(def.name) + '/' + astPath;
+                    resOrAssetData = _getAssemblyOf(def.name) + '/' + astPath;
                 }
             }
             if (resOrAssetData) {
@@ -1093,7 +1093,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         _isASync = _isASync || isASync(memberDef); // if memberDef is an async function, mark it as async automatically
         if (_isASync) {
             _member = async function(...args) {
-                let wrappedMemberDef = new Promise(function(resolve, reject) {
+                return new Promise(function(resolve, reject) {
                     if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
                     let fnArgs = [];
                     if (base) { fnArgs.push(base); }                                // base is always first, if overriding
@@ -1120,7 +1120,6 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                         reject(err, memberDef);
                     }
                 }.bind(bindingHost));
-                return await wrappedMemberDef();
             }.bind(bindingHost);
         } else {
             _member = function(...args) {

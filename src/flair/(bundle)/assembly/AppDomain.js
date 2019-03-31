@@ -11,6 +11,7 @@ const AppDomain = function(name) {
         contexts = {},
         currentContexts = [],
         allADOs = [],
+        loadPaths = {},
         entryPoint = '',
         configFileJSON = null,
         app = null,
@@ -64,6 +65,7 @@ const AppDomain = function(name) {
             asmTypes = {};
             contexts = {};
             domains = {};
+            loadPaths = {};
             allADOs = [];
         }
     };
@@ -95,7 +97,11 @@ const AppDomain = function(name) {
         let isThrowOnDuplicate = true;
         if (ados.length === 1 && typeof ados[0] === 'string') { 
             let ado = JSON.parse(ados[0]);
-            ados = [ado];
+            if (Array.isArray(ado)) {
+                ados = ado;
+            } else {
+                ados = [ado];
+            }
             isThrowOnDuplicate = false;   
         }
 
@@ -157,7 +163,7 @@ const AppDomain = function(name) {
     // set onces, read many times
     this.config = (configFile) => {
         if (!configFileJSON && configFile) { // load only when not already loaded
-            return Promise((resolve, reject) => {
+            return new Promise((resolve, reject) => {
                 loadFile(configFile).then((json) => {
                     configFileJSON = json;
                     resolve(Object.assign({}, configFileJSON)); // return a copy
@@ -172,7 +178,7 @@ const AppDomain = function(name) {
     };
     this.entryPoint = (file) => {
         if (!entryPoint) {
-            if (typeof file !== 'string') { throw _Exception.InvalidArgument('file'); }
+            if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.entryPoint); }
             if (!isWorker) { // when running in context of worker, this will not be needed to set, as a new appdomain cannot be created from inside worker, so it will never be read
                 entryPoint = which(file || ''); // main entry point file
             }
@@ -186,6 +192,15 @@ const AppDomain = function(name) {
     this.host = (hostObj) => {
         if (hostObj) { host = hostObj; }
         return host;
+    };
+    this.loadPathOf = (file, path) => {
+        if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.loadPath); }
+        if (path) { // set
+            if (!loadPaths[file]) {
+                loadPaths[file] = path;
+            }
+        }
+        return loadPaths[file] || '';
     };
 
     // scripts

@@ -18,18 +18,15 @@ const _include = (dep, globalVar) => {
         if (typeof dep !== 'string') { reject(_Exception.InvalidArgument('dep')); return; }
         try {
             _bring([dep], (obj) => {
+                if (!obj) { reject(_Exception.OperationFailed(`Dependency could not be resolved. (${dep})`)); }
                 if (obj) {
-                    resolve(obj);
+                    resolve(obj); 
                 } else if (globalVar) { // if global var is given to look at
-                    if (typeof globalVar === 'boolean') {
-                        resolve(); // since a true is passed, resolve as is
-                    } else {
-                        if (options.global[globalVar]) {
-                            resolve(options.global[globalVar]);
-                        }
+                    if (options.global[globalVar]) {
+                        resolve(options.global[globalVar]); 
                     }
                 }
-                reject(_Exception.OperationFailed(`Dependency could not be resolved. (${dep})`));
+                resolve(); // since obj was some value, may be just true, resolve it
             });
         } catch (err) {
             reject(err);

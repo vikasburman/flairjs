@@ -128,6 +128,7 @@ const __clientModule = (env) => {
             }
         }
     };
+    return funcs;
 };
 _Port.define('clientModule', ['require', 'undef'], __clientModule);
 
@@ -170,7 +171,7 @@ const __serverFile = (env) => { // eslint-disable-line no-unused-vars
         });
     };
 };
-_Port.define('serverFile', null, __serverFile);
+_Port.define('serverFile', __serverFile);
 
 // clientFile factory
 const __clientFile = (env) => { // eslint-disable-line no-unused-vars
@@ -200,7 +201,7 @@ const __clientFile = (env) => { // eslint-disable-line no-unused-vars
         });
     };
 };
-_Port.define('clientFile', null, __clientFile);
+_Port.define('clientFile', __clientFile);
 
 // settingsReader factory
 const __settingsReader = (env) => {
@@ -252,4 +253,4 @@ const __settingsReader = (env) => {
         return settings;
     };
 };
-_Port.define('settingsReader', null, __settingsReader);
+_Port.define('settingsReader', __settingsReader);

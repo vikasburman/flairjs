@@ -42,7 +42,7 @@ const which = (def, isFile) => {
     return def; // as is
 };
 const isArrow = (fn) => {
-    return (!(fn).hasOwnProperty('prototype'));
+    return (!(fn).hasOwnProperty('prototype') && fn.constructor.name === 'Function');
 };
 const isASync = (fn) => {
     return (fn.constructor.name === 'AsyncFunction');
@@ -145,7 +145,7 @@ const uncacheModule = (module) => {
     }
 };
 const forEachAsync = (items, asyncFn) => {
-    return Promise((resolve, reject) => {
+    return new Promise((resolve, reject) => {
         const processItems = (items) => {
             if (!items || items.length === 0) { resolve(); return; }
             Promise((_resolve, _reject) => {
