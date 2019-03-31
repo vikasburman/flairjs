@@ -66,6 +66,11 @@ const _Exception = function(arg1, arg2, arg3, arg4) {
         Error.captureStackTrace(_this, stStart);
     }
 
+    // add hint of error
+    if (_this.error) {
+        _this.message += '[' + this.error + ']';
+    }
+
     // return
     return Object.freeze(_this);
 };

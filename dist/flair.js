@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.26.65
- *  Sun, 31 Mar 2019 01:30:47 GMT
+ *  Version: 0.26.67
+ *  Sun, 31 Mar 2019 02:15:14 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -80,10 +80,10 @@
         name: 'flair',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.26.65',
+        version: '0.26.67',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 31 Mar 2019 01:30:47 GMT')
+        lupdate: new Date('Sun, 31 Mar 2019 02:15:14 GMT')
     });  
     
     flair.members = [];
@@ -206,6 +206,11 @@
         // limit stacktrace
         if (typeof Error.captureStackTrace === 'function') {
             Error.captureStackTrace(_this, stStart);
+        }
+    
+        // add hint of error
+        if (_this.error) {
+            _this.message += '[' + this.error + ']';
         }
     
         // return
@@ -5876,10 +5881,10 @@
     // sessionStorage factory
     const __sessionStorage = (env) => {
         if (env.isServer) {
-            if (!env.global.sessionStorage) { 
+            if (!env.global._sessionStorage) { 
                 // the way, on browser sessionStorage is different for each tab, 
                 // here 'sessionStorage' property on global is different for each node instance in a cluster
-                let nodeSessionStorage = function() {
+                const nodeSessionStorage = function() {
                     let keys = {};
                     this.key = (key) => { 
                         if (!key) { throw _Exception.InvalidArgument('key', this.key); }
@@ -5902,9 +5907,9 @@
                         keys = {};
                     };                        
                 };
-                env.global.sessionStorage = new nodeSessionStorage();
+                env.global._sessionStorage = new nodeSessionStorage();
             }
-            return env.global.sessionStorage;
+            return env.global._sessionStorage;
         } else { // client
             return env.global.sessionStorage;
         }
@@ -6987,6 +6992,6 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 flair.AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.65","lupdate":"Sun, 31 Mar 2019 01:30:47 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["IDisposable","Aspect","Attribute","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+flair.AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.26.67","lupdate":"Sun, 31 Mar 2019 02:15:14 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["IDisposable","Aspect","Attribute","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
 
 })();

@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.26.65
- *  Sun, 31 Mar 2019 01:30:51 GMT
+ *  Version: 0.26.67
+ *  Sun, 31 Mar 2019 02:15:16 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -23,7 +23,7 @@ const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
     name: 'flair.cli',
-    version: '0.26.65',
+    version: '0.26.67',
     format: 'fasm',
     formatVersion: '1',
     contains: [

@@ -3,10 +3,10 @@
 // sessionStorage factory
 const __sessionStorage = (env) => {
     if (env.isServer) {
-        if (!env.global.sessionStorage) { 
+        if (!env.global._sessionStorage) { 
             // the way, on browser sessionStorage is different for each tab, 
             // here 'sessionStorage' property on global is different for each node instance in a cluster
-            let nodeSessionStorage = function() {
+            const nodeSessionStorage = function() {
                 let keys = {};
                 this.key = (key) => { 
                     if (!key) { throw _Exception.InvalidArgument('key', this.key); }
@@ -29,9 +29,9 @@ const __sessionStorage = (env) => {
                     keys = {};
                 };                        
             };
-            env.global.sessionStorage = new nodeSessionStorage();
+            env.global._sessionStorage = new nodeSessionStorage();
         }
-        return env.global.sessionStorage;
+        return env.global._sessionStorage;
     } else { // client
         return env.global.sessionStorage;
     }
