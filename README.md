@@ -41,7 +41,7 @@ Features
 * Pure JavaScript, No external dependencies, ~20k min+gz.
 * **Inheritance:** Single inheritance chain, Multiple inheritance via Mixins, Restrictions via 'sealed', etc.
 * **Encapsulation:** True Public, Private and Protected members etc.
-* **Polymorphism:** Abstract classes, Interfaces, Method overriding, Restrictions via 'sealed', Dynamic casting via 'as', etc.
+* **Polymorphism:** Abstract classes, Interfaces, Method overloading and overriding, Restrictions via 'sealed', Dynamic casting via 'as', etc.
 * **Mature Base Types:** Class, Struct, Interface, Mixin, Enum, Exception, etc.
 * **Aspect orientation:** Aspect definitions with Before, After and Around advise weaving on methods.
 * **Attributes based programming:** Inbuilt system attributes like 'readonly', 'sealed' and many more with full-blown support of defining custom attributes and its usage over class and class members.

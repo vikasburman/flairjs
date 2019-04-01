@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.30.10
- *  Sun, 31 Mar 2019 23:55:46 GMT
+ *  Version: 0.30.11
+ *  Mon, 01 Apr 2019 02:52:34 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -2126,16 +2126,16 @@ Class('Router', Bootware, function() {
                         };
                         const onError = (err) => {
                             res.status(500).end();
-                            AppDomain.host().raiseError(err)
+                            AppDomain.host().raiseError(err);
                         };
 
                         try {
-                            routeHandler = new route.Handler();
+                            routeHandler = new route.Handler(route.flags);
                             // req.params has all the route parameters.
                             // e.g., for route "/users/:userId/books/:bookId" req.params will 
                             // have "req.params: { "userId": "34", "bookId": "8989" }"
                             result = routeHandler[route.verb](req, res);
-                            if (typeof result.then === 'function') {
+                            if (result && typeof result.then === 'function') {
                                 result.then((delayedResult) => {
                                     onDone(delayedResult);
                                 }).catch(onError);
@@ -2162,12 +2162,12 @@ Class('Router', Bootware, function() {
                         };
 
                         try {
-                            routeHandler = new route.Handler();
+                            routeHandler = new route.Handler(route.flags);
                             // ctx.params has all the route parameters.
                             // e.g., for route "/users/:userId/books/:bookId" req.params will 
                             // have "req.params: { "userId": "34", "bookId": "8989" }"
                             result = routeHandler[route.verb](ctx);  // verbs could be 'view' or any custom verb
-                            if (typeof result.then === 'function') {
+                            if (result && typeof result.then === 'function') {
                                 result.then((delayedResult) => {
                                     onDone(delayedResult);
                                 }).catch(onError);
@@ -2196,6 +2196,6 @@ Class('Router', Bootware, function() {
 
 AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.30.10","lupdate":"Sun, 31 Mar 2019 23:55:46 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.App","flair.app.Host","flair.app.BootEngine","flair.boot.ClientHost","flair.boot.ServerHost","flair.bw.DIContainer","flair.bw.Middlewares","flair.bw.NodeEnv","flair.bw.ResHeaders","flair.bw.Router"],"resources":[],"assets":[],"routes":[]}');
+AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.30.11","lupdate":"Mon, 01 Apr 2019 02:52:34 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.App","flair.app.Host","flair.app.BootEngine","flair.boot.ClientHost","flair.boot.ServerHost","flair.bw.DIContainer","flair.bw.Middlewares","flair.bw.NodeEnv","flair.bw.ResHeaders","flair.bw.Router"],"resources":[],"assets":[],"routes":[]}');
 
 })();

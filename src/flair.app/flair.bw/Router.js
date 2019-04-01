@@ -41,16 +41,16 @@ Class('(auto)', Bootware, function() {
                         };
                         const onError = (err) => {
                             res.status(500).end();
-                            AppDomain.host().raiseError(err)
+                            AppDomain.host().raiseError(err);
                         };
 
                         try {
-                            routeHandler = new route.Handler();
+                            routeHandler = new route.Handler(route.flags);
                             // req.params has all the route parameters.
                             // e.g., for route "/users/:userId/books/:bookId" req.params will 
                             // have "req.params: { "userId": "34", "bookId": "8989" }"
                             result = routeHandler[route.verb](req, res);
-                            if (typeof result.then === 'function') {
+                            if (result && typeof result.then === 'function') {
                                 result.then((delayedResult) => {
                                     onDone(delayedResult);
                                 }).catch(onError);
@@ -77,12 +77,12 @@ Class('(auto)', Bootware, function() {
                         };
 
                         try {
-                            routeHandler = new route.Handler();
+                            routeHandler = new route.Handler(route.flags);
                             // ctx.params has all the route parameters.
                             // e.g., for route "/users/:userId/books/:bookId" req.params will 
                             // have "req.params: { "userId": "34", "bookId": "8989" }"
                             result = routeHandler[route.verb](ctx);  // verbs could be 'view' or any custom verb
-                            if (typeof result.then === 'function') {
+                            if (result && typeof result.then === 'function') {
                                 result.then((delayedResult) => {
                                     onDone(delayedResult);
                                 }).catch(onError);

@@ -943,6 +943,24 @@ const build = (options, buildDone) => {
             } else {
                 let allRoutes = fsx.readJSONSync(nsFile.file, 'utf8');
                 let routes = [];
+                // routes.json named files can be placed anywhere inside an assembly
+                // all these files will eventually be read and merged and all routes be 
+                // registered
+                // structure of the file should be:
+                // [
+                //      { .. route definition .. },
+                //      { .. route definition .. }
+                // ]
+                // Each route Definition can be:
+                // {
+                //   name: route name, to access route programatically, it will be prefixed with namespace under which this routes.json is kept
+                //   mount: route root mount name - by default it is 'main', as per config.json setting, it can be any other mount also (each mount is a different express app)
+                //   path: route path in relation to mount
+                //   handler: qualified type nane that handles this route
+                //      hndler can be of any base class - like secureHandler, which checks for security firsy, etc. or any combination thereof
+                //   verb: name of the verb for this route, like get, post, etc. - handler must have the same name method to handle this verb - method can be sync or async
+                //   flags: anything that is extra, this is passed to handler's constructor as is
+                //   index: any + or - number to move routes up or down wrt other routes, all routes from all assemblies are sorted by index before being activated
                 for(let route of allRoutes) { // add each route separately
                     if (route.name.indexOf('.') !== -1) { throw `Route name cannot contain dots. (${route.name})`; }
                     if (!route.path) { throw `Route path must be defined. (${route.name}`; }
@@ -954,8 +972,8 @@ const build = (options, buildDone) => {
                         mount: route.mount || 'main', // by default all routes mount to main
                         index: route.index || 0, // no index means all are at same level
                         verb: route.verb || '', // verb, e.g., view / get / post, etc.
-                        flags: route.flags || [], // any optional flags for some custom logic
-                        path: route.path,
+                        flags: route.flags || [], // any optional flags for some custom logic, this is passed to route handler constructor as is
+                        path: route.path, 
                         handler: route.handler
                     });
                 }
