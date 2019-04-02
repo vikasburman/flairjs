@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.30.12
- *  Mon, 01 Apr 2019 12:05:14 GMT
+ *  Version: 0.30.13
+ *  Tue, 02 Apr 2019 11:22:39 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -1740,6 +1740,33 @@ Class('ClientHost', Host, function() {
 }
 })();
 
+(async () => { // ./src/flair.app/flair.app/RestHandler.js
+try{
+const { Handler } = ns('flair.app');
+
+/**
+ * @name RestHandler
+ * @description Restful API Handler
+ */
+$$('ns', 'flair.app');
+Class('RestHandler', Handler, function() {
+    $$('virtual');
+    this.get = noop;
+
+    $$('virtual');
+    this.post = noop;
+
+    $$('virtual');
+    this.put = noop;
+
+    $$('virtual');
+    this.delete = noop;
+});
+} catch(err) {
+	__asmError(err);
+}
+})();
+
 (async () => { // ./src/flair.app/flair.app/ServerHost.js
 try{
 const express = await include('express | x');
@@ -1922,6 +1949,24 @@ Class('ServerHost', Host, function() {
 
         mountedApps = null;
     };
+});
+} catch(err) {
+	__asmError(err);
+}
+})();
+
+(async () => { // ./src/flair.app/flair.app/ViewHandler.js
+try{
+const { Handler } = ns('flair.app');
+
+/**
+ * @name ViewHandler
+ * @description GUI View Handler
+ */
+$$('ns', 'flair.app');
+Class('ViewHandler', Handler, function() {
+    $$('virtual');
+    this.view = noop;
 });
 } catch(err) {
 	__asmError(err);
@@ -2226,6 +2271,6 @@ Class('Router', Bootware, function() {
 
 AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.30.12","lupdate":"Mon, 01 Apr 2019 12:05:14 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.App","flair.app.Host","flair.app.Handler","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.Router"],"resources":[],"assets":[],"routes":[]}');
+AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.30.13","lupdate":"Tue, 02 Apr 2019 11:22:39 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.App","flair.app.Host","flair.app.Handler","flair.app.BootEngine","flair.app.ClientHost","flair.app.RestHandler","flair.app.ServerHost","flair.app.ViewHandler","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.Router"],"resources":[],"assets":[],"routes":[]}');
 
 })();
