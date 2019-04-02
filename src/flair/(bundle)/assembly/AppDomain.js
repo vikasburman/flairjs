@@ -233,8 +233,8 @@ const AppDomain = function(name) {
 
     // error router
     this.onError = (err) => {
-        if (app) {
-            app.onError(err);
+        if (host) {
+            host.raiseError(err);
         } else {
             throw err;
         }

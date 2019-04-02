@@ -1,8 +1,8 @@
 const { Host } = ns('flair.app');
 
 /**
- * @name Client
- * @description Default client implementation
+ * @name ClientHost
+ * @description Client host implementation
  */
 $$('sealed');
 $$('ns', '(auto)');

@@ -6,8 +6,8 @@ const httpShutdown = await include('http-shutdown | x');
 const { Host } = ns('flair.app');
 
 /**
- * @name Server
- * @description Default server implementation
+ * @name ServerHost
+ * @description Server host implementation
  */
 $$('sealed');
 $$('ns', '(auto)');

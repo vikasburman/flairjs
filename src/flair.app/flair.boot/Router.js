@@ -25,8 +25,7 @@ Class('(auto)', Bootware, function() {
             });
         }
 
-        let routeHandler = null,
-            result = false;
+        let result = false;
         const setupServerRoutes = () => {
             // add routes related to current mount
             for(let route of routes) {
@@ -45,18 +44,19 @@ Class('(auto)', Bootware, function() {
                         };
 
                         try {
-                            routeHandler = new route.Handler(route.flags);
-                            // req.params has all the route parameters.
-                            // e.g., for route "/users/:userId/books/:bookId" req.params will 
-                            // have "req.params: { "userId": "34", "bookId": "8989" }"
-                            result = routeHandler[route.verb](req, res);
-                            if (result && typeof result.then === 'function') {
-                                result.then((delayedResult) => {
-                                    onDone(delayedResult);
-                                }).catch(onError);
-                            } else {
-                                onDone(result);
-                            }
+                            using(new route.Handler(route.flags), (routeHandler) => {
+                                // req.params has all the route parameters.
+                                // e.g., for route "/users/:userId/books/:bookId" req.params will 
+                                // have "req.params: { "userId": "34", "bookId": "8989" }"
+                                result = routeHandler[route.verb](req, res);
+                                if (result && typeof result.then === 'function') {
+                                    result.then((delayedResult) => {
+                                        onDone(delayedResult);
+                                    }).catch(onError);
+                                } else {
+                                    onDone(result);
+                                }
+                            });
                         } catch (err) {
                             onError(err);
                         }
@@ -77,18 +77,19 @@ Class('(auto)', Bootware, function() {
                         };
 
                         try {
-                            routeHandler = new route.Handler(route.flags);
-                            // ctx.params has all the route parameters.
-                            // e.g., for route "/users/:userId/books/:bookId" req.params will 
-                            // have "req.params: { "userId": "34", "bookId": "8989" }"
-                            result = routeHandler[route.verb](ctx);  // verbs could be 'view' or any custom verb
-                            if (result && typeof result.then === 'function') {
-                                result.then((delayedResult) => {
-                                    onDone(delayedResult);
-                                }).catch(onError);
-                            } else {
-                                onDone(result);
-                            }
+                            using(new route.Handler(route.flags), (routeHandler) => {
+                                // ctx.params has all the route parameters.
+                                // e.g., for route "/users/:userId/books/:bookId" req.params will 
+                                // have "req.params: { "userId": "34", "bookId": "8989" }"
+                                result = routeHandler[route.verb](ctx);  // verbs could be 'view' or any custom verb
+                                if (result && typeof result.then === 'function') {
+                                    result.then((delayedResult) => {
+                                        onDone(delayedResult);
+                                    }).catch(onError);
+                                } else {
+                                    onDone(result);
+                                }
+                            });
                         } catch (err) {
                             onError(err);
                         }

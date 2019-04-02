@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.30.11
- *  Mon, 01 Apr 2019 02:52:34 GMT
+ *  Version: 0.30.12
+ *  Mon, 01 Apr 2019 12:05:14 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -1260,7 +1260,7 @@ const __asmError = (err) => { AppDomain.onError(err); };
 /* eslint-enable no-unused-vars */
 
 //load assembly settings from config file
-let settings = JSON.parse('{"host":"flair.boot.ServerHost | flair.boot.ClientHost","app":"flair.app.App","load":[],"container":{},"envVars":[],"envVarsloadOptions":{"overwrite":true},"mounts":{"main":"/"},"main-appSettings":[],"main-middlewares":[],"server-http":{"enable":false,"port":80,"timeout":-1},"server-https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""}}'); // eslint-disable-line no-unused-vars
+let settings = JSON.parse('{"host":"flair.app.ServerHost | flair.app.ClientHost","app":"flair.app.App","load":[],"container":{},"envVars":[],"envVarsloadOptions":{"overwrite":true},"mounts":{"main":"/"},"main-appSettings":[],"main-middlewares":[],"server-http":{"enable":false,"port":80,"timeout":-1},"server-https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""}}'); // eslint-disable-line no-unused-vars
 let settingsReader = flair.Port('settingsReader');
 if (typeof settingsReader === 'function') {
 let externalSettings = settingsReader('flair.app');
@@ -1416,6 +1416,35 @@ Class('Host', Bootware, [IDisposable], function() {
 }
 })();
 
+(async () => { // ./src/flair.app/flair.app/@4-Handler.js
+try{
+
+const { IDisposable } = ns();
+
+/**
+ * @name Handler
+ * @description Handler base class
+ */
+$$('ns', 'flair.app');
+Class('Handler', [IDisposable], function() {
+    $$('privateSet');
+    this.flags = [];
+
+    $$('virtual');
+    this.construct = (flags) => {
+        this.flags = flags;
+    };
+
+    $$('virtual');
+    this.dispose = () => {
+        this.flags = null;
+    };
+});
+} catch(err) {
+	__asmError(err);
+}
+})();
+
 (async () => { // ./src/flair.app/flair.app/BootEngine.js
 try{
 const { Bootware } = ns('flair.app');
@@ -1560,16 +1589,16 @@ Class('BootEngine', function() {
 }
 })();
 
-(async () => { // ./src/flair.app/flair.boot/ClientHost.js
+(async () => { // ./src/flair.app/flair.app/ClientHost.js
 try{
 const { Host } = ns('flair.app');
 
 /**
- * @name Client
- * @description Default client implementation
+ * @name ClientHost
+ * @description Client host implementation
  */
 $$('sealed');
-$$('ns', 'flair.boot');
+$$('ns', 'flair.app');
 Class('ClientHost', Host, function() {
     let mountedApps = {},
         page = window.page,
@@ -1711,7 +1740,7 @@ Class('ClientHost', Host, function() {
 }
 })();
 
-(async () => { // ./src/flair.app/flair.boot/ServerHost.js
+(async () => { // ./src/flair.app/flair.app/ServerHost.js
 try{
 const express = await include('express | x');
 const fs = await include('fs | x');
@@ -1721,11 +1750,11 @@ const httpShutdown = await include('http-shutdown | x');
 const { Host } = ns('flair.app');
 
 /**
- * @name Server
- * @description Default server implementation
+ * @name ServerHost
+ * @description Server host implementation
  */
 $$('sealed');
-$$('ns', 'flair.boot');
+$$('ns', 'flair.app');
 Class('ServerHost', Host, function() {
     let mountedApps = {},
         httpServer = null,
@@ -1899,7 +1928,7 @@ Class('ServerHost', Host, function() {
 }
 })();
 
-(async () => { // ./src/flair.app/flair.bw/DIContainer.js
+(async () => { // ./src/flair.app/flair.boot/DIContainer.js
 try{
 const { Bootware } = ns('flair.app');
 
@@ -1908,7 +1937,7 @@ const { Bootware } = ns('flair.app');
  * @description Initialize DI Container
  */
 $$('sealed');
-$$('ns', 'flair.bw');
+$$('ns', 'flair.boot');
 Class('DIContainer', Bootware, function() {
     $$('override');
     this.construct = (base) => {
@@ -1930,7 +1959,7 @@ Class('DIContainer', Bootware, function() {
 }
 })();
 
-(async () => { // ./src/flair.app/flair.bw/Middlewares.js
+(async () => { // ./src/flair.app/flair.boot/Middlewares.js
 try{
 const { Bootware } = ns('flair.app');
 
@@ -1939,7 +1968,7 @@ const { Bootware } = ns('flair.app');
  * @description Express Middleware Configurator
  */
 $$('sealed');
-$$('ns', 'flair.bw');
+$$('ns', 'flair.boot');
 Class('Middlewares', Bootware, function() {
     $$('override');
     this.construct = (base) => {
@@ -2013,7 +2042,7 @@ Class('Middlewares', Bootware, function() {
 }
 })();
 
-(async () => { // ./src/flair.app/flair.bw/NodeEnv.js
+(async () => { // ./src/flair.app/flair.boot/NodeEnv.js
 try{
 const nodeEnv = await include('node-env-file | x');
 const { Bootware } = ns('flair.app');
@@ -2023,7 +2052,7 @@ const { Bootware } = ns('flair.app');
  * @description Node Environment Settings
  */
 $$('sealed');
-$$('ns', 'flair.bw');
+$$('ns', 'flair.boot');
 Class('NodeEnv', Bootware, function() {
     $$('override');
     this.construct = (base) => {
@@ -2044,7 +2073,7 @@ Class('NodeEnv', Bootware, function() {
 }
 })();
 
-(async () => { // ./src/flair.app/flair.bw/ResHeaders.js
+(async () => { // ./src/flair.app/flair.boot/ResHeaders.js
 try{
 const { Bootware } = ns('flair.app');
 
@@ -2053,7 +2082,7 @@ const { Bootware } = ns('flair.app');
  * @description Express Response Header Settings (Common to all routes)
  */
 $$('sealed');
-$$('ns', 'flair.bw');
+$$('ns', 'flair.boot');
 Class('ResHeaders', Bootware, function() {
     $$('override');
     this.construct = (base) => {
@@ -2081,7 +2110,7 @@ Class('ResHeaders', Bootware, function() {
 }
 })();
 
-(async () => { // ./src/flair.app/flair.bw/Router.js
+(async () => { // ./src/flair.app/flair.boot/Router.js
 try{
 const { Bootware } = ns('flair.app');
 
@@ -2090,7 +2119,7 @@ const { Bootware } = ns('flair.app');
  * @description Router Configuration Setup
  */
 $$('sealed');
-$$('ns', 'flair.bw');
+$$('ns', 'flair.boot');
 Class('Router', Bootware, function() {
     let routes = null;
     $$('override');
@@ -2110,8 +2139,7 @@ Class('Router', Bootware, function() {
             });
         }
 
-        let routeHandler = null,
-            result = false;
+        let result = false;
         const setupServerRoutes = () => {
             // add routes related to current mount
             for(let route of routes) {
@@ -2130,18 +2158,19 @@ Class('Router', Bootware, function() {
                         };
 
                         try {
-                            routeHandler = new route.Handler(route.flags);
-                            // req.params has all the route parameters.
-                            // e.g., for route "/users/:userId/books/:bookId" req.params will 
-                            // have "req.params: { "userId": "34", "bookId": "8989" }"
-                            result = routeHandler[route.verb](req, res);
-                            if (result && typeof result.then === 'function') {
-                                result.then((delayedResult) => {
-                                    onDone(delayedResult);
-                                }).catch(onError);
-                            } else {
-                                onDone(result);
-                            }
+                            using(new route.Handler(route.flags), (routeHandler) => {
+                                // req.params has all the route parameters.
+                                // e.g., for route "/users/:userId/books/:bookId" req.params will 
+                                // have "req.params: { "userId": "34", "bookId": "8989" }"
+                                result = routeHandler[route.verb](req, res);
+                                if (result && typeof result.then === 'function') {
+                                    result.then((delayedResult) => {
+                                        onDone(delayedResult);
+                                    }).catch(onError);
+                                } else {
+                                    onDone(result);
+                                }
+                            });
                         } catch (err) {
                             onError(err);
                         }
@@ -2162,18 +2191,19 @@ Class('Router', Bootware, function() {
                         };
 
                         try {
-                            routeHandler = new route.Handler(route.flags);
-                            // ctx.params has all the route parameters.
-                            // e.g., for route "/users/:userId/books/:bookId" req.params will 
-                            // have "req.params: { "userId": "34", "bookId": "8989" }"
-                            result = routeHandler[route.verb](ctx);  // verbs could be 'view' or any custom verb
-                            if (result && typeof result.then === 'function') {
-                                result.then((delayedResult) => {
-                                    onDone(delayedResult);
-                                }).catch(onError);
-                            } else {
-                                onDone(result);
-                            }
+                            using(new route.Handler(route.flags), (routeHandler) => {
+                                // ctx.params has all the route parameters.
+                                // e.g., for route "/users/:userId/books/:bookId" req.params will 
+                                // have "req.params: { "userId": "34", "bookId": "8989" }"
+                                result = routeHandler[route.verb](ctx);  // verbs could be 'view' or any custom verb
+                                if (result && typeof result.then === 'function') {
+                                    result.then((delayedResult) => {
+                                        onDone(delayedResult);
+                                    }).catch(onError);
+                                } else {
+                                    onDone(result);
+                                }
+                            });
                         } catch (err) {
                             onError(err);
                         }
@@ -2196,6 +2226,6 @@ Class('Router', Bootware, function() {
 
 AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.30.11","lupdate":"Mon, 01 Apr 2019 02:52:34 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.App","flair.app.Host","flair.app.BootEngine","flair.boot.ClientHost","flair.boot.ServerHost","flair.bw.DIContainer","flair.bw.Middlewares","flair.bw.NodeEnv","flair.bw.ResHeaders","flair.bw.Router"],"resources":[],"assets":[],"routes":[]}');
+AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.30.12","lupdate":"Mon, 01 Apr 2019 12:05:14 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.App","flair.app.Host","flair.app.Handler","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.Router"],"resources":[],"assets":[],"routes":[]}');
 
 })();
