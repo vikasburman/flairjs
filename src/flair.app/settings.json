@@ -17,12 +17,16 @@
     ],
     "main-middlewares": [
     ],
-    "server-http": {
+    "url": {
+        "home": "/",
+        "404": "/404"
+    },
+    "http": {
         "enable": false,
         "port": 80,
         "timeout": -1
     },
-    "server-https": {
+    "https": {
         "enable": false,
         "port": 443,
         "timeout": -1,

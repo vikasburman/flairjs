@@ -196,56 +196,27 @@ const build = (options, buildDone) => {
             fsx.writeFileSync(options.current.asm, text);
         }
     };  
-    const resolveRoot = (buildPath) => {
-        let resolvedRoot = 'error/define/resolveRoot/for/' + buildPath;
-        for(let partialBuildPath in options.profiles.current.resolveRoot) {
-            if (options.profiles.current.resolveRoot.hasOwnProperty(partialBuildPath)) {
-                if (buildPath.startsWith(partialBuildPath)) {
-                    resolvedRoot = buildPath.replace(options.profiles.current.resolveRoot[partialBuildPath], './');
-                    break;
-                }
-            }
-        }
-        return resolvedRoot;
-    };
-    const resolvePreamble = (buildPath) => {
-        let preambleRoot = buildPath;
-        for(let partialBuildPath in options.profiles.current.preambleRoot) {
-            if (options.profiles.current.preambleRoot.hasOwnProperty(partialBuildPath)) {
-                if (buildPath.startsWith(partialBuildPath)) {
-                    preambleRoot = options.profiles.current.preambleRoot[partialBuildPath];
-                    break;
-                }
-            }
-        }
-        return path.join(options.dest, preambleRoot);
-    };
     const resolveRootNS = (isAddDot) => {
         let rootNS = ''; // root namespace is always without any name, no matter which assembly
         if (rootNS && isAddDot) { rootNS += '.'; }
         return rootNS;
     };
-    const resolveSkipMinify = (buildPath) => {
-        let skip = false;
-        for(let partialBuildPath of options.profiles.current.skipMinifyRoot) {
-            if (buildPath.startsWith(partialBuildPath)) {
-                skip = true;
-                break;
-            }
-        }
-        return skip;
-    };
     const copyCustom = (done) => {
         if (!options.customBuild) { done(); return; }
-        if (options.profiles.current.copy.length === 0) { done(); return; }
+        if (!options.profiles.current.copy || options.profiles.current.copy.length === 0) { done(); return; }
     
         // copy all files or folders as is in dest
         options.logger(0, 'copy', '', true);    
             let src = '',
                 dest = '';
         for(let fileOrFolder of options.profiles.current.copy) {
-            src = path.resolve(path.join(options.src, fileOrFolder));
-            dest = path.resolve(path.join(options.dest, fileOrFolder))
+            if (options.customBuild) { 
+                src = path.resolve(path.join(options.src, path.join(options.profiles.current.root, fileOrFolder)));
+                dest = path.resolve(path.join(options.profiles.current.dest, fileOrFolder))
+            } else {
+                src = path.resolve(path.join(options.src, fileOrFolder));
+                dest = path.resolve(path.join(options.dest, fileOrFolder))
+            }
             options.logger(1, '', './' + path.join(options.src, fileOrFolder));
             if (fsx.lstatSync(src).isDirectory()) {
                 fsx.ensureDirSync(dest);
@@ -261,15 +232,22 @@ const build = (options, buildDone) => {
     };    
     const copyModules = (done) => {
         if (!options.customBuild) { done(); return; }
-        if (options.profiles.current.modules.length === 0) { done(); return; }
+        if (!options.profiles.current.modules || options.profiles.current.modules.length === 0) { done(); return; }
 
         // copy all defined modules from node_modules to destination's "modules" folder at root
         options.logger(0, 'modules', '', true);    
-            let src = '',
-                dest = '';
+        let src = '',
+            dest = '';
         for(let module of options.profiles.current.modules) {
             src = path.resolve(path.join('node_modules', module));
-            dest = path.resolve(path.join(options.dest, options.profiles.current.root, 'modules', module));
+            if (module.indexOf('/') !== -1) { // module and a folder is defined
+                module = module.split('/')[0]; // pick first part only
+            }
+            if (options.customBuild) { 
+                dest = path.resolve(path.join(options.profiles.current.dest, 'modules', module))
+            } else {
+                dest = path.resolve(path.join(options.dest, 'modules', module))
+            }
             options.logger(1, '', module);
             fsx.ensureDirSync(dest);
             copyDir.sync(src, dest);
@@ -277,7 +255,22 @@ const build = (options, buildDone) => {
     
         // done
         done();
-    };    
+    };  
+    const minifyMiscFiles = async (done) => {
+        if (!options.customBuild && options.minify && options.minifyConfig) { done(); return; }
+        if (!options.profiles.current.minify || options.profiles.current.minify.length === 0) { done(); return; }
+
+        options.logger(0, 'minify', '', true);
+        let src = '';
+        for(let toMinifyfile of options.profiles.current.minify) {
+            src = path.resolve(path.join(options.profiles.current.dest, toMinifyfile));
+            options.logger(1, '', toMinifyfile);
+            await minifyFile(src);
+        }
+    
+        // done
+        done();
+    };
 
     const appendHeader = () => {
         let header = 
@@ -617,7 +610,8 @@ const build = (options, buildDone) => {
         `\t\t\t\tgetTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;\n` +
         `const { TaskInfo } = flair.Tasks;\n` +
         `const { env } = flair.options;\n` +
-        `const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve,\n` +
+        `const DOC = (env.isServer ? null : window.document);\n` +
+        `const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, guid, isArrowFunc, isASyncFunc, sieve,\n` +
         `\t\t\t\tb64EncodeUnicode, b64DecodeUnicode } = flair.utils;\n` +
         `const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,\n` +
         `\t\t\t\t$$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$args, $$inject, $$resource, $$asset, $$singleton, $$serialize,\n` +
@@ -930,7 +924,7 @@ const build = (options, buildDone) => {
             } else if (file.endsWith('.res.' + nsFile.ext)) { // resource
                 nsFile.typeName = path.basename(file).replace('.res.' + nsFile.ext, '');
                 nsFile.type = 'res';
-            } 
+            }
             if (nsFile.type !== 'routes') {
                 if (nsFile.typeName.indexOf('.') !== -1) { throw `Type/Resource names cannot contain dots. (${nsFile.typeName})`; }
                 nsFile.qualifiedName = (options.current.nsName !== '(root)' ? options.current.nsName + '.' : resolveRootNS(true))  + nsFile.typeName;
@@ -956,11 +950,12 @@ const build = (options, buildDone) => {
                 //   name: route name, to access route programatically, it will be prefixed with namespace under which this routes.json is kept
                 //   mount: route root mount name - by default it is 'main', as per config.json setting, it can be any other mount also (each mount is a different express app)
                 //   path: route path in relation to mount
-                //   handler: qualified type nane that handles this route
-                //      hndler can be of any base class - like secureHandler, which checks for security firsy, etc. or any combination thereof
-                //   verb: name of the verb for this route, like get, post, etc. - handler must have the same name method to handle this verb - method can be sync or async
-                //   flags: anything that is extra, this is passed to handler's constructor as is
+                //   handler: qualified type name that handles this route
+                //      handler can be of any class that is derived from Handler base class
+                //   verbs: name of the verbs supported on this route, like get, post, etc. - handler must have the same name methods to handle this verb - methods can be sync or async
                 //   index: any + or - number to move routes up or down wrt other routes, all routes from all assemblies are sorted by index before being activated
+                //      routes are indexed first and then applied in context of their individual mount
+                //      mount's order in config ultimately defines the overall order first than the index of the route itself inside the mount
                 for(let route of allRoutes) { // add each route separately
                     if (route.name.indexOf('.') !== -1) { throw `Route name cannot contain dots. (${route.name})`; }
                     if (!route.path) { throw `Route path must be defined. (${route.name}`; }
@@ -971,8 +966,7 @@ const build = (options, buildDone) => {
                         asmFile: options.current.ado.file,
                         mount: route.mount || 'main', // by default all routes mount to main
                         index: route.index || 0, // no index means all are at same level
-                        verb: route.verb || '', // verb, e.g., view / get / post, etc.
-                        flags: route.flags || [], // any optional flags for some custom logic, this is passed to route handler constructor as is
+                        verbs: route.verbs || [], // verbs, e.g., view / get / post, etc.
                         path: route.path, 
                         handler: route.handler
                     });
@@ -1086,7 +1080,10 @@ const build = (options, buildDone) => {
         options.current.asmName = asmFolder;
         options.current.asmPath = './' + path.join(options.current.src, options.current.asmName);
         options.current.asm = './' + path.join(options.current.dest, options.current.asmName + '.js');
-        options.current.asmFileName = './' + path.join(options.current.resolvedRoot, options.current.asmName) + '.js';
+        options.current.asmFileName = ('./' + path.join(options.current.dest, options.current.asmName) + '.js').replace(options.dest, '.');
+        if (options.customBuild && options.profiles.current.omitRoot) {
+            options.current.asmFileName = options.current.asmFileName.replace(options.profiles.current.root + '/', '');
+        }
         options.current.asmMain = './' + path.join(options.current.src, options.current.asmName, 'index.js');
         options.current.asmSettings = './' + path.join(options.current.src, options.current.asmName, 'settings.json');
 
@@ -1147,16 +1144,20 @@ const build = (options, buildDone) => {
         // pick source
         let source = options.sources.splice(0, 1)[0]; // pick from top
         if (source.startsWith('_')) { processSources(done); return; } // ignore if starts with '_'
+        if (options.customBuild) { source = path.join(options.profiles.current.root, source); }
 
         // start group
         logger(0, 'group', `${source.replace(options.src, '.')} (start)`, true);  
         options.current = {};
         options.current.src = options.customBuild ? ('./' + path.join(options.src, source)) : source;
         options.current.dest = options.current.src.replace(options.src, options.dest);
-        options.current.resolvedRoot = options.customBuild ? resolveRoot(source) : '.';
+        if (options.customBuild) {
+            options.current.dest = options.current.dest.replace(options.dest , options.profiles.current.dest); 
+            options.current.dest = options.current.dest.replace(options.profiles.current.root + '/', '');
+        }
         options.current.adosJSON = [];
-        options.current.preamble = './' + path.join((options.customBuild ? resolvePreamble(source) : options.current.dest), 'preamble.js');
-        options.current.skipMinify = options.customBuild ? resolveSkipMinify(source) : false;
+        options.current.preamble = './' + path.join(options.current.dest, 'preamble.js');
+        options.current.skipMinify = options.customBuild ? options.profiles.current.skipMinify : false;
 
         // process all assemblies under this group
         let folders = getFolders(options.current.src, true);
@@ -1176,7 +1177,8 @@ const build = (options, buildDone) => {
 
         // pick profile
         let profileItem = options.profiles.splice(0, 1)[0]; // pick from top
-        options.profiles.current = options.customBuildConfig.profiles[profileItem.profile];
+        options.profiles.current = Object.assign({}, options.customBuildConfig.profiles[profileItem.profile]); // use a copy
+        options.profiles.current.dest = getProfileTarget(profileItem.profile);
         let srcList = [].concat(...options.profiles.current.build);
         options.sources = srcList;
         // start profile
@@ -1184,36 +1186,33 @@ const build = (options, buildDone) => {
         processSources(() => {
             copyCustom(() => {
                 copyModules(() => {
-                    // done
-                    logger(0, 'profile', `${profileItem.profile} (end)`, true); 
-                    options.profiles.current = null;
-                    processProfiles(done);
+                    minifyMiscFiles(() => {
+                        // done
+                        logger(0, 'profile', `${profileItem.profile} (end)`, true); 
+                        options.profiles.current = null;
+                        processProfiles(done);
+                    });
                 });
             });
         });
     };
-    const organizeProfiles = () => {
-        let source = '',
+    const getProfileTarget = (profileName) => {
+        let theProfile = options.customBuildConfig.profiles[profileName],
             target = '';
-        for (let buildProfile of options.customBuildConfig.build) {
-            source = path.join(options.dest, options.customBuildConfig.profiles[buildProfile.profile].root);
-            if (buildProfile.dest && buildProfile.dest !== '' && buildProfile.dest !== '/') {
-                if (buildProfile.dest.startsWith('@')) { // move 
-                    target = buildProfile.dest.substr(1); // remove @
-                    target = options.customBuildConfig.profiles[target].root; // pick root path of given profile name in dest
-                    target = path.join(target, options.customBuildConfig.profiles[buildProfile.profile].root);
-                } else {
-                    target = buildProfile.dest; // fixed target path
-                }
-                target = path.join(options.dest, target); // fixed target path
-
-                // move
-                if (!source.endsWith('/')) { source += '/'; }
-                if (!target.endsWith('/')) { target += '/'; }
-                fsx.ensureDirSync(target);
-                fsx.moveSync(source, target, { overwrite: true });
+        if (theProfile.dest && theProfile.dest !== '') {
+            if (theProfile.dest === '/') { 
+                target = options.dest;
+            } else if (theProfile.dest.startsWith('@')) { // move
+                target = theProfile.dest.substr(1); // remove @
+                target = getProfileTarget(target);
+                target = path.join(target, theProfile.root);
+            } else {
+                target = path.join(options.dest, theProfile.dest);
             }
+        } else {
+            target = './' + path.join(options.dest, theProfile.root); 
         }
+        return target;
     };
 
     // process sources
@@ -1222,7 +1221,6 @@ const build = (options, buildDone) => {
         options.profiles = options.customBuildConfig.build.slice();
         options.profiles.current = null;
         processProfiles(() => {
-            organizeProfiles();
             buildDone();
         });
     } else {
@@ -1260,34 +1258,28 @@ const build = (options, buildDone) => {
  *                  "profiles": {
  *                      "<profileName>": {
  *                          "root": ""  - root folder name where source of this profile is kept - this is used for identification of content under dest folder only - not used for any prefixing with other paths in profile
- *                          "copy": [ ] - having path (relative to src path) to copy as is on dest folder
+ *                          "dest": "" - dest folder name where built/processed files are anchored under dest folder
+ *                                      it can be:
+ *                                          (empty) or absence of this, means, put it in same root folder name under dest
+ *                                          / - to represents files to be placed directly under dest folder
+ *                                          @<profileName> - to place files in same root folder name under dest folder of given profileName
+ *                          "skipMinify": true/false 
+ *                                      if true, minification for assemblies under this profile will be skipped, this is useful for server side assemblies
+ *                          "omitRoot": true/false
+ *                                      if true, it will replace root folder name with "" when building assembly file path and name for preamble
+ *                                      this is generally set to true for client installation, if client files are being served from inside server files
  *                          "modules": [ ] - copy all specified "node_modules" to a root "modules" folder as is, - to handle some modules at client-side
  *                                           NOTE: unlike broserify, it does not check dependencies, therefore only those modules which work independently, are suited for this
+ *                          "copy": [ ] - having path (relative to src path) to copy as is on dest folder
+ *                          "minify": [ ] - having path (relative to src path) of files which need to be minified (at same place, same name .min.ext file will be created)
  *                          "build": [ ] - having path (relative to src path) to treat as assembly folder group
  *                                      all root level folders under each of these will be treated as one individual assembly
  *                                      Note: if folder name (of assembly folder under it) starts with '_', it is skipped
- *                          "skipMinifyRoot": [ ] - some of the build folders may be skipped for minify (e.g., server folders)
- *                                      those can be defined here, any build folder that starts with the given folder path here will be skipped for minification
- *                                      e.g., "server/app/" here will skip minification for all build folders such as "server/app/group1/", "server/app/group2/", etc.
- *                          "resolveRoot": {
- *                              "<buildPath>": "<removeThisToReachRootPath>" - for each path in "build", define how this will be resolved 
- *                                      when generating path of assemblies underneath
- *                          }
- *                              e.g., "server/app/": "server/" - means, a file at server/app/file.js will be defined as: ./app/file.js - because at runtime server will be the root folder of app
- *                              This means, the second string is replaced with "." in first string
- *                              NOTE: for many build paths that start with same partial path, only one entry may exists here and all build paths
- *                              that start with this path will use same resolveRoot path
- *                          "preambleRoot": {
- *                              "<buildPath>": "<preambleRoot>" - for each path in "build", define where this path's preamble will be created
- *                          }
- *                              e.g., "server/app/": "server/app/" - means, assembly files that exists under path that starts with "server/app/", will have their preamble generated at: "server/app/"preamble.js
- *                              NOTE: for many build paths that start with same partial path, only one entry may exists here and preambles for all build paths
- *                            that start with this path will be generated at same place, in such case, preambles will be merged into one - so there will always be one preamble at one target given path
  *                      }
  *                  }
  *              }
  *              mainAssembly: string - name of the mainAssembly, whose load location will be dynamically used as reference to load other assemblies
- *                            This is ignored in custom build, where resolveRoot setting is statically used for resolving assembly paths
+ *                            This is ignored in custom build where paths are statically resolved at build time
  *              fullBuild: true/false   - is full build to be done
  *              skipBumpVersion: true/false - if skip bump version with build
  *              suppressLogging: true/false  - if build time log is to be shown on terminal

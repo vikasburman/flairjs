@@ -545,6 +545,32 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         _sessionStorage = (cfg.storage ? _Port('sessionStorage') : null),
         _localStorage = (cfg.storage ? _Port('localStorage') : null);
 
+    const self = Object.freeze({
+        id: replaceAll(def.name, '.', '_'),
+        name: def.name,
+        Type: def.Type,
+        members: () => {
+            let members = {};
+            for(let memberName in def.members) {
+                members[memberName] = {
+                    name: memberName,
+                    type: def.members[memberName],
+                    modifiers: [],
+                    attrs: []
+                };
+                for(let ___modifier of def.modifiers.members[memberName]) {
+                    members[memberName].modifiers.push(___modifier.name)
+                }
+                for(let ___attr of def.attrs.members[memberName]) {
+                    members[memberName].attrs.push(___attr.name)
+                }
+                members[memberName].modifiers = Object.freeze(members[memberName].modifiers);
+                members[memberName].attrs = Object.freeze(members[memberName].attrs);
+                members[memberName] = Object.freeze(members[memberName]);
+            }
+            return Object.freeze(members);
+        }
+    });
     const applyCustomAttributes = (bindingHost, memberName, memberType, member) => {
         for(let appliedAttr of attrs.members.all(memberName).current()) {
             if (appliedAttr.isCustom) { // custom attribute instance
@@ -578,12 +604,12 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         }
         return member;           
     };
-    const applyAspects = (memberName, member) => {
+    const applyAspects = (memberName, member, cannedAspects) => {
         let weavedFn = null,
             funcAspects = [];
 
         // get aspects that are applicable for this function (NOTE: Optimization will be needed here, eventually)
-        funcAspects = _get_Aspects(def.name, memberName);
+        funcAspects = _get_Aspects(def.name, memberName, cannedAspects);
         def.aspects.members[memberName] = funcAspects; // store for reference by reflector
             
         // apply these aspects
@@ -1001,7 +1027,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                 }
             }
             if (resOrAssetData) {
-                _member.set(resOrAssetData); // set value now - this includes the case of customer setter
+                _member.set(resOrAssetData); // set value now - this includes the case of custom setter
             }
         } 
 
@@ -1062,10 +1088,16 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             on_attr = attrs.members.probe('on', memberName).current(),              // always look for current on, inherited case would already be baked in
             timer_attr = attrs.members.probe('timer', memberName).current(),          // always look for current timer
             args_attr = attrs.members.probe('args', memberName).current(),
+            aspects_attr = attrs.members.probe('aspects', memberName).current(),
+            fetch_attr = attrs.members.probe('fetch', memberName).current(),
             overload_attr = attrs.members.probe('overload', memberName).current(),
             _isDeprecate = (_deprecate_attr !== null),
             _deprecate_message = (_isDeprecate ? (_deprecate_attr.args[0] || `Function is marked as deprecate. (${def.name}::${memberName})`) : ''),
             base = null,
+            _fetchMethod = '',
+            _fetchResponse = '',
+            _fetchUrl = '',
+            _api = null,
             _injections = [];
 
         // override, if required
@@ -1094,11 +1126,28 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         // define
         _isASync = _isASync || isASync(memberDef); // if memberDef is an async function, mark it as async automatically
         if (_isASync) {
+            // resolve fetch parameters once
+            if (fetch_attr && fetch_attr.args.length > 0) {
+                _fetchMethod = fetch_attr.args[0]; // get, post, put, delete, etc.
+                _fetchResponse = fetch_attr.args[1]; // json, text, blob, buffer, form
+                _fetchUrl = fetch_attr.args[2]; // url to reach
+                _api = (reqData = {}) => {
+                    // add method, rest should come by the call itself
+                    reqData.method = _fetchMethod;
+                    
+                    // make api call
+                    return apiCall(_fetchUrl, _fetchResponse, reqData); // this returns a promise
+                };
+            } else {
+                _api = null;
+            }
+
             _member = async function(...args) {
                 return new Promise(function(resolve, reject) {
                     if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
                     let fnArgs = [];
                     if (base) { fnArgs.push(base); }                                // base is always first, if overriding
+                    if (_api) { fnArgs.push(_api); }                                // api is always next to base, if fetch is used
                     if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base or as first, if injected
                     if (args_attr && args_attr.args.length > 0) {
                         let argsObj = _Args(...args_attr.args)(...args); 
@@ -1150,7 +1199,18 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
 
         // weave advices from aspects
         if (cfg.aop) {
-            _member = applyAspects(memberName, _member);
+            let staticAspects = [];
+            if (aspects_attr && aspects_attr.args.length > 0) { 
+                // validate, each being of type Aspect
+                aspects_attr.args.forEach(item => {
+                    if (!_is(item, 'Aspect')) {
+                        throw _Exception.InvalidArgument(`Only Aspect types can be statically weaved on function. (${def.name}::${memberName})`, builder); 
+                    }
+                });
+                staticAspects = aspects_attr.args; 
+            }
+            // staticAspects are actual type references - cannot be just type names
+            _member = applyAspects(memberName, _member, staticAspects);
         }
 
         // hook it to handle posted event, if configured
@@ -1411,9 +1471,12 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     // define proxy for clean syntax inside factory
     proxy = new Proxy({}, {
         get: (_obj, name) => { 
+            if (name === '$self') { return self; }
+            if (name === '$static') { return params.staticInterface; }
             return obj[name]; 
         },
         set: (_obj, name, value) => {
+            if (['$self', '$static'].indexOf(name) !== -1) { throw _Exception.InvalidOperation(`Special members cannot be custom defined. (${name})`, builder); }
             if (isBuildingObj) {
                 // get member type
                 let memberType = '';

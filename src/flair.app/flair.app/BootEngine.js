@@ -44,7 +44,7 @@ Class('(auto)', function() {
                 mountName = 'main';
                 mount = mounts[mountName];
                 for(let bw of allBootwares) {
-                    await bw[method](mountName, mount);
+                    await bw[method](mount);
                 }
 
                 // run all bootwares which are mount specific for all other mounts (except main)
@@ -52,7 +52,7 @@ Class('(auto)', function() {
                     if (mountName === 'main') { continue; }
                     mount = mounts[mountName];
                     for(let bw of mountSpecificBootwares) {
-                        await bw[method](mountName, mount);
+                        await bw[method](mount);
                     }
                 }
             } else { // worker env

@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.30.13
- *  Tue, 02 Apr 2019 11:22:39 GMT
+ *  Version: 0.30.71
+ *  Sat, 27 Apr 2019 21:54:36 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -1241,7 +1241,8 @@ const { Class, Struct, Enum, Interface, Mixin, Aspects, AppDomain, $$, attr, bri
 				getTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;
 const { TaskInfo } = flair.Tasks;
 const { env } = flair.options;
-const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve,
+const DOC = (env.isServer ? null : window.document);
+const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, guid, isArrowFunc, isASyncFunc, sieve,
 				b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
 const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,
 				$$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$args, $$inject, $$resource, $$asset, $$singleton, $$serialize,
@@ -1260,7 +1261,7 @@ const __asmError = (err) => { AppDomain.onError(err); };
 /* eslint-enable no-unused-vars */
 
 //load assembly settings from config file
-let settings = JSON.parse('{"host":"flair.app.ServerHost | flair.app.ClientHost","app":"flair.app.App","load":[],"container":{},"envVars":[],"envVarsloadOptions":{"overwrite":true},"mounts":{"main":"/"},"main-appSettings":[],"main-middlewares":[],"server-http":{"enable":false,"port":80,"timeout":-1},"server-https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""}}'); // eslint-disable-line no-unused-vars
+let settings = JSON.parse('{"host":"flair.app.ServerHost | flair.app.ClientHost","app":"flair.app.App","load":[],"container":{},"envVars":[],"envVarsloadOptions":{"overwrite":true},"mounts":{"main":"/"},"main-appSettings":[],"main-middlewares":[],"url":{"404":"/404","home":"/"},"http":{"enable":false,"port":80,"timeout":-1},"https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""}}'); // eslint-disable-line no-unused-vars
 let settingsReader = flair.Port('settingsReader');
 if (typeof settingsReader === 'function') {
 let externalSettings = settingsReader('flair.app');
@@ -1427,18 +1428,40 @@ const { IDisposable } = ns();
  */
 $$('ns', 'flair.app');
 Class('Handler', [IDisposable], function() {
-    $$('privateSet');
-    this.flags = [];
-
     $$('virtual');
-    this.construct = (flags) => {
-        this.flags = flags;
+    this.construct = () => {
     };
 
     $$('virtual');
     this.dispose = () => {
-        this.flags = null;
     };
+});
+} catch(err) {
+	__asmError(err);
+}
+})();
+
+(async () => { // ./src/flair.app/flair.api/RestHandler.js
+try{
+const { Handler } = ns('flair.app');
+
+/**
+ * @name RestHandler
+ * @description Restful API Handler
+ */
+$$('ns', 'flair.api');
+Class('RestHandler', Handler, function() {
+    $$('virtual');
+    this.get = noop;
+
+    $$('virtual');
+    this.post = noop;
+
+    $$('virtual');
+    this.put = noop;
+
+    $$('virtual');
+    this.delete = noop;
 });
 } catch(err) {
 	__asmError(err);
@@ -1493,7 +1516,7 @@ Class('BootEngine', function() {
                 mountName = 'main';
                 mount = mounts[mountName];
                 for(let bw of allBootwares) {
-                    await bw[method](mountName, mount);
+                    await bw[method](mount);
                 }
 
                 // run all bootwares which are mount specific for all other mounts (except main)
@@ -1501,7 +1524,7 @@ Class('BootEngine', function() {
                     if (mountName === 'main') { continue; }
                     mount = mounts[mountName];
                     for(let bw of mountSpecificBootwares) {
-                        await bw[method](mountName, mount);
+                        await bw[method](mount);
                     }
                 }
             } else { // worker env
@@ -1700,6 +1723,9 @@ Class('ClientHost', Host, function() {
             }
             if (!app) { app = this.mounts['main']; } // when nothing matches, give it to main
             
+            // add initial /
+            if (path.substr(0, 1) !== '/') { path = '/' + path; }
+
             // run app to initiate routing
             setTimeout(() => { 
                 try {
@@ -1717,7 +1743,12 @@ Class('ClientHost', Host, function() {
 
         // attach event handler
         window.addEventListener('hashchange', hashChangeHandler);
-        console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version}`); // eslint-disable-line no-console        
+
+        // navigate to home
+        this.app.redirect(settings.url.home);
+
+        // ready
+        console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version}`); // eslint-disable-line no-console
     };
 
     $$('override');
@@ -1734,33 +1765,6 @@ Class('ClientHost', Host, function() {
 
         mountedApps = null;
     };
-});
-} catch(err) {
-	__asmError(err);
-}
-})();
-
-(async () => { // ./src/flair.app/flair.app/RestHandler.js
-try{
-const { Handler } = ns('flair.app');
-
-/**
- * @name RestHandler
- * @description Restful API Handler
- */
-$$('ns', 'flair.app');
-Class('RestHandler', Handler, function() {
-    $$('virtual');
-    this.get = noop;
-
-    $$('virtual');
-    this.post = noop;
-
-    $$('virtual');
-    this.put = noop;
-
-    $$('virtual');
-    this.delete = noop;
 });
 } catch(err) {
 	__asmError(err);
@@ -1786,8 +1790,8 @@ Class('ServerHost', Host, function() {
     let mountedApps = {},
         httpServer = null,
         httpsServer = null,
-        httpsSettings = settings['server-https'],
-        httpSettings = settings['server-http'];
+        httpsSettings = settings['https'],
+        httpSettings = settings['http'];
     
     $$('override');
     this.construct = (base) => {
@@ -1949,24 +1953,6 @@ Class('ServerHost', Host, function() {
 
         mountedApps = null;
     };
-});
-} catch(err) {
-	__asmError(err);
-}
-})();
-
-(async () => { // ./src/flair.app/flair.app/ViewHandler.js
-try{
-const { Handler } = ns('flair.app');
-
-/**
- * @name ViewHandler
- * @description GUI View Handler
- */
-$$('ns', 'flair.app');
-Class('ViewHandler', Handler, function() {
-    $$('virtual');
-    this.view = noop;
 });
 } catch(err) {
 	__asmError(err);
@@ -2189,72 +2175,123 @@ Class('Router', Bootware, function() {
             // add routes related to current mount
             for(let route of routes) {
                 if (route.mount === mount.name) { // add route-handler
-                    mount.app[route.verb] = (route.path, (req, res, next) => { // verb could be get/set/delete/put/, etc.
-                        const onDone = (result) => {
-                            if (result) {
-                                res.end();
-                            } else {
-                                next();
-                            }
-                        };
-                        const onError = (err) => {
-                            res.status(500).end();
-                            AppDomain.host().raiseError(err);
-                        };
-
-                        try {
-                            using(new route.Handler(route.flags), (routeHandler) => {
-                                // req.params has all the route parameters.
-                                // e.g., for route "/users/:userId/books/:bookId" req.params will 
-                                // have "req.params: { "userId": "34", "bookId": "8989" }"
-                                result = routeHandler[route.verb](req, res);
-                                if (result && typeof result.then === 'function') {
-                                    result.then((delayedResult) => {
-                                        onDone(delayedResult);
-                                    }).catch(onError);
-                                } else {
-                                    onDone(result);
+                    route.verbs.forEach(verb => {
+                        mount.app[verb](route.path, (req, res, next) => { // verb could be get/set/delete/put/, etc.
+                            const onDone = (result) => {
+                                if (!result) {
+                                    next();
                                 }
-                            });
-                        } catch (err) {
-                            onError(err);
-                        }
-                    }); 
+                            };
+                            const onError = (err) => {
+                                next(err);
+                            };
+    
+                            try {
+                                using(new route.Handler(), (routeHandler) => {
+                                    // req.params has all the route parameters.
+                                    // e.g., for route "/users/:userId/books/:bookId" req.params will 
+                                    // have "req.params: { "userId": "34", "bookId": "8989" }"
+                                    result = routeHandler[verb](req, res);
+                                    if (result && typeof result.then === 'function') {
+                                        result.then((delayedResult) => {
+                                            onDone(delayedResult);
+                                        }).catch(onError);
+                                    } else {
+                                        onDone(result);
+                                    }
+                                });
+                            } catch (err) {
+                                onError(err);
+                            }
+                        });                         
+                    });
                 }
+            }
+
+            // catch 404 for this mount and forward to error handler
+            mount.app.use((req, res, next) => {
+                var err = new Error('Not Found');
+                err.status = 404;
+                next(err);
+            });
+
+            // dev/prod error handler
+            if (env.isProd) {
+                mount.app.use((err, req, res) => {                
+                    res.status(err.status || 500);
+                    if (req.xhr) { 
+                        res.status(500).send({ error: err.toString() }); 
+                    } else {
+                        res.render('error', {
+                            message: err.message,
+                            error: err
+                        });
+                    }
+                    res.end();
+                });
+            } else {
+                mount.app.use((err, req, res) => {
+                    res.status(err.status || 500);
+                    if (req.xhr) { 
+                        res.status(500).send({ error: err.toString() }); 
+                    } else {
+                        res.render('error', {
+                            message: err.message,
+                            error: err
+                        });
+                    }
+                    res.end();
+                });
             }
         };
         const setupClientRoutes = () => {
             // add routes related to current mount
             for(let route of routes) {
                 if (route.mount === mount.name) { // add route-handler
-                    mount.app(route.path, (ctx, next) => { 
-                        const onDone = (result) => {
-                            if (!result) { next(); }
-                        };
-                        const onError = (err) => {
-                            AppDomain.host().raiseError(err);
-                        };
-
+                    // NOTE: verbs are ignored for client routing, only 'view' verb is processed
+                    mount.app(route.path, (ctx) => { // mount.app = page object/func
                         try {
-                            using(new route.Handler(route.flags), (routeHandler) => {
+                            using(new route.Handler(), (routeHandler) => {
+                                // add redirect options
+                                ctx.redirectUrl = '';
+
                                 // ctx.params has all the route parameters.
-                                // e.g., for route "/users/:userId/books/:bookId" req.params will 
-                                // have "req.params: { "userId": "34", "bookId": "8989" }"
-                                result = routeHandler[route.verb](ctx);  // verbs could be 'view' or any custom verb
-                                if (result && typeof result.then === 'function') {
-                                    result.then((delayedResult) => {
-                                        onDone(delayedResult);
-                                    }).catch(onError);
-                                } else {
-                                    onDone(result);
-                                }
+                                // e.g., for route "/users/:userId/books/:bookId" ctx.params will 
+                                // have "ctx.params: { "userId": "34", "bookId": "8989" }"
+                                routeHandler.view(ctx).then((result) => {
+                                    if (!result) { // result could be undefined, true/false or any value
+                                        if (ctx.redirectUrl !== '') { // redirect url was set
+                                            ctx.handled = true; 
+                                            mount.app.redirect(ctx.redirectUrl);
+                                        } else {
+                                            ctx.handled = false; 
+                                        }
+                                    } else {
+                                        ctx.handled = true;
+                                    }
+                                }).catch((err) => {
+                                    AppDomain.host().raiseError(err);
+                                });
+
                             });
                         } catch (err) {
-                            onError(err);
+                            AppDomain.host().raiseError(err);
                         }
                     }); 
                 }
             }
+
+            // add 404 handler
+            mount.app("*", (ctx) => { // mount.app = page object/func
+                // redirect to 404 route, which has to be defined route
+                let url404 = settings.url['404'];
+                if (url404) {
+                    ctx.handled = true;
+                    mount.app.redirect(url404);
+                } else {
+                    window.history.back(); // nothing else can be done
+                }
+            });
         };
 
         if (env.isServer) {
@@ -2271,6 +2308,6 @@ Class('Router', Bootware, function() {
 
 AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.30.13","lupdate":"Tue, 02 Apr 2019 11:22:39 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.App","flair.app.Host","flair.app.Handler","flair.app.BootEngine","flair.app.ClientHost","flair.app.RestHandler","flair.app.ServerHost","flair.app.ViewHandler","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.Router"],"resources":[],"assets":[],"routes":[]}');
+AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.30.71","lupdate":"Sat, 27 Apr 2019 21:54:36 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.App","flair.app.Host","flair.app.Handler","flair.api.RestHandler","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.Router"],"resources":[],"assets":[],"routes":[]}');
 
 })();

@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.30.13
- *  Tue, 02 Apr 2019 11:22:37 GMT
+ *  Version: 0.30.71
+ *  Sat, 27 Apr 2019 21:54:34 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -109,10 +109,10 @@
         name: 'flair',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.30.13',
+        version: '0.30.71',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Tue, 02 Apr 2019 11:22:37 GMT')
+        lupdate: new Date('Sat, 27 Apr 2019 21:54:34 GMT')
     });  
     
     flair.members = [];
@@ -358,6 +358,17 @@
             } else { // client
                 _Port('clientModule').require(module).then(resolve).catch(reject);
             }
+        });
+    };
+    const apiCall = (url, resDataType, reqData) => { 
+        return new Promise((resolve, reject) => {
+            let fetchCaller = null;
+            if (isServer) {
+                fetchCaller = _Port('serverFetch');
+            } else { // client
+                fetchCaller = _Port('clientFetch');
+            }
+            fetchCaller(url, resDataType, reqData).then(resolve).catch(reject);
         });
     };
     const sieve = (obj, props, isFreeze, add) => {
@@ -1194,7 +1205,7 @@
                     typeof route.index !== 'number' ||
                     typeof route.mount !== 'string' || route.mount === '' ||
                     typeof route.path !== 'string' || route.path === '' ||
-                    typeof route.verb !== 'string' || route.verb === '' ||
+                    !Array.isArray(route.verbs) || route.verbs.length === 0 || 
                     typeof route.handler !== 'string' || route.handler === '') {
                     throw _Exception.InvalidArgument('route: ' + route.name, this.registerRoutes);
                 }
@@ -1371,9 +1382,8 @@
         this.assembly = () => { return alc.getAssembly(which(route.asmFile, true)) || null; };
         this.index = route.index;
         this.mount = route.mount;
-        this.verb = route.verb;
+        this.verbs = route.verbs;
         this.path = route.path;
-        this.flags = route.flags || [];
     
         // load handler type, as handler must be from same assembly, so should be loaded without async call
         this.Handler = _getType(route.handler);
@@ -2963,6 +2973,7 @@
             enumerate: new _attrConfig('(class || struct) && prop || func || event'),
             dispose: new _attrConfig('class && prop'),
             post: new _attrConfig('(class || struct) && event'),
+            fetch: new _attrConfig('(class || struct) && (func && async) && !(timer || on || @fetch)'),
             on: new _attrConfig('class && func && !(event || $async || $args || $overload || $inject || $static)'),
             timer: new _attrConfig('class && func && !(event || $async || $args || $inject || @timer || $static)'),
             type: new _attrConfig('(class || struct) && prop'),
@@ -2977,6 +2988,7 @@
             state: new _attrConfig('(class && prop) && !($static || $session || $readonly || $abstract || $virtual)'),
             conditional: new _attrConfig('(class || struct) && (prop || func || event)'),
             noserialize: new _attrConfig('(class || struct) && prop'),
+            aspects: new _attrConfig('(class && func)'),
             ns: new _attrConfig('(class || struct || mixin || interface || enum) && !(prop || func || event || construct || dispose)'),
         
             mixin: new _attrConfig('class && (prop || func || event)'),
@@ -3565,6 +3577,32 @@
             _sessionStorage = (cfg.storage ? _Port('sessionStorage') : null),
             _localStorage = (cfg.storage ? _Port('localStorage') : null);
     
+        const self = Object.freeze({
+            id: replaceAll(def.name, '.', '_'),
+            name: def.name,
+            Type: def.Type,
+            members: () => {
+                let members = {};
+                for(let memberName in def.members) {
+                    members[memberName] = {
+                        name: memberName,
+                        type: def.members[memberName],
+                        modifiers: [],
+                        attrs: []
+                    };
+                    for(let ___modifier of def.modifiers.members[memberName]) {
+                        members[memberName].modifiers.push(___modifier.name)
+                    }
+                    for(let ___attr of def.attrs.members[memberName]) {
+                        members[memberName].attrs.push(___attr.name)
+                    }
+                    members[memberName].modifiers = Object.freeze(members[memberName].modifiers);
+                    members[memberName].attrs = Object.freeze(members[memberName].attrs);
+                    members[memberName] = Object.freeze(members[memberName]);
+                }
+                return Object.freeze(members);
+            }
+        });
         const applyCustomAttributes = (bindingHost, memberName, memberType, member) => {
             for(let appliedAttr of attrs.members.all(memberName).current()) {
                 if (appliedAttr.isCustom) { // custom attribute instance
@@ -3598,12 +3636,12 @@
             }
             return member;           
         };
-        const applyAspects = (memberName, member) => {
+        const applyAspects = (memberName, member, cannedAspects) => {
             let weavedFn = null,
                 funcAspects = [];
     
             // get aspects that are applicable for this function (NOTE: Optimization will be needed here, eventually)
-            funcAspects = _get_Aspects(def.name, memberName);
+            funcAspects = _get_Aspects(def.name, memberName, cannedAspects);
             def.aspects.members[memberName] = funcAspects; // store for reference by reflector
                 
             // apply these aspects
@@ -4021,7 +4059,7 @@
                     }
                 }
                 if (resOrAssetData) {
-                    _member.set(resOrAssetData); // set value now - this includes the case of customer setter
+                    _member.set(resOrAssetData); // set value now - this includes the case of custom setter
                 }
             } 
     
@@ -4082,10 +4120,16 @@
                 on_attr = attrs.members.probe('on', memberName).current(),              // always look for current on, inherited case would already be baked in
                 timer_attr = attrs.members.probe('timer', memberName).current(),          // always look for current timer
                 args_attr = attrs.members.probe('args', memberName).current(),
+                aspects_attr = attrs.members.probe('aspects', memberName).current(),
+                fetch_attr = attrs.members.probe('fetch', memberName).current(),
                 overload_attr = attrs.members.probe('overload', memberName).current(),
                 _isDeprecate = (_deprecate_attr !== null),
                 _deprecate_message = (_isDeprecate ? (_deprecate_attr.args[0] || `Function is marked as deprecate. (${def.name}::${memberName})`) : ''),
                 base = null,
+                _fetchMethod = '',
+                _fetchResponse = '',
+                _fetchUrl = '',
+                _api = null,
                 _injections = [];
     
             // override, if required
@@ -4114,11 +4158,28 @@
             // define
             _isASync = _isASync || isASync(memberDef); // if memberDef is an async function, mark it as async automatically
             if (_isASync) {
+                // resolve fetch parameters once
+                if (fetch_attr && fetch_attr.args.length > 0) {
+                    _fetchMethod = fetch_attr.args[0]; // get, post, put, delete, etc.
+                    _fetchResponse = fetch_attr.args[1]; // json, text, blob, buffer, form
+                    _fetchUrl = fetch_attr.args[2]; // url to reach
+                    _api = (reqData = {}) => {
+                        // add method, rest should come by the call itself
+                        reqData.method = _fetchMethod;
+                        
+                        // make api call
+                        return apiCall(_fetchUrl, _fetchResponse, reqData); // this returns a promise
+                    };
+                } else {
+                    _api = null;
+                }
+    
                 _member = async function(...args) {
                     return new Promise(function(resolve, reject) {
                         if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
                         let fnArgs = [];
                         if (base) { fnArgs.push(base); }                                // base is always first, if overriding
+                        if (_api) { fnArgs.push(_api); }                                // api is always next to base, if fetch is used
                         if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base or as first, if injected
                         if (args_attr && args_attr.args.length > 0) {
                             let argsObj = _Args(...args_attr.args)(...args); 
@@ -4170,7 +4231,18 @@
     
             // weave advices from aspects
             if (cfg.aop) {
-                _member = applyAspects(memberName, _member);
+                let staticAspects = [];
+                if (aspects_attr && aspects_attr.args.length > 0) { 
+                    // validate, each being of type Aspect
+                    aspects_attr.args.forEach(item => {
+                        if (!_is(item, 'Aspect')) {
+                            throw _Exception.InvalidArgument(`Only Aspect types can be statically weaved on function. (${def.name}::${memberName})`, builder); 
+                        }
+                    });
+                    staticAspects = aspects_attr.args; 
+                }
+                // staticAspects are actual type references - cannot be just type names
+                _member = applyAspects(memberName, _member, staticAspects);
             }
     
             // hook it to handle posted event, if configured
@@ -4431,9 +4503,12 @@
         // define proxy for clean syntax inside factory
         proxy = new Proxy({}, {
             get: (_obj, name) => { 
+                if (name === '$self') { return self; }
+                if (name === '$static') { return params.staticInterface; }
                 return obj[name]; 
             },
             set: (_obj, name, value) => {
+                if (['$self', '$static'].indexOf(name) !== -1) { throw _Exception.InvalidOperation(`Special members cannot be custom defined. (${name})`, builder); }
                 if (isBuildingObj) {
                     // get member type
                     let memberType = '';
@@ -5355,6 +5430,9 @@
         
             let result = null;
             const getResolvedObject = (Type) => {
+                // TODO: resolve one alias only once for isAll and once for first item (if isAll was done, pick first from there)
+                // and rest all times load from local resolved cache
+    
                 let obj = Type; // whatever it was
                 if (typeof Type === 'string') {
                     if (Type.endsWith('.js') || Type.endsWith('.mjs')) { 
@@ -5546,7 +5624,7 @@
             allAspects.push({rex: new RegExp(__identifier), Aspect: aspect});
         }
     };
-    const _get_Aspects = (typeName, funcName) => {
+    const _get_Aspects = (typeName, funcName, staticAspects) => {
         // NOTE: intentionally not checking type, because it is an internal call and this needs to run as fast as possible
         // get parts
         let funcAspects = [],
@@ -5563,6 +5641,9 @@
             __class = typeName.trim();
         }
         __identifier = __ns + '/' + __class + ':' + __func;
+    
+        // add staticAspects first, if defined
+        if (staticAspects) { funcAspects.push(...staticAspects); }
     
         allAspects.forEach(item => {
             if (item.rex.test(__identifier)) { 
@@ -6169,7 +6250,7 @@
     
                 let ext = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
                 fetch(file).then((response) => {
-                    if (response.status !== 200) {
+                    if (!response.ok) {
                         reject(_Exception.OperationFailed(file, response.status));
                     } else {
                         let contentType = response.headers['content-type'];
@@ -6242,6 +6323,49 @@
         };
     };
     _Port.define('settingsReader', __settingsReader);
+    
+    // fetch core logic
+    const fetcher = (fetchFunc, url, resDataType, reqData) => {
+        return new Promise((resolve, reject) => {
+            if (typeof url !== 'string') { reject(_Exception.InvalidArgument('url')); return; }
+            if (typeof resDataType !== 'string' || ['text', 'json', 'buffer', 'form', 'blob'].indexOf(resDataType) === -1) { reject(_Exception.InvalidArgument('resDataType')); return; }
+            if (!reqData) { reject(_Exception.InvalidArgument('reqData')); return; }
+    
+            fetchFunc(url, reqData).then((response) => {
+                if (!response.ok) {
+                    reject(_Exception.OperationFailed(url, response.status));
+                } else {
+                    let resMethod = '';
+                    switch(resDataType) {
+                        case 'text': resMethod = 'text'; break;
+                        case 'json': resMethod = 'json'; break;
+                        case 'buffer': resMethod = 'arrayBuffer'; break;
+                        case 'form': resMethod = 'formData'; break;
+                        case 'blob': resMethod = 'blob'; break;
+                    }
+                    response[resMethod]().then(resolve).catch((err) => {
+                        reject(new _Exception(err));
+                    });
+                }
+            }).catch((err) => {
+                reject(new _Exception(err));
+            });
+        });
+    };
+    // serverFetch factory
+    const __serverFetch = (env) => { // eslint-disable-line no-unused-vars
+        return (url, resDataType, reqData) => {
+            return fetcher(require('node-fetch'), url, resDataType, reqData);
+        };
+    };
+    _Port.define('serverFetch', __serverFetch);
+    // clientFetch factory
+    const __clientFetch = (env) => { // eslint-disable-line no-unused-vars
+        return (url, resDataType, reqData) => {
+            return fetcher(fetch, url, resDataType, reqData);
+        };
+    };
+    _Port.define('clientFetch', __clientFetch);
      
     /**
      * @name Reflector
@@ -6735,7 +6859,8 @@ const { Class, Struct, Enum, Interface, Mixin, Aspects, AppDomain, $$, attr, bri
 				getTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;
 const { TaskInfo } = flair.Tasks;
 const { env } = flair.options;
-const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve,
+const DOC = (env.isServer ? null : window.document);
+const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, guid, isArrowFunc, isASyncFunc, sieve,
 				b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
 const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,
 				$$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$args, $$inject, $$resource, $$asset, $$singleton, $$serialize,
@@ -7108,6 +7233,6 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.30.13","lupdate":"Tue, 02 Apr 2019 11:22:37 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["IDisposable","Aspect","Attribute","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.30.71","lupdate":"Sat, 27 Apr 2019 21:54:34 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["IDisposable","Aspect","Attribute","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
 
 })();

@@ -370,7 +370,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
                 typeof route.index !== 'number' ||
                 typeof route.mount !== 'string' || route.mount === '' ||
                 typeof route.path !== 'string' || route.path === '' ||
-                typeof route.verb !== 'string' || route.verb === '' ||
+                !Array.isArray(route.verbs) || route.verbs.length === 0 || 
                 typeof route.handler !== 'string' || route.handler === '') {
                 throw _Exception.InvalidArgument('route: ' + route.name, this.registerRoutes);
             }

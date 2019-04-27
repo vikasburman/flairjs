@@ -58,7 +58,7 @@ const _Aspects = {
         allAspects.push({rex: new RegExp(__identifier), Aspect: aspect});
     }
 };
-const _get_Aspects = (typeName, funcName) => {
+const _get_Aspects = (typeName, funcName, staticAspects) => {
     // NOTE: intentionally not checking type, because it is an internal call and this needs to run as fast as possible
     // get parts
     let funcAspects = [],
@@ -75,6 +75,9 @@ const _get_Aspects = (typeName, funcName) => {
         __class = typeName.trim();
     }
     __identifier = __ns + '/' + __class + ':' + __func;
+
+    // add staticAspects first, if defined
+    if (staticAspects) { funcAspects.push(...staticAspects); }
 
     allAspects.forEach(item => {
         if (item.rex.test(__identifier)) { 

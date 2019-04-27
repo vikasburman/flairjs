@@ -10,9 +10,8 @@ const Route = function(route, ns, alc) {
     this.assembly = () => { return alc.getAssembly(which(route.asmFile, true)) || null; };
     this.index = route.index;
     this.mount = route.mount;
-    this.verb = route.verb;
+    this.verbs = route.verbs;
     this.path = route.path;
-    this.flags = route.flags || [];
 
     // load handler type, as handler must be from same assembly, so should be loaded without async call
     this.Handler = _getType(route.handler);

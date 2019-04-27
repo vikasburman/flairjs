@@ -99,6 +99,17 @@ const loadModule = (module) => {
         }
     });
 };
+const apiCall = (url, resDataType, reqData) => { 
+    return new Promise((resolve, reject) => {
+        let fetchCaller = null;
+        if (isServer) {
+            fetchCaller = _Port('serverFetch');
+        } else { // client
+            fetchCaller = _Port('clientFetch');
+        }
+        fetchCaller(url, resDataType, reqData).then(resolve).catch(reject);
+    });
+};
 const sieve = (obj, props, isFreeze, add) => {
     let _props = props ? splitAndTrim(props) : Object.keys(obj); // if props are not give, pick all
     const extract = (_obj) => {

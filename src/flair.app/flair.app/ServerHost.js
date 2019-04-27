@@ -15,8 +15,8 @@ Class('(auto)', Host, function() {
     let mountedApps = {},
         httpServer = null,
         httpsServer = null,
-        httpsSettings = settings['server-https'],
-        httpSettings = settings['server-http'];
+        httpsSettings = settings['https'],
+        httpSettings = settings['http'];
     
     $$('override');
     this.construct = (base) => {

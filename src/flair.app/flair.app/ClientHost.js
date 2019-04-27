@@ -107,6 +107,9 @@ Class('(auto)', Host, function() {
             }
             if (!app) { app = this.mounts['main']; } // when nothing matches, give it to main
             
+            // add initial /
+            if (path.substr(0, 1) !== '/') { path = '/' + path; }
+
             // run app to initiate routing
             setTimeout(() => { 
                 try {
@@ -124,7 +127,12 @@ Class('(auto)', Host, function() {
 
         // attach event handler
         window.addEventListener('hashchange', hashChangeHandler);
-        console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version}`); // eslint-disable-line no-console        
+
+        // navigate to home
+        this.app.redirect(settings.url.home);
+
+        // ready
+        console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version}`); // eslint-disable-line no-console
     };
 
     $$('override');

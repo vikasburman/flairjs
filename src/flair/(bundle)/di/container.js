@@ -56,6 +56,9 @@ const _Container = {
     
         let result = null;
         const getResolvedObject = (Type) => {
+            // TODO: resolve one alias only once for isAll and once for first item (if isAll was done, pick first from there)
+            // and rest all times load from local resolved cache
+
             let obj = Type; // whatever it was
             if (typeof Type === 'string') {
                 if (Type.endsWith('.js') || Type.endsWith('.mjs')) { 

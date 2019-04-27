@@ -7,16 +7,11 @@ const { IDisposable } = ns();
  */
 $$('ns', '(auto)');
 Class('(auto)', [IDisposable], function() {
-    $$('privateSet');
-    this.flags = [];
-
     $$('virtual');
-    this.construct = (flags) => {
-        this.flags = flags;
+    this.construct = () => {
     };
 
     $$('virtual');
     this.dispose = () => {
-        this.flags = null;
     };
 });

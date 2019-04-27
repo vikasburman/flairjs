@@ -30,72 +30,123 @@ Class('(auto)', Bootware, function() {
             // add routes related to current mount
             for(let route of routes) {
                 if (route.mount === mount.name) { // add route-handler
-                    mount.app[route.verb] = (route.path, (req, res, next) => { // verb could be get/set/delete/put/, etc.
-                        const onDone = (result) => {
-                            if (result) {
-                                res.end();
-                            } else {
-                                next();
-                            }
-                        };
-                        const onError = (err) => {
-                            res.status(500).end();
-                            AppDomain.host().raiseError(err);
-                        };
-
-                        try {
-                            using(new route.Handler(route.flags), (routeHandler) => {
-                                // req.params has all the route parameters.
-                                // e.g., for route "/users/:userId/books/:bookId" req.params will 
-                                // have "req.params: { "userId": "34", "bookId": "8989" }"
-                                result = routeHandler[route.verb](req, res);
-                                if (result && typeof result.then === 'function') {
-                                    result.then((delayedResult) => {
-                                        onDone(delayedResult);
-                                    }).catch(onError);
-                                } else {
-                                    onDone(result);
+                    route.verbs.forEach(verb => {
+                        mount.app[verb](route.path, (req, res, next) => { // verb could be get/set/delete/put/, etc.
+                            const onDone = (result) => {
+                                if (!result) {
+                                    next();
                                 }
-                            });
-                        } catch (err) {
-                            onError(err);
-                        }
-                    }); 
+                            };
+                            const onError = (err) => {
+                                next(err);
+                            };
+    
+                            try {
+                                using(new route.Handler(), (routeHandler) => {
+                                    // req.params has all the route parameters.
+                                    // e.g., for route "/users/:userId/books/:bookId" req.params will 
+                                    // have "req.params: { "userId": "34", "bookId": "8989" }"
+                                    result = routeHandler[verb](req, res);
+                                    if (result && typeof result.then === 'function') {
+                                        result.then((delayedResult) => {
+                                            onDone(delayedResult);
+                                        }).catch(onError);
+                                    } else {
+                                        onDone(result);
+                                    }
+                                });
+                            } catch (err) {
+                                onError(err);
+                            }
+                        });                         
+                    });
                 }
+            }
+
+            // catch 404 for this mount and forward to error handler
+            mount.app.use((req, res, next) => {
+                var err = new Error('Not Found');
+                err.status = 404;
+                next(err);
+            });
+
+            // dev/prod error handler
+            if (env.isProd) {
+                mount.app.use((err, req, res) => {                
+                    res.status(err.status || 500);
+                    if (req.xhr) { 
+                        res.status(500).send({ error: err.toString() }); 
+                    } else {
+                        res.render('error', {
+                            message: err.message,
+                            error: err
+                        });
+                    }
+                    res.end();
+                });
+            } else {
+                mount.app.use((err, req, res) => {
+                    res.status(err.status || 500);
+                    if (req.xhr) { 
+                        res.status(500).send({ error: err.toString() }); 
+                    } else {
+                        res.render('error', {
+                            message: err.message,
+                            error: err
+                        });
+                    }
+                    res.end();
+                });
             }
         };
         const setupClientRoutes = () => {
             // add routes related to current mount
             for(let route of routes) {
                 if (route.mount === mount.name) { // add route-handler
-                    mount.app(route.path, (ctx, next) => { 
-                        const onDone = (result) => {
-                            if (!result) { next(); }
-                        };
-                        const onError = (err) => {
-                            AppDomain.host().raiseError(err);
-                        };
-
+                    // NOTE: verbs are ignored for client routing, only 'view' verb is processed
+                    mount.app(route.path, (ctx) => { // mount.app = page object/func
                         try {
-                            using(new route.Handler(route.flags), (routeHandler) => {
+                            using(new route.Handler(), (routeHandler) => {
+                                // add redirect options
+                                ctx.redirectUrl = '';
+
                                 // ctx.params has all the route parameters.
-                                // e.g., for route "/users/:userId/books/:bookId" req.params will 
-                                // have "req.params: { "userId": "34", "bookId": "8989" }"
-                                result = routeHandler[route.verb](ctx);  // verbs could be 'view' or any custom verb
-                                if (result && typeof result.then === 'function') {
-                                    result.then((delayedResult) => {
-                                        onDone(delayedResult);
-                                    }).catch(onError);
-                                } else {
-                                    onDone(result);
-                                }
+                                // e.g., for route "/users/:userId/books/:bookId" ctx.params will 
+                                // have "ctx.params: { "userId": "34", "bookId": "8989" }"
+                                routeHandler.view(ctx).then((result) => {
+                                    if (!result) { // result could be undefined, true/false or any value
+                                        if (ctx.redirectUrl !== '') { // redirect url was set
+                                            ctx.handled = true; 
+                                            mount.app.redirect(ctx.redirectUrl);
+                                        } else {
+                                            ctx.handled = false; 
+                                        }
+                                    } else {
+                                        ctx.handled = true;
+                                    }
+                                }).catch((err) => {
+                                    AppDomain.host().raiseError(err);
+                                });
+
                             });
                         } catch (err) {
-                            onError(err);
+                            AppDomain.host().raiseError(err);
                         }
                     }); 
                 }
             }
+
+            // add 404 handler
+            mount.app("*", (ctx) => { // mount.app = page object/func
+                // redirect to 404 route, which has to be defined route
+                let url404 = settings.url['404'];
+                if (url404) {
+                    ctx.handled = true;
+                    mount.app.redirect(url404);
+                } else {
+                    window.history.back(); // nothing else can be done
+                }
+            });
         };
 
         if (env.isServer) {

@@ -128,6 +128,7 @@ const _attrMeta = _attr[meta] = Object.freeze({
         enumerate: new _attrConfig('(class || struct) && prop || func || event'),
         dispose: new _attrConfig('class && prop'),
         post: new _attrConfig('(class || struct) && event'),
+        fetch: new _attrConfig('(class || struct) && (func && async) && !(timer || on || @fetch)'),
         on: new _attrConfig('class && func && !(event || $async || $args || $overload || $inject || $static)'),
         timer: new _attrConfig('class && func && !(event || $async || $args || $inject || @timer || $static)'),
         type: new _attrConfig('(class || struct) && prop'),
@@ -142,6 +143,7 @@ const _attrMeta = _attr[meta] = Object.freeze({
         state: new _attrConfig('(class && prop) && !($static || $session || $readonly || $abstract || $virtual)'),
         conditional: new _attrConfig('(class || struct) && (prop || func || event)'),
         noserialize: new _attrConfig('(class || struct) && prop'),
+        aspects: new _attrConfig('(class && func)'),
         ns: new _attrConfig('(class || struct || mixin || interface || enum) && !(prop || func || event || construct || dispose)'),
     
         mixin: new _attrConfig('class && (prop || func || event)'),
