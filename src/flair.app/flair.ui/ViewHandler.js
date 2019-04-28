@@ -9,7 +9,16 @@ $$('ns', '(auto)');
 Class('(auto)', Handler, function() {
     let isInit = false,
         isMounted = false,
-        parentEl = null;
+        mainEl = '';
+
+    $$('override');
+    this.construct = (base, el, title, transition) => {
+        base();
+
+        mainEl = el || 'main';
+        this.viewTransition = transition;
+        this.title = this.title + (title ? ' - ' + title : '');
+    };
 
     this.init = async () => {
         if (!isInit) {
@@ -17,9 +26,6 @@ Class('(auto)', Handler, function() {
 
             // give it a unique name
             this.name = this.$self.id + '_' + guid();
-
-            // define main el
-            parentEl = DOC.getElementById(settings.el || 'main');
 
             // get port
             let clientFileLoader = Port('clientFile');  
@@ -46,11 +52,11 @@ Class('(auto)', Handler, function() {
         }
     };
 
-    $$('protectedSet');
-    this.viewTransition = settings.viewTransition;
+    $$('privateSet');
+    this.viewTransition = '';
 
     $$('privateSet');
-    this.name = "";
+    this.name = '';
 
     $$('protectedSet');
     this.title = '';
@@ -66,9 +72,26 @@ Class('(auto)', Handler, function() {
     $$('protectedSet');
     this.meta = null;
 
+    this.view = async (ctx) => {
+        if (ctx) { // so it do not get executed on component
+            // initialize
+            await this.init();
+
+            // add view html
+            let el = this.append();
+
+            // load view
+            this.loadView(ctx);
+
+            // swap views (old one is replaced with this new one)
+            await this.swap();
+        }
+    };
+
+    $$('protected');
     $$('virtual');
     $$('async');
-    this.view = noop;
+    this.loadView = noop;
 
     $$('static');
     this.currentView = '';
@@ -76,8 +99,8 @@ Class('(auto)', Handler, function() {
     $$('static');
     this.currentViewMeta = [];
 
-    $$('protected');
-    this.mount = () => {
+    $$('private');
+    this.append = () => {
         if (!isMounted) {
             isMounted = true;
 
@@ -100,11 +123,16 @@ Class('(auto)', Handler, function() {
             el.appendChild(htmlEl);
 
             // add to parent
+            let parentEl = DOC.getElementById(mainEl);
             parentEl.appendChild(el);
-        }
+            
+            // return
+            return el;
+        } 
+        return null;
     };
 
-    $$('protected');
+    $$('private');
     this.swap = async () => {
         let thisViewEl = DOC.getElementById(this.name);
 
@@ -128,7 +156,8 @@ Class('(auto)', Handler, function() {
                 thisViewEl.hidden = false;
             }
 
-            // unmount outgoing view
+            // remove outgoing view
+            let parentEl = DOC.getElementById(mainEl);            
             parentEl.removeChild(currentViewEl);
         }
 
@@ -148,9 +177,6 @@ Class('(auto)', Handler, function() {
 
         // update title
         DOC.title = this.title;
-        if (settings.title) {
-            DOC.title += ' - ' + settings.title;
-        }
 
         // set new current
         this.$static.currentView = this.name;

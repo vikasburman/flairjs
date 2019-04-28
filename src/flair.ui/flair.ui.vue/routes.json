@@ -1,0 +1,4 @@
+[
+    { "index": 101, "name": "test2", "mount": "main", "path": "test/:id", "handler": "abc.xyz.Test" },
+    { "index": 103, "name": "exit2", "mount": "main", "path": "exit", "handler": "abc.xyz.Exit" }
+]

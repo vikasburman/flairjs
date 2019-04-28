@@ -329,7 +329,7 @@ const build = (options, buildDone) => {
         //      "types": ["", "", ...],
         //      "resources": ["", "", ...],
         //      "assets": ["", "", ...],
-        //      "routes": ["", "", ...]
+        //      "routes": [{}, {}, ...]
         options.current.ado = {
             name: options.current.asmName,
             file: options.current.asmFileName.replace('.js', '{.min}.js'),
@@ -802,25 +802,21 @@ const build = (options, buildDone) => {
             afterLint();
         }
     };
-    const appendRoutes = (done, justNames3) => {
-        justNames3 = justNames3 || [];
+    const appendRoutes = (done, justData) => {
+        justData = justData || [];
         if (options.current.ado.routes.length === 0) { 
-            options.current.ado.routes = justNames3;
+            options.current.ado.routes = justData;
             delete options.current.__routes;
             done(); return; 
         }
         let nsRoute = options.current.ado.routes.splice(0, 1)[0]; // pick from top
         if (!options.current.__routes) { logger(0, 'routes', ''); options.current.__routes = true; }
+        logger(1, '', './' + nsRoute.file); 
         for(let route of nsRoute.data) {
-            justNames3.push(route.name); // add name of each route
+            justData.push(route); // add each route - this means, from vary many routes.json files in an assembly, all routes are flattened to one list
         }
 
-        logger(1, '', './' + nsRoute.file); 
-        // eslint-disable-next-line no-useless-escape
-        let dump = `\n(() => { \/\/ ${nsRoute.file}\n\tlet routes = JSON.parse('${JSON.stringify(nsRoute.data)}'); \n\tAppDomain.context.current().registerRoutes(...routes);}\n)();\n`;
-        appendToFile(dump);
-
-        appendRoutes(done, justNames3); // pick next
+        appendRoutes(done, justData); // pick next
     };
     const appendSelfRegistration = () => {
         if (options.skipRegistrationsFor.indexOf(options.current.asmName) !== -1) { return; } // skip for special cases
@@ -912,7 +908,7 @@ const build = (options, buildDone) => {
                 index: index
             };
             
-            if (file === 'routes.json') { // routes definition
+            if (file.endsWith('/routes.json')) { // routes definition
                 nsFile.type = 'routes';
             } else if (file.endsWith('.spec.js')) { continue; // ignore specs
             } else if (file.endsWith('.res.js')) { // js as a resource
@@ -948,7 +944,7 @@ const build = (options, buildDone) => {
                 // Each route Definition can be:
                 // {
                 //   name: route name, to access route programatically, it will be prefixed with namespace under which this routes.json is kept
-                //   mount: route root mount name - by default it is 'main', as per config.json setting, it can be any other mount also (each mount is a different express app)
+                //   mount: route root mount name - by default it is 'main', as per config.json setting, it can be any other mount also (each mount is a different express/page app for server/client)
                 //   path: route path in relation to mount
                 //   handler: qualified type name that handles this route
                 //      handler can be of any class that is derived from Handler base class
@@ -963,7 +959,6 @@ const build = (options, buildDone) => {
                     route.qualifiedName = (options.current.nsName !== '(root)' ? options.current.nsName + '.' : resolveRootNS(true))  + route.name;
                     routes.push({ 
                         name: route.qualifiedName,
-                        asmFile: options.current.ado.file,
                         mount: route.mount || 'main', // by default all routes mount to main
                         index: route.index || 0, // no index means all are at same level
                         verbs: route.verbs || [], // verbs, e.g., view / get / post, etc.

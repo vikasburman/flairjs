@@ -55,7 +55,7 @@ Class('(auto)', Host, function() {
         // create main app instance of page
         // 'page' variable is already loaded, as page.js is bundled in fliar.app
         appOptions = getOptions('main');
-        let mainApp = page.create(appOptions);
+        let mainApp = page(appOptions);
         mainApp.strict(appOptions.strict);
         mainApp.base('/');
 
@@ -97,15 +97,20 @@ Class('(auto)', Host, function() {
             if (path.substr(0, 1) === '#') { path = path.substr(1); }
             
             // route this path to most suitable mounted app
-            let app = null;
+            let app = null,
+                mountName = '';
             for(let mount of this.mounts) {
                 if (path.startsWith(mount.root)) { 
                     app = mount.app; 
                     path = path.substr(mount.root.length); // remove all base path, so it becomes at part the way paths were added to this app
+                    mountName = mount;
                     break; 
                 }
             }
-            if (!app) { app = this.mounts['main']; } // when nothing matches, give it to main
+            if (!app) { // when nothing matches, give it to main
+                mountName = 'main';
+                app = this.mounts[mountName]; 
+            } 
             
             // add initial /
             if (path.substr(0, 1) !== '/') { path = '/' + path; }
@@ -113,7 +118,7 @@ Class('(auto)', Host, function() {
             // run app to initiate routing
             setTimeout(() => { 
                 try {
-                    app(path); 
+                    app(path);
                 } catch (err) {
                     this.error(err); // pass-through event
                 }

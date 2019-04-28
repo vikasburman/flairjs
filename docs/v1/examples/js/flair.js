@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.30.71
- *  Sat, 27 Apr 2019 21:54:34 GMT
+ *  Version: 0.30.93
+ *  Sun, 28 Apr 2019 17:39:58 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -109,10 +109,10 @@
         name: 'flair',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.30.71',
+        version: '0.30.93',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sat, 27 Apr 2019 21:54:34 GMT')
+        lupdate: new Date('Sun, 28 Apr 2019 17:39:58 GMT')
     });  
     
     flair.members = [];
@@ -1196,7 +1196,7 @@
         };
     
         // routes
-        this.registerRoutes = (routes) => {
+        this.registerRoutes = (routes, asmFile) => {
             if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.registerRoutes); }
     
             // process each route
@@ -1205,7 +1205,6 @@
                     typeof route.index !== 'number' ||
                     typeof route.mount !== 'string' || route.mount === '' ||
                     typeof route.path !== 'string' || route.path === '' ||
-                    !Array.isArray(route.verbs) || route.verbs.length === 0 || 
                     typeof route.handler !== 'string' || route.handler === '') {
                     throw _Exception.InvalidArgument('route: ' + route.name, this.registerRoutes);
                 }
@@ -1221,7 +1220,7 @@
                 if (alcResources[route.name]) { throw _Exception.Duplicate(`Already registered as Resource. (${route.name})`, this.registerRoutes); }
     
                 // register
-                alcRoutes[route.name] = Object.freeze(new Route(route, ns, this));
+                alcRoutes[route.name] = Object.freeze(new Route(asmFile, route, ns, this));
     
                 // register to namespace as well
                 if (ns) {
@@ -1374,20 +1373,17 @@
      * @name Route
      * @description Route object.
      */ 
-    const Route = function(route, ns, alc) {
+    const Route = function(asmFile, route, ns, alc) {
         this.context = alc;
     
         this.name = route.name;
         this.ns = ns;
-        this.assembly = () => { return alc.getAssembly(which(route.asmFile, true)) || null; };
+        this.assembly = () => { return alc.getAssembly(asmFile) || null; };
         this.index = route.index;
         this.mount = route.mount;
-        this.verbs = route.verbs;
+        this.verbs = route.verbs || (isServer ? ['get'] : ['view']); // default verb
         this.path = route.path;
-    
-        // load handler type, as handler must be from same assembly, so should be loaded without async call
-        this.Handler = _getType(route.handler);
-        if (!this.Handler) { throw _Exception.InvalidDefinition(route.handler, Route); }
+        this.handler = route.handler;
     };
       
     /**
@@ -1815,7 +1811,8 @@
         // ados
         this.registerAdo = (...ados) => {
             // when call is coming from direct assembly loading
-            let isThrowOnDuplicate = true;
+            let isThrowOnDuplicate = true,
+                isCalledFromAsmLoading = false;
             if (ados.length === 1 && typeof ados[0] === 'string') { 
                 let ado = JSON.parse(ados[0]);
                 if (Array.isArray(ado)) {
@@ -1823,13 +1820,15 @@
                 } else {
                     ados = [ado];
                 }
-                isThrowOnDuplicate = false;   
+                isThrowOnDuplicate = false;
+                isCalledFromAsmLoading = true;
             }
     
             // register
             ados.forEach(ado => {
                 if (_typeOf(ado.types) !== 'array' || 
                     _typeOf(ado.resources) !== 'array' ||
+                    _typeOf(ado.routes) !== 'array' ||
                     _typeOf(ado.assets) !== 'array' ||
                     typeof ado.name !== 'string' ||
                     typeof ado.file !== 'string' || ado.file === '') {
@@ -1861,7 +1860,12 @@
                         } else {
                             asmTypes[qualifiedName] = ado.file; // means this resource can be loaded from this assembly
                         }
-                    });                
+                    });
+                    
+                    // register routes
+                    if (!isCalledFromAsmLoading) { // since otherwise routes are registered with preamble loading itself
+                        this.context.registerRoutes(ado.routes, ado.file);
+                    }
                 }
             });  
     
@@ -4503,12 +4507,14 @@
         // define proxy for clean syntax inside factory
         proxy = new Proxy({}, {
             get: (_obj, name) => { 
-                if (name === '$self') { return self; }
-                if (name === '$static') { return params.staticInterface; }
+                if (cfg.new) {
+                    if (name === '$self') { return self; }
+                    if (name === '$static') { return params.staticInterface; }
+                }
                 return obj[name]; 
             },
             set: (_obj, name, value) => {
-                if (['$self', '$static'].indexOf(name) !== -1) { throw _Exception.InvalidOperation(`Special members cannot be custom defined. (${name})`, builder); }
+                if (cfg.new && ['$self', '$static'].indexOf(name) !== -1) { throw _Exception.InvalidOperation(`Special members cannot be custom defined. (${name})`, builder); }
                 if (isBuildingObj) {
                     // get member type
                     let memberType = '';
@@ -7233,6 +7239,6 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.30.71","lupdate":"Sat, 27 Apr 2019 21:54:34 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["IDisposable","Aspect","Attribute","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.30.93","lupdate":"Sun, 28 Apr 2019 17:39:58 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["IDisposable","Aspect","Attribute","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
 
 })();

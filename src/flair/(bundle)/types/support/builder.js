@@ -1471,12 +1471,14 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     // define proxy for clean syntax inside factory
     proxy = new Proxy({}, {
         get: (_obj, name) => { 
-            if (name === '$self') { return self; }
-            if (name === '$static') { return params.staticInterface; }
+            if (cfg.new) {
+                if (name === '$self') { return self; }
+                if (name === '$static') { return params.staticInterface; }
+            }
             return obj[name]; 
         },
         set: (_obj, name, value) => {
-            if (['$self', '$static'].indexOf(name) !== -1) { throw _Exception.InvalidOperation(`Special members cannot be custom defined. (${name})`, builder); }
+            if (cfg.new && ['$self', '$static'].indexOf(name) !== -1) { throw _Exception.InvalidOperation(`Special members cannot be custom defined. (${name})`, builder); }
             if (isBuildingObj) {
                 // get member type
                 let memberType = '';

@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.30.71
- *  Sat, 27 Apr 2019 21:54:36 GMT
+ *  Version: 0.30.93
+ *  Sun, 28 Apr 2019 17:40:00 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -1671,7 +1671,7 @@ Class('ClientHost', Host, function() {
         // create main app instance of page
         // 'page' variable is already loaded, as page.js is bundled in fliar.app
         appOptions = getOptions('main');
-        let mainApp = page.create(appOptions);
+        let mainApp = page(appOptions);
         mainApp.strict(appOptions.strict);
         mainApp.base('/');
 
@@ -1713,15 +1713,20 @@ Class('ClientHost', Host, function() {
             if (path.substr(0, 1) === '#') { path = path.substr(1); }
             
             // route this path to most suitable mounted app
-            let app = null;
+            let app = null,
+                mountName = '';
             for(let mount of this.mounts) {
                 if (path.startsWith(mount.root)) { 
                     app = mount.app; 
                     path = path.substr(mount.root.length); // remove all base path, so it becomes at part the way paths were added to this app
+                    mountName = mount;
                     break; 
                 }
             }
-            if (!app) { app = this.mounts['main']; } // when nothing matches, give it to main
+            if (!app) { // when nothing matches, give it to main
+                mountName = 'main';
+                app = this.mounts[mountName]; 
+            } 
             
             // add initial /
             if (path.substr(0, 1) !== '/') { path = '/' + path; }
@@ -1729,7 +1734,7 @@ Class('ClientHost', Host, function() {
             // run app to initiate routing
             setTimeout(() => { 
                 try {
-                    app(path); 
+                    app(path);
                 } catch (err) {
                     this.error(err); // pass-through event
                 }
@@ -2144,6 +2149,8 @@ Class('ResHeaders', Bootware, function() {
 (async () => { // ./src/flair.app/flair.boot/Router.js
 try{
 const { Bootware } = ns('flair.app');
+const { RestHandler } = ns('flair.api');
+const { ViewHandler, ViewMiddleware } = ns('flair.ui');
 
 /**
  * @name Router
@@ -2177,32 +2184,32 @@ Class('Router', Bootware, function() {
                 if (route.mount === mount.name) { // add route-handler
                     route.verbs.forEach(verb => {
                         mount.app[verb](route.path, (req, res, next) => { // verb could be get/set/delete/put/, etc.
-                            const onDone = (result) => {
-                                if (!result) {
-                                    next();
-                                }
-                            };
-                            const onError = (err) => {
-                                next(err);
-                            };
-    
-                            try {
-                                using(new route.Handler(), (routeHandler) => {
-                                    // req.params has all the route parameters.
-                                    // e.g., for route "/users/:userId/books/:bookId" req.params will 
-                                    // have "req.params: { "userId": "34", "bookId": "8989" }"
-                                    result = routeHandler[verb](req, res);
-                                    if (result && typeof result.then === 'function') {
-                                        result.then((delayedResult) => {
-                                            onDone(delayedResult);
-                                        }).catch(onError);
-                                    } else {
-                                        onDone(result);
+                            const onError = (err) => { next(err); };
+                            const onDone = (result) => { if (!result) { next(); } };
+                            include(route.handler).then((theType) => {
+                                let RouteHandler = as(theType, RestHandler);
+                                if (RouteHandler) {
+                                    try {
+                                        using(new RouteHandler(), (routeHandler) => {
+                                            // req.params has all the route parameters.
+                                            // e.g., for route "/users/:userId/books/:bookId" req.params will 
+                                            // have "req.params: { "userId": "34", "bookId": "8989" }"
+                                            result = routeHandler[verb](req, res);
+                                            if (result && typeof result.then === 'function') {
+                                                result.then((delayedResult) => {
+                                                    onDone(delayedResult);
+                                                }).catch(onError);
+                                            } else {
+                                                onDone(result);
+                                            }
+                                        });
+                                    } catch (err) {
+                                        onError(err);
                                     }
-                                });
-                            } catch (err) {
-                                onError(err);
-                            }
+                                } else {
+                                    onError(Exception.InvalidDefinition(`Invalid route handler. ${route.handler}`));
+                                }
+                            }).catch(onError);
                         });                         
                     });
                 }
@@ -2245,43 +2252,94 @@ Class('Router', Bootware, function() {
             }
         };
         const setupClientRoutes = () => {
+            const runViewMiddlewares = (mountName, ctx) => {
+                return new Promise((resolve, reject) => {
+                    // run mount specific middlewares
+                    // each middleware is derived from ViewMiddleware and
+                    // run method of it takes ctx, can update it
+                    // each item is: "middleWareTypeQualifiedName"
+                    let mountMiddlewares = settings[`${mountName}-middlewares`] || [];
+                    if (mountMiddlewares && mountMiddlewares.length > 0) {
+                        forEachAsync(mountMiddlewares, (_resolve, _reject, mw) => {
+                            include(mw).then((theType) => {
+                                let ViewMW = as(theType, ViewMiddleware);
+                                if (ViewMW) {
+                                    try {
+                                        let vmw = new ViewMW();
+                                        vmw.run(ctx).then(() => {
+                                            if (ctx.$stop) { 
+                                                _reject(); 
+                                            } else {
+                                                _resolve();
+                                            }
+                                        }).catch(_reject);
+                                    } catch (err) {
+                                        _reject(err);
+                                    }
+                                } else {
+                                    _reject(Exception.InvalidDefinition(`Invalid view middleware. (${mw})`));
+                                }
+                            }).catch(_reject);                            
+                        }).then(resolve).catch(reject);
+                    } else {
+                        resolve();
+                    }
+                });
+            };
+
             // add routes related to current mount
+            let verb = 'view'; // only view verb is supported on client
             for(let route of routes) {
                 if (route.mount === mount.name) { // add route-handler
                     // NOTE: verbs are ignored for client routing, only 'view' verb is processed
                     mount.app(route.path, (ctx) => { // mount.app = page object/func
-                        try {
-                            using(new route.Handler(), (routeHandler) => {
-                                // add redirect options
-                                ctx.redirectUrl = '';
+                        const onError = (err) => { AppDomain.host().raiseError(err); };
+                        const onRedirect = (url) => { mount.app.redirect(url); };
 
-                                // ctx.params has all the route parameters.
-                                // e.g., for route "/users/:userId/books/:bookId" ctx.params will 
-                                // have "ctx.params: { "userId": "34", "bookId": "8989" }"
-                                routeHandler.view(ctx).then((result) => {
-                                    if (!result) { // result could be undefined, true/false or any value
-                                        if (ctx.redirectUrl !== '') { // redirect url was set
-                                            ctx.handled = true; 
-                                            mount.app.redirect(ctx.redirectUrl);
-                                        } else {
-                                            ctx.handled = false; 
+                        // add special properties to context
+                        ctx.$stop = false;
+                        ctx.$redirect = '';
+
+                        // run view middlewares
+                        runViewMiddlewares(mount.name, ctx).then(() => {
+                            if (!ctx.$stop) {
+                                include(route.handler).then((theType) => {
+                                    let RouteHandler = as(theType, ViewHandler);
+                                    if (RouteHandler) {
+                                        try {
+                                            using(new RouteHandler(), (routeHandler) => {
+                                                // ctx.params has all the route parameters.
+                                                // e.g., for route "/users/:userId/books/:bookId" ctx.params will 
+                                                // have "ctx.params: { "userId": "34", "bookId": "8989" }"
+                                                routeHandler[verb](ctx).then(() => {
+                                                    ctx.handled = true;
+                                                    if (ctx.$redirect) { onRedirect(ctx.$redirect); } 
+                                                }).catch(onError);
+                                            });
+                                        } catch (err) {
+                                            onError(err);
                                         }
                                     } else {
-                                        ctx.handled = true;
+                                        onError(Exception.InvalidDefinition(`Invalid route handler. (${route.handler})`));
                                     }
-                                }).catch((err) => {
-                                    AppDomain.host().raiseError(err);
-                                });
-
-                            });
-                        } catch (err) {
-                            AppDomain.host().raiseError(err);
-                        }
+                                }).catch(onError);
+                            } else {
+                                ctx.handled = true;
+                                if (ctx.$redirect) { onRedirect(ctx.$redirect); }  
+                            }
+                        }).catch((err) => {
+                            if (ctx.$stop) { // reject might also be because of stop done by a middleware
+                                ctx.handled = true;
+                                if (ctx.$redirect) { onRedirect(ctx.$redirect); }  
+                            } else {
+                                onError(err);
+                            }
+                        });
                     }); 
                 }
             }
 
-            // add 404 handler
+            // catch 404 for this mount and forward to error handler
             mount.app("*", (ctx) => { // mount.app = page object/func
                 // redirect to 404 route, which has to be defined route
                 let url404 = settings.url['404'];
@@ -2306,8 +2364,238 @@ Class('Router', Bootware, function() {
 }
 })();
 
+(async () => { // ./src/flair.app/flair.ui/ViewHandler.js
+try{
+const { Handler } = ns('flair.app');
+const { ViewTransition } = ns('flair.ui');
+
+/**
+ * @name ViewHandler
+ * @description GUI View Handler
+ */
+$$('ns', 'flair.ui');
+Class('ViewHandler', Handler, function() {
+    let isInit = false,
+        isMounted = false,
+        mainEl = '';
+
+    $$('override');
+    this.construct = (base, el, title, transition) => {
+        base();
+
+        mainEl = el || 'main';
+        this.viewTransition = transition;
+        this.title = this.title + (title ? ' - ' + title : '');
+    };
+
+    this.init = async () => {
+        if (!isInit) {
+            isInit = true;
+
+            // give it a unique name
+            this.name = this.$self.id + '_' + guid();
+
+            // get port
+            let clientFileLoader = Port('clientFile');  
+
+            // load style content in property
+            if (this.style && this.style.endsWith('.css')) { // if style file is defined via $$('asset', '<fileName>');
+                this.style = await clientFileLoader(this.style);
+            }
+
+            // load html content in property
+            if (this.html && this.html.endsWith('.html')) { // if html file is defined via $$('asset', '<fileName>');
+                this.html = await clientFileLoader(this.html);
+            }
+
+            // load view transition
+            if (this.viewTransition) {
+                let ViewTransitionType = as(await include(this.viewTransition), ViewTransition);
+                if (ViewTransitionType) {
+                    this.viewTransition = new ViewTransitionType();
+                } else {
+                    this.viewTransition = '';
+                }
+            }
+        }
+    };
+
+    $$('privateSet');
+    this.viewTransition = '';
+
+    $$('privateSet');
+    this.name = '';
+
+    $$('protectedSet');
+    this.title = '';
+
+    $$('protected');
+    this.style = '';
+
+    $$('protected');
+    this.html = '';
+
+    // each meta in array can be defined as:
+    // { "<nameOfAttribute>": "<contentOfAttribute>", "<nameOfAttribute>": "<contentOfAttribute>", ... }
+    $$('protectedSet');
+    this.meta = null;
+
+    this.view = async (ctx) => {
+        if (ctx) { // so it do not get executed on component
+            // initialize
+            await this.init();
+
+            // add view html
+            let el = this.append();
+
+            // load view
+            this.loadView(ctx, el);
+
+            // swap views (old one is replaced with this new one)
+            await this.swap();
+        }
+    };
+
+    $$('protected');
+    $$('virtual');
+    $$('async');
+    this.loadView = noop;
+
+    $$('static');
+    this.currentView = '';
+
+    $$('static');
+    this.currentViewMeta = [];
+
+    $$('private');
+    this.append = () => {
+        if (!isMounted) {
+            isMounted = true;
+
+            // main node
+            let el = DOC.createElement('div');
+            el.id = this.name;
+            el.setAttribute('hidden', '');
+
+            // add style node
+            if (this.style) {
+                let styleEl = DOC.createElement('style');
+                styleEl.setAttribute('scoped', '');
+                styleEl.innerText = this.style.trim();
+                el.appendChild(styleEl);
+            } 
+
+            // add html node
+            let htmlEl = DOC.createElement('div'); 
+            htmlEl.innerHTML = this.html.trim();
+            el.appendChild(htmlEl);
+
+            // add to parent
+            let parentEl = DOC.getElementById(mainEl);
+            parentEl.appendChild(el);
+            
+            // return
+            return el;
+        } 
+        return null;
+    };
+
+    $$('private');
+    this.swap = async () => {
+        let thisViewEl = DOC.getElementById(this.name);
+
+        // outgoing view
+        if (this.$static.currentView) {
+            let currentViewEl = DOC.getElementById(this.$static.currentView);
+
+            // remove outgoing view meta   
+            for(let meta of this.meta) {
+                DOC.head.removeChild(DOC.querySelector('meta[name="' + meta + '"]'));
+            }
+                
+            // apply transitions
+            if (this.viewTransition) {
+                // leave outgoing, enter incoming
+                await this.viewTransition.leave(currentViewEl, thisViewEl);
+                await this.viewTransition.enter(thisViewEl, currentViewEl);
+            } else {
+                // default is no transition
+                currentViewEl.hidden = true;
+                thisViewEl.hidden = false;
+            }
+
+            // remove outgoing view
+            let parentEl = DOC.getElementById(mainEl);            
+            parentEl.removeChild(currentViewEl);
+        }
+
+        // add incoming view meta
+        for(let meta of this.meta) {
+            var metaEl = document.createElement('meta');
+            for(let metaAttr in meta) {
+                metaEl[metaAttr] = meta[metaAttr];
+            }
+            DOC.head.appendChild(metaEl);
+        }
+
+        // in case there was no previous view
+        if (!this.$static.currentView) {
+            thisViewEl.hidden = false;
+        }
+
+        // update title
+        DOC.title = this.title;
+
+        // set new current
+        this.$static.currentView = this.name;
+        this.$static.currentViewMeta = this.meta;
+    };
+});
+} catch(err) {
+	__asmError(err);
+}
+})();
+
+(async () => { // ./src/flair.app/flair.ui/ViewMiddleware.js
+try{
+/**
+ * @name ViewMiddleware
+ * @description GUI View Middleware
+ */
+$$('ns', 'flair.ui');
+Class('ViewMiddleware', function() {
+    $$('virtual');
+    $$('async');
+    this.run = noop;
+});
+} catch(err) {
+	__asmError(err);
+}
+})();
+
+(async () => { // ./src/flair.app/flair.ui/ViewTransition.js
+try{
+/**
+ * @name ViewTransition
+ * @description GUI View Transition
+ */
+$$('ns', 'flair.ui');
+Class('ViewTransition', function() {
+    $$('virtual');
+    $$('async');
+    this.enter = noop;
+
+    $$('virtual');
+    $$('async');
+    this.leave = noop;
+});
+} catch(err) {
+	__asmError(err);
+}
+})();
+
 AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.30.71","lupdate":"Sat, 27 Apr 2019 21:54:36 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.App","flair.app.Host","flair.app.Handler","flair.api.RestHandler","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.Router"],"resources":[],"assets":[],"routes":[]}');
+AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.30.93","lupdate":"Sun, 28 Apr 2019 17:40:00 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.App","flair.app.Host","flair.app.Handler","flair.api.RestHandler","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.Router","flair.ui.ViewHandler","flair.ui.ViewMiddleware","flair.ui.ViewTransition"],"resources":[],"assets":[],"routes":[]}');
 
 })();

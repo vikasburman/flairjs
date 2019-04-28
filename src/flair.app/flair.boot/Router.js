@@ -1,4 +1,6 @@
 const { Bootware } = ns('flair.app');
+const { RestHandler } = ns('flair.api');
+const { ViewHandler, ViewMiddleware } = ns('flair.ui');
 
 /**
  * @name Router
@@ -32,32 +34,32 @@ Class('(auto)', Bootware, function() {
                 if (route.mount === mount.name) { // add route-handler
                     route.verbs.forEach(verb => {
                         mount.app[verb](route.path, (req, res, next) => { // verb could be get/set/delete/put/, etc.
-                            const onDone = (result) => {
-                                if (!result) {
-                                    next();
-                                }
-                            };
-                            const onError = (err) => {
-                                next(err);
-                            };
-    
-                            try {
-                                using(new route.Handler(), (routeHandler) => {
-                                    // req.params has all the route parameters.
-                                    // e.g., for route "/users/:userId/books/:bookId" req.params will 
-                                    // have "req.params: { "userId": "34", "bookId": "8989" }"
-                                    result = routeHandler[verb](req, res);
-                                    if (result && typeof result.then === 'function') {
-                                        result.then((delayedResult) => {
-                                            onDone(delayedResult);
-                                        }).catch(onError);
-                                    } else {
-                                        onDone(result);
+                            const onError = (err) => { next(err); };
+                            const onDone = (result) => { if (!result) { next(); } };
+                            include(route.handler).then((theType) => {
+                                let RouteHandler = as(theType, RestHandler);
+                                if (RouteHandler) {
+                                    try {
+                                        using(new RouteHandler(), (routeHandler) => {
+                                            // req.params has all the route parameters.
+                                            // e.g., for route "/users/:userId/books/:bookId" req.params will 
+                                            // have "req.params: { "userId": "34", "bookId": "8989" }"
+                                            result = routeHandler[verb](req, res);
+                                            if (result && typeof result.then === 'function') {
+                                                result.then((delayedResult) => {
+                                                    onDone(delayedResult);
+                                                }).catch(onError);
+                                            } else {
+                                                onDone(result);
+                                            }
+                                        });
+                                    } catch (err) {
+                                        onError(err);
                                     }
-                                });
-                            } catch (err) {
-                                onError(err);
-                            }
+                                } else {
+                                    onError(Exception.InvalidDefinition(`Invalid route handler. ${route.handler}`));
+                                }
+                            }).catch(onError);
                         });                         
                     });
                 }
@@ -100,43 +102,94 @@ Class('(auto)', Bootware, function() {
             }
         };
         const setupClientRoutes = () => {
+            const runViewMiddlewares = (mountName, ctx) => {
+                return new Promise((resolve, reject) => {
+                    // run mount specific middlewares
+                    // each middleware is derived from ViewMiddleware and
+                    // run method of it takes ctx, can update it
+                    // each item is: "middleWareTypeQualifiedName"
+                    let mountMiddlewares = settings[`${mountName}-middlewares`] || [];
+                    if (mountMiddlewares && mountMiddlewares.length > 0) {
+                        forEachAsync(mountMiddlewares, (_resolve, _reject, mw) => {
+                            include(mw).then((theType) => {
+                                let ViewMW = as(theType, ViewMiddleware);
+                                if (ViewMW) {
+                                    try {
+                                        let vmw = new ViewMW();
+                                        vmw.run(ctx).then(() => {
+                                            if (ctx.$stop) { 
+                                                _reject(); 
+                                            } else {
+                                                _resolve();
+                                            }
+                                        }).catch(_reject);
+                                    } catch (err) {
+                                        _reject(err);
+                                    }
+                                } else {
+                                    _reject(Exception.InvalidDefinition(`Invalid view middleware. (${mw})`));
+                                }
+                            }).catch(_reject);                            
+                        }).then(resolve).catch(reject);
+                    } else {
+                        resolve();
+                    }
+                });
+            };
+
             // add routes related to current mount
+            let verb = 'view'; // only view verb is supported on client
             for(let route of routes) {
                 if (route.mount === mount.name) { // add route-handler
                     // NOTE: verbs are ignored for client routing, only 'view' verb is processed
                     mount.app(route.path, (ctx) => { // mount.app = page object/func
-                        try {
-                            using(new route.Handler(), (routeHandler) => {
-                                // add redirect options
-                                ctx.redirectUrl = '';
+                        const onError = (err) => { AppDomain.host().raiseError(err); };
+                        const onRedirect = (url) => { mount.app.redirect(url); };
 
-                                // ctx.params has all the route parameters.
-                                // e.g., for route "/users/:userId/books/:bookId" ctx.params will 
-                                // have "ctx.params: { "userId": "34", "bookId": "8989" }"
-                                routeHandler.view(ctx).then((result) => {
-                                    if (!result) { // result could be undefined, true/false or any value
-                                        if (ctx.redirectUrl !== '') { // redirect url was set
-                                            ctx.handled = true; 
-                                            mount.app.redirect(ctx.redirectUrl);
-                                        } else {
-                                            ctx.handled = false; 
+                        // add special properties to context
+                        ctx.$stop = false;
+                        ctx.$redirect = '';
+
+                        // run view middlewares
+                        runViewMiddlewares(mount.name, ctx).then(() => {
+                            if (!ctx.$stop) {
+                                include(route.handler).then((theType) => {
+                                    let RouteHandler = as(theType, ViewHandler);
+                                    if (RouteHandler) {
+                                        try {
+                                            using(new RouteHandler(), (routeHandler) => {
+                                                // ctx.params has all the route parameters.
+                                                // e.g., for route "/users/:userId/books/:bookId" ctx.params will 
+                                                // have "ctx.params: { "userId": "34", "bookId": "8989" }"
+                                                routeHandler[verb](ctx).then(() => {
+                                                    ctx.handled = true;
+                                                    if (ctx.$redirect) { onRedirect(ctx.$redirect); } 
+                                                }).catch(onError);
+                                            });
+                                        } catch (err) {
+                                            onError(err);
                                         }
                                     } else {
-                                        ctx.handled = true;
+                                        onError(Exception.InvalidDefinition(`Invalid route handler. (${route.handler})`));
                                     }
-                                }).catch((err) => {
-                                    AppDomain.host().raiseError(err);
-                                });
-
-                            });
-                        } catch (err) {
-                            AppDomain.host().raiseError(err);
-                        }
+                                }).catch(onError);
+                            } else {
+                                ctx.handled = true;
+                                if (ctx.$redirect) { onRedirect(ctx.$redirect); }  
+                            }
+                        }).catch((err) => {
+                            if (ctx.$stop) { // reject might also be because of stop done by a middleware
+                                ctx.handled = true;
+                                if (ctx.$redirect) { onRedirect(ctx.$redirect); }  
+                            } else {
+                                onError(err);
+                            }
+                        });
                     }); 
                 }
             }
 
-            // add 404 handler
+            // catch 404 for this mount and forward to error handler
             mount.app("*", (ctx) => { // mount.app = page object/func
                 // redirect to 404 route, which has to be defined route
                 let url404 = settings.url['404'];

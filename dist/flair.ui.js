@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.ui
  *     File: ./flair.ui.js
- *  Version: 0.30.71
- *  Sat, 27 Apr 2019 21:54:37 GMT
+ *  Version: 0.30.93
+ *  Sun, 28 Apr 2019 17:40:01 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -50,193 +50,6 @@ if (externalSettings) { settings = Object.assign(settings, externalSettings); }}
 settings = Object.freeze(settings);
 AppDomain.context.current().currentAssemblyBeingLoaded('./flair.ui{.min}.js');
 
-(async () => { // ./src/flair.ui/flair.ui/ViewHandler.js
-try{
-const { Handler } = ns('flair.app');
-const { ViewTransition } = ns('flair.ui');
-
-/**
- * @name ViewHandler
- * @description GUI View Handler
- */
-$$('ns', 'flair.ui');
-Class('ViewHandler', Handler, function() {
-    let isInit = false,
-        isMounted = false,
-        parentEl = null;
-
-    this.init = async () => {
-        if (!isInit) {
-            isInit = true;
-
-            // give it a unique name
-            this.name = this.$self.id + '_' + guid();
-
-            // define main el
-            parentEl = DOC.getElementById(settings.el || 'main');
-
-            // get port
-            let clientFileLoader = Port('clientFile');  
-
-            // load style content in property
-            if (this.style && this.style.endsWith('.css')) { // if style file is defined via $$('asset', '<fileName>');
-                this.style = await clientFileLoader(this.style);
-            }
-
-            // load html content in property
-            if (this.html && this.html.endsWith('.html')) { // if html file is defined via $$('asset', '<fileName>');
-                this.html = await clientFileLoader(this.html);
-            }
-
-            // load view transition
-            if (this.viewTransition) {
-                let ViewTransitionType = as(await include(this.viewTransition), ViewTransition);
-                if (ViewTransitionType) {
-                    this.viewTransition = new ViewTransitionType();
-                } else {
-                    this.viewTransition = '';
-                }
-            }
-        }
-    };
-
-    $$('protectedSet');
-    this.viewTransition = settings.viewTransition;
-
-    $$('privateSet');
-    this.name = "";
-
-    $$('protectedSet');
-    this.title = '';
-
-    $$('protected');
-    this.style = '';
-
-    $$('protected');
-    this.html = '';
-
-    // each meta in array can be defined as:
-    // { "<nameOfAttribute>": "<contentOfAttribute>", "<nameOfAttribute>": "<contentOfAttribute>", ... }
-    $$('protectedSet');
-    this.meta = null;
-
-    $$('virtual');
-    $$('async');
-    this.view = noop;
-
-    $$('static');
-    this.currentView = '';
-
-    $$('static');
-    this.currentViewMeta = [];
-
-    $$('protected');
-    this.mount = () => {
-        if (!isMounted) {
-            isMounted = true;
-
-            // main node
-            let el = DOC.createElement('div');
-            el.id = this.name;
-            el.setAttribute('hidden', '');
-
-            // add style node
-            if (this.style) {
-                let styleEl = DOC.createElement('style');
-                styleEl.setAttribute('scoped', '');
-                styleEl.innerText = this.style.trim();
-                el.appendChild(styleEl);
-            } 
-
-            // add html node
-            let htmlEl = DOC.createElement('div'); 
-            htmlEl.innerHTML = this.html.trim();
-            el.appendChild(htmlEl);
-
-            // add to parent
-            parentEl.appendChild(el);
-        }
-    };
-
-    $$('protected');
-    this.swap = async () => {
-        let thisViewEl = DOC.getElementById(this.name);
-
-        // outgoing view
-        if (this.$static.currentView) {
-            let currentViewEl = DOC.getElementById(this.$static.currentView);
-
-            // remove outgoing view meta   
-            for(let meta of this.meta) {
-                DOC.head.removeChild(DOC.querySelector('meta[name="' + meta + '"]'));
-            }
-                
-            // apply transitions
-            if (this.viewTransition) {
-                // leave outgoing, enter incoming
-                await this.viewTransition.leave(currentViewEl, thisViewEl);
-                await this.viewTransition.enter(thisViewEl, currentViewEl);
-            } else {
-                // default is no transition
-                currentViewEl.hidden = true;
-                thisViewEl.hidden = false;
-            }
-
-            // unmount outgoing view
-            parentEl.removeChild(currentViewEl);
-        }
-
-        // add incoming view meta
-        for(let meta of this.meta) {
-            var metaEl = document.createElement('meta');
-            for(let metaAttr in meta) {
-                metaEl[metaAttr] = meta[metaAttr];
-            }
-            DOC.head.appendChild(metaEl);
-        }
-
-        // in case there was no previous view
-        if (!this.$static.currentView) {
-            thisViewEl.hidden = false;
-        }
-
-        // update title
-        DOC.title = this.title;
-        if (settings.title) {
-            DOC.title += ' - ' + settings.title;
-        }
-
-        // set new current
-        this.$static.currentView = this.name;
-        this.$static.currentViewMeta = this.meta;
-    };
-});
-} catch(err) {
-	__asmError(err);
-}
-})();
-
-(async () => { // ./src/flair.ui/flair.ui/ViewTransition.js
-try{
-/**
- * @name ViewTransition
- * @description GUI View Transition
- */
-$$('ns', 'flair.ui');
-Class('ViewTransition', function() {
-    $$('virtual');
-    $$('async');
-    this.enter = noop;
-
-    $$('virtual');
-    $$('async');
-    this.leave = noop;
-});
-} catch(err) {
-	__asmError(err);
-}
-})();
-
 (async () => { // ./src/flair.ui/flair.ui.vue/VueComponent.js
 try{
 const { ViewHandler } = ns('flair.ui');
@@ -247,6 +60,11 @@ const { ViewHandler } = ns('flair.ui');
  */
 $$('ns', 'flair.ui.vue');
 Class('VueComponent', ViewHandler, function() {
+    $$('override');
+    this.construct = (base) => {
+        base(settings.el, settings.title, settings.viewTransition);
+    };
+
     this.factory = (el) => {
        let component = {};
 
@@ -554,23 +372,15 @@ const Vue = await include('vue/vue{.min}.js');
  */
 $$('ns', 'flair.ui.vue');
 Class('VueView', VueComponent, function() {
+    $$('protected');
     $$('override');
     $$('sealed');
-    this.view = async (ctx) => {
-        // initialize
-        await this.init();
+    this.loadView = async (ctx, el) => {
+        // load view context
+        await this.loadContext(ctx, el);
 
-        // load context
-        await this.loadContext(ctx);
-
-        // mount view html
-        this.mount();
-
-        // setup view
+        // load view
         new Vue(this.factory(this.name));
-
-        // swap views (old one is replaced with this new one)
-        await this.swap();
     };
 
     $$('protected');
@@ -585,6 +395,6 @@ Class('VueView', VueComponent, function() {
 
 AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-AppDomain.registerAdo('{"name":"flair.ui","file":"./flair.ui{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.30.71","lupdate":"Sat, 27 Apr 2019 21:54:37 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.ui.ViewHandler","flair.ui.ViewTransition","flair.ui.vue.VueComponent","flair.ui.vue.VueFilter","flair.ui.vue.VueMixin","flair.ui.vue.VuePlugin","flair.ui.vue.VueSetup","flair.ui.vue.VueTransition","flair.ui.vue.VueView"],"resources":[],"assets":[],"routes":[]}');
+AppDomain.registerAdo('{"name":"flair.ui","file":"./flair.ui{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.30.93","lupdate":"Sun, 28 Apr 2019 17:40:01 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.ui.vue.VueComponent","flair.ui.vue.VueFilter","flair.ui.vue.VueMixin","flair.ui.vue.VuePlugin","flair.ui.vue.VueSetup","flair.ui.vue.VueTransition","flair.ui.vue.VueView"],"resources":[],"assets":[],"routes":[{"name":"flair.ui.vue.test2","mount":"main","index":101,"verbs":[],"path":"test/:id","handler":"abc.xyz.Test"},{"name":"flair.ui.vue.exit2","mount":"main","index":103,"verbs":[],"path":"exit","handler":"abc.xyz.Exit"}]}');
 
 })();

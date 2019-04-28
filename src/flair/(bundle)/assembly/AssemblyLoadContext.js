@@ -361,7 +361,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
     };
 
     // routes
-    this.registerRoutes = (routes) => {
+    this.registerRoutes = (routes, asmFile) => {
         if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.registerRoutes); }
 
         // process each route
@@ -370,7 +370,6 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
                 typeof route.index !== 'number' ||
                 typeof route.mount !== 'string' || route.mount === '' ||
                 typeof route.path !== 'string' || route.path === '' ||
-                !Array.isArray(route.verbs) || route.verbs.length === 0 || 
                 typeof route.handler !== 'string' || route.handler === '') {
                 throw _Exception.InvalidArgument('route: ' + route.name, this.registerRoutes);
             }
@@ -386,7 +385,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
             if (alcResources[route.name]) { throw _Exception.Duplicate(`Already registered as Resource. (${route.name})`, this.registerRoutes); }
 
             // register
-            alcRoutes[route.name] = Object.freeze(new Route(route, ns, this));
+            alcRoutes[route.name] = Object.freeze(new Route(asmFile, route, ns, this));
 
             // register to namespace as well
             if (ns) {

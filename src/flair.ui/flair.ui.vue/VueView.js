@@ -7,23 +7,15 @@ const Vue = await include('vue/vue{.min}.js');
  */
 $$('ns', '(auto)');
 Class('(auto)', VueComponent, function() {
+    $$('protected');
     $$('override');
     $$('sealed');
-    this.view = async (ctx) => {
-        // initialize
-        await this.init();
+    this.loadView = async (ctx, el) => {
+        // load view context
+        await this.loadContext(ctx, el);
 
-        // load context
-        await this.loadContext(ctx);
-
-        // mount view html
-        this.mount();
-
-        // setup view
+        // load view
         new Vue(this.factory(this.name));
-
-        // swap views (old one is replaced with this new one)
-        await this.swap();
     };
 
     $$('protected');

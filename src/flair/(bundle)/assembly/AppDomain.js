@@ -97,7 +97,8 @@ const AppDomain = function(name) {
     // ados
     this.registerAdo = (...ados) => {
         // when call is coming from direct assembly loading
-        let isThrowOnDuplicate = true;
+        let isThrowOnDuplicate = true,
+            isCalledFromAsmLoading = false;
         if (ados.length === 1 && typeof ados[0] === 'string') { 
             let ado = JSON.parse(ados[0]);
             if (Array.isArray(ado)) {
@@ -105,13 +106,15 @@ const AppDomain = function(name) {
             } else {
                 ados = [ado];
             }
-            isThrowOnDuplicate = false;   
+            isThrowOnDuplicate = false;
+            isCalledFromAsmLoading = true;
         }
 
         // register
         ados.forEach(ado => {
             if (_typeOf(ado.types) !== 'array' || 
                 _typeOf(ado.resources) !== 'array' ||
+                _typeOf(ado.routes) !== 'array' ||
                 _typeOf(ado.assets) !== 'array' ||
                 typeof ado.name !== 'string' ||
                 typeof ado.file !== 'string' || ado.file === '') {
@@ -143,7 +146,12 @@ const AppDomain = function(name) {
                     } else {
                         asmTypes[qualifiedName] = ado.file; // means this resource can be loaded from this assembly
                     }
-                });                
+                });
+                
+                // register routes
+                if (!isCalledFromAsmLoading) { // since otherwise routes are registered with preamble loading itself
+                    this.context.registerRoutes(ado.routes, ado.file);
+                }
             }
         });  
 

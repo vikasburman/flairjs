@@ -6,12 +6,17 @@ const { ViewHandler } = ns('flair.ui');
  */
 $$('ns', '(auto)');
 Class('(auto)', ViewHandler, function() {
-    this.factory = (el) => {
+    $$('override');
+    this.construct = (base) => {
+        base(settings.el, settings.title, settings.viewTransition);
+    };
+
+    this.factory = (elId) => {
        let component = {};
 
         // el OR template
-        if (el) { // this is a view
-            component.el = '#' + el; // its always id
+        if (elId) { // this is a view
+            component.el = '#' + elId; // its always id
         } else { // this is a component
             if (this.style) {
                 component.template = '<div><style scoped>' + this.style.trim() +'</style></div><div>' + this.html.trim() + '</div>';
@@ -21,7 +26,7 @@ Class('(auto)', ViewHandler, function() {
         }
 
         // TODO: rest all properties
-
+        
 
 
         // done
