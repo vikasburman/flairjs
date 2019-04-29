@@ -10,8 +10,8 @@ $$('ns', '(auto)');
 Mixin('(auto)', function() {
     $$('private');
     this.define = async () => {
-        let component = {},
-            viewState = new ViewState();
+        let viewState = new ViewState(),
+            component = {};
 
         // get port
         let clientFileLoader = Port('clientFile');  
@@ -33,12 +33,12 @@ Mixin('(auto)', function() {
             component.template = this.template;
         } else {
             if (this.style && this.html) {
-                component.template = '<div><style scoped>' + this.style.trim() +'</style></div><div>' + this.html.trim() + '</div>';
+                component.template = '<div><style scoped>' + this.style.trim() +'</style><div>' + this.html.trim() + '</div></div>';
             } else if (this.html) {
                 component.template = this.html.trim();
             }
         }
-
+        
         // render
         // https://vuejs.org/v2/api/#render
         // https://vuejs.org/v2/guide/render-function.html#Functional-Components

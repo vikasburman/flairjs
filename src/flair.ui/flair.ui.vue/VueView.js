@@ -17,9 +17,23 @@ Class('(auto)', ViewHandler, [VueComponentMembers], function() {
 
     $$('private');
     this.factory = async () => {
+        // merge layout's components
+        // each area here can be as:
+        // { "area: "", component": "", "type": "" } 
+        // "area" is the div-id (in defined html) where the component needs to be placed
+        // "component" is the name of the component
+        // "type" is the qualified component type name      
+        if (this.layout && this.layout.areas && Array.isArray(this.layout.areas)) {
+            this.components = this.components || [];
+            for(let area of this.layout.areas) {
+                // each component arrat item is: { "name": "name", "type": "ns.typeName" }
+                this.components.push({ name: area.component, type: area.type });
+            }
+        }
+
         // shared between view and component both
         // coming from VueComponentMembers mixin
-        let component = this.define(component);
+        let component = this.define();
 
         // el
         // https://vuejs.org/v2/api/#el
@@ -35,6 +49,11 @@ Class('(auto)', ViewHandler, [VueComponentMembers], function() {
         // https://vuejs.org/v2/api/#data
         if (this.data && typeof this.data !== 'function') {
             component.data = this.data;
+        }
+
+        // merge view and view' layout's template
+        if (this.layout) {
+            component.template = await this.layout.merge(component.template);
         }
 
         // done
@@ -69,4 +88,7 @@ Class('(auto)', ViewHandler, [VueComponentMembers], function() {
 
     $$('protected');
     this.data = null;
+
+    $$('protected');
+    this.layout = null;
 });

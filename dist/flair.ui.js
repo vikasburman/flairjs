@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.ui
  *     File: ./flair.ui.js
- *  Version: 0.31.11
- *  Mon, 29 Apr 2019 12:13:45 GMT
+ *  Version: 0.31.12
+ *  Mon, 29 Apr 2019 19:11:06 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -64,8 +64,8 @@ $$('ns', 'flair.ui.vue');
 Mixin('VueComponentMembers', function() {
     $$('private');
     this.define = async () => {
-        let component = {},
-            viewState = new ViewState();
+        let viewState = new ViewState(),
+            component = {};
 
         // get port
         let clientFileLoader = Port('clientFile');  
@@ -87,12 +87,12 @@ Mixin('VueComponentMembers', function() {
             component.template = this.template;
         } else {
             if (this.style && this.html) {
-                component.template = '<div><style scoped>' + this.style.trim() +'</style></div><div>' + this.html.trim() + '</div>';
+                component.template = '<div><style scoped>' + this.style.trim() +'</style><div>' + this.html.trim() + '</div></div>';
             } else if (this.html) {
                 component.template = this.html.trim();
             }
         }
-
+        
         // render
         // https://vuejs.org/v2/api/#render
         // https://vuejs.org/v2/guide/render-function.html#Functional-Components
@@ -475,6 +475,92 @@ Class('VueFilter', function() {
 }
 })();
 
+(async () => { // ./src/flair.ui/flair.ui.vue/VueLayout.js
+try{
+/**
+ * @name VueLayout
+ * @description Vue Layout
+ */
+$$('ns', 'flair.ui.vue');
+Class('VueLayout', function() {
+    $$('protected');
+    this.html = '';
+
+    $$('protected');
+    this.style = '';
+
+    // this is the "div-id" (in defined html) where actual view's html will come
+    $$('protected');
+    this.viewArea = 'view';
+
+    // each area here can be as:
+    // { "area: "", component": "", "type": "" } 
+    // "area" is the div-id (in defined html) where the component needs to be placed
+    // "component" is the name of the component
+    // "type" is the qualified component type name
+    $$('protectedSet');
+    this.areas = [];
+
+    this.merge = async (viewHtml) => {
+        // get port
+        let clientFileLoader = Port('clientFile');  
+
+        // load style content in property
+        if (this.style && this.style.endsWith('.css')) { // if style file is defined via $$('asset', '<fileName>');
+            this.style = await clientFileLoader(this.style);
+        }
+
+        // load html content in property
+        if (this.html && this.html.endsWith('.html')) { // if html file is defined via $$('asset', '<fileName>');
+            this.html = await clientFileLoader(this.html);
+        }
+
+        // root
+        let rootEl = DOC.createElement('div');
+        if (this.style) {
+            let styleEl = DOC.createElement('style');
+            styleEl.innerHTML = this.style.trim();
+            styleEl.setAttribute('scoped', '');
+            rootEl.append(styleEl);
+        } 
+        if (this.html) {
+            let htmlEl = DOC.createElement('div');
+            htmlEl.innerHTML = this.html.trim();
+            rootEl.append(htmlEl);
+        }
+        
+        // merge view area
+        this.viewArea = this.viewArea || 'view'; // inbuilt default value
+        let viewAreaEl = rootEl.content.getElementById(this.viewArea);
+        if (viewAreaEl) { viewAreaEl.innerHTML = viewHtml; }
+
+        // merge all other areas with component name placeholders
+        // each area here can be as:
+        // { "area: "", component": "", "type": "" } 
+        // "area" is the div-id (in defined html) where the component needs to be placed
+        // "component" is the name of the component
+        // "type" is the qualified component type name         
+        let areaEl = null;
+        if (this.layout && this.layout.areas && Array.isArray(this.layout.areas)) {
+            for(let area of this.layout.areas) {
+                areaEl = rootEl.content.getElementById(area.area);
+                if (areaEl) { 
+                    let componentEl = DOC.createElement('component');
+                    componentEl.setAttribute('is', area.component);
+                    areaEl.append(componentEl);
+                }
+            }
+        }       
+        
+        // done
+        return rootEl.innerHTML;
+    };
+});
+} catch(err) {
+	__asmError(err);
+}
+})();
+
 (async () => { // ./src/flair.ui/flair.ui.vue/VueMixin.js
 try{
 /**
@@ -687,9 +773,23 @@ Class('VueView', ViewHandler, [VueComponentMembers], function() {
 
     $$('private');
     this.factory = async () => {
+        // merge layout's components
+        // each area here can be as:
+        // { "area: "", component": "", "type": "" } 
+        // "area" is the div-id (in defined html) where the component needs to be placed
+        // "component" is the name of the component
+        // "type" is the qualified component type name      
+        if (this.layout && this.layout.areas && Array.isArray(this.layout.areas)) {
+            this.components = this.components || [];
+            for(let area of this.layout.areas) {
+                // each component arrat item is: { "name": "name", "type": "ns.typeName" }
+                this.components.push({ name: area.component, type: area.type });
+            }
+        }
+
         // shared between view and component both
         // coming from VueComponentMembers mixin
-        let component = this.define(component);
+        let component = this.define();
 
         // el
         // https://vuejs.org/v2/api/#el
@@ -705,6 +805,11 @@ Class('VueView', ViewHandler, [VueComponentMembers], function() {
         // https://vuejs.org/v2/api/#data
         if (this.data && typeof this.data !== 'function') {
             component.data = this.data;
+        }
+
+        // merge view and view' layout's template
+        if (this.layout) {
+            component.template = await this.layout.merge(component.template);
         }
 
         // done
@@ -739,6 +844,9 @@ Class('VueView', ViewHandler, [VueComponentMembers], function() {
 
     $$('protected');
     this.data = null;
+
+    $$('protected');
+    this.layout = null;
 });
 } catch(err) {
 	__asmError(err);
@@ -747,7 +855,7 @@ Class('VueView', ViewHandler, [VueComponentMembers], function() {
 
 AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-AppDomain.registerAdo('{"name":"flair.ui","file":"./flair.ui{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.31.11","lupdate":"Mon, 29 Apr 2019 12:13:45 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","functions","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.ui.vue.VueComponentMembers","flair.ui.vue.VueComponent","flair.ui.vue.VueDirective","flair.ui.vue.VueFilter","flair.ui.vue.VueMixin","flair.ui.vue.VuePlugin","flair.ui.vue.VueSetup","flair.ui.vue.VueView"],"resources":[],"assets":[],"routes":[{"name":"flair.ui.vue.test2","mount":"main","index":101,"verbs":[],"path":"test/:id","handler":"abc.xyz.Test"},{"name":"flair.ui.vue.exit2","mount":"main","index":103,"verbs":[],"path":"exit","handler":"abc.xyz.Exit"}]}');
+AppDomain.registerAdo('{"name":"flair.ui","file":"./flair.ui{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.31.12","lupdate":"Mon, 29 Apr 2019 19:11:06 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","functions","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.ui.vue.VueComponentMembers","flair.ui.vue.VueComponent","flair.ui.vue.VueDirective","flair.ui.vue.VueFilter","flair.ui.vue.VueLayout","flair.ui.vue.VueMixin","flair.ui.vue.VuePlugin","flair.ui.vue.VueSetup","flair.ui.vue.VueView"],"resources":[],"assets":[],"routes":[{"name":"flair.ui.vue.test2","mount":"main","index":101,"verbs":[],"path":"test/:id","handler":"abc.xyz.Test"},{"name":"flair.ui.vue.exit2","mount":"main","index":103,"verbs":[],"path":"exit","handler":"abc.xyz.Exit"}]}');
 
 if(typeof onLoadComplete === 'function'){ onLoadComplete(); onLoadComplete = noop; } // eslint-disable-line no-undef
 
