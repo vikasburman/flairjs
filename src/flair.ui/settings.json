@@ -6,6 +6,7 @@
     "transitions": [],
     "filters": [],
     "mixins": [],
+    "directives": [],
     "plugins": [],
     "pluginOptions": {
     }

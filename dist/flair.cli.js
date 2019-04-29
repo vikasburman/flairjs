@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.30.93
- *  Sun, 28 Apr 2019 17:40:01 GMT
+ *  Version: 0.31.9
+ *  Mon, 29 Apr 2019 01:07:01 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -23,11 +23,12 @@ const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
     name: 'flair.cli',
-    version: '0.30.93',
+    version: '0.31.9',
     format: 'fasm',
     formatVersion: '1',
     contains: [
-        'initializer',      // index.js is built
+        'initializer',      // index.js is bundled outside closure, which can have injected dependencies
+        'functions',        // functions.js is bundled in closure, which can have local closure functions as well as a special named function 'onLoadComplete'
         'types',            // types are embedded
         'enclosureVars',    // flair variables are made available in a closure where types are bundled
         'enclosedTypes',    // types are places in a closure
@@ -321,6 +322,15 @@ const build = (options, buildDone) => {
             logger(0, 'index', options.current.asmMain); 
         }
     };
+    const appendFunctions = () => {
+        if (fsx.existsSync(options.current.functions)) {
+            let content = fsx.readFileSync(options.current.functions, 'utf8');
+            content = '\n// ' + options.current.functions + ' (start)\n' + content + '\n// ' + options.current.functions + ' (end)\n\n';
+
+            appendToFile(content); 
+            logger(0, 'functions', options.current.functions); 
+        }
+    };    
     const initAsm = () => {
         if (fsx.existsSync(options.current.asm)) { 
             options.current.asmLupdate = fsx.statSync(options.current.asm).mtime; 
@@ -839,6 +849,10 @@ const build = (options, buildDone) => {
         let dump = `\nAppDomain.registerAdo('${JSON.stringify(options.current.ado)}');\n`;
         appendToFile(dump);
     };
+    const appendLoadCompleteCall = () => {
+        let dump = `\nif(typeof onLoadComplete === 'function'){ onLoadComplete(); onLoadComplete = noop; } // eslint-disable-line no-undef\n`;
+        appendToFile(dump);
+    };
     const pack = (done) => {
         options.current.stat = options.current.asmFileName + ' (' + Math.round(fsx.statSync(options.current.asm).size / 1024) + 'kb';
         
@@ -1094,6 +1108,7 @@ const build = (options, buildDone) => {
             options.current.asmFileName = options.current.asmFileName.replace(options.profiles.current.root + '/', '');
         }
         options.current.asmMain = './' + path.join(options.current.src, options.current.asmName, 'index.js');
+        options.current.functions = './' + path.join(options.current.src, options.current.asmName, 'functions.js');
         options.current.asmSettings = './' + path.join(options.current.src, options.current.asmName, 'settings.json');
 
         // skip minify for this assembly, if this is a special file
@@ -1126,11 +1141,17 @@ const build = (options, buildDone) => {
                 // append settings
                 appendSettings();
 
+                // append local functions (functions.js)
+                appendFunctions();
+
                 // append types, resources and self-registration
                 appendTypes(() => {
                     appendResources(() => {
                         appendRoutes(() => {
                             appendSelfRegistration();
+
+                            // load complete call
+                            appendLoadCompleteCall();
 
                             // end assembly content closure
                             endClosure();
@@ -1640,3 +1661,5 @@ exports.flairBuild = function(options, cb) {
     });
 };
 
+
+if(typeof onLoadComplete === 'function'){ onLoadComplete(); onLoadComplete = noop; } // eslint-disable-line no-undef

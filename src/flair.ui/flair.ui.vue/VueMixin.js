@@ -5,5 +5,6 @@
 $$('ns', '(auto)');
 Class('(auto)', function() {
     $$('virtual');
+    $$('async');
     this.factory = noop;
 });

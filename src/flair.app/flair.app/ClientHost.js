@@ -35,10 +35,10 @@ Class('(auto)', Host, function() {
             // each item is: { name: '', value:  }
             // name: as in above link (as-is)
             // value: as defined in above link
-            let appSettings = settings[`${mountName}-appSettings`];
-            if (appSettings && appSettings.length > 0) {
-                for(let appSetting of appSettings) {
-                    appOptions[appSetting.name] = appSetting.value;
+            let pageOptions = settings[`${mountName}-options`];
+            if (pageOptions && pageOptions.length > 0) {
+                for(let pageOption of pageOptions) {
+                    appOptions[pageOption.name] = pageOption.value;
                 }
             }   
 

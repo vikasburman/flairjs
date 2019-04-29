@@ -13,7 +13,8 @@ const buildInfo = {
     format: 'fasm',
     formatVersion: '1',
     contains: [
-        'initializer',      // index.js is built
+        'initializer',      // index.js is bundled outside closure, which can have injected dependencies
+        'functions',        // functions.js is bundled in closure, which can have local closure functions as well as a special named function 'onLoadComplete'
         'types',            // types are embedded
         'enclosureVars',    // flair variables are made available in a closure where types are bundled
         'enclosedTypes',    // types are places in a closure
@@ -307,6 +308,15 @@ const build = (options, buildDone) => {
             logger(0, 'index', options.current.asmMain); 
         }
     };
+    const appendFunctions = () => {
+        if (fsx.existsSync(options.current.functions)) {
+            let content = fsx.readFileSync(options.current.functions, 'utf8');
+            content = '\n// ' + options.current.functions + ' (start)\n' + content + '\n// ' + options.current.functions + ' (end)\n\n';
+
+            appendToFile(content); 
+            logger(0, 'functions', options.current.functions); 
+        }
+    };    
     const initAsm = () => {
         if (fsx.existsSync(options.current.asm)) { 
             options.current.asmLupdate = fsx.statSync(options.current.asm).mtime; 
@@ -825,6 +835,10 @@ const build = (options, buildDone) => {
         let dump = `\nAppDomain.registerAdo('${JSON.stringify(options.current.ado)}');\n`;
         appendToFile(dump);
     };
+    const appendLoadCompleteCall = () => {
+        let dump = `\nif(typeof onLoadComplete === 'function'){ onLoadComplete(); onLoadComplete = noop; } // eslint-disable-line no-undef\n`;
+        appendToFile(dump);
+    };
     const pack = (done) => {
         options.current.stat = options.current.asmFileName + ' (' + Math.round(fsx.statSync(options.current.asm).size / 1024) + 'kb';
         
@@ -1080,6 +1094,7 @@ const build = (options, buildDone) => {
             options.current.asmFileName = options.current.asmFileName.replace(options.profiles.current.root + '/', '');
         }
         options.current.asmMain = './' + path.join(options.current.src, options.current.asmName, 'index.js');
+        options.current.functions = './' + path.join(options.current.src, options.current.asmName, 'functions.js');
         options.current.asmSettings = './' + path.join(options.current.src, options.current.asmName, 'settings.json');
 
         // skip minify for this assembly, if this is a special file
@@ -1112,11 +1127,17 @@ const build = (options, buildDone) => {
                 // append settings
                 appendSettings();
 
+                // append local functions (functions.js)
+                appendFunctions();
+
                 // append types, resources and self-registration
                 appendTypes(() => {
                     appendResources(() => {
                         appendRoutes(() => {
                             appendSelfRegistration();
+
+                            // load complete call
+                            appendLoadCompleteCall();
 
                             // end assembly content closure
                             endClosure();

@@ -12,6 +12,7 @@ Class('(auto)', function() {
     };
 
     $$('virtual');
+    $$('async');
     this.factory = noop;
 
     this.options = null;

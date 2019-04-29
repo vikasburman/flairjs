@@ -1,6 +1,6 @@
 const { Bootware } = ns('flair.app');
 const Vue = await include('vue/vue{.min}.js');
-const { VueComponent, VueFilter, VuePlugin, VueMixin, VueTransition } = ns('flair.ui.vue');
+const { VueComponent, VueFilter, VueDirective, VuePlugin, VueMixin } = ns('flair.ui.vue');
 
 /**
  * @name VueSetup
@@ -18,7 +18,7 @@ Class('(auto)', Bootware, function() {
         // setup Vue configuration
         // TODO:
 
-        // load Vue plugins
+        // load Vue global plugins
         // each plugin in array is defined as:
         // { "name": "name", "type": "ns.typeName" }
         let plugins = settings.plugins,
@@ -32,7 +32,7 @@ Class('(auto)', Bootware, function() {
             if (PluginType) {
                 try {
                     plugin = new PluginType(item.name);
-                    Vue.use(plugin.factory(), plugin.options || {});
+                    Vue.use(await plugin.factory(), plugin.options || {});
                 } catch (err) {
                     throw Exception.OperationFailed(`Plugin registration failed. (${item.type})`, err);
                 }
@@ -41,7 +41,7 @@ Class('(auto)', Bootware, function() {
             }
         }  
 
-        // load Vue mixins
+        // load Vue global mixins
         // each mixin in array is defined as:
         // { "name": "name", "type": "ns.typeName" }
         let mixins = settings.mixins,
@@ -55,9 +55,32 @@ Class('(auto)', Bootware, function() {
             if (MixinType) {
                 try {
                     mixin = new MixinType();
-                    Vue.mixin(mixin.factory());
+                    Vue.mixin(await mixin.factory());
                 } catch (err) {
                     throw Exception.OperationFailed(`Mixin registration failed. (${item.type})`, err);
+                }
+            } else {
+                throw Exception.InvalidArgument(item.type);
+            }
+        }         
+
+        // load Vue global directives
+        // each directive in array is defined as:
+        // { "name": "name", "type": "ns.typeName" }
+        let directives = settings.directives,
+            DirectiveType = null,
+            directive = null;
+        for(let item in directives) {
+            if (!item.name) { throw Exception.OperationFailed(`Directive name cannot be empty. (${item.type})`); }
+            if (!item.type) { throw Exception.OperationFailed(`Directive type cannot be empty. (${item.name})`); }
+
+            DirectiveType = as(await include(item.type), VueDirective);
+            if (DirectiveType) {
+                try {
+                    directive = new DirectiveType();
+                    Vue.directive(item.name, await directive.factory());
+                } catch (err) {
+                    throw Exception.OperationFailed(`Directive registration failed. (${item.type})`, err);
                 }
             } else {
                 throw Exception.InvalidArgument(item.type);
@@ -78,7 +101,7 @@ Class('(auto)', Bootware, function() {
                 try {
                     filter = new FilterType();
                     // TODO: prevent duplicate filter registration, as done for components
-                    Vue.filter(item.name, filter.factory());
+                    Vue.filter(item.name, await filter.factory());
                 } catch (err) {
                     throw Exception.OperationFailed(`Filter registration failed. (${item.type})`, err);
                 }
@@ -87,30 +110,7 @@ Class('(auto)', Bootware, function() {
             }
         } 
 
-        // load Vue transitions
-        // each transition in array is defined as:
-        // { "name": "name", "type": "ns.typeName" }
-        let transitions = settings.transitions,
-            TransitionType = null,
-            transition = null;
-        for(let item in transitions) {
-            if (!item.name) { throw Exception.OperationFailed(`Transition name cannot be empty. (${item.type})`); }
-            if (!item.type) { throw Exception.OperationFailed(`Transition type cannot be empty. (${item.name})`); }
-
-            TransitionType = as(await include(item.type), VueTransition);
-            if (TransitionType) {
-                try {
-                    transition = new TransitionType();
-                    Vue.transition(item.name, transition.factory());
-                } catch (err) {
-                    throw Exception.OperationFailed(`Mixin registration failed. (${item.type})`, err);
-                }
-            } else {
-                throw Exception.InvalidArgument(item.type);
-            }
-        }         
-
-        // register components
+        // register global components
         // each component in array is defined as:
         // { "name": "name", "type": "ns.typeName" }
         let components = settings.components,
@@ -128,12 +128,8 @@ Class('(auto)', Bootware, function() {
                     // check for duplicate
                     if (Vue.options.components[item.name]) { throw Exception.Duplicate(`Component already registered. (${item.name})`); }
                 
-                    // initialize
-                    await component.init();
-                
                     // register globally
-                    Vue.component(item.name, component.factory());
-                    dispose(component); // component is IDisposable
+                    Vue.component(item.name, await component.factory());
                 } catch (err) {
                     throw Exception.OperationFailed(`Component registration failed. (${item.type})`, err);
                 }

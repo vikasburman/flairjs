@@ -1,5 +1,6 @@
 const { IDisposable } = ns();
 const { Bootware } = ns('flair.app');
+const { ViewState } = ns('flair.ui');
 
 /**
  * @name App
@@ -21,12 +22,20 @@ Class('(auto)', Bootware, [IDisposable], function() {
     };
 
     $$('virtual');
-    $$('async');
-    this.start = noop;
+    this.start = async () => {
+        // initialize view state
+        if (!env.isServer && !env.isWorker) {
+            new ViewState(); // this initializes the global view state store's persistance via this singleton object
+        }
+    };
 
     $$('virtual');
-    $$('async');
-    this.stop = noop;
+    this.stop = async () => {
+        // clear view state
+        if (!env.isServer && !env.isWorker) {
+            new ViewState().clear();
+        }
+    };
 
     $$('virtual');
     this.onError = (e) => {

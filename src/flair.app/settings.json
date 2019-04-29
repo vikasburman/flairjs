@@ -13,9 +13,13 @@
     "mounts": {
         "main": "/"
     },
+    "main-options": [
+    ],
     "main-appSettings": [
     ],
     "main-middlewares": [
+    ],
+    "main-interceptors": [
     ],
     "url": {
         "home": "/",

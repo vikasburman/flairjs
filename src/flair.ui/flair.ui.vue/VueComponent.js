@@ -1,79 +1,61 @@
-const { ViewHandler } = ns('flair.ui');
+const { VueComponentMembers } = ns('flair.ui.vue');
 
 /**
  * @name VueComponent
  * @description Vue Component
  */
 $$('ns', '(auto)');
-Class('(auto)', ViewHandler, function() {
-    $$('override');
-    this.construct = (base) => {
-        base(settings.el, settings.title, settings.viewTransition);
-    };
+Class('(auto)', [VueComponentMembers], function() {
+    this.factory = async () => {
+        // shared between view and component both
+        // coming from VueComponentMembers mixin
+        let component = this.define();
 
-    this.factory = (elId) => {
-       let component = {};
-
-        // el OR template
-        if (elId) { // this is a view
-            component.el = '#' + elId; // its always id
-        } else { // this is a component
-            if (this.style) {
-                component.template = '<div><style scoped>' + this.style.trim() +'</style></div><div>' + this.html.trim() + '</div>';
-            } else {
-                component.template = this.html.trim();
-            }
+        // props
+        // https://vuejs.org/v2/guide/components-props.html
+        // https://vuejs.org/v2/api/#props
+        // these names can then be defined as attribute on component's html node
+        if (this.props && Array.isArray(this.props)) {
+            component.props = this.props;
         }
 
-        // TODO: rest all properties
-        
+        // data
+        // https://vuejs.org/v2/api/#data
+        if (this.data && typeof this.data === 'function') { 
+            component.data = this.data;
+        }
 
+        // name
+        // https://vuejs.org/v2/api/#name
+        if (this.name) {
+            component.name = this.name;
+        }
+
+        // model
+        // https://vuejs.org/v2/api/#model
+        if (this.model) {
+            component.model = this.model;
+        }
+
+        // inheritAttrs
+        // https://vuejs.org/v2/api/#inheritAttrs
+        if (typeof this.inheritAttrs === 'boolean') { 
+            component.inheritAttrs = this.inheritAttrs;
+        }
 
         // done
         return component;
     };
 
     $$('protected');
-    this.inheritAttrs = true;
-
-    $$('protected');
-    this.functional = false;
-
-    $$('protected');
-    this.model = null;
-
-    $$('protected');
-    this.data = null;
-
-    $$('protected');
-    this.template = null;
-
-    $$('protected');
     this.props = null;
 
     $$('protected');
-    this.computed = null;
+    this.data = null;    
 
     $$('protected');
-    this.methods = null;
+    this.model = null;    
 
     $$('protected');
-    this.watch = null;
-
-    // each component in array is defined as:
-    // { "name": "name", "type": "ns.typeName" }
-    $$('protected');
-    this.components = null;
-
-    $$('protected');
-    this.mixins = null;
-
-    $$('protected');
-    this.transitions = null;
-
-    $$('protected');
-    this.handlers = null;   
-
-    $$('protected');
-    this.filters = null;
+    this.inheritAttrs = null;
 });

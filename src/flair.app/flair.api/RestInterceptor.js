@@ -1,10 +1,10 @@
 /**
- * @name VueFilter
- * @description Vue Filter
+ * @name RestInterceptor
+ * @description Api Interceptor
  */
 $$('ns', '(auto)');
 Class('(auto)', function() {
     $$('virtual');
     $$('async');
-    this.factory = noop;
+    this.run = noop;
 });

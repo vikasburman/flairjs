@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.30.93
- *  Sun, 28 Apr 2019 17:40:00 GMT
+ *  Version: 0.31.9
+ *  Mon, 29 Apr 2019 01:07:01 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -1261,12 +1261,19 @@ const __asmError = (err) => { AppDomain.onError(err); };
 /* eslint-enable no-unused-vars */
 
 //load assembly settings from config file
-let settings = JSON.parse('{"host":"flair.app.ServerHost | flair.app.ClientHost","app":"flair.app.App","load":[],"container":{},"envVars":[],"envVarsloadOptions":{"overwrite":true},"mounts":{"main":"/"},"main-appSettings":[],"main-middlewares":[],"url":{"404":"/404","home":"/"},"http":{"enable":false,"port":80,"timeout":-1},"https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""}}'); // eslint-disable-line no-unused-vars
+let settings = JSON.parse('{"host":"flair.app.ServerHost | flair.app.ClientHost","app":"flair.app.App","load":[],"container":{},"envVars":[],"envVarsloadOptions":{"overwrite":true},"mounts":{"main":"/"},"main-options":[],"main-appSettings":[],"main-middlewares":[],"main-interceptors":[],"url":{"404":"/404","home":"/"},"http":{"enable":false,"port":80,"timeout":-1},"https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""}}'); // eslint-disable-line no-unused-vars
 let settingsReader = flair.Port('settingsReader');
 if (typeof settingsReader === 'function') {
 let externalSettings = settingsReader('flair.app');
 if (externalSettings) { settings = Object.assign(settings, externalSettings); }}
 settings = Object.freeze(settings);
+
+// ./src/flair.app/functions.js (start)
+// global handler
+let onLoadComplete = () => {
+};
+// ./src/flair.app/functions.js (end)
+
 AppDomain.context.current().currentAssemblyBeingLoaded('./flair.app{.min}.js');
 
 (async () => { // ./src/flair.app/flair.app/@1-Bootware.js
@@ -1332,6 +1339,7 @@ Class('Bootware', function() {
 try{
 const { IDisposable } = ns();
 const { Bootware } = ns('flair.app');
+const { ViewState } = ns('flair.ui');
 
 /**
  * @name App
@@ -1353,12 +1361,20 @@ Class('App', Bootware, [IDisposable], function() {
     };
 
     $$('virtual');
-    $$('async');
-    this.start = noop;
+    this.start = async () => {
+        // initialize view state
+        if (!env.isServer && !env.isWorker) {
+            new ViewState(); // this initializes the global view state store's persistance via this singleton object
+        }
+    };
 
     $$('virtual');
-    $$('async');
-    this.stop = noop;
+    this.stop = async () => {
+        // clear view state
+        if (!env.isServer && !env.isWorker) {
+            new ViewState().clear();
+        }
+    };
 
     $$('virtual');
     this.onError = (e) => {
@@ -1462,6 +1478,23 @@ Class('RestHandler', Handler, function() {
 
     $$('virtual');
     this.delete = noop;
+});
+} catch(err) {
+	__asmError(err);
+}
+})();
+
+(async () => { // ./src/flair.app/flair.api/RestInterceptor.js
+try{
+/**
+ * @name RestInterceptor
+ * @description Api Interceptor
+ */
+$$('ns', 'flair.api');
+Class('RestInterceptor', function() {
+    $$('virtual');
+    $$('async');
+    this.run = noop;
 });
 } catch(err) {
 	__asmError(err);
@@ -1651,10 +1684,10 @@ Class('ClientHost', Host, function() {
             // each item is: { name: '', value:  }
             // name: as in above link (as-is)
             // value: as defined in above link
-            let appSettings = settings[`${mountName}-appSettings`];
-            if (appSettings && appSettings.length > 0) {
-                for(let appSetting of appSettings) {
-                    appOptions[appSetting.name] = appSetting.value;
+            let pageOptions = settings[`${mountName}-options`];
+            if (pageOptions && pageOptions.length > 0) {
+                for(let pageOption of pageOptions) {
+                    appOptions[pageOption.name] = pageOption.value;
                 }
             }   
 
@@ -2149,8 +2182,8 @@ Class('ResHeaders', Bootware, function() {
 (async () => { // ./src/flair.app/flair.boot/Router.js
 try{
 const { Bootware } = ns('flair.app');
-const { RestHandler } = ns('flair.api');
-const { ViewHandler, ViewMiddleware } = ns('flair.ui');
+const { RestHandler, RestInterceptor } = ns('flair.api');
+const { ViewHandler, ViewInterceptor } = ns('flair.ui');
 
 /**
  * @name Router
@@ -2179,6 +2212,41 @@ Class('Router', Bootware, function() {
 
         let result = false;
         const setupServerRoutes = () => {
+            const runApiInterceptors = (mountName, req, res) => {
+                return new Promise((resolve, reject) => {
+                    // run mount specific interceptors
+                    // each interceptor is derived from RestInterceptor and
+                    // run method of it takes req, can update it, also takes res method and can generate response, in case request is being stopped
+                    // each item is: "InterceptorTypeQualifiedName"
+                    let mountInterceptors = settings[`${mountName}-interceptors`] || [];
+                    if (mountInterceptors && mountInterceptors.length > 0) {
+                        forEachAsync(mountInterceptors, (_resolve, _reject, ic) => {
+                            include(ic).then((theType) => {
+                                let ApiICType = as(theType, RestInterceptor);
+                                if (ApiICType) {
+                                    try {
+                                        let aic = new ApiICType();
+                                        aic.run(req, res).then(() => {
+                                            if (req.$stop) { 
+                                                _reject(); 
+                                            } else {
+                                                _resolve();
+                                            }
+                                        }).catch(_reject);
+                                    } catch (err) {
+                                        _reject(err);
+                                    }
+                                } else {
+                                    _reject(Exception.InvalidDefinition(`Invalid api interceptor. (${ic})`));
+                                }
+                            }).catch(_reject);                            
+                        }).then(resolve).catch(reject);
+                    } else {
+                        resolve();
+                    }
+                });
+            };
+
             // add routes related to current mount
             for(let route of routes) {
                 if (route.mount === mount.name) { // add route-handler
@@ -2186,30 +2254,47 @@ Class('Router', Bootware, function() {
                         mount.app[verb](route.path, (req, res, next) => { // verb could be get/set/delete/put/, etc.
                             const onError = (err) => { next(err); };
                             const onDone = (result) => { if (!result) { next(); } };
-                            include(route.handler).then((theType) => {
-                                let RouteHandler = as(theType, RestHandler);
-                                if (RouteHandler) {
-                                    try {
-                                        using(new RouteHandler(), (routeHandler) => {
-                                            // req.params has all the route parameters.
-                                            // e.g., for route "/users/:userId/books/:bookId" req.params will 
-                                            // have "req.params: { "userId": "34", "bookId": "8989" }"
-                                            result = routeHandler[verb](req, res);
-                                            if (result && typeof result.then === 'function') {
-                                                result.then((delayedResult) => {
-                                                    onDone(delayedResult);
-                                                }).catch(onError);
-                                            } else {
-                                                onDone(result);
+
+                            // add special properties to req
+                            req.$stop = false;
+
+                            // run api interceptors
+                            runApiInterceptors(mount.name, req, res).then(() => {
+                                if (!req.$stop) {
+                                    include(route.handler).then((theType) => {
+                                        let RouteHandler = as(theType, RestHandler);
+                                        if (RouteHandler) {
+                                            try {
+                                                using(new RouteHandler(), (routeHandler) => {
+                                                    // req.params has all the route parameters.
+                                                    // e.g., for route "/users/:userId/books/:bookId" req.params will 
+                                                    // have "req.params: { "userId": "34", "bookId": "8989" }"
+                                                    result = routeHandler[verb](req, res);
+                                                    if (result && typeof result.then === 'function') {
+                                                        result.then((delayedResult) => {
+                                                            onDone(delayedResult);
+                                                        }).catch(onError);
+                                                    } else {
+                                                        onDone(result);
+                                                    }
+                                                });
+                                            } catch (err) {
+                                                onError(err);
                                             }
-                                        });
-                                    } catch (err) {
-                                        onError(err);
-                                    }
+                                        } else {
+                                            onError(Exception.InvalidDefinition(`Invalid route handler. ${route.handler}`));
+                                        }
+                                    }).catch(onError);
                                 } else {
-                                    onError(Exception.InvalidDefinition(`Invalid route handler. ${route.handler}`));
+                                    res.end();
                                 }
-                            }).catch(onError);
+                            }).catch((err) => {
+                                if (req.$stop) { // reject might also be because of stop done by an interceptor
+                                    res.end();
+                                } else {
+                                    onError(err);
+                                }
+                            });
                         });                         
                     });
                 }
@@ -2252,21 +2337,21 @@ Class('Router', Bootware, function() {
             }
         };
         const setupClientRoutes = () => {
-            const runViewMiddlewares = (mountName, ctx) => {
+            const runViewInterceptors = (mountName, ctx) => {
                 return new Promise((resolve, reject) => {
-                    // run mount specific middlewares
-                    // each middleware is derived from ViewMiddleware and
+                    // run mount specific interceptors
+                    // each interceptor is derived from ViewInterceptor and
                     // run method of it takes ctx, can update it
-                    // each item is: "middleWareTypeQualifiedName"
-                    let mountMiddlewares = settings[`${mountName}-middlewares`] || [];
-                    if (mountMiddlewares && mountMiddlewares.length > 0) {
-                        forEachAsync(mountMiddlewares, (_resolve, _reject, mw) => {
-                            include(mw).then((theType) => {
-                                let ViewMW = as(theType, ViewMiddleware);
-                                if (ViewMW) {
+                    // each item is: "InterceptorTypeQualifiedName"
+                    let mountInterceptors = settings[`${mountName}-interceptors`] || [];
+                    if (mountInterceptors && mountInterceptors.length > 0) {
+                        forEachAsync(mountInterceptors, (_resolve, _reject, ic) => {
+                            include(ic).then((theType) => {
+                                let ViewICType = as(theType, ViewInterceptor);
+                                if (ViewICType) {
                                     try {
-                                        let vmw = new ViewMW();
-                                        vmw.run(ctx).then(() => {
+                                        let vic = new ViewICType();
+                                        vic.run(ctx).then(() => {
                                             if (ctx.$stop) { 
                                                 _reject(); 
                                             } else {
@@ -2277,7 +2362,7 @@ Class('Router', Bootware, function() {
                                         _reject(err);
                                     }
                                 } else {
-                                    _reject(Exception.InvalidDefinition(`Invalid view middleware. (${mw})`));
+                                    _reject(Exception.InvalidDefinition(`Invalid view interceptor. (${ic})`));
                                 }
                             }).catch(_reject);                            
                         }).then(resolve).catch(reject);
@@ -2300,8 +2385,8 @@ Class('Router', Bootware, function() {
                         ctx.$stop = false;
                         ctx.$redirect = '';
 
-                        // run view middlewares
-                        runViewMiddlewares(mount.name, ctx).then(() => {
+                        // run view interceptors
+                        runViewInterceptors(mount.name, ctx).then(() => {
                             if (!ctx.$stop) {
                                 include(route.handler).then((theType) => {
                                     let RouteHandler = as(theType, ViewHandler);
@@ -2328,7 +2413,7 @@ Class('Router', Bootware, function() {
                                 if (ctx.$redirect) { onRedirect(ctx.$redirect); }  
                             }
                         }).catch((err) => {
-                            if (ctx.$stop) { // reject might also be because of stop done by a middleware
+                            if (ctx.$stop) { // reject might also be because of stop done by an interceptor
                                 ctx.handled = true;
                                 if (ctx.$redirect) { onRedirect(ctx.$redirect); }  
                             } else {
@@ -2375,9 +2460,7 @@ const { ViewTransition } = ns('flair.ui');
  */
 $$('ns', 'flair.ui');
 Class('ViewHandler', Handler, function() {
-    let isInit = false,
-        isMounted = false,
-        mainEl = '';
+    let mainEl = '';
 
     $$('override');
     this.construct = (base, el, title, transition) => {
@@ -2388,52 +2471,14 @@ Class('ViewHandler', Handler, function() {
         this.title = this.title + (title ? ' - ' + title : '');
     };
 
-    this.init = async () => {
-        if (!isInit) {
-            isInit = true;
-
-            // give it a unique name
-            this.name = this.$self.id + '_' + guid();
-
-            // get port
-            let clientFileLoader = Port('clientFile');  
-
-            // load style content in property
-            if (this.style && this.style.endsWith('.css')) { // if style file is defined via $$('asset', '<fileName>');
-                this.style = await clientFileLoader(this.style);
-            }
-
-            // load html content in property
-            if (this.html && this.html.endsWith('.html')) { // if html file is defined via $$('asset', '<fileName>');
-                this.html = await clientFileLoader(this.html);
-            }
-
-            // load view transition
-            if (this.viewTransition) {
-                let ViewTransitionType = as(await include(this.viewTransition), ViewTransition);
-                if (ViewTransitionType) {
-                    this.viewTransition = new ViewTransitionType();
-                } else {
-                    this.viewTransition = '';
-                }
-            }
-        }
-    };
-
     $$('privateSet');
     this.viewTransition = '';
 
-    $$('privateSet');
+    $$('protectedSet');
     this.name = '';
 
     $$('protectedSet');
     this.title = '';
-
-    $$('protected');
-    this.style = '';
-
-    $$('protected');
-    this.html = '';
 
     // each meta in array can be defined as:
     // { "<nameOfAttribute>": "<contentOfAttribute>", "<nameOfAttribute>": "<contentOfAttribute>", ... }
@@ -2441,64 +2486,37 @@ Class('ViewHandler', Handler, function() {
     this.meta = null;
 
     this.view = async (ctx) => {
-        if (ctx) { // so it do not get executed on component
-            // initialize
-            await this.init();
+        // give it a unique name, if not already given
+        this.name = this.name || (this.$self.id + '_' + guid());
 
-            // add view html
-            let el = this.append();
-
-            // load view
-            this.loadView(ctx, el);
-
-            // swap views (old one is replaced with this new one)
-            await this.swap();
+        // load view transition
+        if (this.viewTransition) {
+            let ViewTransitionType = as(await include(this.viewTransition), ViewTransition);
+            if (ViewTransitionType) {
+                this.viewTransition = new ViewTransitionType();
+            } else {
+                this.viewTransition = '';
+            }
         }
+
+        // add view el to parent
+        let el = DOC.createElement('div'),
+            parentEl = DOC.getElementById(mainEl);
+        el.id = this.name;
+        el.setAttribute('hidden', '');
+        parentEl.appendChild(el);
+        
+        // load view
+        this.load(ctx, el);
+
+        // swap views (old one is replaced with this new one)
+        await this.swap();
     };
 
     $$('protected');
     $$('virtual');
     $$('async');
     this.loadView = noop;
-
-    $$('static');
-    this.currentView = '';
-
-    $$('static');
-    this.currentViewMeta = [];
-
-    $$('private');
-    this.append = () => {
-        if (!isMounted) {
-            isMounted = true;
-
-            // main node
-            let el = DOC.createElement('div');
-            el.id = this.name;
-            el.setAttribute('hidden', '');
-
-            // add style node
-            if (this.style) {
-                let styleEl = DOC.createElement('style');
-                styleEl.setAttribute('scoped', '');
-                styleEl.innerText = this.style.trim();
-                el.appendChild(styleEl);
-            } 
-
-            // add html node
-            let htmlEl = DOC.createElement('div'); 
-            htmlEl.innerHTML = this.html.trim();
-            el.appendChild(htmlEl);
-
-            // add to parent
-            let parentEl = DOC.getElementById(mainEl);
-            parentEl.appendChild(el);
-            
-            // return
-            return el;
-        } 
-        return null;
-    };
 
     $$('private');
     this.swap = async () => {
@@ -2550,23 +2568,61 @@ Class('ViewHandler', Handler, function() {
         this.$static.currentView = this.name;
         this.$static.currentViewMeta = this.meta;
     };
+
+    $$('static');
+    this.currentView = '';
+
+    $$('static');
+    this.currentViewMeta = [];
 });
 } catch(err) {
 	__asmError(err);
 }
 })();
 
-(async () => { // ./src/flair.app/flair.ui/ViewMiddleware.js
+(async () => { // ./src/flair.app/flair.ui/ViewInterceptor.js
 try{
 /**
- * @name ViewMiddleware
- * @description GUI View Middleware
+ * @name ViewInterceptor
+ * @description GUI View Interceptor
  */
 $$('ns', 'flair.ui');
-Class('ViewMiddleware', function() {
+Class('ViewInterceptor', function() {
     $$('virtual');
     $$('async');
     this.run = noop;
+});
+} catch(err) {
+	__asmError(err);
+}
+})();
+
+(async () => { // ./src/flair.app/flair.ui/ViewState.js
+try{
+/**
+ * @name ViewState
+ * @description GUI View State Global Store
+ */
+$$('singleton');
+$$('ns', 'flair.ui');
+Class('ViewState', function() {
+    $$('state');
+    $$('private');
+    this.store = {};
+
+    this.get = (path, name) => {
+        path = path || ''; name = name || '';
+        return this.store[path + '/' + name] || null;
+    };
+    this.set = (path, name, value) => {
+        path = path || ''; name = name || '';
+        if (typeof value !== 'boolean' && !value) {
+            delete this.store[path + '/' + name]; return;
+        }
+        this.store[path + '/' + name] = value;
+    };
+
+    this.clear = () => { this.store = null; }
 });
 } catch(err) {
 	__asmError(err);
@@ -2596,6 +2652,8 @@ Class('ViewTransition', function() {
 
 AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.30.93","lupdate":"Sun, 28 Apr 2019 17:40:00 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.App","flair.app.Host","flair.app.Handler","flair.api.RestHandler","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.Router","flair.ui.ViewHandler","flair.ui.ViewMiddleware","flair.ui.ViewTransition"],"resources":[],"assets":[],"routes":[]}');
+AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.31.9","lupdate":"Mon, 29 Apr 2019 01:07:01 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","functions","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.App","flair.app.Host","flair.app.Handler","flair.api.RestHandler","flair.api.RestInterceptor","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.Router","flair.ui.ViewHandler","flair.ui.ViewInterceptor","flair.ui.ViewState","flair.ui.ViewTransition"],"resources":[],"assets":[],"routes":[]}');
+
+if(typeof onLoadComplete === 'function'){ onLoadComplete(); onLoadComplete = noop; } // eslint-disable-line no-undef
 
 })();

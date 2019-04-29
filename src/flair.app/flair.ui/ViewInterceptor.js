@@ -1,6 +1,6 @@
 /**
- * @name ViewMiddleware
- * @description GUI View Middleware
+ * @name ViewInterceptor
+ * @description GUI View Interceptor
  */
 $$('ns', '(auto)');
 Class('(auto)', function() {

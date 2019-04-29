@@ -1,6 +1,6 @@
 const { Bootware } = ns('flair.app');
-const { RestHandler } = ns('flair.api');
-const { ViewHandler, ViewMiddleware } = ns('flair.ui');
+const { RestHandler, RestInterceptor } = ns('flair.api');
+const { ViewHandler, ViewInterceptor } = ns('flair.ui');
 
 /**
  * @name Router
@@ -29,6 +29,41 @@ Class('(auto)', Bootware, function() {
 
         let result = false;
         const setupServerRoutes = () => {
+            const runApiInterceptors = (mountName, req, res) => {
+                return new Promise((resolve, reject) => {
+                    // run mount specific interceptors
+                    // each interceptor is derived from RestInterceptor and
+                    // run method of it takes req, can update it, also takes res method and can generate response, in case request is being stopped
+                    // each item is: "InterceptorTypeQualifiedName"
+                    let mountInterceptors = settings[`${mountName}-interceptors`] || [];
+                    if (mountInterceptors && mountInterceptors.length > 0) {
+                        forEachAsync(mountInterceptors, (_resolve, _reject, ic) => {
+                            include(ic).then((theType) => {
+                                let ApiICType = as(theType, RestInterceptor);
+                                if (ApiICType) {
+                                    try {
+                                        let aic = new ApiICType();
+                                        aic.run(req, res).then(() => {
+                                            if (req.$stop) { 
+                                                _reject(); 
+                                            } else {
+                                                _resolve();
+                                            }
+                                        }).catch(_reject);
+                                    } catch (err) {
+                                        _reject(err);
+                                    }
+                                } else {
+                                    _reject(Exception.InvalidDefinition(`Invalid api interceptor. (${ic})`));
+                                }
+                            }).catch(_reject);                            
+                        }).then(resolve).catch(reject);
+                    } else {
+                        resolve();
+                    }
+                });
+            };
+
             // add routes related to current mount
             for(let route of routes) {
                 if (route.mount === mount.name) { // add route-handler
@@ -36,30 +71,47 @@ Class('(auto)', Bootware, function() {
                         mount.app[verb](route.path, (req, res, next) => { // verb could be get/set/delete/put/, etc.
                             const onError = (err) => { next(err); };
                             const onDone = (result) => { if (!result) { next(); } };
-                            include(route.handler).then((theType) => {
-                                let RouteHandler = as(theType, RestHandler);
-                                if (RouteHandler) {
-                                    try {
-                                        using(new RouteHandler(), (routeHandler) => {
-                                            // req.params has all the route parameters.
-                                            // e.g., for route "/users/:userId/books/:bookId" req.params will 
-                                            // have "req.params: { "userId": "34", "bookId": "8989" }"
-                                            result = routeHandler[verb](req, res);
-                                            if (result && typeof result.then === 'function') {
-                                                result.then((delayedResult) => {
-                                                    onDone(delayedResult);
-                                                }).catch(onError);
-                                            } else {
-                                                onDone(result);
+
+                            // add special properties to req
+                            req.$stop = false;
+
+                            // run api interceptors
+                            runApiInterceptors(mount.name, req, res).then(() => {
+                                if (!req.$stop) {
+                                    include(route.handler).then((theType) => {
+                                        let RouteHandler = as(theType, RestHandler);
+                                        if (RouteHandler) {
+                                            try {
+                                                using(new RouteHandler(), (routeHandler) => {
+                                                    // req.params has all the route parameters.
+                                                    // e.g., for route "/users/:userId/books/:bookId" req.params will 
+                                                    // have "req.params: { "userId": "34", "bookId": "8989" }"
+                                                    result = routeHandler[verb](req, res);
+                                                    if (result && typeof result.then === 'function') {
+                                                        result.then((delayedResult) => {
+                                                            onDone(delayedResult);
+                                                        }).catch(onError);
+                                                    } else {
+                                                        onDone(result);
+                                                    }
+                                                });
+                                            } catch (err) {
+                                                onError(err);
                                             }
-                                        });
-                                    } catch (err) {
-                                        onError(err);
-                                    }
+                                        } else {
+                                            onError(Exception.InvalidDefinition(`Invalid route handler. ${route.handler}`));
+                                        }
+                                    }).catch(onError);
                                 } else {
-                                    onError(Exception.InvalidDefinition(`Invalid route handler. ${route.handler}`));
+                                    res.end();
                                 }
-                            }).catch(onError);
+                            }).catch((err) => {
+                                if (req.$stop) { // reject might also be because of stop done by an interceptor
+                                    res.end();
+                                } else {
+                                    onError(err);
+                                }
+                            });
                         });                         
                     });
                 }
@@ -102,21 +154,21 @@ Class('(auto)', Bootware, function() {
             }
         };
         const setupClientRoutes = () => {
-            const runViewMiddlewares = (mountName, ctx) => {
+            const runViewInterceptors = (mountName, ctx) => {
                 return new Promise((resolve, reject) => {
-                    // run mount specific middlewares
-                    // each middleware is derived from ViewMiddleware and
+                    // run mount specific interceptors
+                    // each interceptor is derived from ViewInterceptor and
                     // run method of it takes ctx, can update it
-                    // each item is: "middleWareTypeQualifiedName"
-                    let mountMiddlewares = settings[`${mountName}-middlewares`] || [];
-                    if (mountMiddlewares && mountMiddlewares.length > 0) {
-                        forEachAsync(mountMiddlewares, (_resolve, _reject, mw) => {
-                            include(mw).then((theType) => {
-                                let ViewMW = as(theType, ViewMiddleware);
-                                if (ViewMW) {
+                    // each item is: "InterceptorTypeQualifiedName"
+                    let mountInterceptors = settings[`${mountName}-interceptors`] || [];
+                    if (mountInterceptors && mountInterceptors.length > 0) {
+                        forEachAsync(mountInterceptors, (_resolve, _reject, ic) => {
+                            include(ic).then((theType) => {
+                                let ViewICType = as(theType, ViewInterceptor);
+                                if (ViewICType) {
                                     try {
-                                        let vmw = new ViewMW();
-                                        vmw.run(ctx).then(() => {
+                                        let vic = new ViewICType();
+                                        vic.run(ctx).then(() => {
                                             if (ctx.$stop) { 
                                                 _reject(); 
                                             } else {
@@ -127,7 +179,7 @@ Class('(auto)', Bootware, function() {
                                         _reject(err);
                                     }
                                 } else {
-                                    _reject(Exception.InvalidDefinition(`Invalid view middleware. (${mw})`));
+                                    _reject(Exception.InvalidDefinition(`Invalid view interceptor. (${ic})`));
                                 }
                             }).catch(_reject);                            
                         }).then(resolve).catch(reject);
@@ -150,8 +202,8 @@ Class('(auto)', Bootware, function() {
                         ctx.$stop = false;
                         ctx.$redirect = '';
 
-                        // run view middlewares
-                        runViewMiddlewares(mount.name, ctx).then(() => {
+                        // run view interceptors
+                        runViewInterceptors(mount.name, ctx).then(() => {
                             if (!ctx.$stop) {
                                 include(route.handler).then((theType) => {
                                     let RouteHandler = as(theType, ViewHandler);
@@ -178,7 +230,7 @@ Class('(auto)', Bootware, function() {
                                 if (ctx.$redirect) { onRedirect(ctx.$redirect); }  
                             }
                         }).catch((err) => {
-                            if (ctx.$stop) { // reject might also be because of stop done by a middleware
+                            if (ctx.$stop) { // reject might also be because of stop done by an interceptor
                                 ctx.handled = true;
                                 if (ctx.$redirect) { onRedirect(ctx.$redirect); }  
                             } else {
