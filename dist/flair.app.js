@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.49.94
- *  Mon, 29 Apr 2019 20:30:31 GMT
+ *  Version: 0.49.96
+ *  Fri, 03 May 2019 14:48:08 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -1335,11 +1335,213 @@ Class('Bootware', function() {
 }
 })();
 
-(async () => { // ./src/flair.app/flair.app/@2-App.js
+(async () => { // ./src/flair.app/flair.app/@10-Handler.js
+try{
+
+const { IDisposable } = ns();
+
+/**
+ * @name Handler
+ * @description Handler base class
+ */
+$$('ns', 'flair.app');
+Class('Handler', [IDisposable], function() {
+    $$('virtual');
+    this.construct = () => {
+    };
+
+    $$('virtual');
+    this.dispose = () => {
+    };
+});
+} catch(err) {
+	__asmError(err);
+}
+})();
+
+(async () => { // ./src/flair.app/flair.ui/@10-ViewTransition.js
+try{
+/**
+ * @name ViewTransition
+ * @description GUI View Transition
+ */
+$$('ns', 'flair.ui');
+Class('ViewTransition', function() {
+    $$('virtual');
+    $$('async');
+    this.enter = noop;
+
+    $$('virtual');
+    $$('async');
+    this.leave = noop;
+});
+} catch(err) {
+	__asmError(err);
+}
+})();
+
+(async () => { // ./src/flair.app/flair.api/@11-RestHandler.js
+try{
+const { Handler } = ns('flair.app');
+
+/**
+ * @name RestHandler
+ * @description Restful API Handler
+ */
+$$('ns', 'flair.api');
+Class('RestHandler', Handler, function() {
+    $$('virtual');
+    this.get = noop;
+
+    $$('virtual');
+    this.post = noop;
+
+    $$('virtual');
+    this.put = noop;
+
+    $$('virtual');
+    this.delete = noop;
+});
+} catch(err) {
+	__asmError(err);
+}
+})();
+
+(async () => { // ./src/flair.app/flair.ui/@11-ViewHandler.js
+try{
+const { Handler } = ns('flair.app');
+const { ViewTransition } = ns('flair.ui');
+
+/**
+ * @name ViewHandler
+ * @description GUI View Handler
+ */
+$$('ns', 'flair.ui');
+Class('ViewHandler', Handler, function() {
+    let mainEl = '';
+
+    $$('override');
+    this.construct = (base, el, title, transition) => {
+        base();
+
+        mainEl = el || 'main';
+        this.viewTransition = transition;
+        this.title = this.title + (title ? ' - ' + title : '');
+    };
+
+    $$('privateSet');
+    this.viewTransition = '';
+
+    $$('protectedSet');
+    this.name = '';
+
+    $$('protectedSet');
+    this.title = '';
+
+    // each meta in array can be defined as:
+    // { "<nameOfAttribute>": "<contentOfAttribute>", "<nameOfAttribute>": "<contentOfAttribute>", ... }
+    $$('protectedSet');
+    this.meta = null;
+
+    this.view = async (ctx) => {
+        // give it a unique name, if not already given
+        this.name = this.name || (this.$self.id + '_' + guid());
+
+        // load view transition
+        if (this.viewTransition) {
+            let ViewTransitionType = as(await include(this.viewTransition), ViewTransition);
+            if (ViewTransitionType) {
+                this.viewTransition = new ViewTransitionType();
+            } else {
+                this.viewTransition = '';
+            }
+        }
+
+        // add view el to parent
+        let el = DOC.createElement('div'),
+            parentEl = DOC.getElementById(mainEl);
+        el.id = this.name;
+        el.setAttribute('hidden', '');
+        parentEl.appendChild(el);
+        
+        // load view
+        this.load(ctx, el);
+
+        // swap views (old one is replaced with this new one)
+        await this.swap();
+    };
+
+    $$('protected');
+    $$('virtual');
+    $$('async');
+    this.loadView = noop;
+
+    $$('private');
+    this.swap = async () => {
+        let thisViewEl = DOC.getElementById(this.name);
+
+        // outgoing view
+        if (this.$static.currentView) {
+            let currentViewEl = DOC.getElementById(this.$static.currentView);
+
+            // remove outgoing view meta   
+            for(let meta of this.meta) {
+                DOC.head.removeChild(DOC.querySelector('meta[name="' + meta + '"]'));
+            }
+                
+            // apply transitions
+            if (this.viewTransition) {
+                // leave outgoing, enter incoming
+                await this.viewTransition.leave(currentViewEl, thisViewEl);
+                await this.viewTransition.enter(thisViewEl, currentViewEl);
+            } else {
+                // default is no transition
+                currentViewEl.hidden = true;
+                thisViewEl.hidden = false;
+            }
+
+            // remove outgoing view
+            let parentEl = DOC.getElementById(mainEl);            
+            parentEl.removeChild(currentViewEl);
+        }
+
+        // add incoming view meta
+        for(let meta of this.meta) {
+            var metaEl = document.createElement('meta');
+            for(let metaAttr in meta) {
+                metaEl[metaAttr] = meta[metaAttr];
+            }
+            DOC.head.appendChild(metaEl);
+        }
+
+        // in case there was no previous view
+        if (!this.$static.currentView) {
+            thisViewEl.hidden = false;
+        }
+
+        // update title
+        DOC.title = this.title;
+
+        // set new current
+        this.$static.currentView = this.name;
+        this.$static.currentViewMeta = this.meta;
+    };
+
+    $$('static');
+    this.currentView = '';
+
+    $$('static');
+    this.currentViewMeta = [];
+});
+} catch(err) {
+	__asmError(err);
+}
+})();
+
+(async () => { // ./src/flair.app/flair.app/@20-App.js
 try{
 const { IDisposable } = ns();
 const { Bootware } = ns('flair.app');
-const { ViewState } = ns('flair.ui');
 
 /**
  * @name App
@@ -1364,6 +1566,7 @@ Class('App', Bootware, [IDisposable], function() {
     this.start = async () => {
         // initialize view state
         if (!env.isServer && !env.isWorker) {
+            const { ViewState } = ns('flair.ui');
             new ViewState(); // this initializes the global view state store's persistance via this singleton object
         }
     };
@@ -1372,6 +1575,7 @@ Class('App', Bootware, [IDisposable], function() {
     this.stop = async () => {
         // clear view state
         if (!env.isServer && !env.isWorker) {
+            const { ViewState } = ns('flair.ui');
             new ViewState().clear();
         }
     };
@@ -1391,7 +1595,7 @@ Class('App', Bootware, [IDisposable], function() {
 }
 })();
 
-(async () => { // ./src/flair.app/flair.app/@3-Host.js
+(async () => { // ./src/flair.app/flair.app/@30-Host.js
 try{
 const { IDisposable } = ns();
 const { Bootware } = ns('flair.app');
@@ -1427,57 +1631,6 @@ Class('Host', Bootware, [IDisposable], function() {
     this.raiseError = (err) => {
         this.error(err);
     };
-});
-} catch(err) {
-	__asmError(err);
-}
-})();
-
-(async () => { // ./src/flair.app/flair.app/@4-Handler.js
-try{
-
-const { IDisposable } = ns();
-
-/**
- * @name Handler
- * @description Handler base class
- */
-$$('ns', 'flair.app');
-Class('Handler', [IDisposable], function() {
-    $$('virtual');
-    this.construct = () => {
-    };
-
-    $$('virtual');
-    this.dispose = () => {
-    };
-});
-} catch(err) {
-	__asmError(err);
-}
-})();
-
-(async () => { // ./src/flair.app/flair.api/RestHandler.js
-try{
-const { Handler } = ns('flair.app');
-
-/**
- * @name RestHandler
- * @description Restful API Handler
- */
-$$('ns', 'flair.api');
-Class('RestHandler', Handler, function() {
-    $$('virtual');
-    this.get = noop;
-
-    $$('virtual');
-    this.post = noop;
-
-    $$('virtual');
-    this.put = noop;
-
-    $$('virtual');
-    this.delete = noop;
 });
 } catch(err) {
 	__asmError(err);
@@ -2453,137 +2606,6 @@ Class('Router', Bootware, function () {
 }
 })();
 
-(async () => { // ./src/flair.app/flair.ui/ViewHandler.js
-try{
-const { Handler } = ns('flair.app');
-const { ViewTransition } = ns('flair.ui');
-
-/**
- * @name ViewHandler
- * @description GUI View Handler
- */
-$$('ns', 'flair.ui');
-Class('ViewHandler', Handler, function() {
-    let mainEl = '';
-
-    $$('override');
-    this.construct = (base, el, title, transition) => {
-        base();
-
-        mainEl = el || 'main';
-        this.viewTransition = transition;
-        this.title = this.title + (title ? ' - ' + title : '');
-    };
-
-    $$('privateSet');
-    this.viewTransition = '';
-
-    $$('protectedSet');
-    this.name = '';
-
-    $$('protectedSet');
-    this.title = '';
-
-    // each meta in array can be defined as:
-    // { "<nameOfAttribute>": "<contentOfAttribute>", "<nameOfAttribute>": "<contentOfAttribute>", ... }
-    $$('protectedSet');
-    this.meta = null;
-
-    this.view = async (ctx) => {
-        // give it a unique name, if not already given
-        this.name = this.name || (this.$self.id + '_' + guid());
-
-        // load view transition
-        if (this.viewTransition) {
-            let ViewTransitionType = as(await include(this.viewTransition), ViewTransition);
-            if (ViewTransitionType) {
-                this.viewTransition = new ViewTransitionType();
-            } else {
-                this.viewTransition = '';
-            }
-        }
-
-        // add view el to parent
-        let el = DOC.createElement('div'),
-            parentEl = DOC.getElementById(mainEl);
-        el.id = this.name;
-        el.setAttribute('hidden', '');
-        parentEl.appendChild(el);
-        
-        // load view
-        this.load(ctx, el);
-
-        // swap views (old one is replaced with this new one)
-        await this.swap();
-    };
-
-    $$('protected');
-    $$('virtual');
-    $$('async');
-    this.loadView = noop;
-
-    $$('private');
-    this.swap = async () => {
-        let thisViewEl = DOC.getElementById(this.name);
-
-        // outgoing view
-        if (this.$static.currentView) {
-            let currentViewEl = DOC.getElementById(this.$static.currentView);
-
-            // remove outgoing view meta   
-            for(let meta of this.meta) {
-                DOC.head.removeChild(DOC.querySelector('meta[name="' + meta + '"]'));
-            }
-                
-            // apply transitions
-            if (this.viewTransition) {
-                // leave outgoing, enter incoming
-                await this.viewTransition.leave(currentViewEl, thisViewEl);
-                await this.viewTransition.enter(thisViewEl, currentViewEl);
-            } else {
-                // default is no transition
-                currentViewEl.hidden = true;
-                thisViewEl.hidden = false;
-            }
-
-            // remove outgoing view
-            let parentEl = DOC.getElementById(mainEl);            
-            parentEl.removeChild(currentViewEl);
-        }
-
-        // add incoming view meta
-        for(let meta of this.meta) {
-            var metaEl = document.createElement('meta');
-            for(let metaAttr in meta) {
-                metaEl[metaAttr] = meta[metaAttr];
-            }
-            DOC.head.appendChild(metaEl);
-        }
-
-        // in case there was no previous view
-        if (!this.$static.currentView) {
-            thisViewEl.hidden = false;
-        }
-
-        // update title
-        DOC.title = this.title;
-
-        // set new current
-        this.$static.currentView = this.name;
-        this.$static.currentViewMeta = this.meta;
-    };
-
-    $$('static');
-    this.currentView = '';
-
-    $$('static');
-    this.currentViewMeta = [];
-});
-} catch(err) {
-	__asmError(err);
-}
-})();
-
 (async () => { // ./src/flair.app/flair.ui/ViewInterceptor.js
 try{
 /**
@@ -2633,30 +2655,9 @@ Class('ViewState', function() {
 }
 })();
 
-(async () => { // ./src/flair.app/flair.ui/ViewTransition.js
-try{
-/**
- * @name ViewTransition
- * @description GUI View Transition
- */
-$$('ns', 'flair.ui');
-Class('ViewTransition', function() {
-    $$('virtual');
-    $$('async');
-    this.enter = noop;
-
-    $$('virtual');
-    $$('async');
-    this.leave = noop;
-});
-} catch(err) {
-	__asmError(err);
-}
-})();
-
 AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.49.94","lupdate":"Mon, 29 Apr 2019 20:30:31 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","functions","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.App","flair.app.Host","flair.app.Handler","flair.api.RestHandler","flair.api.RestInterceptor","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.Router","flair.ui.ViewHandler","flair.ui.ViewInterceptor","flair.ui.ViewState","flair.ui.ViewTransition"],"resources":[],"assets":[],"routes":[]}');
+AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.49.96","lupdate":"Fri, 03 May 2019 14:48:08 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","functions","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Handler","flair.ui.ViewTransition","flair.api.RestHandler","flair.ui.ViewHandler","flair.app.App","flair.app.Host","flair.api.RestInterceptor","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.Router","flair.ui.ViewInterceptor","flair.ui.ViewState"],"resources":[],"assets":[],"routes":[]}');
 
 if(typeof onLoadComplete === 'function'){ onLoadComplete(); onLoadComplete = noop; } // eslint-disable-line no-undef
 

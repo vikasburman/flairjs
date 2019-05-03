@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.49.94
- *  Mon, 29 Apr 2019 20:30:29 GMT
+ *  Version: 0.49.96
+ *  Fri, 03 May 2019 14:48:06 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -109,10 +109,10 @@
         name: 'flair',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.49.94',
+        version: '0.49.96',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Mon, 29 Apr 2019 20:30:29 GMT')
+        lupdate: new Date('Fri, 03 May 2019 14:48:06 GMT')
     });  
     
     flair.members = [];
@@ -7239,7 +7239,7 @@ Class('Task', [IProgressReporter, IDisposable], function() {
 
 AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.49.94","lupdate":"Mon, 29 Apr 2019 20:30:29 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","functions","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["IDisposable","Aspect","Attribute","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.49.96","lupdate":"Fri, 03 May 2019 14:48:06 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","functions","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["IDisposable","Aspect","Attribute","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
 
 if(typeof onLoadComplete === 'function'){ onLoadComplete(); onLoadComplete = noop; } // eslint-disable-line no-undef
 
