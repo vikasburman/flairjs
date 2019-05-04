@@ -2,8 +2,8 @@
  * @name IProgressReporter
  * @description IProgressReporter interface
  */
-$$('ns', '(auto)');
-Interface('(auto)', function() {
+$$('ns', '(root)');
+Interface('IProgressReporter', function() {
     // progress report
     this.progress = nie;
 });

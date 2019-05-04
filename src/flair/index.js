@@ -183,6 +183,27 @@
     // freeze members
     flair.members = Object.freeze(flair.members);
 
+    // built-in types
+    (()=>{
+        /* eslint-disable no-unused-vars */
+        const { Class, Struct, Enum, Interface, Mixin, Aspects, AppDomain, $$, attr, bring, Container, include, Port, on, post, telemetry,
+                        Reflector, Serializer, Tasks, as, is, isComplies, isDerivedFrom, isAbstract, isSealed, isStatic, isSingleton, isDeprecated,
+                        isImplements, isInstanceOf, isMixed, getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf,
+                        getTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;
+        const { TaskInfo } = flair.Tasks;
+        const { env } = flair.options;
+        const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, guid, isArrowFunc, isASyncFunc, sieve,
+                        b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
+        /* eslint-enable no-unused-vars */
+    
+        <!-- inject: ./(bundle)/builtin-types/(root)/IDisposable.js -->
+        <!-- inject: ./(bundle)/builtin-types/(root)/IProgressReporter.js -->
+        <!-- inject: ./(bundle)/builtin-types/(root)/Aspect.js -->
+        <!-- inject: ./(bundle)/builtin-types/(root)/Attribute.js -->
+        <!-- inject: ./(bundle)/builtin-types/(root)/Task.js -->
+
+    })();
+
     // return
     return Object.freeze(flair);
 });    

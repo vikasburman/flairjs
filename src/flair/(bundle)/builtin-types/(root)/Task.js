@@ -4,10 +4,11 @@ const { IProgressReporter, IDisposable } = ns();
  * @name Task
  * @description Task base class.
  */
-$$('ns', '(auto)');
-Class('(auto)', [IProgressReporter, IDisposable], function() {
+$$('ns', '(root)');
+Class('Task', [IProgressReporter, IDisposable], function() {
     let isSetupDone = false,
-        isRunning = false;
+        isRunning = false,
+        loadingContextName = AppDomain.context.current().name; // this will be processed at the time class is loaded
 
    /** 
     * @name construct
@@ -17,7 +18,7 @@ Class('(auto)', [IProgressReporter, IDisposable], function() {
         this.args = args;
 
         // set context and domain
-        this.context = AppDomain.contexts(__currentContextName);
+        this.context = AppDomain.contexts(loadingContextName);
         this.domain = this.context.domain;
     };
 
@@ -124,4 +125,3 @@ Class('(auto)', [IProgressReporter, IDisposable], function() {
     $$('async');
     this.onRun = nim;
 });
-

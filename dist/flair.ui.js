@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.ui
  *     File: ./flair.ui.js
- *  Version: 0.49.96
- *  Fri, 03 May 2019 14:48:09 GMT
+ *  Version: 0.50.15
+ *  Sat, 04 May 2019 00:05:18 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -22,7 +22,7 @@ const { Class, Struct, Enum, Interface, Mixin, Aspects, AppDomain, $$, attr, bri
 				getTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;
 const { TaskInfo } = flair.Tasks;
 const { env } = flair.options;
-const DOC = (env.isServer ? null : window.document);
+const DOC = ((env.isServer || env.isWorker) ? null : window.document);
 const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, guid, isArrowFunc, isASyncFunc, sieve,
 				b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
 const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,
@@ -49,6 +49,8 @@ let externalSettings = settingsReader('flair.ui');
 if (externalSettings) { settings = Object.assign(settings, externalSettings); }}
 settings = Object.freeze(settings);
 AppDomain.context.current().currentAssemblyBeingLoaded('./flair.ui{.min}.js');
+
+try{
 
 (async () => { // ./src/flair.ui/flair.ui.vue/@1-VueComponentMembers.js
 try{
@@ -853,9 +855,13 @@ Class('VueView', ViewHandler, [VueComponentMembers], function() {
 }
 })();
 
+} catch(err) {
+	__asmError(err);
+}
+
 AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-AppDomain.registerAdo('{"name":"flair.ui","file":"./flair.ui{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.49.96","lupdate":"Fri, 03 May 2019 14:48:09 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","functions","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.ui.vue.VueComponentMembers","flair.ui.vue.VueComponent","flair.ui.vue.VueDirective","flair.ui.vue.VueFilter","flair.ui.vue.VueLayout","flair.ui.vue.VueMixin","flair.ui.vue.VuePlugin","flair.ui.vue.VueSetup","flair.ui.vue.VueView"],"resources":[],"assets":[],"routes":[{"name":"flair.ui.vue.test2","mount":"main","index":101,"verbs":[],"path":"test/:id","handler":"abc.xyz.Test"},{"name":"flair.ui.vue.exit2","mount":"main","index":103,"verbs":[],"path":"exit","handler":"abc.xyz.Exit"}]}');
+AppDomain.registerAdo('{"name":"flair.ui","file":"./flair.ui{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.50.15","lupdate":"Sat, 04 May 2019 00:05:18 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","functions","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.ui.vue.VueComponentMembers","flair.ui.vue.VueComponent","flair.ui.vue.VueDirective","flair.ui.vue.VueFilter","flair.ui.vue.VueLayout","flair.ui.vue.VueMixin","flair.ui.vue.VuePlugin","flair.ui.vue.VueSetup","flair.ui.vue.VueView"],"resources":[],"assets":[],"routes":[{"name":"flair.ui.vue.test2","mount":"main","index":101,"verbs":[],"path":"test/:id","handler":"abc.xyz.Test"},{"name":"flair.ui.vue.exit2","mount":"main","index":103,"verbs":[],"path":"exit","handler":"abc.xyz.Exit"}]}');
 
 if(typeof onLoadComplete === 'function'){ onLoadComplete(); onLoadComplete = noop; } // eslint-disable-line no-undef
 

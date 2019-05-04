@@ -7,15 +7,17 @@
         {
             "type": "chrome",
             "request": "launch",
-            "name": "Launch Chrome",
-            "url": "http://localhost:8080",
-            "webRoot": "${workspaceFolder}/dist/flair.js"
+            "name": "Client Mode",
+            "url": "http://localhost:8088/debug/client.html",
+            "webRoot": "${workspaceFolder}",
+            "preLaunchTask": "server"
         },
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch Program",
-            "program": "${workspaceFolder}/dist/flair.js"
+            "name": "Server Mode",
+            "program": "${workspaceFolder}/debug/server.js",
+            "cwd": "${workspaceFolder}"
         }
     ]
 }

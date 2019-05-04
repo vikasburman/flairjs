@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.49.96
- *  Fri, 03 May 2019 14:48:09 GMT
+ *  Version: 0.50.15
+ *  Sat, 04 May 2019 00:05:18 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -23,7 +23,7 @@ const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
     name: 'flair.cli',
-    version: '0.49.96',
+    version: '0.50.15',
     format: 'fasm',
     formatVersion: '1',
     contains: [
@@ -634,7 +634,7 @@ const build = (options, buildDone) => {
         `\t\t\t\tgetTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;\n` +
         `const { TaskInfo } = flair.Tasks;\n` +
         `const { env } = flair.options;\n` +
-        `const DOC = (env.isServer ? null : window.document);\n` +
+        `const DOC = ((env.isServer || env.isWorker) ? null : window.document);\n` +
         `const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, guid, isArrowFunc, isASyncFunc, sieve,\n` +
         `\t\t\t\tb64EncodeUnicode, b64DecodeUnicode } = flair.utils;\n` +
         `const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,\n` +
@@ -697,6 +697,10 @@ const build = (options, buildDone) => {
         let dump = `AppDomain.context.current().currentAssemblyBeingLoaded('${options.current.ado.file}');\n`;
         appendToFile(dump);
 
+        // // begin main try catch
+        dump = `\ntry{\n`;
+        appendToFile(dump);
+
         // append types
         let justNames = [],
             thisFile = '';
@@ -740,6 +744,10 @@ const build = (options, buildDone) => {
             appendToFile(content);
         }
         options.current.ado.types = justNames; // update types list
+
+        // end main try catch
+        dump = `\n} catch(err) {\n\t__asmError(err);\n}\n`;
+        appendToFile(dump);
 
         // deactivate current file name
         dump = `\nAppDomain.context.current().currentAssemblyBeingLoaded('');\n`;
@@ -850,6 +858,8 @@ const build = (options, buildDone) => {
         appendToFile(dump);
     };
     const appendLoadCompleteCall = () => {
+        if (options.skipRegistrationsFor.indexOf(options.current.asmName) !== -1) { return; } // skip for special cases
+
         let dump = `\nif(typeof onLoadComplete === 'function'){ onLoadComplete(); onLoadComplete = noop; } // eslint-disable-line no-undef\n`;
         appendToFile(dump);
     };
@@ -1112,7 +1122,7 @@ const build = (options, buildDone) => {
         options.current.asmSettings = './' + path.join(options.current.src, options.current.asmName, 'settings.json');
 
         // skip minify for this assembly, if this is a special file
-        options.current.skipMinifyThisAssembly = (options.skipRegistrationsFor.indexOf(asmFolder) !== -1);
+        options.current.skipMinifyThisAssembly = (options.skipMinifyFor.indexOf(asmFolder) !== -1);
 
         // initialize
         initAsm();
@@ -1573,13 +1583,18 @@ exports.flairBuild = function(options, cb) {
 
     // exclude files from being registered
     options.skipRegistrationsFor = [
+        'flair',
         'flair.cli'
     ];
     // exclude files from being added to preamble
     options.skipPreambleFor = [
         'flair',
         'flair.cli'
-    ];    
+    ];  
+    // exclude files from being added to minified
+    options.skipMinifyFor = [
+        'flair.cli'
+    ];        
 
     // define logger
     const logger = (level, msg, data, prlf, polf) => {
@@ -1661,5 +1676,3 @@ exports.flairBuild = function(options, cb) {
     });
 };
 
-
-if(typeof onLoadComplete === 'function'){ onLoadComplete(); onLoadComplete = noop; } // eslint-disable-line no-undef

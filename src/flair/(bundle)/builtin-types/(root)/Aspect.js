@@ -3,8 +3,8 @@
  * @description Aspect base class.
  */
 $$('abstract');
-$$('ns', '(auto)');
-Class('(auto)', function() {
+$$('ns', '(root)');
+Class('Aspect', function() {
     /** 
      * @name before
      * @description Before advise

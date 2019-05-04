@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.49.96
- *  Fri, 03 May 2019 14:48:08 GMT
+ *  Version: 0.50.15
+ *  Sat, 04 May 2019 00:05:17 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -1241,7 +1241,7 @@ const { Class, Struct, Enum, Interface, Mixin, Aspects, AppDomain, $$, attr, bri
 				getTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;
 const { TaskInfo } = flair.Tasks;
 const { env } = flair.options;
-const DOC = (env.isServer ? null : window.document);
+const DOC = ((env.isServer || env.isWorker) ? null : window.document);
 const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, guid, isArrowFunc, isASyncFunc, sieve,
 				b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
 const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,
@@ -1275,6 +1275,8 @@ let onLoadComplete = () => {
 // ./src/flair.app/functions.js (end)
 
 AppDomain.context.current().currentAssemblyBeingLoaded('./flair.app{.min}.js');
+
+try{
 
 (async () => { // ./src/flair.app/flair.app/@1-Bootware.js
 try{
@@ -2655,9 +2657,13 @@ Class('ViewState', function() {
 }
 })();
 
+} catch(err) {
+	__asmError(err);
+}
+
 AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.49.96","lupdate":"Fri, 03 May 2019 14:48:08 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","functions","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Handler","flair.ui.ViewTransition","flair.api.RestHandler","flair.ui.ViewHandler","flair.app.App","flair.app.Host","flair.api.RestInterceptor","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.Router","flair.ui.ViewInterceptor","flair.ui.ViewState"],"resources":[],"assets":[],"routes":[]}');
+AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.50.15","lupdate":"Sat, 04 May 2019 00:05:17 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","functions","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Handler","flair.ui.ViewTransition","flair.api.RestHandler","flair.ui.ViewHandler","flair.app.App","flair.app.Host","flair.api.RestInterceptor","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.Router","flair.ui.ViewInterceptor","flair.ui.ViewState"],"resources":[],"assets":[],"routes":[]}');
 
 if(typeof onLoadComplete === 'function'){ onLoadComplete(); onLoadComplete = noop; } // eslint-disable-line no-undef
 
