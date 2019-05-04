@@ -1,40 +1,10 @@
 {
     "host": "flair.app.ServerHost | flair.app.ClientHost",
     "app": "flair.app.App",
+    
     "load": [
     ],
+
     "container": {
-    },
-    "envVars": [
-    ],
-    "envVarsloadOptions": {
-        "overwrite": true
-    },    
-    "mounts": {
-        "main": "/"
-    },
-    "main-options": [
-    ],
-    "main-appSettings": [
-    ],
-    "main-middlewares": [
-    ],
-    "main-interceptors": [
-    ],
-    "url": {
-        "home": "/",
-        "404": "/404"
-    },
-    "http": {
-        "enable": false,
-        "port": 80,
-        "timeout": -1
-    },
-    "https": {
-        "enable": false,
-        "port": 443,
-        "timeout": -1,
-        "privateKey": "",
-        "publicCert": ""
     }
 }

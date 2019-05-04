@@ -1,87 +1,22 @@
-const express = await include('express | x');
 const fs = await include('fs | x');
 const http = await include('http | x');
 const https = await include('https | x');
 const httpShutdown = await include('http-shutdown | x');
-const { Host } = ns('flair.app');
 
 /**
- * @name ServerHost
- * @description Server host implementation
+ * @name ExpressServer
+ * @description Express Server implementation
  */
-$$('sealed');
+
 $$('ns', '(auto)');
-Class('(auto)', Host, function() {
-    let mountedApps = {},
-        httpServer = null,
+Mixin('(auto)', function() {
+    let httpServer = null,
         httpsServer = null,
-        httpsSettings = settings['https'],
-        httpSettings = settings['http'];
+        httpSettings = settings['server-http'],
+        httpsSettings = settings['server-https'];        
     
     $$('override');
-    this.construct = (base) => {
-        base('Express', '4.x');
-    };
-
-    this.app = () => { return this.mounts['main'].app; }  // main express app
-    this.mounts = { // all mounted express apps
-        get: () => { return mountedApps; },
-        set: noop
-    };
-
-    $$('override');
-    this.boot = async (base) => { // mount all express app and sub-apps
-        base();
-
-        const applySettings = (mountName, mount) => {
-            // app settings
-            // each item is: { name: '', value:  }
-            // name: as in above link (as-is)
-            // value: as defined in above link
-            let appSettings = settings[`${mountName}-appSettings`];
-            if (appSettings && appSettings.length > 0) {
-                for(let appSetting of appSettings) {
-                    mount.set(appSetting.name, appSetting.value);
-                }
-            }            
-        };
-
-        // create main app instance of express
-        let mainApp = express();
-        applySettings('main', mainApp);
-
-        // create one instance of express app for each mounted path
-        let mountPath = '',
-            mount = null;
-        for(let mountName of Object.keys(settings.mounts)) {
-            if (mountName === 'main') {
-                mountPath = '/';
-                mount = mainApp;
-            } else {
-                mountPath = settings.mounts[mountName];
-                mount = express(); // create a sub-app
-            }
-
-            // attach
-            mountedApps[mountName] = Object.freeze({
-                name: mountName,
-                root: mountPath,
-                app: mount
-            });
-
-            // apply settings and attach to main app
-            if (mountName !== 'main') {
-                applySettings(mountName, mount);
-                mainApp.use(mountPath, mount); // mount sub-app on given root path                
-            }
-        }
-
-        // store
-        mountedApps = Object.freeze(mountedApps);        
-    };
-
-    $$('override');
-    this.start = async (base) => { // configure http and https server
+    this.start = async (base) => { // configure express http and https server
         base();
 
         // configure http server
@@ -118,7 +53,7 @@ Class('(auto)', Host, function() {
     };
 
     $$('override');
-    this.ready = (base) => { // start listening http and https servers
+    this.ready = (base) => { // start listening express http and https servers
         return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
             base();
 
@@ -150,7 +85,7 @@ Class('(auto)', Host, function() {
     };
 
     $$('override');
-    this.stop = async (base) => { // graceful shutdown http and https servers
+    this.stop = async (base) => { // graceful shutdown express http and https servers
         base();
 
         // stop http server gracefully
@@ -171,11 +106,4 @@ Class('(auto)', Host, function() {
             });
         }
     };    
-
-    $$('override');
-    this.dispose = (base) => {
-        base();
-
-        mountedApps = null;
-    };
 });

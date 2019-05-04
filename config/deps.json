@@ -1,7 +1,7 @@
 {
     "pre": [
-      { "src": "./node_modules/page/page.js", "dest": "./src/flair.app/(bundle)/page.js" },
-      { "src": "./node_modules/page/Readme.md", "dest": "./src/flair.app/(..)/credits/page/Readme.md" }
+      { "src": "./node_modules/page/page.js", "dest": "./src/flair.client/(bundle)/page.js" },
+      { "src": "./node_modules/page/Readme.md", "dest": "./src/flair.client/(..)/credits/page/Readme.md" }
   ],
     "post": [
         { "src": "./dist/flair.js", 

@@ -9,5 +9,16 @@
     "directives": [],
     "plugins": [],
     "pluginOptions": {
-    }
+    },
+    "url": {
+        "home": "/",
+        "404": "/404"
+    },
+    "mounts": {
+        "main": "/"
+    },
+    "main-options": [
+    ],
+    "main-interceptors": [
+    ]        
 }

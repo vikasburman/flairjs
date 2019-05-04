@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.50.17
- *  Sat, 04 May 2019 01:26:44 GMT
+ *  Version: 0.50.32
+ *  Sat, 04 May 2019 18:35:15 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -21,9 +21,10 @@ const copyDir = require('copy-dir');
 const path = require('path');
 const fsx = require('fs-extra');
 const del = require('del');
+const exec = require('child_process').exec;
 const buildInfo = {
     name: 'flair.cli',
-    version: '0.50.17',
+    version: '0.50.32',
     format: 'fasm',
     formatVersion: '1',
     contains: [
@@ -285,6 +286,36 @@ const build = (options, buildDone) => {
     
         // done
         done();
+    };
+    const copyPackageJson = async (done) => {
+        if (!options.profiles.current.packagejson) { done(); return; }
+
+        options.logger(0, 'package.json', '', true);
+        let src = options.package,
+            dest = path.resolve(path.join(options.profiles.current.dest, src));
+        fsx.copyFileSync(src, dest);
+    
+        // done
+        done();
+    };    
+    const installNodeModules = async (done) => {
+        if (!options.profiles.current.nodemodules) { done(); return; }
+
+        options.logger(0, 'node_modules', '', true);
+
+        // copy package.json, if not already copied
+        if (!options.profiles.current.packagejson) { 
+            let src = options.package,
+                dest = path.resolve(path.join(options.profiles.current.dest, src));
+            fsx.copyFileSync(src, dest);
+        }
+
+        // install node-modules
+        exec(options.nodemodulesCMD, {
+            cwd: path.resolve(options.profiles.current.dest)
+        }, () => {
+            done();
+        })
     };
 
     const appendHeader = () => {
@@ -675,9 +706,9 @@ const build = (options, buildDone) => {
         }
         // settings is a closure variable of each assembly separately
         if (settings) { 
-            settingsContent = `//load assembly settings from config file\nlet settings = JSON.parse('${settings}'); // eslint-disable-line no-unused-vars\n`;
+            settingsContent = `// load assembly settings from settings file\nlet settings = JSON.parse('${settings}'); // eslint-disable-line no-unused-vars\n`;
         } else {
-            settingsContent = `let settings = {}; // eslint-disable-line no-unused-vars\n`;
+            settingsContent = `// default assembly settings\nlet settings = {}; // eslint-disable-line no-unused-vars\n`;
         }
         // settings can be defined outside as well, new also
         // default values given in these settings will be overwritten by what is defined in external config file
@@ -685,9 +716,28 @@ const build = (options, buildDone) => {
         settingsContent += `if (typeof settingsReader === 'function') {\n`;
         settingsContent += `let externalSettings = settingsReader('${options.current.asmName}');\n`;
         settingsContent += `if (externalSettings) { settings = Object.assign(settings, externalSettings); }}\n`;
-        settingsContent += `settings = Object.freeze(settings);\n`;
+        settingsContent += `settings = Object.freeze(settings);\n\n`;
         appendToFile(settingsContent);
     };
+    const appendConfig = () => {
+        if (options.skipRegistrationsFor.indexOf(options.current.asmName) !== -1) { return; } // skip for special cases
+
+        let config = '',
+            configContent = '';
+        if (fsx.existsSync(options.current.asmConfig)) {
+            config = JSON.stringify(fsx.readJSONSync(options.current.asmConfig));
+            logger(0, 'config',  options.current.asmConfig);
+        }
+        // config is a closure variable of each assembly separately
+        if (config) { 
+            configContent = `// load assembly config from config file\nlet config = JSON.parse('${config}'); // eslint-disable-line no-unused-vars\n`;
+        } else {
+            configContent = `// default assembly config\nlet config = {}; // eslint-disable-line no-unused-vars\n`;
+        }
+        // unlike settings, config cannot be defined outside, therefore this is it
+        configContent += `config = Object.freeze(config);\n\n`;
+        appendToFile(configContent);
+    };    
     const appendTypes = (done) => {
         if (options.current.ado.types.length === 0) { done(); return; }
 
@@ -1120,6 +1170,7 @@ const build = (options, buildDone) => {
         options.current.asmMain = './' + path.join(options.current.src, options.current.asmName, 'index.js');
         options.current.functions = './' + path.join(options.current.src, options.current.asmName, 'functions.js');
         options.current.asmSettings = './' + path.join(options.current.src, options.current.asmName, 'settings.json');
+        options.current.asmConfig = './' + path.join(options.current.src, options.current.asmName, 'config.json');
 
         // skip minify for this assembly, if this is a special file
         options.current.skipMinifyThisAssembly = (options.skipMinifyFor.indexOf(asmFolder) !== -1);
@@ -1150,6 +1201,9 @@ const build = (options, buildDone) => {
 
                 // append settings
                 appendSettings();
+
+                // append config
+                appendConfig();                
 
                 // append local functions (functions.js)
                 appendFunctions();
@@ -1227,10 +1281,14 @@ const build = (options, buildDone) => {
             copyCustom(() => {
                 copyModules(() => {
                     minifyMiscFiles(() => {
-                        // done
-                        logger(0, 'profile', `${profileItem.profile} (end)`, true); 
-                        options.profiles.current = null;
-                        processProfiles(done);
+                        copyPackageJson(() => {
+                            installNodeModules(() => {
+                                // done
+                                logger(0, 'profile', `${profileItem.profile} (end)`, true); 
+                                options.profiles.current = null;
+                                processProfiles(done);
+                            });
+                        });
                     });
                 });
             });
@@ -1315,6 +1373,10 @@ const build = (options, buildDone) => {
  *                          "build": [ ] - having path (relative to src path) to treat as assembly folder group
  *                                      all root level folders under each of these will be treated as one individual assembly
  *                                      Note: if folder name (of assembly folder under it) starts with '_', it is skipped
+ *                          "packagejson": true/false
+ *                                          if true, will copy package.json at root
+ *                          "nodemodules": true/false
+ *                                          if true, will copy package.json at root (if not already done) and run 'yarn install --prod' in that root to install/update node_modules
  *                      }
  *                  }
  *              }
@@ -1389,6 +1451,7 @@ const build = (options, buildDone) => {
  *                  }
  *              preBuildDeps: true/false   - if before the start of assembly building, all local copies of external dependencies  need to be refreshed 
  *              postBuildDeps: true/false  - if after build update other local copies using the built files
+ *              nodemodulesCMD: '' - what command to use to install node-modules in dist folder - default is 'yarn install --prod'
  *              package: path of packageJSON file of the project
  *                  it picks project name, version and copyright information etc. from here to place on assembly
  * 
@@ -1555,6 +1618,8 @@ exports.flairBuild = function(options, cb) {
     options.depsConfig = options.depsConfig || '';
     options.preBuildDeps = options.preBuildDeps || false;    
     options.postBuildDeps = options.postBuildDeps || false;
+
+    options.nodemodulesCMD = options.nodemodulesCMD || 'yarn install --prod';
 
     // full-build vs quick build vs default build settings
     if (options.fullBuild) { // full build - ensure these things happen, if configured, even if turned off otherwise

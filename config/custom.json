@@ -2,31 +2,21 @@
     "build": [
     ],
     "profiles": {
-        "server": {
+        "profileName": {
             "root": "",
+            "dest": "",
             "copy": [
             ],
             "build": [
             ],
-            "skipMinifyRoot": [
+            "minify": [
             ],
-            "resolveRoot": {
-            },
-            "preambleRoot": {
-            }
-        },
-        "client": {
-            "root": "",
-            "copy": [
+            "modules": [
             ],
-            "build": [
-            ],
-            "skipMinifyRoot": [
-            ],
-            "resolveRoot": {
-            },
-            "preambleRoot": {
-            }
+            "skipMinify": false,
+            "omitRoot": false,
+            "packagejson": false,
+            "nodemodules": false
         }
     }
 }
