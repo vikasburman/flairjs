@@ -32,7 +32,8 @@
         "test": "gulp test --TEST --options ./config/test.json",
         "test-client": "gulp test --TEST --client --options ./config/test.json",
         "package": "gulp package --options ./publish/pack.json && npm pack ./publish/package/npm",
-        "server": "http-server ./ -p8088 &"
+        "server-start": "http-server ./ -p8088 &",
+        "server-stop": "pkill -f http-server"
     },
     "devDependencies": {
         "clean-css": "^4.2.1",

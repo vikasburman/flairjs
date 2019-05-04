@@ -4,10 +4,17 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "server",
+            "label": "startserver",
             "type": "shell",
-            "command": "yarn server",
+            "command": "yarn server-start",
+            "problemMatcher": []
+        },
+        {
+            "label": "stopserver",
+            "type": "shell",
+            "command": "yarn server-stop",
             "problemMatcher": []
         }
+
     ]
 }
