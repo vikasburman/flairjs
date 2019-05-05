@@ -217,7 +217,7 @@ const build = (options, buildDone) => {
             done();
         };
 
-        let allPlugins = options.profiles.current.plugins.slice();
+        let allPlugins = options.profiles.current.plugins ? options.profiles.current.plugins.slice() : [];
         const runPlugin = () => {
             if (allPlugins.length === 0) { onDone(); return; }
             
@@ -596,7 +596,7 @@ const build = (options, buildDone) => {
         `// define loadPathOf this assembly\n` +
         `let __currentFile = (env.isServer ? __filename : window.document.currentScript.src.replace(window.document.location.href, './'));\n` +
         `let __currentPath = __currentFile.substr(0, __currentFile.lastIndexOf('/') + 1);\n` +
-        `AppDomain.loadPathOf('${options.current.asmName}', __currentPath)\n` +
+        `AppDomain.loadPathOf('${options.current.asmName}', __currentPath);\n` +
         `\n` +
         `// assembly level error handler\n` +
         `const __asmError = (err) => { AppDomain.onError(err); };\n` +

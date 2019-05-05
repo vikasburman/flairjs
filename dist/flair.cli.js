@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.50.50
- *  Sun, 05 May 2019 12:58:18 GMT
+ *  Version: 0.50.54
+ *  Sun, 05 May 2019 14:13:37 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -23,7 +23,7 @@ const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
     name: 'flair.cli',
-    version: '0.50.50',
+    version: '0.50.54',
     format: 'fasm',
     formatVersion: '1',
     contains: [
@@ -231,7 +231,7 @@ const build = (options, buildDone) => {
             done();
         };
 
-        let allPlugins = options.profiles.current.plugins.slice();
+        let allPlugins = options.profiles.current.plugins ? options.profiles.current.plugins.slice() : [];
         const runPlugin = () => {
             if (allPlugins.length === 0) { onDone(); return; }
             
@@ -610,7 +610,7 @@ const build = (options, buildDone) => {
         `// define loadPathOf this assembly\n` +
         `let __currentFile = (env.isServer ? __filename : window.document.currentScript.src.replace(window.document.location.href, './'));\n` +
         `let __currentPath = __currentFile.substr(0, __currentFile.lastIndexOf('/') + 1);\n` +
-        `AppDomain.loadPathOf('${options.current.asmName}', __currentPath)\n` +
+        `AppDomain.loadPathOf('${options.current.asmName}', __currentPath);\n` +
         `\n` +
         `// assembly level error handler\n` +
         `const __asmError = (err) => { AppDomain.onError(err); };\n` +

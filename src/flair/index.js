@@ -194,14 +194,48 @@
         const { env } = flair.options;
         const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, guid, isArrowFunc, isASyncFunc, sieve,
                         b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
-        /* eslint-enable no-unused-vars */
+        const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,
+            $$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$args, $$inject, $$resource, $$asset, $$singleton, $$serialize,
+            $$deprecate, $$session, $$state, $$conditional, $$noserialize, $$ns } = $$;
     
-        <!-- inject: ./(bundle)/builtin-types/(root)/IDisposable.js -->
-        <!-- inject: ./(bundle)/builtin-types/(root)/IProgressReporter.js -->
-        <!-- inject: ./(bundle)/builtin-types/(root)/Aspect.js -->
-        <!-- inject: ./(bundle)/builtin-types/(root)/Attribute.js -->
-        <!-- inject: ./(bundle)/builtin-types/(root)/Task.js -->
+        // define current context name
+        const __currentContextName = _AppDomain.context.current().name;
 
+        // define loadPathOf this assembly
+        let __currentFile = (env.isServer ? __filename : window.document.currentScript.src.replace(window.document.location.href, './'));
+        let __currentPath = __currentFile.substr(0, __currentFile.lastIndexOf('/') + 1);
+        _AppDomain.loadPathOf('flair', __currentPath);
+
+        // assembly level error handler
+        const __asmError = (err) => { _AppDomain.onError(err); };
+
+        // no settings for this assembly
+        let settings = {};
+        settings = Object.freeze(settings);        
+        
+        // no config for this assembly
+        let config = {}; 
+        config = Object.freeze(config);
+
+        /* eslint-enable no-unused-vars */
+
+        _AppDomain.context.current().currentAssemblyBeingLoaded('./flair{.min}.js');
+        try{
+            (async () => {
+                try{
+                    <!-- inject: ./(bundle)/builtin-types/(root)/IDisposable.js -->
+                    <!-- inject: ./(bundle)/builtin-types/(root)/IProgressReporter.js -->
+                    <!-- inject: ./(bundle)/builtin-types/(root)/Aspect.js -->
+                    <!-- inject: ./(bundle)/builtin-types/(root)/Attribute.js -->
+                    <!-- inject: ./(bundle)/builtin-types/(root)/Task.js -->
+                } catch(err) {
+                    __asmError(err);
+                }
+            })();
+        } catch(err) {
+            __asmError(err);
+        }   
+        _AppDomain.context.current().currentAssemblyBeingLoaded('');
     })();
 
     // return

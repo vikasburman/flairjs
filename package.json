@@ -3,7 +3,7 @@
     "title": "Flair.js",
     "description": "True Object Oriented JavaScript",
     "copyright": "(c) 2017-2019 Vikas Burman",
-    "version": "0.50.50",
+    "version": "0.50.54",
     "author": "Vikas Burman <vikasburman@gmail.com>",
     "keywords": [
         "javascript",
@@ -24,7 +24,7 @@
         "type": "git",
         "url": "https://github.com/vikasburman/flairjs.git"
     },
-    "main": "./flair.min.js",
+    "main": "./flair.js",
     "scripts": {
         "build": "gulp build --options ./config/build.json",
         "build-full": "gulp build --full --options ./config/build.json",
