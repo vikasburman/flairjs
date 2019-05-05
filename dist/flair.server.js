@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.server
  *     File: ./flair.server.js
- *  Version: 0.50.54
- *  Sun, 05 May 2019 14:13:38 GMT
+ *  Version: 0.50.55
+ *  Sun, 05 May 2019 14:41:11 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -57,140 +57,7 @@ AppDomain.context.current().currentAssemblyBeingLoaded('./flair.server{.min}.js'
 
 try{
 
-(async () => { // ./src/flair.server/flair.api/RestHandler.js
-try{
-const { Handler } = ns('flair.app');
-
-/**
- * @name RestHandler
- * @description Restful API Handler
- */
-$$('ns', 'flair.api');
-Class('RestHandler', Handler, function() {
-    $$('virtual');
-    this.get = noop;
-
-    $$('virtual');
-    this.post = noop;
-
-    $$('virtual');
-    this.put = noop;
-
-    $$('virtual');
-    this.delete = noop;
-});
-} catch(err) {
-	__asmError(err);
-}
-})();
-
-(async () => { // ./src/flair.server/flair.api/RestInterceptor.js
-try{
-/**
- * @name RestInterceptor
- * @description Api Interceptor
- */
-$$('ns', 'flair.api');
-Class('RestInterceptor', function() {
-    $$('virtual');
-    $$('async');
-    this.run = noop;
-});
-} catch(err) {
-	__asmError(err);
-}
-})();
-
-(async () => { // ./src/flair.server/flair.app/ServerHost.js
-try{
-const { Host } = ns('flair.app');
-const Server = await include(settings['server'] || 'flair.app.server.ExpressServer');
-const express = await include('express | x');
-
-/**
- * @name ServerHost
- * @description Server host implementation
- */
-$$('sealed');
-$$('ns', 'flair.app');
-Class('ServerHost', Host, [Server], function() {
-    let mountedApps = {};
-    
-    $$('override');
-    this.construct = (base) => {
-        base('Express', '4.x');
-    };
-
-    this.app = () => { return this.mounts['main'].app; }  // main express app
-    this.mounts = { // all mounted express apps
-        get: () => { return mountedApps; },
-        set: noop
-    };
-
-    $$('override');
-    this.boot = async (base) => { // mount all express app and sub-apps
-        base();
-
-        const applySettings = (mountName, mount) => {
-            // app settings
-            // each item is: { name: '', value:  }
-            // name: as in above link (as-is)
-            // value: as defined in above link
-            let appSettings = settings[`${mountName}-appSettings`];
-            if (appSettings && appSettings.length > 0) {
-                for(let appSetting of appSettings) {
-                    mount.set(appSetting.name, appSetting.value);
-                }
-            }            
-        };
-
-        // create main app instance of express
-        let mainApp = express();
-        applySettings('main', mainApp);
-
-        // create one instance of express app for each mounted path
-        let mountPath = '',
-            mount = null;
-        for(let mountName of Object.keys(settings.mounts)) {
-            if (mountName === 'main') {
-                mountPath = '/';
-                mount = mainApp;
-            } else {
-                mountPath = settings.mounts[mountName];
-                mount = express(); // create a sub-app
-            }
-
-            // attach
-            mountedApps[mountName] = Object.freeze({
-                name: mountName,
-                root: mountPath,
-                app: mount
-            });
-
-            // apply settings and attach to main app
-            if (mountName !== 'main') {
-                applySettings(mountName, mount);
-                mainApp.use(mountPath, mount); // mount sub-app on given root path                
-            }
-        }
-
-        // store
-        mountedApps = Object.freeze(mountedApps);        
-    };
-
-    $$('override');
-    this.dispose = (base) => {
-        base();
-
-        mountedApps = null;
-    };
-});
-} catch(err) {
-	__asmError(err);
-}
-})();
-
-(async () => { // ./src/flair.server/flair.app.server/ExpressServer.js
+(async () => { // ./src/flair.server/flair.app.server/@1-ExpressServer.js
 try{
 const fs = await include('fs | x');
 const http = await include('http | x');
@@ -300,6 +167,139 @@ Mixin('ExpressServer', function() {
             });
         }
     };    
+});
+} catch(err) {
+	__asmError(err);
+}
+})();
+
+(async () => { // ./src/flair.server/flair.app/@10-ServerHost.js
+try{
+const { Host } = ns('flair.app');
+const Server = await include(settings['server'] || 'flair.app.server.ExpressServer');
+const express = await include('express | x');
+
+/**
+ * @name ServerHost
+ * @description Server host implementation
+ */
+$$('sealed');
+$$('ns', 'flair.app');
+Class('ServerHost', Host, [Server], function() {
+    let mountedApps = {};
+    
+    $$('override');
+    this.construct = (base) => {
+        base('Express', '4.x');
+    };
+
+    this.app = () => { return this.mounts['main'].app; }  // main express app
+    this.mounts = { // all mounted express apps
+        get: () => { return mountedApps; },
+        set: noop
+    };
+
+    $$('override');
+    this.boot = async (base) => { // mount all express app and sub-apps
+        base();
+
+        const applySettings = (mountName, mount) => {
+            // app settings
+            // each item is: { name: '', value:  }
+            // name: as in above link (as-is)
+            // value: as defined in above link
+            let appSettings = settings[`${mountName}-appSettings`];
+            if (appSettings && appSettings.length > 0) {
+                for(let appSetting of appSettings) {
+                    mount.set(appSetting.name, appSetting.value);
+                }
+            }            
+        };
+
+        // create main app instance of express
+        let mainApp = express();
+        applySettings('main', mainApp);
+
+        // create one instance of express app for each mounted path
+        let mountPath = '',
+            mount = null;
+        for(let mountName of Object.keys(settings.mounts)) {
+            if (mountName === 'main') {
+                mountPath = '/';
+                mount = mainApp;
+            } else {
+                mountPath = settings.mounts[mountName];
+                mount = express(); // create a sub-app
+            }
+
+            // attach
+            mountedApps[mountName] = Object.freeze({
+                name: mountName,
+                root: mountPath,
+                app: mount
+            });
+
+            // apply settings and attach to main app
+            if (mountName !== 'main') {
+                applySettings(mountName, mount);
+                mainApp.use(mountPath, mount); // mount sub-app on given root path                
+            }
+        }
+
+        // store
+        mountedApps = Object.freeze(mountedApps);        
+    };
+
+    $$('override');
+    this.dispose = (base) => {
+        base();
+
+        mountedApps = null;
+    };
+});
+} catch(err) {
+	__asmError(err);
+}
+})();
+
+(async () => { // ./src/flair.server/flair.api/RestHandler.js
+try{
+const { Handler } = ns('flair.app');
+
+/**
+ * @name RestHandler
+ * @description Restful API Handler
+ */
+$$('ns', 'flair.api');
+Class('RestHandler', Handler, function() {
+    $$('virtual');
+    this.get = noop;
+
+    $$('virtual');
+    this.post = noop;
+
+    $$('virtual');
+    this.put = noop;
+
+    $$('virtual');
+    this.delete = noop;
+});
+} catch(err) {
+	__asmError(err);
+}
+})();
+
+(async () => { // ./src/flair.server/flair.api/RestInterceptor.js
+try{
+/**
+ * @name RestInterceptor
+ * @description Api Interceptor
+ */
+$$('ns', 'flair.api');
+Class('RestInterceptor', function() {
+    $$('virtual');
+    $$('async');
+    this.run = noop;
 });
 } catch(err) {
 	__asmError(err);
@@ -639,7 +639,7 @@ Class('ServerRouter', Bootware, function () {
 
 AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-AppDomain.registerAdo('{"name":"flair.server","file":"./flair.server{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.50.54","lupdate":"Sun, 05 May 2019 14:13:38 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","functions","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.api.RestHandler","flair.api.RestInterceptor","flair.app.ServerHost","flair.app.server.ExpressServer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter"],"resources":[],"assets":[],"routes":[]}');
+AppDomain.registerAdo('{"name":"flair.server","file":"./flair.server{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.50.55","lupdate":"Sun, 05 May 2019 14:41:11 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","functions","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.server.ExpressServer","flair.app.ServerHost","flair.api.RestHandler","flair.api.RestInterceptor","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter"],"resources":[],"assets":[],"routes":[]}');
 
 if(typeof onLoadComplete === 'function'){ onLoadComplete(); onLoadComplete = noop; } // eslint-disable-line no-undef
 

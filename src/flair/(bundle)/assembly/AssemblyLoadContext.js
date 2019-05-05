@@ -254,7 +254,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         return new Promise((resolve, reject) => {
             if (this.isUnloaded()) { reject(_Exception.InvalidOperation(`Context is already unloaded. (${this.name})`)); return; }
 
-            if (!asmFiles[file]) { // load only when it is not already loaded in this load context
+            if (!asmFiles[file] && !this.currentAssemblyBeingLoaded() === file) { // load only when it is not already loaded (or not already being loaded) in this load context
                 // set this context as current context, so all types being loaded in this assembly will get attached to this context;
                 currentContexts.push(this);
 

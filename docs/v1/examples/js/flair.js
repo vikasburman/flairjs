@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.50.54
- *  Sun, 05 May 2019 14:13:34 GMT
+ *  Version: 0.50.55
+ *  Sun, 05 May 2019 14:41:09 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -109,10 +109,10 @@
         name: 'flair',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.50.54',
+        version: '0.50.55',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 05 May 2019 14:13:34 GMT')
+        lupdate: new Date('Sun, 05 May 2019 14:41:09 GMT')
     });  
     
     flair.members = [];
@@ -1089,7 +1089,7 @@
             return new Promise((resolve, reject) => {
                 if (this.isUnloaded()) { reject(_Exception.InvalidOperation(`Context is already unloaded. (${this.name})`)); return; }
     
-                if (!asmFiles[file]) { // load only when it is not already loaded in this load context
+                if (!asmFiles[file] && !this.currentAssemblyBeingLoaded() === file) { // load only when it is not already loaded (or not already being loaded) in this load context
                     // set this context as current context, so all types being loaded in this assembly will get attached to this context;
                     currentContexts.push(this);
     
