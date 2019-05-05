@@ -22,5 +22,5 @@ gulp.task('test-client', (done) => {
 
 // task: package
 gulp.task('package', (done) => {
-    require("./publish/package.js").pack(done);
+    require(gulpOptions.package).pack(done);
 });
