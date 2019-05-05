@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.50.40
- *  Sun, 05 May 2019 02:31:42 GMT
+ *  Version: 0.50.45
+ *  Sun, 05 May 2019 02:38:39 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -23,7 +23,7 @@ const fsx = require('fs-extra');
 const del = require('del');
 const buildInfo = {
     name: 'flair.cli',
-    version: '0.50.40',
+    version: '0.50.45',
     format: 'fasm',
     formatVersion: '1',
     contains: [
@@ -1246,9 +1246,7 @@ const build = (options, buildDone) => {
                 exec: null
             };
             if (path.basename(p.file) === p.file) { // no path given, means it is an inbuilt plugin
-                p.file = path.resolve(path.join(path.dirname(options.engine), 'plugins', p.file));
-            } else { // custom plugin, find it relative to project root
-                p.file = path.resolve(p.file);
+                p.file = path.join(options.engine.replace('.js', '/plugins'),  p.file);
             }
             if (p.file) {
                 plugins[p.name].file = p.file;

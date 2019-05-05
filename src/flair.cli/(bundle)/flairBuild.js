@@ -1232,9 +1232,7 @@ const build = (options, buildDone) => {
                 exec: null
             };
             if (path.basename(p.file) === p.file) { // no path given, means it is an inbuilt plugin
-                p.file = path.resolve(path.join(path.dirname(options.engine), 'plugins', p.file));
-            } else { // custom plugin, find it relative to project root
-                p.file = path.resolve(p.file);
+                p.file = path.join(options.engine.replace('.js', '/plugins'),  p.file);
             }
             if (p.file) {
                 plugins[p.name].file = p.file;
