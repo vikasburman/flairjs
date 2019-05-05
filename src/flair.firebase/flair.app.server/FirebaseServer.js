@@ -14,20 +14,15 @@ Mixin('(auto)', function() {
     $$('override');
     this.start = async (base) => { 
         base();
-
-
     };
 
     $$('override');
     this.ready = (base) => { 
         base();
-
     };
 
     $$('override');
     this.stop = async (base) => { 
         base();
-
-
     };    
 });

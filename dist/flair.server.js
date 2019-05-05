@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.server
  *     File: ./flair.server.js
- *  Version: 0.50.32
- *  Sat, 04 May 2019 18:35:16 GMT
+ *  Version: 0.50.40
+ *  Sun, 05 May 2019 02:31:43 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * Licensed under MIT
@@ -42,7 +42,7 @@ const __asmError = (err) => { AppDomain.onError(err); };
 /* eslint-enable no-unused-vars */
 
 // load assembly settings from settings file
-let settings = JSON.parse('{"server":"flair.app.express.Server","server-http":{"enable":false,"port":80,"timeout":-1},"server-https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""},"envVars":[],"envVarsloadOptions":{"overwrite":true},"mounts":{"main":"/"},"main-appSettings":[],"main-middlewares":[],"main-interceptors":[]}'); // eslint-disable-line no-unused-vars
+let settings = JSON.parse('{"server":"flair.app.server.ExpressServer","server-http":{"enable":false,"port":80,"timeout":-1},"server-https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""},"envVars":[],"envVarsloadOptions":{"overwrite":true},"mounts":{"main":"/"},"main-appSettings":[],"main-middlewares":[],"main-interceptors":[]}'); // eslint-disable-line no-unused-vars
 let settingsReader = flair.Port('settingsReader');
 if (typeof settingsReader === 'function') {
 let externalSettings = settingsReader('flair.server');
@@ -104,7 +104,7 @@ Class('RestInterceptor', function() {
 (async () => { // ./src/flair.server/flair.app/ServerHost.js
 try{
 const { Host } = ns('flair.app');
-const Server = await include(settings['server'] || 'flair.app.express.Server');
+const Server = await include(settings['server'] || 'flair.app.server.ExpressServer');
 const express = await include('express | x');
 
 /**
@@ -190,7 +190,7 @@ Class('ServerHost', Host, [Server], function() {
 }
 })();
 
-(async () => { // ./src/flair.server/flair.app.express/Server.js
+(async () => { // ./src/flair.server/flair.app.server/ExpressServer.js
 try{
 const fs = await include('fs | x');
 const http = await include('http | x');
@@ -198,12 +198,12 @@ const https = await include('https | x');
 const httpShutdown = await include('http-shutdown | x');
 
 /**
- * @name Server
+ * @name ExpressServer
  * @description Express Server implementation
  */
 
-$$('ns', 'flair.app.express');
-Mixin('Server', function() {
+$$('ns', 'flair.app.server');
+Mixin('ExpressServer', function() {
     let httpServer = null,
         httpsServer = null,
         httpSettings = settings['server-http'],
@@ -299,46 +299,6 @@ Mixin('Server', function() {
                 console.log('https server is cleanly shutdown!'); // eslint-disable-line no-console
             });
         }
-    };    
-});
-} catch(err) {
-	__asmError(err);
-}
-})();
-
-(async () => { // ./src/flair.server/flair.app.firebase/Server.js
-try{
-// const fs = await include('fs | x');
-// const http = await include('http | x');
-// const https = await include('https | x');
-// const httpShutdown = await include('http-shutdown | x');
-
-/**
- * @name Server
- * @description Firebase Server implementation
- */
-
-$$('ns', 'flair.app.firebase');
-Mixin('Server', function() {
-    
-    $$('override');
-    this.start = async (base) => { 
-        base();
-
-
-    };
-
-    $$('override');
-    this.ready = (base) => { 
-        base();
-
-    };
-
-    $$('override');
-    this.stop = async (base) => { 
-        base();
-
-
     };    
 });
 } catch(err) {
@@ -679,7 +639,7 @@ Class('ServerRouter', Bootware, function () {
 
 AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-AppDomain.registerAdo('{"name":"flair.server","file":"./flair.server{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.50.32","lupdate":"Sat, 04 May 2019 18:35:16 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","functions","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.api.RestHandler","flair.api.RestInterceptor","flair.app.ServerHost","flair.app.express.Server","flair.app.firebase.Server","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter"],"resources":[],"assets":[],"routes":[]}');
+AppDomain.registerAdo('{"name":"flair.server","file":"./flair.server{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.50.40","lupdate":"Sun, 05 May 2019 02:31:43 GMT","builder":{"name":"<<name>>","version":"<<version>>","format":"fasm","formatVersion":"1","contains":["initializer","functions","types","enclosureVars","enclosedTypes","resources","assets","routes","selfreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.api.RestHandler","flair.api.RestInterceptor","flair.app.ServerHost","flair.app.server.ExpressServer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter"],"resources":[],"assets":[],"routes":[]}');
 
 if(typeof onLoadComplete === 'function'){ onLoadComplete(); onLoadComplete = noop; } // eslint-disable-line no-undef
 

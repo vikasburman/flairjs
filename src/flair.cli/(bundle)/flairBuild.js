@@ -7,7 +7,6 @@ const copyDir = require('copy-dir');
 const path = require('path');
 const fsx = require('fs-extra');
 const del = require('del');
-const exec = require('child_process').exec;
 const buildInfo = {
     name: '<<name>>',
     version: '<<version>>',
@@ -203,105 +202,38 @@ const build = (options, buildDone) => {
         if (rootNS && isAddDot) { rootNS += '.'; }
         return rootNS;
     };
-    const copyCustom = (done) => {
+    const runPlugins = (done) => {
         if (!options.customBuild) { done(); return; }
-        if (!options.profiles.current.copy || options.profiles.current.copy.length === 0) { done(); return; }
-    
-        // copy all files or folders as is in dest
-        options.logger(0, 'copy', '', true);    
-            let src = '',
-                dest = '';
-        for(let fileOrFolder of options.profiles.current.copy) {
-            if (options.customBuild) { 
-                src = path.resolve(path.join(options.src, path.join(options.profiles.current.root, fileOrFolder)));
-                dest = path.resolve(path.join(options.profiles.current.dest, fileOrFolder))
-            } else {
-                src = path.resolve(path.join(options.src, fileOrFolder));
-                dest = path.resolve(path.join(options.dest, fileOrFolder))
-            }
-            options.logger(1, '', './' + path.join(options.src, fileOrFolder));
-            if (fsx.lstatSync(src).isDirectory()) {
-                fsx.ensureDirSync(dest);
-                copyDir.sync(src, dest);
-            } else {
-                fsx.ensureDirSync(path.dirname(dest));
-                fsx.copyFileSync(src, dest);
-            }        
-        }
-    
-        // done
-        done();
-    };    
-    const copyModules = (done) => {
-        if (!options.customBuild) { done(); return; }
-        if (!options.profiles.current.modules || options.profiles.current.modules.length === 0) { done(); return; }
 
-        // copy all defined modules from node_modules to destination's "modules" folder at root
-        options.logger(0, 'modules', '', true);    
-        let src = '',
-            dest = '';
-        for(let module of options.profiles.current.modules) {
-            src = path.resolve(path.join('node_modules', module));
-            if (module.indexOf('/') !== -1) { // module and a folder is defined
-                module = module.split('/')[0]; // pick first part only
-            }
-            if (options.customBuild) { 
-                dest = path.resolve(path.join(options.profiles.current.dest, 'modules', module))
-            } else {
-                dest = path.resolve(path.join(options.dest, 'modules', module))
-            }
-            options.logger(1, '', module);
-            fsx.ensureDirSync(dest);
-            copyDir.sync(src, dest);
-        }
-    
-        // done
-        done();
-    };  
-    const minifyMiscFiles = async (done) => {
-        if (!options.customBuild && options.minify && options.minifyConfig) { done(); return; }
-        if (!options.profiles.current.minify || options.profiles.current.minify.length === 0) { done(); return; }
+        // expose functions for plugins
+        options.funcs = {
+            minifyFile: minifyFile,
+            lintFile: lintFile,
+            gzipFile: gzipFile
+        };
 
-        options.logger(0, 'minify', '', true);
-        let src = '';
-        for(let toMinifyfile of options.profiles.current.minify) {
-            src = path.resolve(path.join(options.profiles.current.dest, toMinifyfile));
-            options.logger(1, '', toMinifyfile);
-            await minifyFile(src);
-        }
-    
-        // done
-        done();
-    };
-    const copyPackageJson = async (done) => {
-        if (!options.profiles.current.packagejson) { done(); return; }
-
-        options.logger(0, 'package.json', '', true);
-        let src = options.package,
-            dest = path.resolve(path.join(options.profiles.current.dest, src));
-        fsx.copyFileSync(src, dest);
-    
-        // done
-        done();
-    };    
-    const installNodeModules = async (done) => {
-        if (!options.profiles.current.nodemodules) { done(); return; }
-
-        options.logger(0, 'node_modules', '', true);
-
-        // copy package.json, if not already copied
-        if (!options.profiles.current.packagejson) { 
-            let src = options.package,
-                dest = path.resolve(path.join(options.profiles.current.dest, src));
-            fsx.copyFileSync(src, dest);
-        }
-
-        // install node-modules
-        exec(options.nodemodulesCMD, {
-            cwd: path.resolve(options.profiles.current.dest)
-        }, () => {
+        const onDone = () => {
+            delete options.funcs;
             done();
-        })
+        };
+
+        let allPlugins = options.profiles.current.plugins.slice();
+        const runPlugin = () => {
+            if (allPlugins.length === 0) { onDone(); return; }
+            
+            let plugin_name = allPlugins.shift(),
+                plugin_exec = null;
+
+            if (options.plugins[plugin_name]) { 
+                plugin_exec = options.plugins[plugin_name].exec; 
+                if (plugin_exec) {
+                    plugin_exec(options.plugins[plugin_name].settings, options, runPlugin);
+                }
+            }
+        };
+
+        // start
+        runPlugin();
     };
 
     const appendHeader = () => {
@@ -1264,19 +1196,11 @@ const build = (options, buildDone) => {
         // start profile
         logger(0, 'profile', `${profileItem.profile} (start)`, true);  
         processSources(() => {
-            copyCustom(() => {
-                copyModules(() => {
-                    minifyMiscFiles(() => {
-                        copyPackageJson(() => {
-                            installNodeModules(() => {
-                                // done
-                                logger(0, 'profile', `${profileItem.profile} (end)`, true); 
-                                options.profiles.current = null;
-                                processProfiles(done);
-                            });
-                        });
-                    });
-                });
+            runPlugins(() => {
+                // done
+                logger(0, 'profile', `${profileItem.profile} (end)`, true); 
+                options.profiles.current = null;
+                processProfiles(done);
             });
         });
     };
@@ -1298,9 +1222,33 @@ const build = (options, buildDone) => {
         }
         return target;
     };
+    const getPlugins = () => {
+        let plugins = {};
+        for(let p of options.customBuildConfig.plugins) {
+            plugins[p.name] = {
+                name: p.name,
+                settings: Object.assign({}, p.settings),
+                file: p.file,
+                exec: null
+            };
+            if (path.basename(p.file) === p.file) { // no path given, means it is an inbuilt plugin
+                p.file = path.resolve(path.join(path.dirname(options.engine), 'plugins', p.file));
+            } else { // custom plugin, find it relative to project root
+                p.file = path.resolve(p.file);
+            }
+            if (p.file) {
+                plugins[p.name].file = p.file;
+                plugins[p.name].exec = require(p.file).exec;
+            }
+        }
+        return plugins;
+    };
 
     // process sources
     if (options.customBuild) {
+        // add plugins
+        options.plugins = getPlugins();
+
         // process each build profile
         options.profiles = options.customBuildConfig.build.slice();
         options.profiles.current = null;
@@ -1359,10 +1307,6 @@ const build = (options, buildDone) => {
  *                          "build": [ ] - having path (relative to src path) to treat as assembly folder group
  *                                      all root level folders under each of these will be treated as one individual assembly
  *                                      Note: if folder name (of assembly folder under it) starts with '_', it is skipped
- *                          "packagejson": true/false
- *                                          if true, will copy package.json at root
- *                          "nodemodules": true/false
- *                                          if true, will copy package.json at root (if not already done) and run 'yarn install --prod' in that root to install/update node_modules
  *                      }
  *                  }
  *              }
@@ -1437,7 +1381,6 @@ const build = (options, buildDone) => {
  *                  }
  *              preBuildDeps: true/false   - if before the start of assembly building, all local copies of external dependencies  need to be refreshed 
  *              postBuildDeps: true/false  - if after build update other local copies using the built files
- *              nodemodulesCMD: '' - what command to use to install node-modules in dist folder - default is 'yarn install --prod'
  *              package: path of packageJSON file of the project
  *                  it picks project name, version and copyright information etc. from here to place on assembly
  * 
@@ -1558,7 +1501,7 @@ const build = (options, buildDone) => {
  *                          behind the scenes.
  * 
  *  cb: function - callback function
- * @returns type - flair type for the given object
+ * @returns void
  */ 
 exports.flairBuild = function(options, cb) {
     // build options
@@ -1604,8 +1547,6 @@ exports.flairBuild = function(options, cb) {
     options.depsConfig = options.depsConfig || '';
     options.preBuildDeps = options.preBuildDeps || false;    
     options.postBuildDeps = options.postBuildDeps || false;
-
-    options.nodemodulesCMD = options.nodemodulesCMD || 'yarn install --prod';
 
     // full-build vs quick build vs default build settings
     if (options.fullBuild) { // full build - ensure these things happen, if configured, even if turned off otherwise

@@ -1,22 +1,16 @@
 {
+    "plugins": [
+    ],
     "build": [
     ],
     "profiles": {
         "profileName": {
             "root": "",
             "dest": "",
-            "copy": [
-            ],
             "build": [
             ],
-            "minify": [
-            ],
-            "modules": [
-            ],
             "skipMinify": false,
-            "omitRoot": false,
-            "packagejson": false,
-            "nodemodules": false
+            "omitRoot": false
         }
     }
 }
