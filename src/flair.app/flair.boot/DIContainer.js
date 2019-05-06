@@ -13,7 +13,9 @@ Class('(auto)', Bootware, function() {
     };
 
     $$('override');
-    this.boot = async () => {
+    this.boot = async (base) => {
+        base();
+        
         let containerItems = settings.container;
         for(let alias in containerItems) {
             if (containerItems.hasOwnProperty(alias)) {

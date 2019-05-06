@@ -13,7 +13,9 @@ Class('(auto)', Bootware, function() {
     };
 
     $$('override');
-    this.boot = async (mount) => {
+    this.boot = async (base, mount) => {
+        base();
+        
         let resHeaders = settings[`${mount.name}-resHeaders`];
         if (resHeaders && resHeaders.length > 0) {
             mount.app.use((req, res, next) => {

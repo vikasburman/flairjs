@@ -44,7 +44,8 @@ Class('(auto)', Bootware, [IDisposable], function() {
     };
 
     $$('override');
-    this.dispose = () => {
+    this.dispose = (base) => {
+        base();
         AppDomain.host().error.remove(this.onError); // remove error handler
     };
 });

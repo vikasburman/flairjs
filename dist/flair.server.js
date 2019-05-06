@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.server
  *     File: ./flair.server.js
- *  Version: 0.51.57
- *  Mon, 06 May 2019 02:41:09 GMT
+ *  Version: 0.51.64
+ *  Mon, 06 May 2019 13:50:07 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -335,7 +335,9 @@
         };
     
         $$('override');
-        this.boot = async (mount) => {
+        this.boot = async (base, mount) => {
+            base();
+            
             // middleware information is defined at: https://expressjs.com/en/guide/using-middleware.html#middleware.application
             // each item is: { module: '', func: '', 'args': []  }
             // module: module name of the middleware, which can be required
@@ -416,7 +418,9 @@
         };
     
         $$('override');
-        this.boot = async () => {
+        this.boot = async (base) => {
+            base();
+            
             if (settings.envVars.length > 0) {
                 for(let envVar of settings.envVars) {
                     nodeEnv(AppDomain.resolvePath(envVar), settings.envVarsLoadOptions);
@@ -443,7 +447,9 @@
         };
     
         $$('override');
-        this.boot = async (mount) => {
+        this.boot = async (base, mount) => {
+            base();
+            
             let resHeaders = settings[`${mount.name}-resHeaders`];
             if (resHeaders && resHeaders.length > 0) {
                 mount.app.use((req, res, next) => {
@@ -479,7 +485,9 @@
         };
     
         $$('override');
-        this.boot = async (mount) => {
+        this.boot = async (base, mount) => {
+            base();
+            
             // get all registered routes, and sort by index, if was not already done in previous call
             if (!routes) {
                 routes = AppDomain.context.current().allRoutes(true);
@@ -637,14 +645,14 @@
     // assembly types (end)
 
     // assembly embedded resources (start)
-    
+    // (not defined)
     // assembly embedded resources (end)        
 
     // clear assembly being loaded
     AppDomain.context.current().currentAssemblyBeingLoaded('');
 
     // register assembly definition object
-    AppDomain.registerAdo('{"name":"flair.server","file":"./flair.server{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.51.57","lupdate":"Mon, 06 May 2019 02:41:09 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.server.ExpressServer","flair.app.ServerHost","flair.api.RestHandler","flair.api.RestInterceptor","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter"],"resources":[],"assets":[],"routes":[]}');
+    AppDomain.registerAdo('{"name":"flair.server","file":"./flair.server{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.51.64","lupdate":"Mon, 06 May 2019 13:50:07 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.server.ExpressServer","flair.app.ServerHost","flair.api.RestHandler","flair.api.RestInterceptor","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter"],"resources":[],"assets":[],"routes":[]}');
 
     // assembly load complete
     if (typeof onLoadComplete === 'function') { 

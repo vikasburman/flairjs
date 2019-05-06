@@ -63,9 +63,10 @@ Class('(auto)', ViewHandler, [VueComponentMembers], function() {
     $$('protected');
     $$('override');
     $$('sealed');
-    this.loadView = async (ctx, el) => {
+    this.loadView = async (base, ctx, el) => {
         if (!isLoaded) {
             isLoaded = true;
+            base();
 
             // custom load op
             await this.load(ctx, el);

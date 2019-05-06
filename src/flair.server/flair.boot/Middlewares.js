@@ -13,7 +13,9 @@ Class('(auto)', Bootware, function() {
     };
 
     $$('override');
-    this.boot = async (mount) => {
+    this.boot = async (base, mount) => {
+        base();
+        
         // middleware information is defined at: https://expressjs.com/en/guide/using-middleware.html#middleware.application
         // each item is: { module: '', func: '', 'args': []  }
         // module: module name of the middleware, which can be required

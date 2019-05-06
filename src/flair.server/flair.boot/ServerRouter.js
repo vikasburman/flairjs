@@ -15,7 +15,9 @@ Class('(auto)', Bootware, function () {
     };
 
     $$('override');
-    this.boot = async (mount) => {
+    this.boot = async (base, mount) => {
+        base();
+        
         // get all registered routes, and sort by index, if was not already done in previous call
         if (!routes) {
             routes = AppDomain.context.current().allRoutes(true);

@@ -14,7 +14,9 @@ Class('(auto)', Bootware, function() {
     };
 
     $$('override');
-    this.boot = async () => {
+    this.boot = async (base) => {
+        base();
+        
         if (settings.envVars.length > 0) {
             for(let envVar of settings.envVars) {
                 nodeEnv(AppDomain.resolvePath(envVar), settings.envVarsLoadOptions);

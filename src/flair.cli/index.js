@@ -87,7 +87,7 @@ const asm_index = `
     /* eslint-disable no-unused-vars */
     
     // flair object
-    const flair = (typeof global !== 'undefined' ? require('<<package>>') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));
+    const flair = (typeof global !== 'undefined' ? require('flairjs') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));
     
     // flair types, variables and functions
     const { Class, Struct, Enum, Interface, Mixin, Aspects, AppDomain, $$, attr, bring, Container, include, Port, on, post, telemetry,
@@ -181,8 +181,8 @@ const asm_preamble_file = `
  * Created: <<lupdate>>
  */
 (() => {
-    const flair = (typeof global !== 'undefined' ? require('<<package>>') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));
-    flair.AppDomain.registerAdo(...JSON.parse('<<ados>>'));}
+    const flair = (typeof global !== 'undefined' ? require('flairjs') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));
+    flair.AppDomain.registerAdo(...JSON.parse('<<ados>>'));
 })();
 `;
     // template: preamble file wrapper (end)    
@@ -860,7 +860,6 @@ const asm_preamble_file = `
                 options.current.asmContent = replaceAll(options.current.asmContent, '<<lupdate>>', options.current.ado.lupdate);
                 options.current.asmContent = replaceAll(options.current.asmContent, '<<copyright>>', options.current.ado.copyright);
                 options.current.asmContent = replaceAll(options.current.asmContent, '<<license>>', options.current.ado.license);
-                options.current.asmContent = replaceAll(options.current.asmContent, '<<package>>', options.packageJSON.name);
                 options.current.asmContent = replaceAll(options.current.asmContent, '<<which_file>>', options.current.ado.file);
 
                 // process file injections
@@ -896,7 +895,10 @@ const asm_preamble_file = `
                 options.current.asmContent = replaceAll(options.current.asmContent, '<<ado>>', JSON.stringify(options.current.ado));
             };
             const injectTypes = (cb) => {
-                if (options.current.ado.types.length === 0) { cb(); return; }
+                if (options.current.ado.types.length === 0) { 
+                    options.current.asmContent = replaceAll(options.current.asmContent, '<<asm_types>>', '// (not defined)');
+                    cb(); return; 
+                }
                 
                 // start
                 logger(0, 'types', '');
@@ -961,7 +963,7 @@ const asm_preamble_file = `
                     options.current.ado.resources = justNames; // update resources list
 
                     // inject resources
-                    options.current.asmContent = replaceAll(options.current.asmContent, '<<asm_resources>>', allResources);
+                    options.current.asmContent = replaceAll(options.current.asmContent, '<<asm_resources>>', allResources || '// (not defined)');
 
                     // done
                     cb(); return; 
@@ -1200,7 +1202,6 @@ const asm_preamble_file = `
                 // create preamble content
                 let preambleContent = replaceAll(asm_preamble_file, '<<path>>', options.current.dest.replace(options.dest, './'));
                 preambleContent = replaceAll(preambleContent, '<<lupdate>>', new Date().toUTCString());
-                preambleContent = replaceAll(preambleContent, '<<package>>', options.packageJSON.name);
                 preambleContent = replaceAll(preambleContent, '<<ados>>', JSON.stringify(options.current.adosJSON));
 
                 // write preamble file

@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.client
  *     File: ./flair.client.js
- *  Version: 0.51.57
- *  Mon, 06 May 2019 02:41:09 GMT
+ *  Version: 0.51.64
+ *  Mon, 06 May 2019 13:50:07 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -279,7 +279,9 @@
         };
     
         $$('override');
-        this.boot = async (mount) => {
+        this.boot = async (base, mount) => {
+            base();
+            
             // get all registered routes, and sort by index, if was not already done in previous call
             if (!routes) {
                 routes = AppDomain.context.current().allRoutes(true);
@@ -581,14 +583,14 @@
     // assembly types (end)
 
     // assembly embedded resources (start)
-    
+    // (not defined)
     // assembly embedded resources (end)        
 
     // clear assembly being loaded
     AppDomain.context.current().currentAssemblyBeingLoaded('');
 
     // register assembly definition object
-    AppDomain.registerAdo('{"name":"flair.client","file":"./flair.client{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.51.57","lupdate":"Mon, 06 May 2019 02:41:09 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.ui.ViewTransition","flair.app.ClientHost","flair.boot.ClientRouter","flair.ui.ViewHandler","flair.ui.ViewInterceptor","flair.ui.ViewState"],"resources":[],"assets":[],"routes":[]}');
+    AppDomain.registerAdo('{"name":"flair.client","file":"./flair.client{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.51.64","lupdate":"Mon, 06 May 2019 13:50:07 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.ui.ViewTransition","flair.app.ClientHost","flair.boot.ClientRouter","flair.ui.ViewHandler","flair.ui.ViewInterceptor","flair.ui.ViewState"],"resources":[],"assets":[],"routes":[]}');
 
     // assembly load complete
     if (typeof onLoadComplete === 'function') { 
