@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.51.56
- *  Mon, 06 May 2019 02:38:07 GMT
+ *  Version: 0.51.57
+ *  Mon, 06 May 2019 02:41:07 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -105,10 +105,10 @@
         name: 'flairjs',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.51.56',
+        version: '0.51.57',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Mon, 06 May 2019 02:38:07 GMT')
+        lupdate: new Date('Mon, 06 May 2019 02:41:07 GMT')
     });  
     
     flair.members = [];
