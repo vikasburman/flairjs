@@ -1,7 +1,4 @@
 {
-    "engine": "../../(bundle)/flairBuild.js",
-    "package": "./package.json",
-
     "dest": "./dist",
     "src": "./src",
 

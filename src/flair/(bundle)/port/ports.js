@@ -86,7 +86,11 @@ const __clientModule = (env) => {
                 let ext = module.substr(module.lastIndexOf('.') + 1).toLowerCase();
                 try {
                     if (typeof require !== 'undefined') { // if requirejs is available
-                        require([module], resolve, reject);
+                        try {
+                            require([module], resolve, reject);
+                        } catch (err) {
+                            reject(new _Exception(err));
+                        }
                     } else { // load it as file on browser or in web worker
                         if (env.isWorker) {
                             try {

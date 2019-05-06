@@ -1,4 +1,3 @@
-const path = require('path');
 const fsx = require('fs-extra');
 const argv = require('minimist')(process.argv.slice(2));
 
@@ -18,13 +17,13 @@ const doTask = (done) => {
     optionsJSON = fsx.readJSONSync(options, 'utf8');
     if (forcedFullBuild) { optionsJSON.fullBuild = true; }
     if (forcedQuickBuild && !forcedFullBuild) { optionsJSON.quickBuild = true; }
-    let engine = optionsJSON.engine || '';
+    let engine = optionsJSON.engine || '../../index.js';
     if (!engine) {
         console.log('Build engine is not configured. Define correct path of flair.cli.js at "engine" option in build options file.'); // eslint-disable-line no-console
     }
 
     // load and run engine
-    let flairBuild = require(engine).flairBuild;
+    let flairBuild = require(engine);
     flairBuild(optionsJSON, done);
 };
 

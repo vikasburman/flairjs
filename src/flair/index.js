@@ -1,6 +1,15 @@
 /**
- * @name flair
- * @description Initializer
+ * @preserve
+ * <<title>>
+ * <<desc>>
+ * 
+ * Assembly: <<asm>>
+ *     File: <<file>>
+ *  Version: <<version>>
+ *  <<lupdate>>
+ * 
+ * <<copyright>>
+ * <<license>>
  */
  (function(root, factory) {
     'use strict';
@@ -42,7 +51,7 @@
             let __currentScript = (env.isServer ? '' : window.document.scripts[window.document.scripts.length - 1].src),
                 __entryPoint = (env.isServer ? (env.isWorker ? '' : entryPoint) : (env.isWorker ? '' : __currentScript)),
                 __rootPath = (env.isServer ? (__entryPoint.substr(0, __entryPoint.lastIndexOf('/') + 1)) : './'),
-                __preamble = 'flairjs/preamble.js',
+                __preamble = '<<package>>/preamble.js',
                 __config = configFile,
                 __BootEngine = 'flair.app.BootEngine',
                 be = null;
@@ -183,59 +192,73 @@
     // freeze members
     flair.members = Object.freeze(flair.members);
 
-    // built-in types
+    // builtin types
     (()=>{
+        // NOTES: 
+        // 1. Any relevant change in flair.cli/(bundle)/asm.js may require to bring here
+        // 2. These build-in types do not support await include() type syntax on top, as these are not wrapped inside an async wrapper
+
+        // assembly closure init (start)
         /* eslint-disable no-unused-vars */
+        
+        // flair object (already defined)
+
+        // flair types, variables and functions
         const { Class, Struct, Enum, Interface, Mixin, Aspects, AppDomain, $$, attr, bring, Container, include, Port, on, post, telemetry,
-                        Reflector, Serializer, Tasks, as, is, isComplies, isDerivedFrom, isAbstract, isSealed, isStatic, isSingleton, isDeprecated,
-                        isImplements, isInstanceOf, isMixed, getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf,
-                        getTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;
+                Reflector, Serializer, Tasks, as, is, isComplies, isDerivedFrom, isAbstract, isSealed, isStatic, isSingleton, isDeprecated,
+                isImplements, isInstanceOf, isMixed, getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf,
+                getTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;
         const { TaskInfo } = flair.Tasks;
         const { env } = flair.options;
         const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, guid, isArrowFunc, isASyncFunc, sieve,
-                        b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
-        const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,
-            $$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$args, $$inject, $$resource, $$asset, $$singleton, $$serialize,
-            $$deprecate, $$session, $$state, $$conditional, $$noserialize, $$ns } = $$;
-    
-        // define current context name
-        const __currentContextName = _AppDomain.context.current().name;
-
-        // define loadPathOf this assembly
-        let __currentFile = (env.isServer ? __filename : window.document.currentScript.src.replace(window.document.location.href, './'));
-        let __currentPath = __currentFile.substr(0, __currentFile.lastIndexOf('/') + 1);
-        _AppDomain.loadPathOf('flair', __currentPath);
-
-        // assembly level error handler
-        const __asmError = (err) => { _AppDomain.onError(err); };
-
-        // no settings for this assembly
-        let settings = {};
-        settings = Object.freeze(settings);        
+                b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
         
-        // no config for this assembly
-        let config = {}; 
+        // inbuilt modifiers and attributes compile-time-safe support
+        const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,
+                $$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$args, $$inject, $$resource, $$asset, $$singleton, $$serialize,
+                $$deprecate, $$session, $$state, $$conditional, $$noserialize, $$ns } = $$;
+    
+        // access to DOC
+        const DOC = ((env.isServer || env.isWorker) ? null : window.document);
+
+        // current for this assembly
+        const __currentContextName = AppDomain.context.current().name;
+        const __currentFile = (env.isServer ? __filename : window.document.currentScript.src.replace(window.document.location.href, './'));
+        const __currentPath = __currentFile.substr(0, __currentFile.lastIndexOf('/') + 1);
+        AppDomain.loadPathOf('<<asm>>', __currentPath);
+
+        // settings of this assembly (not supported)
+        let settings = JSON.parse('{}');
+        settings = Object.freeze(settings);
+
+        // config of this assembly
+        let config = JSON.parse('{}');
         config = Object.freeze(config);
 
         /* eslint-enable no-unused-vars */
+        // assembly closure init (end)
 
-        _AppDomain.context.current().currentAssemblyBeingLoaded('./flair{.min}.js');
-        try{
-            (async () => {
-                try{
-                    <!-- inject: ./(bundle)/builtin-types/(root)/IDisposable.js -->
-                    <!-- inject: ./(bundle)/builtin-types/(root)/IProgressReporter.js -->
-                    <!-- inject: ./(bundle)/builtin-types/(root)/Aspect.js -->
-                    <!-- inject: ./(bundle)/builtin-types/(root)/Attribute.js -->
-                    <!-- inject: ./(bundle)/builtin-types/(root)/Task.js -->
-                } catch(err) {
-                    __asmError(err);
-                }
-            })();
-        } catch(err) {
-            __asmError(err);
-        }   
-        _AppDomain.context.current().currentAssemblyBeingLoaded('');
+        // assembly global functions (not supported)
+
+        // set assembly being loaded
+        AppDomain.context.current().currentAssemblyBeingLoaded('<<which_file>>');
+
+        // assembly builtin-types (start)
+        <!-- inject: ./(bundle)/builtin-types/(root)/IDisposable.js -->
+        <!-- inject: ./(bundle)/builtin-types/(root)/IProgressReporter.js -->
+        <!-- inject: ./(bundle)/builtin-types/(root)/Aspect.js -->
+        <!-- inject: ./(bundle)/builtin-types/(root)/Attribute.js -->
+        <!-- inject: ./(bundle)/builtin-types/(root)/Task.js -->        
+        // assembly builtin-types (end)
+
+        // assembly embedded resources (not supported)
+
+        // clear assembly being loaded
+        AppDomain.context.current().currentAssemblyBeingLoaded('');
+
+        // register assembly definition object (not-supported)
+
+        // assembly load complete (not-supported)
     })();
 
     // return

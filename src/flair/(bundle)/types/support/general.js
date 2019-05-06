@@ -64,7 +64,7 @@ const splitAndTrim = (str, splitChar) => {
     return str.split(splitChar).map((item) => { return item.trim(); });
 };
 const escapeRegExp = (string) => {
-    return string.replace(/([.*+?\^=!:${}()|\[\]\/\\])/g, '\\$1'); // eslint-disable-line no-useless-escape
+    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");  // eslint-disable-line no-useless-escape
 };
 const replaceAll = (string, find, replace) => {
     return string.replace(new RegExp(escapeRegExp(find), 'g'), replace);
@@ -90,12 +90,27 @@ const loadFile = (file) => { // text based file loading operation - not a genera
         loader(file).then(resolve).catch(reject);
     });
 };
-const loadModule = (module) => {
+const loadModule = (module, globalObjName, isDelete) => {
     return new Promise((resolve, reject) => {
         if (isServer) {
             _Port('serverModule').require(module).then(resolve).catch(reject);
         } else { // client
-            _Port('clientModule').require(module).then(resolve).catch(reject);
+            _Port('clientModule').require(module).then((obj) => {
+                if (!obj && typeof globalObjName === 'string') {
+                    if (isWorker) {
+                        obj = WorkerGlobalScope[globalObjName] || null;
+                        if (isDelete) { delete WorkerGlobalScope[globalObjName]; }
+                    } else {
+                        obj = window[globalObjName] || null;
+                        if (isDelete) { delete window[globalObjName]; }
+                    }
+                }
+                if (obj) {
+                    resolve(obj);
+                } else {
+                    resolve();
+                }
+            }).catch(reject);
         }
     });
 };

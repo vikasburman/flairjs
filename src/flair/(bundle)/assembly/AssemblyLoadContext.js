@@ -254,7 +254,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         return new Promise((resolve, reject) => {
             if (this.isUnloaded()) { reject(_Exception.InvalidOperation(`Context is already unloaded. (${this.name})`)); return; }
 
-            if (!asmFiles[file] && !this.currentAssemblyBeingLoaded() === file) { // load only when it is not already loaded (or not already being loaded) in this load context
+            if (!asmFiles[file] && this.currentAssemblyBeingLoaded() !== file) { // load only when it is not already loaded (or not already being loaded) in this load context
                 // set this context as current context, so all types being loaded in this assembly will get attached to this context;
                 currentContexts.push(this);
 
@@ -270,15 +270,24 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
                 }
 
                 // load module
-                loadModule(file2).then(() => {
-                    // remove this from current context list
-                    currentContexts.pop();
+                loadModule(file2, asmADO.name, true).then((asmFactory) => {
+                    // run asm factory to load assembly
+                    asmFactory().then(() => {
+                        // remove this from current context list
+                        currentContexts.pop();
 
-                    // add to list
-                    asmFiles[file] = Object.freeze(new Assembly(asmADO, this));
+                        // add to list
+                        asmFiles[file] = Object.freeze(new Assembly(asmADO, this));
 
-                    // resolve
-                    resolve();
+                        // resolve
+                        resolve();
+                    }).catch((err) => {
+                        // remove this from current context list
+                        currentContexts.pop();
+
+                        // reject
+                        reject(err);
+                    });
                 }).catch((err) => {
                     // remove this from current context list
                     currentContexts.pop();

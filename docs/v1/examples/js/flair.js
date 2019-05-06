@@ -5,15 +5,11 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.50.55
- *  Sun, 05 May 2019 14:41:09 GMT
+ *  Version: 0.51.56
+ *  Mon, 06 May 2019 02:38:07 GMT
  * 
  * (c) 2017-2019 Vikas Burman
- * Licensed under MIT
- */
-/**
- * @name flair
- * @description Initializer
+ * MIT
  */
  (function(root, factory) {
     'use strict';
@@ -106,13 +102,13 @@
 
     // flair
     flair.info = Object.freeze({
-        name: 'flair',
+        name: 'flairjs',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.50.55',
+        version: '0.51.56',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 05 May 2019 14:41:09 GMT')
+        lupdate: new Date('Mon, 06 May 2019 02:38:07 GMT')
     });  
     
     flair.members = [];
@@ -325,7 +321,7 @@
         return str.split(splitChar).map((item) => { return item.trim(); });
     };
     const escapeRegExp = (string) => {
-        return string.replace(/([.*+?\^=!:${}()|\[\]\/\\])/g, '\\$1'); // eslint-disable-line no-useless-escape
+        return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");  // eslint-disable-line no-useless-escape
     };
     const replaceAll = (string, find, replace) => {
         return string.replace(new RegExp(escapeRegExp(find), 'g'), replace);
@@ -351,12 +347,27 @@
             loader(file).then(resolve).catch(reject);
         });
     };
-    const loadModule = (module) => {
+    const loadModule = (module, globalObjName, isDelete) => {
         return new Promise((resolve, reject) => {
             if (isServer) {
                 _Port('serverModule').require(module).then(resolve).catch(reject);
             } else { // client
-                _Port('clientModule').require(module).then(resolve).catch(reject);
+                _Port('clientModule').require(module).then((obj) => {
+                    if (!obj && typeof globalObjName === 'string') {
+                        if (isWorker) {
+                            obj = WorkerGlobalScope[globalObjName] || null;
+                            if (isDelete) { delete WorkerGlobalScope[globalObjName]; }
+                        } else {
+                            obj = window[globalObjName] || null;
+                            if (isDelete) { delete window[globalObjName]; }
+                        }
+                    }
+                    if (obj) {
+                        resolve(obj);
+                    } else {
+                        resolve();
+                    }
+                }).catch(reject);
             }
         });
     };
@@ -1089,7 +1100,7 @@
             return new Promise((resolve, reject) => {
                 if (this.isUnloaded()) { reject(_Exception.InvalidOperation(`Context is already unloaded. (${this.name})`)); return; }
     
-                if (!asmFiles[file] && !this.currentAssemblyBeingLoaded() === file) { // load only when it is not already loaded (or not already being loaded) in this load context
+                if (!asmFiles[file] && this.currentAssemblyBeingLoaded() !== file) { // load only when it is not already loaded (or not already being loaded) in this load context
                     // set this context as current context, so all types being loaded in this assembly will get attached to this context;
                     currentContexts.push(this);
     
@@ -1105,15 +1116,24 @@
                     }
     
                     // load module
-                    loadModule(file2).then(() => {
-                        // remove this from current context list
-                        currentContexts.pop();
+                    loadModule(file2, asmADO.name, true).then((asmFactory) => {
+                        // run asm factory to load assembly
+                        asmFactory().then(() => {
+                            // remove this from current context list
+                            currentContexts.pop();
     
-                        // add to list
-                        asmFiles[file] = Object.freeze(new Assembly(asmADO, this));
+                            // add to list
+                            asmFiles[file] = Object.freeze(new Assembly(asmADO, this));
     
-                        // resolve
-                        resolve();
+                            // resolve
+                            resolve();
+                        }).catch((err) => {
+                            // remove this from current context list
+                            currentContexts.pop();
+    
+                            // reject
+                            reject(err);
+                        });
                     }).catch((err) => {
                         // remove this from current context list
                         currentContexts.pop();
@@ -1399,10 +1419,8 @@
         // NOTE: This function's script is loaded independently by worker thread constructor as text/code.
         const remoteMessageHandler = function() {
             let isServer = ('<<isServer>>' === 'true' ? true : false), // eslint-disable-line no-constant-condition
-                ados = JSON.parse('<<ados>>'),
-                flair = null,
-                port = null,
-                AppDomain = null;
+                port = null;
+            // let ados = JSON.parse('<<ados>>');
     
             // build communication pipeline between main thread and worker thread
             const onMessageFromMain = (e) => { // message received from main thread
@@ -1474,7 +1492,6 @@
             if (isServer) {
                 // load entry point
                 require('<<entryPoint>>');
-                flair = require('flairjs');
     
                 // plumb to parent port for private port connection
                 let parentPort = require('worker_threads').parentPort;
@@ -1486,22 +1503,15 @@
             } else {
                 // load entry point
                 importScripts('<<entryPoint>>');
-                flair = WorkerGlobalScope.flair;
     
                 // plumb to private port 
                 port = this;
                 port.onmessage = onMessageFromMain;
             }
-            AppDomain = flair.AppDomain;
-    
-            // load all preambles which were registered on main app domain at the time of creating new app domain
-            if (ados.length !== 0) {
-                AppDomain.registerAdo(...ados);
-            }        
         };
         let remoteMessageHandlerScript = remoteMessageHandler.toString().replace('<<entryPoint>>', AppDomain.entryPoint());
         remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<isServer>>', isServer.toString());
-        remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<ados>>', JSON.stringify(allADOs));
+        // remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<ados>>', JSON.stringify(allADOs));
         remoteMessageHandlerScript = `(${remoteMessageHandlerScript})();`
         // NOTE: script/end
     
@@ -6156,7 +6166,11 @@
                     let ext = module.substr(module.lastIndexOf('.') + 1).toLowerCase();
                     try {
                         if (typeof require !== 'undefined') { // if requirejs is available
-                            require([module], resolve, reject);
+                            try {
+                                require([module], resolve, reject);
+                            } catch (err) {
+                                reject(new _Exception(err));
+                            }
                         } else { // load it as file on browser or in web worker
                             if (env.isWorker) {
                                 try {
@@ -6851,371 +6865,385 @@
     // freeze members
     flair.members = Object.freeze(flair.members);
 
-    // built-in types
+    // builtin types
     (()=>{
+        // NOTES: 
+        // 1. Any relevant change in flair.cli/(bundle)/asm.js may require to bring here
+        // 2. These build-in types do not support await include() type syntax on top, as these are not wrapped inside an async wrapper
+
+        // assembly closure init (start)
         /* eslint-disable no-unused-vars */
+        
+        // flair object (already defined)
+
+        // flair types, variables and functions
         const { Class, Struct, Enum, Interface, Mixin, Aspects, AppDomain, $$, attr, bring, Container, include, Port, on, post, telemetry,
-                        Reflector, Serializer, Tasks, as, is, isComplies, isDerivedFrom, isAbstract, isSealed, isStatic, isSingleton, isDeprecated,
-                        isImplements, isInstanceOf, isMixed, getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf,
-                        getTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;
+                Reflector, Serializer, Tasks, as, is, isComplies, isDerivedFrom, isAbstract, isSealed, isStatic, isSingleton, isDeprecated,
+                isImplements, isInstanceOf, isMixed, getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf,
+                getTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;
         const { TaskInfo } = flair.Tasks;
         const { env } = flair.options;
         const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, guid, isArrowFunc, isASyncFunc, sieve,
-                        b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
-        const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,
-            $$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$args, $$inject, $$resource, $$asset, $$singleton, $$serialize,
-            $$deprecate, $$session, $$state, $$conditional, $$noserialize, $$ns } = $$;
-    
-        // define current context name
-        const __currentContextName = _AppDomain.context.current().name;
-
-        // define loadPathOf this assembly
-        let __currentFile = (env.isServer ? __filename : window.document.currentScript.src.replace(window.document.location.href, './'));
-        let __currentPath = __currentFile.substr(0, __currentFile.lastIndexOf('/') + 1);
-        _AppDomain.loadPathOf('flair', __currentPath);
-
-        // assembly level error handler
-        const __asmError = (err) => { _AppDomain.onError(err); };
-
-        // no settings for this assembly
-        let settings = {};
-        settings = Object.freeze(settings);        
+                b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
         
-        // no config for this assembly
-        let config = {}; 
+        // inbuilt modifiers and attributes compile-time-safe support
+        const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,
+                $$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$args, $$inject, $$resource, $$asset, $$singleton, $$serialize,
+                $$deprecate, $$session, $$state, $$conditional, $$noserialize, $$ns } = $$;
+    
+        // access to DOC
+        const DOC = ((env.isServer || env.isWorker) ? null : window.document);
+
+        // current for this assembly
+        const __currentContextName = AppDomain.context.current().name;
+        const __currentFile = (env.isServer ? __filename : window.document.currentScript.src.replace(window.document.location.href, './'));
+        const __currentPath = __currentFile.substr(0, __currentFile.lastIndexOf('/') + 1);
+        AppDomain.loadPathOf('flair', __currentPath);
+
+        // settings of this assembly (not supported)
+        let settings = JSON.parse('{}');
+        settings = Object.freeze(settings);
+
+        // config of this assembly
+        let config = JSON.parse('{}');
         config = Object.freeze(config);
 
         /* eslint-enable no-unused-vars */
+        // assembly closure init (end)
 
-        _AppDomain.context.current().currentAssemblyBeingLoaded('./flair{.min}.js');
-        try{
-            (async () => {
-                try{
-                    /**
-                     * @name IDisposable
-                     * @description IDisposable interface
-                     */
-                    $$('ns', '(root)');
-                    Interface('IDisposable', function() {
-                        this.dispose = nim;
-                    });
-                    
-                    /**
-                     * @name IProgressReporter
-                     * @description IProgressReporter interface
-                     */
-                    $$('ns', '(root)');
-                    Interface('IProgressReporter', function() {
-                        // progress report
-                        this.progress = nie;
-                    });
-                    
-                    /**
-                     * @name Aspect
-                     * @description Aspect base class.
-                     */
-                    $$('abstract');
-                    $$('ns', '(root)');
-                    Class('Aspect', function() {
-                        /** 
-                         * @name before
-                         * @description Before advise
-                         * @example
-                         *  before(ctx)
-                         * @arguments
-                         * ctx: object - context object that is shared across all weavings
-                         *  typeName()      - gives the name of the type
-                         *  funcName()      - gives the name of the function
-                         *  error(err)      - store new error to context, or just call error() to get last error
-                         *  result(value)   - store new result to context, or just call result() to get last stored result
-                         *  args()          - get original args passed to main call
-                         *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
-                         */  
-                        $$('virtual');
-                        this.before = nim;
-                    
-                        /** 
-                         * @name around
-                         * @description Around advise
-                         * @example
-                         *  around(ctx, fn)
-                         * @arguments
-                         * ctx: object - context object that is shared across all weavings
-                         *  typeName()      - gives the name of the type
-                         *  funcName()      - gives the name of the function
-                         *  error(err)      - store new error to context, or just call error() to get last error
-                         *  result(value)   - store new result to context, or just call result() to get last stored result
-                         *  args()          - get original args passed to main call
-                         *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
-                         * fn: function - function which is wrapped, it should be called in between pre and post actions
-                         */  
-                        $$('virtual');
-                        this.around = nim;
-                    
-                        /** 
-                         * @name after
-                         * @description After advise
-                         * @example
-                         *  after(ctx)
-                         * @arguments
-                         * ctx: object - context object that is shared across all weavings
-                         *  typeName()      - gives the name of the type
-                         *  funcName()      - gives the name of the function
-                         *  error(err)      - store new error to context, or just call error() to get last error
-                         *  result(value)   - store new result to context, or just call result() to get last stored result
-                         *  args()          - get original args passed to main call
-                         *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
-                         */  
-                        $$('virtual');
-                        this.after = nim;
-                    });
-                    
-                    /**
-                     * @name Attribute
-                     * @description Attribute base class.
-                     */
-                    $$('abstract');
-                    $$('ns', '(root)');
-                    Class('Attribute', function() {
-                        $$('virtual');
-                        this.construct = (args) => {
-                            this.args = args;
-                        };
-                    
-                       /** 
-                        *  @name args: array - arguments as defined where attribute is applied e.g., ('text', 012, false, Reference)
-                        */
-                        $$('readonly');
-                        this.args = [];
-                    
-                       /** 
-                        *  @name constraints: string - An expression that defined the constraints of applying this attribute 
-                        *                     using NAMES, PREFIXES, SUFFIXES and logical Javascript operator
-                        * 
-                        *                  NAMES can be: 
-                        *                      type names: class, struct, enum, interface, mixin
-                        *                      type member names: prop, func, construct, dispose, event
-                        *                      inbuilt modifier names: static, abstract, sealed, virtual, override, private, protected, readonly, async, etc.
-                        *                      inbuilt attribute names: promise, singleton, serialize, deprecate, session, state, conditional, noserialize, etc.
-                        *                      custom attribute names: any registered custom attribute name
-                        *                      type names itself: e.g., Aspect, Attribute, etc. (any registered type name is fine)
-                        *                          SUFFIX: A typename must have a suffix (^) e.g., Aspect^, Attribute^, etc. Otherwise this name will be treated as custom attribute name
-                        *                  
-                        *                  PREFIXES can be:
-                        *                      No Prefix: means it must match or be present at the level where it is being defined
-                        *                      @: means it must be inherited from or present at up in hierarchy chain
-                        *                      $: means it either must ne present at the level where it is being defined or must be present up in hierarchy chain
-                        *                  <name> 
-                        *                  @<name>
-                        *                  $<name>
-                        * 
-                        *                  BOOLEAN Not (!) can also be used to negate:
-                        *                  !<name>
-                        *                  !@<name>
-                        *                  !$<name>
-                        *                  
-                        *                  NOTE: Constraints are processed as logical boolean expressions and 
-                        *                        can be grouped, ANDed or ORed as:
-                        * 
-                        *                        AND: <name1> && <name2> && ...
-                        *                        OR: <name1> || <name2>
-                        *                        GROUPING: ((<name1> || <name2>) && (<name1> || <name2>))
-                        *                                  (((<name1> || <name2>) && (<name1> || <name2>)) || <name3>)
-                        * 
-                        **/
-                        $$('readonly');
-                        this.constraints = '';
-                    
-                        /** 
-                         * @name decorateProperty
-                         * @description Property decorator
-                         * @example
-                         *  decorateProperty(typeName, memberName, member)
-                         * @arguments
-                         *  typeName: string - typeName
-                         *  memberName: string - member name
-                         *  member - object - having get: getter function and set: setter function
-                         *          both getter and setter can be applied attribute functionality on
-                         * @returns
-                         *  object - having decorated { get: fn, set: fn }
-                         *           Note: decorated get must call member's get
-                         *                 decorated set must accept value argument and pass it to member's set with or without processing
-                         */  
-                        $$('virtual');
-                        this.decorateProperty = nim;
-                    
-                        /** 
-                         * @name decorateFunction
-                         * @description Function decorator
-                         * @example
-                         *  decorateFunction(typeName, memberName, member)
-                         * @arguments
-                         *  typeName: string - typeName
-                         *  memberName: string - member name
-                         *  member - function - function to decorate
-                         * @returns
-                         *  function - decorated function
-                         *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
-                         */  
-                        $$('virtual');
-                        this.decorateFunction = nim;    
-                    
-                        /** 
-                         * @name decorateEvent
-                         * @description Event decorator
-                         * @example
-                         *  decorateEvent(typeName, memberName, member)
-                         * @arguments
-                         *  typeName: string - typeName
-                         *  memberName: string - member name
-                         *  member - function - event argument processor function
-                         * @returns
-                         *  function - decorated function
-                         *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
-                         */  
-                        $$('virtual');
-                        this.decorateEvent = nim;
-                    });
-                    
-                    
-                    const { IProgressReporter, IDisposable } = ns();
-                    
-                    /**
-                     * @name Task
-                     * @description Task base class.
-                     */
-                    $$('ns', '(root)');
-                    Class('Task', [IProgressReporter, IDisposable], function() {
-                        let isSetupDone = false,
-                            isRunning = false,
-                            loadingContextName = AppDomain.context.current().name; // this will be processed at the time class is loaded
-                    
-                       /** 
-                        * @name construct
-                        * @description Task constructor
-                        */        
-                        this.construct = (...args) => {
-                            this.args = args;
-                    
-                            // set context and domain
-                            this.context = AppDomain.contexts(loadingContextName);
-                            this.domain = this.context.domain;
-                        };
-                    
-                       /** 
-                        * @name dispose
-                        * @description Task disposer
-                        */  
-                        $$('abstract');
-                        this.dispose = nim;
-                    
-                       /** 
-                        *  @name args: array - for task setup
-                        */
-                        $$('protected');
-                        this.args = [];
-                    
-                       /** 
-                        *  @name context: object - current assembly load context where this task is loaded
-                        */
-                       $$('protected');
-                       this.context = null;
-                    
-                       /** 
-                        *  @name domain: object - current assembly domain where this task is executing
-                        */
-                       $$('protected');
-                       this.domain = null;
-                    
-                       /** 
-                        * @name run
-                        * @description Task executor
-                        * @example
-                        *  run()
-                        * @arguments
-                        *  args: array - array as passed to task constructor* 
-                        * @returns
-                        *  any - anything
-                        */  
-                        this.run = async (...args) => {
-                            if (!isRunning) {
-                                // mark
-                                isRunning = true;
-                    
-                                // setup
-                                if (!isSetupDone) {
-                                    try {
-                                        await this.setup();
-                                        isSetupDone = true;
-                                    } catch(err) {
-                                        isRunning = false;
-                                        throw err;
-                                    }
-                                }
-                    
-                                // run
-                                try {
-                                    let result = await this.onRun(...args);
-                                    return result;
-                                } catch(err) {
-                                    throw err;
-                                } finally {
-                                    isRunning = false;
-                                }
-                            } else {
-                                 throw Exception.InvalidOperation('Task is already running', this.run);
-                            }
-                        };
-                       
-                       /** 
-                        * @name progress
-                        * @description Progress event
-                        * @example
-                        *  progress()
-                        */  
-                        this.progress = event((data) => {
-                            return { data: data };
-                        });
-                    
-                        /** 
-                         * @name setup
-                         * @description Task related setup, executed only once, before onRun is called, - async
-                         * @example
-                         *  setup()
-                         * @returns
-                         *  promise
-                         */  
-                        $$('virtual');
-                        $$('protected');
-                        $$('async');
-                        this.setup = noop;
-                    
-                        /** 
-                         * @name onRun
-                         * @description Task run handler - async
-                         * @example
-                         *  onRun(...args)
-                         * @arguments
-                         *  args: array - array as passed to task run
-                         * @returns
-                         *  any - anything
-                         */  
-                        $$('abstract');
-                        $$('protected');
-                        $$('async');
-                        this.onRun = nim;
-                    });
-                    
-                } catch(err) {
-                    __asmError(err);
+        // assembly global functions (not supported)
+
+        // set assembly being loaded
+        AppDomain.context.current().currentAssemblyBeingLoaded('./flair{.min}.js');
+
+        // assembly builtin-types (start)
+        /**
+         * @name IDisposable
+         * @description IDisposable interface
+         */
+        $$('ns', '(root)');
+        Interface('IDisposable', function() {
+            this.dispose = nim;
+        });
+        
+        /**
+         * @name IProgressReporter
+         * @description IProgressReporter interface
+         */
+        $$('ns', '(root)');
+        Interface('IProgressReporter', function() {
+            // progress report
+            this.progress = nie;
+        });
+        
+        /**
+         * @name Aspect
+         * @description Aspect base class.
+         */
+        $$('abstract');
+        $$('ns', '(root)');
+        Class('Aspect', function() {
+            /** 
+             * @name before
+             * @description Before advise
+             * @example
+             *  before(ctx)
+             * @arguments
+             * ctx: object - context object that is shared across all weavings
+             *  typeName()      - gives the name of the type
+             *  funcName()      - gives the name of the function
+             *  error(err)      - store new error to context, or just call error() to get last error
+             *  result(value)   - store new result to context, or just call result() to get last stored result
+             *  args()          - get original args passed to main call
+             *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
+             */  
+            $$('virtual');
+            this.before = nim;
+        
+            /** 
+             * @name around
+             * @description Around advise
+             * @example
+             *  around(ctx, fn)
+             * @arguments
+             * ctx: object - context object that is shared across all weavings
+             *  typeName()      - gives the name of the type
+             *  funcName()      - gives the name of the function
+             *  error(err)      - store new error to context, or just call error() to get last error
+             *  result(value)   - store new result to context, or just call result() to get last stored result
+             *  args()          - get original args passed to main call
+             *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
+             * fn: function - function which is wrapped, it should be called in between pre and post actions
+             */  
+            $$('virtual');
+            this.around = nim;
+        
+            /** 
+             * @name after
+             * @description After advise
+             * @example
+             *  after(ctx)
+             * @arguments
+             * ctx: object - context object that is shared across all weavings
+             *  typeName()      - gives the name of the type
+             *  funcName()      - gives the name of the function
+             *  error(err)      - store new error to context, or just call error() to get last error
+             *  result(value)   - store new result to context, or just call result() to get last stored result
+             *  args()          - get original args passed to main call
+             *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
+             */  
+            $$('virtual');
+            this.after = nim;
+        });
+        
+        /**
+         * @name Attribute
+         * @description Attribute base class.
+         */
+        $$('abstract');
+        $$('ns', '(root)');
+        Class('Attribute', function() {
+            $$('virtual');
+            this.construct = (args) => {
+                this.args = args;
+            };
+        
+           /** 
+            *  @name args: array - arguments as defined where attribute is applied e.g., ('text', 012, false, Reference)
+            */
+            $$('readonly');
+            this.args = [];
+        
+           /** 
+            *  @name constraints: string - An expression that defined the constraints of applying this attribute 
+            *                     using NAMES, PREFIXES, SUFFIXES and logical Javascript operator
+            * 
+            *                  NAMES can be: 
+            *                      type names: class, struct, enum, interface, mixin
+            *                      type member names: prop, func, construct, dispose, event
+            *                      inbuilt modifier names: static, abstract, sealed, virtual, override, private, protected, readonly, async, etc.
+            *                      inbuilt attribute names: promise, singleton, serialize, deprecate, session, state, conditional, noserialize, etc.
+            *                      custom attribute names: any registered custom attribute name
+            *                      type names itself: e.g., Aspect, Attribute, etc. (any registered type name is fine)
+            *                          SUFFIX: A typename must have a suffix (^) e.g., Aspect^, Attribute^, etc. Otherwise this name will be treated as custom attribute name
+            *                  
+            *                  PREFIXES can be:
+            *                      No Prefix: means it must match or be present at the level where it is being defined
+            *                      @: means it must be inherited from or present at up in hierarchy chain
+            *                      $: means it either must ne present at the level where it is being defined or must be present up in hierarchy chain
+            *                  <name> 
+            *                  @<name>
+            *                  $<name>
+            * 
+            *                  BOOLEAN Not (!) can also be used to negate:
+            *                  !<name>
+            *                  !@<name>
+            *                  !$<name>
+            *                  
+            *                  NOTE: Constraints are processed as logical boolean expressions and 
+            *                        can be grouped, ANDed or ORed as:
+            * 
+            *                        AND: <name1> && <name2> && ...
+            *                        OR: <name1> || <name2>
+            *                        GROUPING: ((<name1> || <name2>) && (<name1> || <name2>))
+            *                                  (((<name1> || <name2>) && (<name1> || <name2>)) || <name3>)
+            * 
+            **/
+            $$('readonly');
+            this.constraints = '';
+        
+            /** 
+             * @name decorateProperty
+             * @description Property decorator
+             * @example
+             *  decorateProperty(typeName, memberName, member)
+             * @arguments
+             *  typeName: string - typeName
+             *  memberName: string - member name
+             *  member - object - having get: getter function and set: setter function
+             *          both getter and setter can be applied attribute functionality on
+             * @returns
+             *  object - having decorated { get: fn, set: fn }
+             *           Note: decorated get must call member's get
+             *                 decorated set must accept value argument and pass it to member's set with or without processing
+             */  
+            $$('virtual');
+            this.decorateProperty = nim;
+        
+            /** 
+             * @name decorateFunction
+             * @description Function decorator
+             * @example
+             *  decorateFunction(typeName, memberName, member)
+             * @arguments
+             *  typeName: string - typeName
+             *  memberName: string - member name
+             *  member - function - function to decorate
+             * @returns
+             *  function - decorated function
+             *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
+             */  
+            $$('virtual');
+            this.decorateFunction = nim;    
+        
+            /** 
+             * @name decorateEvent
+             * @description Event decorator
+             * @example
+             *  decorateEvent(typeName, memberName, member)
+             * @arguments
+             *  typeName: string - typeName
+             *  memberName: string - member name
+             *  member - function - event argument processor function
+             * @returns
+             *  function - decorated function
+             *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
+             */  
+            $$('virtual');
+            this.decorateEvent = nim;
+        });
+        
+        
+        const { IProgressReporter, IDisposable } = ns();
+        
+        /**
+         * @name Task
+         * @description Task base class.
+         */
+        $$('ns', '(root)');
+        Class('Task', [IProgressReporter, IDisposable], function() {
+            let isSetupDone = false,
+                isRunning = false,
+                loadingContextName = AppDomain.context.current().name; // this will be processed at the time class is loaded
+        
+           /** 
+            * @name construct
+            * @description Task constructor
+            */        
+            this.construct = (...args) => {
+                this.args = args;
+        
+                // set context and domain
+                this.context = AppDomain.contexts(loadingContextName);
+                this.domain = this.context.domain;
+            };
+        
+           /** 
+            * @name dispose
+            * @description Task disposer
+            */  
+            $$('abstract');
+            this.dispose = nim;
+        
+           /** 
+            *  @name args: array - for task setup
+            */
+            $$('protected');
+            this.args = [];
+        
+           /** 
+            *  @name context: object - current assembly load context where this task is loaded
+            */
+           $$('protected');
+           this.context = null;
+        
+           /** 
+            *  @name domain: object - current assembly domain where this task is executing
+            */
+           $$('protected');
+           this.domain = null;
+        
+           /** 
+            * @name run
+            * @description Task executor
+            * @example
+            *  run()
+            * @arguments
+            *  args: array - array as passed to task constructor* 
+            * @returns
+            *  any - anything
+            */  
+            this.run = async (...args) => {
+                if (!isRunning) {
+                    // mark
+                    isRunning = true;
+        
+                    // setup
+                    if (!isSetupDone) {
+                        try {
+                            await this.setup();
+                            isSetupDone = true;
+                        } catch(err) {
+                            isRunning = false;
+                            throw err;
+                        }
+                    }
+        
+                    // run
+                    try {
+                        let result = await this.onRun(...args);
+                        return result;
+                    } catch(err) {
+                        throw err;
+                    } finally {
+                        isRunning = false;
+                    }
+                } else {
+                     throw Exception.InvalidOperation('Task is already running', this.run);
                 }
-            })();
-        } catch(err) {
-            __asmError(err);
-        }   
-        _AppDomain.context.current().currentAssemblyBeingLoaded('');
+            };
+           
+           /** 
+            * @name progress
+            * @description Progress event
+            * @example
+            *  progress()
+            */  
+            this.progress = event((data) => {
+                return { data: data };
+            });
+        
+            /** 
+             * @name setup
+             * @description Task related setup, executed only once, before onRun is called, - async
+             * @example
+             *  setup()
+             * @returns
+             *  promise
+             */  
+            $$('virtual');
+            $$('protected');
+            $$('async');
+            this.setup = noop;
+        
+            /** 
+             * @name onRun
+             * @description Task run handler - async
+             * @example
+             *  onRun(...args)
+             * @arguments
+             *  args: array - array as passed to task run
+             * @returns
+             *  any - anything
+             */  
+            $$('abstract');
+            $$('protected');
+            $$('async');
+            this.onRun = nim;
+        });
+                
+        // assembly builtin-types (end)
+
+        // assembly embedded resources (not supported)
+
+        // clear assembly being loaded
+        AppDomain.context.current().currentAssemblyBeingLoaded('');
+
+        // register assembly definition object (not-supported)
+
+        // assembly load complete (not-supported)
     })();
 
     // return
     return Object.freeze(flair);
-});    
+});
