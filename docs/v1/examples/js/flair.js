@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.51.64
- *  Mon, 06 May 2019 13:50:05 GMT
+ *  Version: 0.51.67
+ *  Tue, 07 May 2019 00:06:45 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -51,7 +51,7 @@
             let __currentScript = (env.isServer ? '' : window.document.scripts[window.document.scripts.length - 1].src),
                 __entryPoint = (env.isServer ? (env.isWorker ? '' : entryPoint) : (env.isWorker ? '' : __currentScript)),
                 __rootPath = (env.isServer ? (__entryPoint.substr(0, __entryPoint.lastIndexOf('/') + 1)) : './'),
-                __preamble = '<<package>>/preamble.js',
+                __preamble = 'flairjs/preamble.js',
                 __config = configFile,
                 __BootEngine = 'flair.app.BootEngine',
                 be = null;
@@ -105,10 +105,10 @@
         name: 'flairjs',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.51.64',
+        version: '0.51.67',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Mon, 06 May 2019 13:50:05 GMT')
+        lupdate: new Date('Tue, 07 May 2019 00:06:45 GMT')
     });  
     
     flair.members = [];
@@ -1156,7 +1156,7 @@
             if (isRaw) {
                 let all = [],
                     keys = Object.keys(asmFiles);
-                for(let r in keys) { all.push(asmFiles[r]); }
+                for(let r of keys) { all.push(asmFiles[r]); }
                 return all;
             } else {
                 return Object.keys(asmFiles);
@@ -1208,7 +1208,7 @@
             if (isRaw) {
                 let all = [],
                     keys = Object.keys(alcResources);
-                for(let r in keys) { all.push(alcResources[r]); }
+                for(let r of keys) { all.push(alcResources[r]); }
                 return all;
             } else {
                 return Object.keys(alcResources);
@@ -1261,7 +1261,7 @@
             if (isRaw) {
                 let all = [],
                     keys = Object.keys(alcRoutes);
-                for(let r in keys) { all.push(alcRoutes[r]); }
+                for(let r of keys) { all.push(alcRoutes[r]); }
                 return all;
             } else {
                 return Object.keys(alcRoutes);

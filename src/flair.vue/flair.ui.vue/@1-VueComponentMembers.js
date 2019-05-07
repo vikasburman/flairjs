@@ -126,7 +126,7 @@ Mixin('(auto)', function() {
             let ComponentType = null,
                 component = null;
             const { VueComponent } = ns('flair.ui.vue');
-            for(let item in this.components) {
+            for(let item of this.components) {
                 if (!item.name) { throw Exception.OperationFailed(`Component name cannot be empty. (${item.type})`); }
                 if (!item.type) { throw Exception.OperationFailed(`Component type cannot be empty. (${item.name})`); }
 
@@ -160,7 +160,7 @@ Mixin('(auto)', function() {
         if (this.mixins && Array.isArray(this.mixins)) {
             let MixinType = null,
                 mixin = null;
-            for(let item in this.mixins) {
+            for(let item of this.mixins) {
                 if (!item.name) { throw Exception.OperationFailed(`Mixin name cannot be empty. (${item.type})`); }
                 if (!item.type) { throw Exception.OperationFailed(`Mixin type cannot be empty. (${item.name})`); }
 
@@ -192,7 +192,7 @@ Mixin('(auto)', function() {
         if (this.directives && Array.isArray(this.directives)) {
             let DirectiveType = null,
             directive = null;
-            for(let item in this.directives) {
+            for(let item of this.directives) {
                 if (!item.name) { throw Exception.OperationFailed(`Directive name cannot be empty. (${item.type})`); }
                 if (!item.type) { throw Exception.OperationFailed(`Directive type cannot be empty. (${item.name})`); }
 
@@ -224,7 +224,7 @@ Mixin('(auto)', function() {
         if (this.filters && Array.isArray(this.filters)) {
             let FilterType = null,
                 filter = null;
-            for(let item in this.filters) {
+            for(let item of this.filters) {
                 if (!item.name) { throw Exception.OperationFailed(`Filter name cannot be empty. (${item.type})`); }
                 if (!item.type) { throw Exception.OperationFailed(`Filter type cannot be empty. (${item.name})`); }
                 

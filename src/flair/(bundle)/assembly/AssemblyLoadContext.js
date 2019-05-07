@@ -310,7 +310,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         if (isRaw) {
             let all = [],
                 keys = Object.keys(asmFiles);
-            for(let r in keys) { all.push(asmFiles[r]); }
+            for(let r of keys) { all.push(asmFiles[r]); }
             return all;
         } else {
             return Object.keys(asmFiles);
@@ -362,7 +362,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         if (isRaw) {
             let all = [],
                 keys = Object.keys(alcResources);
-            for(let r in keys) { all.push(alcResources[r]); }
+            for(let r of keys) { all.push(alcResources[r]); }
             return all;
         } else {
             return Object.keys(alcResources);
@@ -415,7 +415,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         if (isRaw) {
             let all = [],
                 keys = Object.keys(alcRoutes);
-            for(let r in keys) { all.push(alcRoutes[r]); }
+            for(let r of keys) { all.push(alcRoutes[r]); }
             return all;
         } else {
             return Object.keys(alcRoutes);

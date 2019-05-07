@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.51.64
- *  Mon, 06 May 2019 13:50:07 GMT
+ *  Version: 0.51.67
+ *  Tue, 07 May 2019 00:06:47 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -61,8 +61,8 @@ const asm_index = `
  * 
  * Assembly: flair.cli
  *     File: ./flair.cli.js
- *  Version: 0.51.64
- *  Mon, 06 May 2019 13:50:07 GMT
+ *  Version: 0.51.67
+ *  Tue, 07 May 2019 00:06:47 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -148,7 +148,7 @@ const asm_index = `
     AppDomain.context.current().currentAssemblyBeingLoaded('');
 
     // register assembly definition object
-    AppDomain.registerAdo('{"name":"flair.cli","file":"./flair.cli{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.51.64","lupdate":"Mon, 06 May 2019 13:50:07 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":[],"resources":[],"assets":["./flair.cli/gulp/build.js","./flair.cli/gulp/package.js","./flair.cli/gulp/test.js","./flair.cli/jasmine/SpecRunner.html","./flair.cli/plugins/copy_files.js","./flair.cli/plugins/docker_image.js","./flair.cli/plugins/minify_files.js","./flair.cli/plugins/node_modules.js","./flair.cli/plugins/web_modules.js"],"routes":[]}');
+    AppDomain.registerAdo('{"name":"flair.cli","file":"./flair.cli{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.51.67","lupdate":"Tue, 07 May 2019 00:06:47 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":[],"resources":[],"assets":["./flair.cli/gulp/build.js","./flair.cli/gulp/package.js","./flair.cli/gulp/test.js","./flair.cli/jasmine/SpecRunner.html","./flair.cli/plugins/copy_files.js","./flair.cli/plugins/docker_image.js","./flair.cli/plugins/minify_files.js","./flair.cli/plugins/node_modules.js","./flair.cli/plugins/web_modules.js"],"routes":[]}');
 
     // assembly load complete
     if (typeof onLoadComplete === 'function') { 
@@ -178,7 +178,7 @@ const asm_preamble_file = `
 /**
  * @preserve
  * Preamble for assemblies at: <<path>>
- * Created: Mon, 06 May 2019 13:50:07 GMT
+ * Created: Tue, 07 May 2019 00:06:47 GMT
  */
 (() => {
     const flair = (typeof global !== 'undefined' ? require('flairjs') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));
@@ -856,8 +856,8 @@ const asm_preamble_file = `
                 options.current.asmContent = replaceAll(options.current.asmContent, 'True Object Oriented JavaScript',  options.current.ado.desc);
                 options.current.asmContent = replaceAll(options.current.asmContent, 'flair.cli', options.current.ado.name);
                 options.current.asmContent = replaceAll(options.current.asmContent, './flair.cli.js', options.current.asmFileName);
-                options.current.asmContent = replaceAll(options.current.asmContent, '0.51.64', options.current.ado.version);
-                options.current.asmContent = replaceAll(options.current.asmContent, 'Mon, 06 May 2019 13:50:07 GMT', options.current.ado.lupdate);
+                options.current.asmContent = replaceAll(options.current.asmContent, '0.51.67', options.current.ado.version);
+                options.current.asmContent = replaceAll(options.current.asmContent, 'Tue, 07 May 2019 00:06:47 GMT', options.current.ado.lupdate);
                 options.current.asmContent = replaceAll(options.current.asmContent, '(c) 2017-2019 Vikas Burman', options.current.ado.copyright);
                 options.current.asmContent = replaceAll(options.current.asmContent, 'MIT', options.current.ado.license);
                 options.current.asmContent = replaceAll(options.current.asmContent, './flair.cli{.min}.js', options.current.ado.file);
@@ -892,7 +892,7 @@ const asm_preamble_file = `
             };
             const finalizeAssemblyContent = () => {
                 // inject ado
-                options.current.asmContent = replaceAll(options.current.asmContent, '{"name":"flair.cli","file":"./flair.cli{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.51.64","lupdate":"Mon, 06 May 2019 13:50:07 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":[],"resources":[],"assets":["./flair.cli/gulp/build.js","./flair.cli/gulp/package.js","./flair.cli/gulp/test.js","./flair.cli/jasmine/SpecRunner.html","./flair.cli/plugins/copy_files.js","./flair.cli/plugins/docker_image.js","./flair.cli/plugins/minify_files.js","./flair.cli/plugins/node_modules.js","./flair.cli/plugins/web_modules.js"],"routes":[]}', JSON.stringify(options.current.ado));
+                options.current.asmContent = replaceAll(options.current.asmContent, '{"name":"flair.cli","file":"./flair.cli{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.51.67","lupdate":"Tue, 07 May 2019 00:06:47 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":[],"resources":[],"assets":["./flair.cli/gulp/build.js","./flair.cli/gulp/package.js","./flair.cli/gulp/test.js","./flair.cli/jasmine/SpecRunner.html","./flair.cli/plugins/copy_files.js","./flair.cli/plugins/docker_image.js","./flair.cli/plugins/minify_files.js","./flair.cli/plugins/node_modules.js","./flair.cli/plugins/web_modules.js"],"routes":[]}', JSON.stringify(options.current.ado));
             };
             const injectTypes = (cb) => {
                 if (options.current.ado.types.length === 0) { 
@@ -1201,7 +1201,7 @@ const asm_preamble_file = `
                 
                 // create preamble content
                 let preambleContent = replaceAll(asm_preamble_file, '<<path>>', options.current.dest.replace(options.dest, './'));
-                preambleContent = replaceAll(preambleContent, 'Mon, 06 May 2019 13:50:07 GMT', new Date().toUTCString());
+                preambleContent = replaceAll(preambleContent, 'Tue, 07 May 2019 00:06:47 GMT', new Date().toUTCString());
                 preambleContent = replaceAll(preambleContent, '<<ados>>', JSON.stringify(options.current.adosJSON));
 
                 // write preamble file

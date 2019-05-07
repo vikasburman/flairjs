@@ -26,7 +26,7 @@ Class('(auto)', Bootware, function() {
         let plugins = settings.plugins,
             PluginType = null,
             plugin = null;
-        for(let item in plugins) {
+        for(let item of plugins) {
             if (!item.name) { throw Exception.OperationFailed(`Plugin name cannot be empty. (${item.type})`); }
             if (!item.type) { throw Exception.OperationFailed(`Plugin type cannot be empty. (${item.name})`); }
 
@@ -49,7 +49,7 @@ Class('(auto)', Bootware, function() {
         let mixins = settings.mixins,
             MixinType = null,
             mixin = null;
-        for(let item in mixins) {
+        for(let item of mixins) {
             if (!item.name) { throw Exception.OperationFailed(`Mixin name cannot be empty. (${item.type})`); }
             if (!item.type) { throw Exception.OperationFailed(`Mixin type cannot be empty. (${item.name})`); }
 
@@ -72,7 +72,7 @@ Class('(auto)', Bootware, function() {
         let directives = settings.directives,
             DirectiveType = null,
             directive = null;
-        for(let item in directives) {
+        for(let item of directives) {
             if (!item.name) { throw Exception.OperationFailed(`Directive name cannot be empty. (${item.type})`); }
             if (!item.type) { throw Exception.OperationFailed(`Directive type cannot be empty. (${item.name})`); }
 
@@ -95,7 +95,7 @@ Class('(auto)', Bootware, function() {
         let filters = settings.filters,
             FilterType = null,
             filter = null;
-        for(let item in filters) {
+        for(let item of filters) {
             if (!item.name) { throw Exception.OperationFailed(`Filter name cannot be empty. (${item.type})`); }
             if (!item.type) { throw Exception.OperationFailed(`Filter type cannot be empty. (${item.name})`); }
             FilterType = as(await include(item.type), VueFilter);
@@ -118,7 +118,7 @@ Class('(auto)', Bootware, function() {
         let components = settings.components,
             ComponentType = null,
             component = null;
-        for(let item in components) {
+        for(let item of components) {
             if (!item.name) { throw Exception.OperationFailed(`Component name cannot be empty. (${item.type})`); }
             if (!item.type) { throw Exception.OperationFailed(`Component type cannot be empty. (${item.name})`); }
 

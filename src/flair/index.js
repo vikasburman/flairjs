@@ -51,7 +51,7 @@
             let __currentScript = (env.isServer ? '' : window.document.scripts[window.document.scripts.length - 1].src),
                 __entryPoint = (env.isServer ? (env.isWorker ? '' : entryPoint) : (env.isWorker ? '' : __currentScript)),
                 __rootPath = (env.isServer ? (__entryPoint.substr(0, __entryPoint.lastIndexOf('/') + 1)) : './'),
-                __preamble = '<<package>>/preamble.js',
+                __preamble = 'flairjs/preamble.js',
                 __config = configFile,
                 __BootEngine = 'flair.app.BootEngine',
                 be = null;

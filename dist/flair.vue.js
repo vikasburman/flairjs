@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.vue
  *     File: ./flair.vue.js
- *  Version: 0.51.64
- *  Mon, 06 May 2019 13:50:07 GMT
+ *  Version: 0.51.67
+ *  Tue, 07 May 2019 00:06:47 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -211,7 +211,7 @@
                 let ComponentType = null,
                     component = null;
                 const { VueComponent } = ns('flair.ui.vue');
-                for(let item in this.components) {
+                for(let item of this.components) {
                     if (!item.name) { throw Exception.OperationFailed(`Component name cannot be empty. (${item.type})`); }
                     if (!item.type) { throw Exception.OperationFailed(`Component type cannot be empty. (${item.name})`); }
     
@@ -245,7 +245,7 @@
             if (this.mixins && Array.isArray(this.mixins)) {
                 let MixinType = null,
                     mixin = null;
-                for(let item in this.mixins) {
+                for(let item of this.mixins) {
                     if (!item.name) { throw Exception.OperationFailed(`Mixin name cannot be empty. (${item.type})`); }
                     if (!item.type) { throw Exception.OperationFailed(`Mixin type cannot be empty. (${item.name})`); }
     
@@ -277,7 +277,7 @@
             if (this.directives && Array.isArray(this.directives)) {
                 let DirectiveType = null,
                 directive = null;
-                for(let item in this.directives) {
+                for(let item of this.directives) {
                     if (!item.name) { throw Exception.OperationFailed(`Directive name cannot be empty. (${item.type})`); }
                     if (!item.type) { throw Exception.OperationFailed(`Directive type cannot be empty. (${item.name})`); }
     
@@ -309,7 +309,7 @@
             if (this.filters && Array.isArray(this.filters)) {
                 let FilterType = null,
                     filter = null;
-                for(let item in this.filters) {
+                for(let item of this.filters) {
                     if (!item.name) { throw Exception.OperationFailed(`Filter name cannot be empty. (${item.type})`); }
                     if (!item.type) { throw Exception.OperationFailed(`Filter type cannot be empty. (${item.name})`); }
                     
@@ -644,7 +644,7 @@
             let plugins = settings.plugins,
                 PluginType = null,
                 plugin = null;
-            for(let item in plugins) {
+            for(let item of plugins) {
                 if (!item.name) { throw Exception.OperationFailed(`Plugin name cannot be empty. (${item.type})`); }
                 if (!item.type) { throw Exception.OperationFailed(`Plugin type cannot be empty. (${item.name})`); }
     
@@ -667,7 +667,7 @@
             let mixins = settings.mixins,
                 MixinType = null,
                 mixin = null;
-            for(let item in mixins) {
+            for(let item of mixins) {
                 if (!item.name) { throw Exception.OperationFailed(`Mixin name cannot be empty. (${item.type})`); }
                 if (!item.type) { throw Exception.OperationFailed(`Mixin type cannot be empty. (${item.name})`); }
     
@@ -690,7 +690,7 @@
             let directives = settings.directives,
                 DirectiveType = null,
                 directive = null;
-            for(let item in directives) {
+            for(let item of directives) {
                 if (!item.name) { throw Exception.OperationFailed(`Directive name cannot be empty. (${item.type})`); }
                 if (!item.type) { throw Exception.OperationFailed(`Directive type cannot be empty. (${item.name})`); }
     
@@ -713,7 +713,7 @@
             let filters = settings.filters,
                 FilterType = null,
                 filter = null;
-            for(let item in filters) {
+            for(let item of filters) {
                 if (!item.name) { throw Exception.OperationFailed(`Filter name cannot be empty. (${item.type})`); }
                 if (!item.type) { throw Exception.OperationFailed(`Filter type cannot be empty. (${item.name})`); }
                 FilterType = as(await include(item.type), VueFilter);
@@ -736,7 +736,7 @@
             let components = settings.components,
                 ComponentType = null,
                 component = null;
-            for(let item in components) {
+            for(let item of components) {
                 if (!item.name) { throw Exception.OperationFailed(`Component name cannot be empty. (${item.type})`); }
                 if (!item.type) { throw Exception.OperationFailed(`Component type cannot be empty. (${item.name})`); }
     
@@ -871,7 +871,7 @@
     AppDomain.context.current().currentAssemblyBeingLoaded('');
 
     // register assembly definition object
-    AppDomain.registerAdo('{"name":"flair.vue","file":"./flair.vue{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.51.64","lupdate":"Mon, 06 May 2019 13:50:07 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.ui.vue.VueComponentMembers","flair.ui.vue.VueComponent","flair.ui.vue.VueDirective","flair.ui.vue.VueFilter","flair.ui.vue.VueLayout","flair.ui.vue.VueMixin","flair.ui.vue.VuePlugin","flair.ui.vue.VueSetup","flair.ui.vue.VueView"],"resources":[],"assets":[],"routes":[{"name":"flair.ui.vue.test2","mount":"main","index":101,"verbs":[],"path":"test/:id","handler":"abc.xyz.Test"},{"name":"flair.ui.vue.exit2","mount":"main","index":103,"verbs":[],"path":"exit","handler":"abc.xyz.Exit"}]}');
+    AppDomain.registerAdo('{"name":"flair.vue","file":"./flair.vue{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.51.67","lupdate":"Tue, 07 May 2019 00:06:47 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.ui.vue.VueComponentMembers","flair.ui.vue.VueComponent","flair.ui.vue.VueDirective","flair.ui.vue.VueFilter","flair.ui.vue.VueLayout","flair.ui.vue.VueMixin","flair.ui.vue.VuePlugin","flair.ui.vue.VueSetup","flair.ui.vue.VueView"],"resources":[],"assets":[],"routes":[{"name":"flair.ui.vue.test2","mount":"main","index":101,"verbs":[],"path":"test/:id","handler":"abc.xyz.Test"},{"name":"flair.ui.vue.exit2","mount":"main","index":103,"verbs":[],"path":"exit","handler":"abc.xyz.Exit"}]}');
 
     // assembly load complete
     if (typeof onLoadComplete === 'function') { 
