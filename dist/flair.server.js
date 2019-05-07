@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.server
  *     File: ./flair.server.js
- *  Version: 0.51.67
- *  Tue, 07 May 2019 00:06:47 GMT
+ *  Version: 0.51.72
+ *  Tue, 07 May 2019 01:19:33 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -339,23 +339,24 @@
             base();
             
             // middleware information is defined at: https://expressjs.com/en/guide/using-middleware.html#middleware.application
-            // each item is: { module: '', func: '', 'args': []  }
-            // module: module name of the middleware, which can be required
+            // each item is: { name: '', func: '', 'args': []  }
+            // name: module name of the middleware, which can be required
             // func: if middleware has a function that needs to be called for configuration, empty if required object itself is a function
             // args: an array of args that need to be passed to this function or middleware function
             //       Note: In case a particular argument setting is a function - define the function code as an arrow function string with a 'return prefix' and it will be loaded as function
             //       E.g., setHeaders in https://expressjs.com/en/4x/api.html#express.static is a function
             //       define it as: "return (res, path, stat) => { res.set('x-timestamp', Date.now()) }"
-            //       this string will ne passed to new Function(...) and returned values will be used as value of option
+            //       this string will be passed to new Function(...) and returned values will be used as value of option
             //       all object type arguments will be scanned for string values that start with 'return ' and will be tried to convert into a function
             let middlewares = settings[`${mount.name}-middlewares`];
             if (middlewares && middlewares.length > 0) {
                 let mod = null,
                     func = null;
                 for(let middleware of middlewares) {
-                    if (middleware.module) {
+                    if (middleware.name) {
                         try {
                             // get module
+                            // it could be 'express' itself for inbuilt middlewares
                             mod = require(middleware.name);
     
                             // get func
@@ -382,6 +383,7 @@
                                             }
                                         }
                                     }
+                                    argValue = arg;
                                 } else {
                                     argValue = arg;
                                 }
@@ -652,7 +654,7 @@
     AppDomain.context.current().currentAssemblyBeingLoaded('');
 
     // register assembly definition object
-    AppDomain.registerAdo('{"name":"flair.server","file":"./flair.server{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.51.67","lupdate":"Tue, 07 May 2019 00:06:47 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.server.ExpressServer","flair.app.ServerHost","flair.api.RestHandler","flair.api.RestInterceptor","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter"],"resources":[],"assets":[],"routes":[]}');
+    AppDomain.registerAdo('{"name":"flair.server","file":"./flair.server{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.51.72","lupdate":"Tue, 07 May 2019 01:19:33 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.server.ExpressServer","flair.app.ServerHost","flair.api.RestHandler","flair.api.RestInterceptor","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter"],"resources":[],"assets":[],"routes":[]}');
 
     // assembly load complete
     if (typeof onLoadComplete === 'function') { 
