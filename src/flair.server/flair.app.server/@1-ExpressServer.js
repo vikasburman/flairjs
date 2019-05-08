@@ -21,7 +21,7 @@ Mixin('(auto)', function() {
 
         // configure http server
         if (httpSettings.enable) { 
-            httpServer = http.createServer(this.app());
+            httpServer = http.createServer(this.app);
             httpServer = httpShutdown(httpServer); // wrap
             httpServer.on('error', (err) => {
                 this.error(err);
@@ -43,7 +43,7 @@ Mixin('(auto)', function() {
             const publicCert = fs.readFileSync(AppDomain.resolvePath(httpsSettings.publicCert), 'utf8');
             const credentials = { key: privateKey, cert: publicCert };
 
-            httpsServer = https.createServer(credentials, this.app());
+            httpsServer = https.createServer(credentials, this.app);
             httpsServer = httpShutdown(httpsServer); // wrap
             httpsServer.on('error', (err) => {
                 this.error(err);
