@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.client
  *     File: ./flair.client.js
- *  Version: 0.51.72
- *  Tue, 07 May 2019 01:19:33 GMT
+ *  Version: 0.51.96
+ *  Wed, 08 May 2019 18:44:53 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -24,7 +24,7 @@
     } else { // expose as global on window
         root['flair.client'] = factory;
     }
-})(this, async function() {
+})(this, async function(__asmFile) {
     'use strict';
     
     // assembly closure init (start)
@@ -53,12 +53,12 @@
 
     // current for this assembly
     const __currentContextName = AppDomain.context.current().name;
-    const __currentFile = (env.isServer ? __filename : window.document.currentScript.src.replace(window.document.location.href, './'));
+    const __currentFile = __asmFile;
     const __currentPath = __currentFile.substr(0, __currentFile.lastIndexOf('/') + 1);
     AppDomain.loadPathOf('flair.client', __currentPath);
 
     // settings of this assembly
-    let settings = JSON.parse('{"el":"main","title":"","viewTransition":"","components":[],"transitions":[],"filters":[],"mixins":[],"directives":[],"plugins":[],"pluginOptions":{},"url":{"404":"/404","home":"/"},"mounts":{"main":"/"},"main-options":[],"main-interceptors":[]}');
+    let settings = JSON.parse('{"el":"main","title":"","viewTransition":"","url":{"404":"/404","home":"/"},"mounts":{"main":"/"},"main-options":[],"main-interceptors":[]}');
     let settingsReader = flair.Port('settingsReader');
     if (typeof settingsReader === 'function') {
         let externalSettings = settingsReader('flair.client');
@@ -102,6 +102,7 @@
     
     await (async () => { // type: ./src/flair.client/flair.app/ClientHost.js
     const { Host } = ns('flair.app');
+    const page = await include('page/page{.min}.js', 'page');
     
     /**
      * @name ClientHost
@@ -111,7 +112,6 @@
     $$('ns', 'flair.app');
     Class('ClientHost', Host, function() {
         let mountedApps = {},
-            page = window.page,
             hashChangeHandler = null;
     
         $$('override');
@@ -119,7 +119,10 @@
             base('Page', '1.x'); // https://www.npmjs.com/package/page
         };
     
-        this.app = () => { return this.mounts['main']; } // main page app
+        this.app = {
+            get: () => { return this.mounts['main'].app; },  // main page app
+            set: noop
+        };    
         this.mounts = { // all mounted page apps
             get: () => { return mountedApps; },
             set: noop
@@ -151,14 +154,15 @@
                 appOptions.dispatch = false;
                 appOptions.hashbang = false;
                 appOptions.decodeURLComponents = true;
+                appOptions.window = window; // always this is main window (even for sub-apps) - since we are not binding any handlers here, this is fine to have same window
     
                 return appOptions;         
             };
     
             // create main app instance of page
-            // 'page' variable is already loaded, as page.js is bundled in fliar.app
             appOptions = getOptions('main');
-            let mainApp = page(appOptions);
+            page(appOptions); // configure main app
+            let mainApp = page; // main-app is this object itself
             mainApp.strict(appOptions.strict);
             mainApp.base('/');
     
@@ -400,7 +404,11 @@
                 let url404 = settings.url['404'];
                 if (url404) {
                     ctx.handled = true;
-                    mount.app.redirect(url404);
+                    if (ctx.pathname !== url404) { 
+                        mount.app.redirect(url404);
+                    } else { // when even 404 is not handled
+                        // just mark as handled, and don't do anything
+                    }
                 } else {
                     window.history.back(); // nothing else can be done
                 }
@@ -590,7 +598,7 @@
     AppDomain.context.current().currentAssemblyBeingLoaded('');
 
     // register assembly definition object
-    AppDomain.registerAdo('{"name":"flair.client","file":"./flair.client{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.51.72","lupdate":"Tue, 07 May 2019 01:19:33 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.ui.ViewTransition","flair.app.ClientHost","flair.boot.ClientRouter","flair.ui.ViewHandler","flair.ui.ViewInterceptor","flair.ui.ViewState"],"resources":[],"assets":[],"routes":[]}');
+    AppDomain.registerAdo('{"name":"flair.client","file":"./flair.client{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.51.96","lupdate":"Wed, 08 May 2019 18:44:53 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.ui.ViewTransition","flair.app.ClientHost","flair.boot.ClientRouter","flair.ui.ViewHandler","flair.ui.ViewInterceptor","flair.ui.ViewState"],"resources":[],"assets":[],"routes":[]}');
 
     // assembly load complete
     if (typeof onLoadComplete === 'function') { 

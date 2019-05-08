@@ -136,7 +136,7 @@ const _attrMeta = _attr[meta] = Object.freeze({
         inject: new _attrConfig('class && (prop || func || construct) && !(static || session || state)'),
         resource: new _attrConfig('class && prop && !(session || state || inject || asset)'),
         asset: new _attrConfig('class && prop && !(session || state || inject || resource)'),
-        singleton: new _attrConfig('(class && !(prop || func || event) && !($abstract || $static)'),
+        singleton: new _attrConfig('(class && !(prop || func || event) && !($abstract || $static))'),
         serialize: new _attrConfig('((class || struct) || ((class || struct) && prop)) && !($abstract || $static || noserialize)'),
         deprecate: new _attrConfig('!construct && !dispose'),
         session: new _attrConfig('(class && prop) && !($static || $state || $readonly || $abstract || $virtual)'),

@@ -1,6 +1,6 @@
-const { ViewHandler } = ns('flair.ui');
-const { VueComponentMembers } = ns('flair.ui.vue');
 const Vue = await include('vue/vue{.min}.js');
+const { ViewHandler } = await ns('flair.ui', 'flair.ui.ViewHandler');
+const { VueComponentMembers } = ns('flair.ui.vue');
 
 /**
  * @name VueView

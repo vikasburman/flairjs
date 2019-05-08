@@ -30,7 +30,7 @@
     // locals
     let isServer = new Function("try {return this===global;}catch(e){return false;}")(),
         isWorker = isServer ? (!require('worker_threads').isMainThread) : (typeof WorkerGlobalScope !== 'undefined' ? true : false),
-        currentFile = (isServer ? __filename : window.document.currentScript.src),
+        currentFile = (isServer ? __filename : (isWorker ? self.location.href : window.document.currentScript.src)),
         sym = [],
         meta = Symbol('[meta]'),
         modulesRootFolder = 'modules',

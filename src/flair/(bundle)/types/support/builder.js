@@ -3,13 +3,16 @@ const attributesAndModifiers = (def, typeDef, memberName, isTypeLevel, isCustomA
         attrBucket = null,
         modifierBucket = null,
         modifiers = modifierOrAttrRefl(true, def, typeDef),
-        attrs = modifierOrAttrRefl(false, def, typeDef);
+        attrs = modifierOrAttrRefl(false, def, typeDef),
+        errorInName = '';
     if (isTypeLevel) {
         attrBucket = typeDef.attrs.type;
         modifierBucket = typeDef.modifiers.type;
+        errorInName = `${typeDef.name}`;
     } else {
         attrBucket = def.attrs.members[memberName]; // pick bucket
         modifierBucket = def.modifiers.members[memberName]; // pick bucket
+        errorInName = `${def.name}::${memberName}`;
     }
 
     // throw if custom attributes are applied but not allowed
@@ -161,10 +164,14 @@ const attributesAndModifiers = (def, typeDef, memberName, isTypeLevel, isCustomA
         }
         
         // validate expression
-        result = (new Function("try {return (" + constraintsLex + ");}catch(e){return false;}")());
-        if (!result) {
-            // TODO: send telemetry of _list, so it can be debugged
-            throw _Exception.InvalidOperation(`${appliedAttr.cfg.isModifier ? 'Modifier' : 'Attribute'} ${appliedAttr.name} could not be applied. (${def.name}::${memberName} --> [${constraintsLex}])`, builder);
+        try {
+            result = (new Function("try {return (" + constraintsLex + ");}catch(e){return false;}")());
+            if (!result) {
+                // TODO: send telemetry of _list, so it can be debugged
+                throw _Exception.InvalidOperation(`${appliedAttr.cfg.isModifier ? 'Modifier' : 'Attribute'} ${appliedAttr.name} could not be applied. (${errorInName} --> [${constraintsLex}])`, builder);
+            }
+        } catch (err) {
+            throw _Exception.OperationFailed(`${appliedAttr.cfg.isModifier ? 'Modifier' : 'Attribute'} ${appliedAttr.name} could not be applied. (${errorInName} --> [${constraintsLex}])`, err, builder);
         }
 
         // return
@@ -511,7 +518,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     }
 
     // singleton specific case
-    if (cfg.singleton && !typeDef.staticConstructionCycle && !isNewFromReflector && params.isTopLevelInstance && TypeMeta.singleInstance()) { return TypeMeta.singleInstance(); }
+    if (cfg.singleton && !typeDef.staticConstructionCycle && !isNewFromReflector && params.isTopLevelInstance && TypeMeta.singleInstance.value) { return TypeMeta.singleInstance.value; }
 
     // define vars
     let exposed_obj = {},
@@ -1609,10 +1616,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     // add/update meta on top level instance
     if (params.isTopLevelInstance && !typeDef.staticConstructionCycle && !isNewFromReflector) {
         if (cfg.singleton && attrs.type.probe('singleton').current()) {
-            TypeMeta.singleInstance = () => { return exposed_obj; }; 
-            TypeMeta.singleInstance.clear = () => { 
-                TypeMeta.singleInstance = () => { return null; };
-            };
+            TypeMeta.singleInstance.value = exposed_obj;
         }
     }
 
@@ -1832,8 +1836,7 @@ const builder = (cfg) => {
     }
     if (cfg.singleton) {
         _ObjectMeta.isSingleton = () => { return attrs.type.probe('singleton').current() ? true : false; };
-        _ObjectMeta.singleInstance = () => { return null; };
-        _ObjectMeta.singleInstance.clear = _noop;
+        _ObjectMeta.singleInstance = { value: null };
     }
     if (cfg.mixins) {
         _ObjectMeta.mixins = cfg.params.mixins; // mixin types that were applied to this type

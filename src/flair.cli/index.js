@@ -80,7 +80,7 @@ const asm_index = `
     } else { // expose as global on window
         root['<<asm>>'] = factory;
     }
-})(this, async function() {
+})(this, async function(__asmFile) {
     'use strict';
     
     // assembly closure init (start)
@@ -109,7 +109,7 @@ const asm_index = `
 
     // current for this assembly
     const __currentContextName = AppDomain.context.current().name;
-    const __currentFile = (env.isServer ? __filename : window.document.currentScript.src.replace(window.document.location.href, './'));
+    const __currentFile = __asmFile;
     const __currentPath = __currentFile.substr(0, __currentFile.lastIndexOf('/') + 1);
     AppDomain.loadPathOf('<<asm>>', __currentPath);
 

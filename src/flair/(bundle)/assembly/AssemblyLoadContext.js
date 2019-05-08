@@ -246,7 +246,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
     this.currentAssemblyBeingLoaded = (value) => {
         // NOTE: called at build time, so no checking is required
         if (typeof value !== 'undefined') { 
-            currentAssemblyBeingLoaded = which(value, true);
+            currentAssemblyBeingLoaded = which(value, true); // min/dev contextual pick
         }
         return currentAssemblyBeingLoaded;
     }
@@ -272,7 +272,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
                 // load module
                 loadModule(file2, asmADO.name, true).then((asmFactory) => {
                     // run asm factory to load assembly
-                    asmFactory().then(() => {
+                    asmFactory(file2).then(() => {
                         // remove this from current context list
                         currentContexts.pop();
 

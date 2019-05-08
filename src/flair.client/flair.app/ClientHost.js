@@ -1,4 +1,5 @@
 const { Host } = ns('flair.app');
+const page = await include('page/page{.min}.js', 'page');
 
 /**
  * @name ClientHost
@@ -8,7 +9,6 @@ $$('sealed');
 $$('ns', '(auto)');
 Class('(auto)', Host, function() {
     let mountedApps = {},
-        page = window.page,
         hashChangeHandler = null;
 
     $$('override');
@@ -16,7 +16,10 @@ Class('(auto)', Host, function() {
         base('Page', '1.x'); // https://www.npmjs.com/package/page
     };
 
-    this.app = () => { return this.mounts['main']; } // main page app
+    this.app = {
+        get: () => { return this.mounts['main'].app; },  // main page app
+        set: noop
+    };    
     this.mounts = { // all mounted page apps
         get: () => { return mountedApps; },
         set: noop
@@ -48,14 +51,15 @@ Class('(auto)', Host, function() {
             appOptions.dispatch = false;
             appOptions.hashbang = false;
             appOptions.decodeURLComponents = true;
+            appOptions.window = window; // always this is main window (even for sub-apps) - since we are not binding any handlers here, this is fine to have same window
 
             return appOptions;         
         };
 
         // create main app instance of page
-        // 'page' variable is already loaded, as page.js is bundled in fliar.app
         appOptions = getOptions('main');
-        let mainApp = page(appOptions);
+        page(appOptions); // configure main app
+        let mainApp = page; // main-app is this object itself
         mainApp.strict(appOptions.strict);
         mainApp.base('/');
 

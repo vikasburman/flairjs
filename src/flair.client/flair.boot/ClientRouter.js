@@ -136,7 +136,11 @@ Class('(auto)', Bootware, function () {
             let url404 = settings.url['404'];
             if (url404) {
                 ctx.handled = true;
-                mount.app.redirect(url404);
+                if (ctx.pathname !== url404) { 
+                    mount.app.redirect(url404);
+                } else { // when even 404 is not handled
+                    // just mark as handled, and don't do anything
+                }
             } else {
                 window.history.back(); // nothing else can be done
             }

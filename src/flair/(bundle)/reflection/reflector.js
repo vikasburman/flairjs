@@ -355,7 +355,7 @@ const _Reflector = function (Type) {
         refl.isSerializable = () => { return findItemByProp(typeDef.attrs.type, 'name', 'serialize') !== null; };        
         refl.isStatic = () => { return (TypeMeta.isStatic ? TypeMeta.isStatic() : false); };
         refl.isSingleton = () => { return (TypeMeta.isSingleton ? TypeMeta.isSingleton() : false); };                       
-        refl.isSingleInstanceCreated = () => { return TypeMeta.singleInstance ? (TypeMeta.singleInstance() !== null) : false; };
+        refl.isSingleInstanceCreated = () => { return TypeMeta.singleInstance.value ? true : false; };
         addInstanceRefl(refl);
         addMembersRefl(refl);
         return refl;        

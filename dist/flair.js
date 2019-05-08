@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.51.72
- *  Tue, 07 May 2019 01:19:30 GMT
+ *  Version: 0.51.96
+ *  Wed, 08 May 2019 18:44:50 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -30,7 +30,7 @@
     // locals
     let isServer = new Function("try {return this===global;}catch(e){return false;}")(),
         isWorker = isServer ? (!require('worker_threads').isMainThread) : (typeof WorkerGlobalScope !== 'undefined' ? true : false),
-        currentFile = (isServer ? __filename : window.document.currentScript.src),
+        currentFile = (isServer ? __filename : (isWorker ? self.location.href : window.document.currentScript.src)),
         sym = [],
         meta = Symbol('[meta]'),
         modulesRootFolder = 'modules',
@@ -105,10 +105,10 @@
         name: 'flairjs',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.51.72',
+        version: '0.51.96',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Tue, 07 May 2019 01:19:30 GMT')
+        lupdate: new Date('Wed, 08 May 2019 18:44:50 GMT')
     });  
     
     flair.members = [];
@@ -1092,7 +1092,7 @@
         this.currentAssemblyBeingLoaded = (value) => {
             // NOTE: called at build time, so no checking is required
             if (typeof value !== 'undefined') { 
-                currentAssemblyBeingLoaded = which(value, true);
+                currentAssemblyBeingLoaded = which(value, true); // min/dev contextual pick
             }
             return currentAssemblyBeingLoaded;
         }
@@ -1118,7 +1118,7 @@
                     // load module
                     loadModule(file2, asmADO.name, true).then((asmFactory) => {
                         // run asm factory to load assembly
-                        asmFactory().then(() => {
+                        asmFactory(file2).then(() => {
                             // remove this from current context list
                             currentContexts.pop();
     
@@ -2202,15 +2202,28 @@
      * @description Gets the registered namespace from default assembly load context of default appdomain
      * @example
      *  ns(name)
+     *  ns(name, where)
      * @params
      *  name: string - name of the namespace
-     * @returns object - namespace object
+     *  asInType: string - qualified name of any type which exists in this namespace
+     *          this will look for correct assembly to load before returning namespace object
+     * @returns object/promise - namespace object (if only namespace was passed) OR promise object (if asInType name was also passed)
      */ 
-    const _ns = (name) => { 
+    const _ns = (name, asInType) => { 
         let args = _Args('name: undefined', 
-                         'name: string')(name); args.throwOnError(_ns);
+                         'name: string',
+                         'name: string, asInType: string')(name, asInType); args.throwOnError(_ns);
         
-        return _AppDomain.context.namespace(name);
+        if (typeof asInType === 'string') {
+            return new Promise((resolve, reject) => {
+                // include the type, this will load corresponding assembly, if not already loaded
+                _include(asInType).then(() => {
+                    resolve(_AppDomain.context.namespace(name)); // now resolve with the namespace object
+                }).catch(reject);
+            });
+        } else {
+            return _AppDomain.context.namespace(name);
+        }
     };
     
     // attach to flair
@@ -2578,7 +2591,7 @@
                     _resolved = null;
     
                 // pick contextual dep
-                _dep = which(_dep);
+                _dep = which(_dep); // server/client pick
     
                 // check if this is an alias registered on DI container
                 let option1 = (done) => {
@@ -2633,8 +2646,7 @@
                         _dep = _AppDomain.resolvePath(_dep);
                         if (ext) {
                             if (ext === 'js' || ext === 'mjs') {
-                                // pick contextual file for DEBUG/PROD
-                                _dep = which(_dep, true);
+                                _dep = which(_dep, true); // min/dev contextual pick
     
                                 // load as module, since this is a js file and we need is executed and not the content as such
                                 loadModule(_dep).then((content) => { 
@@ -2681,6 +2693,7 @@
                         // on server require() finds modules automatically
                         // on client modules are supposed to be inside ./modules/ folder, therefore prefix it
                         if (!isServer) { _dep = `./${modulesRootFolder}/${_dep}`; }
+                        _dep = which(_dep, true); // min/dev contextual pick
                         loadModule(_dep).then((content) => { 
                             _resolved = content || true; done();
                         }).catch((err) => {
@@ -2995,7 +3008,7 @@
             inject: new _attrConfig('class && (prop || func || construct) && !(static || session || state)'),
             resource: new _attrConfig('class && prop && !(session || state || inject || asset)'),
             asset: new _attrConfig('class && prop && !(session || state || inject || resource)'),
-            singleton: new _attrConfig('(class && !(prop || func || event) && !($abstract || $static)'),
+            singleton: new _attrConfig('(class && !(prop || func || event) && !($abstract || $static))'),
             serialize: new _attrConfig('((class || struct) || ((class || struct) && prop)) && !($abstract || $static || noserialize)'),
             deprecate: new _attrConfig('!construct && !dispose'),
             session: new _attrConfig('(class && prop) && !($static || $state || $readonly || $abstract || $virtual)'),
@@ -3049,13 +3062,16 @@
             attrBucket = null,
             modifierBucket = null,
             modifiers = modifierOrAttrRefl(true, def, typeDef),
-            attrs = modifierOrAttrRefl(false, def, typeDef);
+            attrs = modifierOrAttrRefl(false, def, typeDef),
+            errorInName = '';
         if (isTypeLevel) {
             attrBucket = typeDef.attrs.type;
             modifierBucket = typeDef.modifiers.type;
+            errorInName = `${typeDef.name}`;
         } else {
             attrBucket = def.attrs.members[memberName]; // pick bucket
             modifierBucket = def.modifiers.members[memberName]; // pick bucket
+            errorInName = `${def.name}::${memberName}`;
         }
     
         // throw if custom attributes are applied but not allowed
@@ -3207,10 +3223,14 @@
             }
             
             // validate expression
-            result = (new Function("try {return (" + constraintsLex + ");}catch(e){return false;}")());
-            if (!result) {
-                // TODO: send telemetry of _list, so it can be debugged
-                throw _Exception.InvalidOperation(`${appliedAttr.cfg.isModifier ? 'Modifier' : 'Attribute'} ${appliedAttr.name} could not be applied. (${def.name}::${memberName} --> [${constraintsLex}])`, builder);
+            try {
+                result = (new Function("try {return (" + constraintsLex + ");}catch(e){return false;}")());
+                if (!result) {
+                    // TODO: send telemetry of _list, so it can be debugged
+                    throw _Exception.InvalidOperation(`${appliedAttr.cfg.isModifier ? 'Modifier' : 'Attribute'} ${appliedAttr.name} could not be applied. (${errorInName} --> [${constraintsLex}])`, builder);
+                }
+            } catch (err) {
+                throw _Exception.OperationFailed(`${appliedAttr.cfg.isModifier ? 'Modifier' : 'Attribute'} ${appliedAttr.name} could not be applied. (${errorInName} --> [${constraintsLex}])`, err, builder);
             }
     
             // return
@@ -3557,7 +3577,7 @@
         }
     
         // singleton specific case
-        if (cfg.singleton && !typeDef.staticConstructionCycle && !isNewFromReflector && params.isTopLevelInstance && TypeMeta.singleInstance()) { return TypeMeta.singleInstance(); }
+        if (cfg.singleton && !typeDef.staticConstructionCycle && !isNewFromReflector && params.isTopLevelInstance && TypeMeta.singleInstance.value) { return TypeMeta.singleInstance.value; }
     
         // define vars
         let exposed_obj = {},
@@ -4655,10 +4675,7 @@
         // add/update meta on top level instance
         if (params.isTopLevelInstance && !typeDef.staticConstructionCycle && !isNewFromReflector) {
             if (cfg.singleton && attrs.type.probe('singleton').current()) {
-                TypeMeta.singleInstance = () => { return exposed_obj; }; 
-                TypeMeta.singleInstance.clear = () => { 
-                    TypeMeta.singleInstance = () => { return null; };
-                };
+                TypeMeta.singleInstance.value = exposed_obj;
             }
         }
     
@@ -4878,8 +4895,7 @@
         }
         if (cfg.singleton) {
             _ObjectMeta.isSingleton = () => { return attrs.type.probe('singleton').current() ? true : false; };
-            _ObjectMeta.singleInstance = () => { return null; };
-            _ObjectMeta.singleInstance.clear = _noop;
+            _ObjectMeta.singleInstance = { value: null };
         }
         if (cfg.mixins) {
             _ObjectMeta.mixins = cfg.params.mixins; // mixin types that were applied to this type
@@ -6744,7 +6760,7 @@
             refl.isSerializable = () => { return findItemByProp(typeDef.attrs.type, 'name', 'serialize') !== null; };        
             refl.isStatic = () => { return (TypeMeta.isStatic ? TypeMeta.isStatic() : false); };
             refl.isSingleton = () => { return (TypeMeta.isSingleton ? TypeMeta.isSingleton() : false); };                       
-            refl.isSingleInstanceCreated = () => { return TypeMeta.singleInstance ? (TypeMeta.singleInstance() !== null) : false; };
+            refl.isSingleInstanceCreated = () => { return TypeMeta.singleInstance.value ? true : false; };
             addInstanceRefl(refl);
             addMembersRefl(refl);
             return refl;        

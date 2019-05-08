@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.server
  *     File: ./flair.server.js
- *  Version: 0.51.72
- *  Tue, 07 May 2019 01:19:33 GMT
+ *  Version: 0.51.96
+ *  Wed, 08 May 2019 18:44:53 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -24,7 +24,7 @@
     } else { // expose as global on window
         root['flair.server'] = factory;
     }
-})(this, async function() {
+})(this, async function(__asmFile) {
     'use strict';
     
     // assembly closure init (start)
@@ -53,7 +53,7 @@
 
     // current for this assembly
     const __currentContextName = AppDomain.context.current().name;
-    const __currentFile = (env.isServer ? __filename : window.document.currentScript.src.replace(window.document.location.href, './'));
+    const __currentFile = __asmFile;
     const __currentPath = __currentFile.substr(0, __currentFile.lastIndexOf('/') + 1);
     AppDomain.loadPathOf('flair.server', __currentPath);
 
@@ -214,7 +214,10 @@
             base('Express', '4.x');
         };
     
-        this.app = () => { return this.mounts['main'].app; }  // main express app
+        this.app = {
+            get: () => { return this.mounts['main'].app; },  // main express app
+            set: noop
+        };
         this.mounts = { // all mounted express apps
             get: () => { return mountedApps; },
             set: noop
@@ -654,7 +657,7 @@
     AppDomain.context.current().currentAssemblyBeingLoaded('');
 
     // register assembly definition object
-    AppDomain.registerAdo('{"name":"flair.server","file":"./flair.server{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.51.72","lupdate":"Tue, 07 May 2019 01:19:33 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.server.ExpressServer","flair.app.ServerHost","flair.api.RestHandler","flair.api.RestInterceptor","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter"],"resources":[],"assets":[],"routes":[]}');
+    AppDomain.registerAdo('{"name":"flair.server","file":"./flair.server{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.51.96","lupdate":"Wed, 08 May 2019 18:44:53 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.server.ExpressServer","flair.app.ServerHost","flair.api.RestHandler","flair.api.RestInterceptor","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter"],"resources":[],"assets":[],"routes":[]}');
 
     // assembly load complete
     if (typeof onLoadComplete === 'function') { 
