@@ -2,6 +2,13 @@
     "el": "main",
     "title": "",
     "viewTransition": "",
+    "components": [],
+    "filters": [],
+    "mixins": [],
+    "directives": [],
+    "plugins": [],
+    "pluginOptions": {
+    },    
     "url": {
         "home": "/",
         "404": "/404"

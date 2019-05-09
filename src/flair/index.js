@@ -192,74 +192,15 @@
     // freeze members
     flair.members = Object.freeze(flair.members);
 
-    // builtin types
-    (()=>{
+    // assembly payload
+    ((__asmFile) => {
         // NOTES: 
-        // 1. Any relevant change in flair.cli/(bundle)/asm.js may require to bring here
-        // 2. These build-in types do not support await include() type syntax on top, as these are not wrapped inside an async wrapper
+        // 1. Since this is a custom assembly index.js file, types built-in here does not support await type calls, as this outer closure is not an async function
 
-        // assembly closure init (start)
-        /* eslint-disable no-unused-vars */
-        
-        // flair object (already defined)
+        <<asm_payload_start>>
 
-        // flair types, variables and functions
-        const { Class, Struct, Enum, Interface, Mixin, Aspects, AppDomain, $$, attr, bring, Container, include, Port, on, post, telemetry,
-                Reflector, Serializer, Tasks, as, is, isComplies, isDerivedFrom, isAbstract, isSealed, isStatic, isSingleton, isDeprecated,
-                isImplements, isInstanceOf, isMixed, getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf,
-                getTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;
-        const { TaskInfo } = flair.Tasks;
-        const { env } = flair.options;
-        const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, guid, isArrowFunc, isASyncFunc, sieve,
-                b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
-        
-        // inbuilt modifiers and attributes compile-time-safe support
-        const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,
-                $$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$args, $$inject, $$resource, $$asset, $$singleton, $$serialize,
-                $$deprecate, $$session, $$state, $$conditional, $$noserialize, $$ns } = $$;
-    
-        // access to DOC
-        const DOC = ((env.isServer || env.isWorker) ? null : window.document);
-
-        // current for this assembly
-        const __currentContextName = AppDomain.context.current().name;
-        const __currentFile = (env.isServer ? __filename : window.document.currentScript.src.replace(window.document.location.href, './'));
-        const __currentPath = __currentFile.substr(0, __currentFile.lastIndexOf('/') + 1);
-        AppDomain.loadPathOf('<<asm>>', __currentPath);
-
-        // settings of this assembly (not supported)
-        let settings = JSON.parse('{}');
-        settings = Object.freeze(settings);
-
-        // config of this assembly
-        let config = JSON.parse('{}');
-        config = Object.freeze(config);
-
-        /* eslint-enable no-unused-vars */
-        // assembly closure init (end)
-
-        // assembly global functions (not supported)
-
-        // set assembly being loaded
-        AppDomain.context.current().currentAssemblyBeingLoaded('<<which_file>>');
-
-        // assembly builtin-types (start)
-        <!-- inject: ./(bundle)/builtin-types/(root)/IDisposable.js -->
-        <!-- inject: ./(bundle)/builtin-types/(root)/IProgressReporter.js -->
-        <!-- inject: ./(bundle)/builtin-types/(root)/Aspect.js -->
-        <!-- inject: ./(bundle)/builtin-types/(root)/Attribute.js -->
-        <!-- inject: ./(bundle)/builtin-types/(root)/Task.js -->        
-        // assembly builtin-types (end)
-
-        // assembly embedded resources (not supported)
-
-        // clear assembly being loaded
-        AppDomain.context.current().currentAssemblyBeingLoaded('');
-
-        // register assembly definition object (not-supported)
-
-        // assembly load complete (not-supported)
-    })();
+        <<asm_payload_close>>
+    })(currentFile);
 
     // return
     return Object.freeze(flair);

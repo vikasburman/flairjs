@@ -17,9 +17,9 @@ const doTask = (done) => {
     optionsJSON = fsx.readJSONSync(options, 'utf8');
     if (forcedFullBuild) { optionsJSON.fullBuild = true; }
     if (forcedQuickBuild && !forcedFullBuild) { optionsJSON.quickBuild = true; }
-    let engine = optionsJSON.engine || '../../index.js';
+    let engine = optionsJSON.engine || '../flairBuild.js';
     if (!engine) {
-        console.log('Build engine is not configured. Define correct path of flair.cli.js at "engine" option in build options file.'); // eslint-disable-line no-console
+        console.log('Build engine is not configured. Define correct path of flairBuild.js at "engine" option in build options file.'); // eslint-disable-line no-console
     }
 
     // load and run engine

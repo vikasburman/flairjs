@@ -9,7 +9,7 @@
  *                    MyStruct
  *                 >> auto naming, e.g., 
  *                    '(auto)'
- *                    Use this only when putting only one struct in a file and using flair.cli builder to build assembly
+ *                    Use this only when putting only one struct in a file and using flairBuild builder to build assembly
  *                    And in that case, filename will be used as struct name. So if file name is 'MyStruct.js', name would be 'MyStruct' (case sensitive)
  *                    To give namespace to a type, use $$('ns', 'com.product.feature');
  *                    Apply this attribute on struct definition itself. then struct can be accessed as getType('com.product.feature.MyStruct');

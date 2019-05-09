@@ -1,6 +1,6 @@
 {
     "jasmine": {
-        "specRunner": "./src/flair.cli/(libs)/jasmine/SpecRunner.html",
+        "specRunner": "./src/flair/(libs)/jasmine/SpecRunner.html",
         "temp_dir": "./temp",
         "spec_dir": "./test",
         "relative_prefix": "../",

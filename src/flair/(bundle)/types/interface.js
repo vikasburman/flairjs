@@ -10,7 +10,7 @@
  *                    IInterfaceName
  *                 >> auto naming, e.g., 
  *                    '(auto)'
- *                    Use this only when putting only one interface in a file and using flair.cli builder to build assembly
+ *                    Use this only when putting only one interface in a file and using flairBuild builder to build assembly
  *                    And in that case, filename will be used as interface name. So if file name is 'IInterfaceName.js', name would be 'IInterfaceName' (case sensitive)
  *                    To give namespace to a type, use $$('ns', 'com.product.feature');
  *                    Apply this attribute on interface definition itself. then interface can be accessed as getType('com.product.feature.IInterfaceName');

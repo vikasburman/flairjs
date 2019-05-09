@@ -4,8 +4,8 @@ const { IProgressReporter, IDisposable } = ns();
  * @name Task
  * @description Task base class.
  */
-$$('ns', '(root)');
-Class('Task', [IProgressReporter, IDisposable], function() {
+$$('ns', '(auto)');
+Class('(auto)', [IProgressReporter, IDisposable], function() {
     let isSetupDone = false,
         isRunning = false,
         loadingContextName = AppDomain.context.current().name; // this will be processed at the time class is loaded

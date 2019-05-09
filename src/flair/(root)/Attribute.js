@@ -3,8 +3,8 @@
  * @description Attribute base class.
  */
 $$('abstract');
-$$('ns', '(root)');
-Class('Attribute', function() {
+$$('ns', '(auto)');
+Class('(auto)', function() {
     $$('virtual');
     this.construct = (args) => {
         this.args = args;

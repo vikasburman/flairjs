@@ -2,7 +2,7 @@
  * @name IDisposable
  * @description IDisposable interface
  */
-$$('ns', '(root)');
-Interface('IDisposable', function() {
+$$('ns', '(auto)');
+Interface('(auto)', function() {
     this.dispose = nim;
 });

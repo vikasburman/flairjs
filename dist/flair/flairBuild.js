@@ -1,15 +1,6 @@
 /**
- * @preserve
- * <<name>>
- * <<desc>>
- * 
- * Assembly: <<asm>>
- *     File: <<file>>
- *  Version: <<version>>
- *  <<lupdate>>
- * 
- * <<copyright>>
- * <<license>>
+ * flairBuild
+ * v1
  */
 (function(root, factory) {
     'use strict';
@@ -52,140 +43,12 @@
         ]
     };    
 
-    // template: assembly module wrapper (start)
-const asm_index = `
-/**
- * @preserve
- * <<title>>
- * <<desc>>
- * 
- * Assembly: <<asm>>
- *     File: <<file>>
- *  Version: <<version>>
- *  <<lupdate>>
- * 
- * <<copyright>>
- * <<license>>
- */
-(function(root, factory) {
-    'use strict';
-
-    if (typeof define === 'function' && define.amd) { // AMD support
-        define(factory);
-    } else if (typeof exports === 'object') { // CommonJS and Node.js module support
-        if (typeof module !== 'undefined' && module.exports) {
-            exports = module.exports = factory; // Node.js specific module.exports
-        }
-        module.exports = exports = factory; // CommonJS        
-    } else { // expose as global on window
-        root['<<asm>>'] = factory;
-    }
-})(this, async function(__asmFile) {
-    'use strict';
-    
-    // assembly closure init (start)
-    /* eslint-disable no-unused-vars */
-    
-    // flair object
-    const flair = (typeof global !== 'undefined' ? require('flairjs') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));
-    
-    // flair types, variables and functions
-    const { Class, Struct, Enum, Interface, Mixin, Aspects, AppDomain, $$, attr, bring, Container, include, Port, on, post, telemetry,
-            Reflector, Serializer, Tasks, as, is, isComplies, isDerivedFrom, isAbstract, isSealed, isStatic, isSingleton, isDeprecated,
-            isImplements, isInstanceOf, isMixed, getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf,
-            getTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;
-    const { TaskInfo } = flair.Tasks;
-    const { env } = flair.options;
-    const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, guid, isArrowFunc, isASyncFunc, sieve,
-            b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
-    
-    // inbuilt modifiers and attributes compile-time-safe support
-    const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,
-            $$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$args, $$inject, $$resource, $$asset, $$singleton, $$serialize,
-            $$deprecate, $$session, $$state, $$conditional, $$noserialize, $$ns } = $$;
-    
-    // access to DOC
-    const DOC = ((env.isServer || env.isWorker) ? null : window.document);
-
-    // current for this assembly
-    const __currentContextName = AppDomain.context.current().name;
-    const __currentFile = __asmFile;
-    const __currentPath = __currentFile.substr(0, __currentFile.lastIndexOf('/') + 1);
-    AppDomain.loadPathOf('<<asm>>', __currentPath);
-
-    // settings of this assembly
-    let settings = JSON.parse('<<settings>>');
-    let settingsReader = flair.Port('settingsReader');
-    if (typeof settingsReader === 'function') {
-        let externalSettings = settingsReader('<<asm>>');
-        if (externalSettings) { settings = Object.assign(settings, externalSettings); }
-    }
-    settings = Object.freeze(settings);
-
-    // config of this assembly
-    let config = JSON.parse('<<config>>');
-    config = Object.freeze(config);
-
-    /* eslint-enable no-unused-vars */
-    // assembly closure init (end)
-
-    // assembly global functions (start)
-    <<asm_functions>>
-    // assembly global functions (end)
-
-    // set assembly being loaded
-    AppDomain.context.current().currentAssemblyBeingLoaded('<<which_file>>');
-
-    // assembly types (start)
-    <<asm_types>>
-    // assembly types (end)
-
-    // assembly embedded resources (start)
-    <<asm_resources>>
-    // assembly embedded resources (end)        
-
-    // clear assembly being loaded
-    AppDomain.context.current().currentAssemblyBeingLoaded('');
-
-    // register assembly definition object
-    AppDomain.registerAdo('<<ado>>');
-
-    // assembly load complete
-    if (typeof onLoadComplete === 'function') { 
-        onLoadComplete();   // eslint-disable-line no-undef
-    } 
-});
-`;
-    // template: assembly module wrapper (end)
-
-    // template: assembly type wrapper (start)
-    const asm_type = `
-    await (async () => { // type: <<file>>
-    <<asm_type>>
-    })();
-    `;
-    // template: assembly type wrapper (end)
-
-    // template: assembly embedded resource wrapper (start)
-    const asm_res = `
-    // resource: <<file>>
-    AppDomain.context.current().registerResource(JSON.parse('<<asm_res>>'));
-    `;
-    // template: assembly embedded resource wrapper (end)    
-
-    // template: preamble file wrapper (start)
-const asm_preamble_file = `
-/**
- * @preserve
- * Preamble for assemblies at: <<path>>
- * Created: <<lupdate>>
- */
-(() => {
-    const flair = (typeof global !== 'undefined' ? require('flairjs') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));
-    flair.AppDomain.registerAdo(...JSON.parse('<<ados>>'));
-})();
-`;
-    // template: preamble file wrapper (end)    
+    // templates
+    const asm_module = fsx.readFileSync(path.join(__dirname, 'templates/asm_module.js'), 'utf8')
+    const asm_type_async = fsx.readFileSync(path.join(__dirname, 'templates/asm_type_async.js'), 'utf8');
+    const asm_type_sync = fsx.readFileSync(path.join(__dirname, 'templates/asm_type_sync.js'), 'utf8');
+    const asm_resource = fsx.readFileSync(path.join(__dirname, 'templates/asm_resource.js'), 'utf8');
+    const asm_preamble = fsx.readFileSync(path.join(__dirname, 'templates/asm_preamble.js'), 'utf8');
 
     // support functions
     const getFolders = (root, excludeRoot) => {
@@ -846,9 +709,20 @@ const asm_preamble_file = `
                 // define default wrapper
                 if (fsx.existsSync(options.current.asmMain)) {
                     options.current.asmContent = fsx.readFileSync(options.current.asmMain, 'utf8');
+                    options.current.asyncTypeLoading = false;
                 } else {
-                    options.current.asmContent = asm_index; // template
+                    options.current.asmContent = asm_module; // template
+                    options.current.asyncTypeLoading = true;
                 }
+
+                // process file injections
+                options.current.asmContent = injector(options.current.asmPath, options.current.asmContent); 
+
+                // replace payload placeholders and injections
+                options.current.asmContent = replaceAll(options.current.asmContent, '<<asm_payload_start>>', '<!-- inject: ./templates/asm_payload_start.js -->');
+                options.current.asmContent = replaceAll(options.current.asmContent, '<<asm_payload_extra>>', '<!-- inject: ./templates/asm_payload_extra.js -->');
+                options.current.asmContent = replaceAll(options.current.asmContent, '<<asm_payload_close>>', '<!-- inject: ./templates/asm_payload_close.js -->');
+                options.current.asmContent = injector(__dirname, options.current.asmContent); 
 
                 // replace placeholders
                 options.current.asmContent = replaceAll(options.current.asmContent, '<<name>>',  options.packageJSON.name);
@@ -861,9 +735,6 @@ const asm_preamble_file = `
                 options.current.asmContent = replaceAll(options.current.asmContent, '<<copyright>>', options.current.ado.copyright);
                 options.current.asmContent = replaceAll(options.current.asmContent, '<<license>>', options.current.ado.license);
                 options.current.asmContent = replaceAll(options.current.asmContent, '<<which_file>>', options.current.ado.file);
-
-                // process file injections
-                options.current.asmContent = injector(options.current.asmPath, options.current.asmContent); 
 
                 // inject settings
                 if (fsx.existsSync(options.current.asmSettings)) {
@@ -906,7 +777,8 @@ const asm_preamble_file = `
                 // append types
                 let justNames = [],
                     thisFile = '',
-                    allTypes = '';
+                    allTypes = '',
+                    typeWrapper = (options.current.asyncTypeLoading ? asm_type_async : asm_type_sync);
                 for(let nsFile of options.current.ado.types) {
                     justNames.push(nsFile.qualifiedName);
                     thisFile = './' + nsFile.originalFile;
@@ -917,7 +789,7 @@ const asm_preamble_file = `
                     // does not mess with '$' issue, which otherwise by reading file
                     // and replacing content, cause problem
                     // more about the issue at: https://stackoverflow.com/questions/5297856/replaceall-in-javascript-and-dollar-sign
-                    let content = replaceAll(asm_type, '<<asm_type>>', `<!-- inject: ${thisFile} -->`);
+                    let content = replaceAll(typeWrapper, '<<asm_type>>', `<!-- inject: ${thisFile} -->`);
                     content = replaceAll(content, '<<file>>', thisFile);
                     content = injector('./', content);
                     content = replaceAll(content, '$(', '$$$('); // replace all messed-up calls with correct $$$( eventually becomes $$(
@@ -951,7 +823,11 @@ const asm_preamble_file = `
                 options.current.ado.types = justNames; // update types list
 
                 // inject types
-                options.current.asmContent = replaceAll(options.current.asmContent, '<<asm_types>>', allTypes);
+                if (options.current.asmContent.indexOf('<<asm_types>>') === -1) {
+                    logger(1, '', 'omitted (no placeholder found)');
+                } else {
+                    options.current.asmContent = replaceAll(options.current.asmContent, '<<asm_types>>', allTypes);
+                }
         
                 // done
                 cb();
@@ -962,8 +838,15 @@ const asm_preamble_file = `
                 if (options.current.ado.resources.length === 0) { 
                     options.current.ado.resources = justNames; // update resources list
 
-                    // inject resources
-                    options.current.asmContent = replaceAll(options.current.asmContent, '<<asm_resources>>', allResources || '// (not defined)');
+                    // validate
+                    if (options.current.asmContent.indexOf('<<asm_resources>>') === -1) {
+                        if (allResources) {
+                            logger(1, '', 'omitted (no placeholder found)');
+                        }
+                    } else {
+                        // inject resources
+                        options.current.asmContent = replaceAll(options.current.asmContent, '<<asm_resources>>', allResources || '// (not defined)');
+                    }
 
                     // done
                     cb(); return; 
@@ -1004,7 +887,7 @@ const asm_preamble_file = `
         
                     // wrap resource in resource wrapper
                     let thisRes = '';
-                    thisRes = replaceAll(asm_res, '<<asm_res>>', JSON.stringify(rdo));
+                    thisRes = replaceAll(asm_resource, '<<asm_res>>', JSON.stringify(rdo));
                     thisRes = replaceAll(thisRes, '<<file>>', rdo.file);
         
                     // append content to all list
@@ -1128,6 +1011,7 @@ const asm_preamble_file = `
                 options.current.asmFileName = options.current.asmFileName.replace(options.profiles.current.root + '/', '');
             }
             options.current.asmMain = './' + path.join(options.current.src, options.current.asmName, 'index.js');
+            options.current.asyncTypeLoading = true;
             options.current.functions = './' + path.join(options.current.src, options.current.asmName, 'functions.js');
             options.current.asmSettings = './' + path.join(options.current.src, options.current.asmName, 'settings.json');
             options.current.asmConfig = './' + path.join(options.current.src, options.current.asmName, 'config.json');
@@ -1200,7 +1084,7 @@ const asm_preamble_file = `
                 logger(0, 'preamble', options.current.preamble.replace(options.dest, '.'), true);
                 
                 // create preamble content
-                let preambleContent = replaceAll(asm_preamble_file, '<<path>>', options.current.dest.replace(options.dest, './'));
+                let preambleContent = replaceAll(asm_preamble, '<<path>>', options.current.dest.replace(options.dest, './'));
                 preambleContent = replaceAll(preambleContent, '<<lupdate>>', new Date().toUTCString());
                 preambleContent = replaceAll(preambleContent, '<<ados>>', JSON.stringify(options.current.adosJSON));
 
@@ -1339,7 +1223,7 @@ const asm_preamble_file = `
                         exec: null
                     };
                     if (path.basename(p.file) === p.file) { // no path given, means it is an inbuilt plugin
-                        p.file = path.join(options.engine.replace('.js', '/plugins'),  p.file);
+                        p.file = path.join(options.engine.replace('.js', 'plugins'),  p.file);
                     }
                     if (p.file) {
                         plugins[p.name].file = p.file;
@@ -1692,16 +1576,13 @@ const asm_preamble_file = `
         // exclude files from being registered
         options.skipRegistrationsFor = [
             'flair',
-            'flair.cli'
         ];
         // exclude files from being added to preamble
         options.skipPreambleFor = [
             'flair',
-            'flair.cli'
         ];  
         // exclude files from being added to minified
         options.skipMinifyFor = [
-            'flair.cli'
         ];        
 
         // process options with their resolved values

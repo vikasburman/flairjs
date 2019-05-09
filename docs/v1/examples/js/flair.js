@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.52.0
- *  Wed, 08 May 2019 18:52:00 GMT
+ *  Version: 0.52.32
+ *  Thu, 09 May 2019 03:24:44 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -105,10 +105,10 @@
         name: 'flairjs',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.52.0',
+        version: '0.52.32',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Wed, 08 May 2019 18:52:00 GMT')
+        lupdate: new Date('Thu, 09 May 2019 03:24:44 GMT')
     });  
     
     flair.members = [];
@@ -1418,9 +1418,9 @@
     
         // NOTE: This function's script is loaded independently by worker thread constructor as text/code.
         const remoteMessageHandler = function() {
-            let isServer = ('<<isServer>>' === 'true' ? true : false), // eslint-disable-line no-constant-condition
+            let isServer = ('<<{{isServer}}>>' === 'true' ? true : false), // eslint-disable-line no-constant-condition
                 port = null;
-            // let ados = JSON.parse('<<ados>>');
+            // let ados = JSON.parse('<<{{ados}}>>');
     
             // build communication pipeline between main thread and worker thread
             const onMessageFromMain = (e) => { // message received from main thread
@@ -1491,7 +1491,7 @@
             // initialize environment
             if (isServer) {
                 // load entry point
-                require('<<entryPoint>>');
+                require('<<{{entryPoint}}>>');
     
                 // plumb to parent port for private port connection
                 let parentPort = require('worker_threads').parentPort;
@@ -1502,16 +1502,16 @@
                 });
             } else {
                 // load entry point
-                importScripts('<<entryPoint>>');
+                importScripts('<<{{entryPoint}}>>');
     
                 // plumb to private port 
                 port = this;
                 port.onmessage = onMessageFromMain;
             }
         };
-        let remoteMessageHandlerScript = remoteMessageHandler.toString().replace('<<entryPoint>>', AppDomain.entryPoint());
-        remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<isServer>>', isServer.toString());
-        // remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<ados>>', JSON.stringify(allADOs));
+        let remoteMessageHandlerScript = remoteMessageHandler.toString().replace('<<{{entryPoint}}>>', AppDomain.entryPoint());
+        remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{isServer}}>>', isServer.toString());
+        // remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{ados}}>>', JSON.stringify(allADOs));
         remoteMessageHandlerScript = `(${remoteMessageHandlerScript})();`
         // NOTE: script/end
     
@@ -5009,7 +5009,7 @@
      *                    MyClass
      *                 >> auto naming, e.g., 
      *                    '(auto)'
-     *                    Use this only when putting only one class in a file and using flair.cli builder to build assembly
+     *                    Use this only when putting only one class in a file and using flairBuild builder to build assembly
      *                    And in that case, filename will be used as class name. So if file name is 'MyClass.js', name would be 'MyClass' (case sensitive)
      *                    To give namespace to a type, use $$('ns', 'com.product.feature');
      *                    Apply this attribute on class definition itself. then class can be accessed as getType('com.product.feature.MyClass');
@@ -5086,7 +5086,7 @@
      *                    IInterfaceName
      *                 >> auto naming, e.g., 
      *                    '(auto)'
-     *                    Use this only when putting only one interface in a file and using flair.cli builder to build assembly
+     *                    Use this only when putting only one interface in a file and using flairBuild builder to build assembly
      *                    And in that case, filename will be used as interface name. So if file name is 'IInterfaceName.js', name would be 'IInterfaceName' (case sensitive)
      *                    To give namespace to a type, use $$('ns', 'com.product.feature');
      *                    Apply this attribute on interface definition itself. then interface can be accessed as getType('com.product.feature.IInterfaceName');
@@ -5138,7 +5138,7 @@
      *                    MyStruct
      *                 >> auto naming, e.g., 
      *                    '(auto)'
-     *                    Use this only when putting only one struct in a file and using flair.cli builder to build assembly
+     *                    Use this only when putting only one struct in a file and using flairBuild builder to build assembly
      *                    And in that case, filename will be used as struct name. So if file name is 'MyStruct.js', name would be 'MyStruct' (case sensitive)
      *                    To give namespace to a type, use $$('ns', 'com.product.feature');
      *                    Apply this attribute on struct definition itself. then struct can be accessed as getType('com.product.feature.MyStruct');
@@ -5189,7 +5189,7 @@
      *                    MyEnum
      *                 >> auto naming, e.g., 
      *                    '(auto)'
-     *                    Use this only when putting only one enum in a file and using flair.cli builder to build assembly
+     *                    Use this only when putting only one enum in a file and using flairBuild builder to build assembly
      *                    And in that case, filename will be used as enum name. So if file name is 'MyEnum.js', name would be 'MyEnum' (case sensitive)
      *                    To give namespace to a type, use $$('ns', 'com.product.feature');
      *                    Apply this attribute on enum definition itself. then enum can be accessed as getType('com.product.feature.MyEnum');
@@ -5317,7 +5317,7 @@
      *                    MyMixin
      *                 >> auto naming, e.g., 
      *                    '(auto)'
-     *                    Use this only when putting only one mixin in a file and using flair.cli builder to build assembly
+     *                    Use this only when putting only one mixin in a file and using flairBuild builder to build assembly
      *                    And in that case, filename will be used as mixin name. So if file name is 'MyMixin.js', name would be 'MyMixin' (case sensitive)
      *                    To give namespace to a type, use $$('ns', 'com.product.feature');
      *                    Apply this attribute on mixin definition itself. then mixin can be accessed as getType('com.product.feature.MyMixin');
@@ -6881,17 +6881,14 @@
     // freeze members
     flair.members = Object.freeze(flair.members);
 
-    // builtin types
-    (()=>{
+    // assembly payload
+    ((__asmFile) => {
         // NOTES: 
-        // 1. Any relevant change in flair.cli/(bundle)/asm.js may require to bring here
-        // 2. These build-in types do not support await include() type syntax on top, as these are not wrapped inside an async wrapper
+        // 1. Since this is a custom assembly index.js file, types built-in here does not support await type calls, as this outer closure is not an async function
 
         // assembly closure init (start)
         /* eslint-disable no-unused-vars */
         
-        // flair object (already defined)
-
         // flair types, variables and functions
         const { Class, Struct, Enum, Interface, Mixin, Aspects, AppDomain, $$, attr, bring, Container, include, Port, on, post, telemetry,
                 Reflector, Serializer, Tasks, as, is, isComplies, isDerivedFrom, isAbstract, isSealed, isStatic, isSingleton, isDeprecated,
@@ -6906,52 +6903,42 @@
         const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,
                 $$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$args, $$inject, $$resource, $$asset, $$singleton, $$serialize,
                 $$deprecate, $$session, $$state, $$conditional, $$noserialize, $$ns } = $$;
-    
+        
         // access to DOC
         const DOC = ((env.isServer || env.isWorker) ? null : window.document);
-
+        
         // current for this assembly
         const __currentContextName = AppDomain.context.current().name;
-        const __currentFile = (env.isServer ? __filename : window.document.currentScript.src.replace(window.document.location.href, './'));
+        const __currentFile = __asmFile;
         const __currentPath = __currentFile.substr(0, __currentFile.lastIndexOf('/') + 1);
         AppDomain.loadPathOf('flair', __currentPath);
-
-        // settings of this assembly (not supported)
+        
+        // settings of this assembly
         let settings = JSON.parse('{}');
+        let settingsReader = flair.Port('settingsReader');
+        if (typeof settingsReader === 'function') {
+        let externalSettings = settingsReader('flair');
+        if (externalSettings) { settings = Object.assign(settings, externalSettings); }
+        }
         settings = Object.freeze(settings);
-
+        
         // config of this assembly
         let config = JSON.parse('{}');
         config = Object.freeze(config);
-
+        
         /* eslint-enable no-unused-vars */
         // assembly closure init (end)
-
-        // assembly global functions (not supported)
-
+        
+        // assembly global functions (start)
+        // (not defined)
+        // assembly global functions (end)
+        
         // set assembly being loaded
         AppDomain.context.current().currentAssemblyBeingLoaded('./flair{.min}.js');
-
-        // assembly builtin-types (start)
-        /**
-         * @name IDisposable
-         * @description IDisposable interface
-         */
-        $$('ns', '(root)');
-        Interface('IDisposable', function() {
-            this.dispose = nim;
-        });
         
-        /**
-         * @name IProgressReporter
-         * @description IProgressReporter interface
-         */
-        $$('ns', '(root)');
-        Interface('IProgressReporter', function() {
-            // progress report
-            this.progress = nie;
-        });
-        
+        // assembly types (start)
+            
+    (() => { // type: ./src/flair/(root)/Aspect.js
         /**
          * @name Aspect
          * @description Aspect base class.
@@ -7012,6 +6999,8 @@
             this.after = nim;
         });
         
+    })();    
+    (() => { // type: ./src/flair/(root)/Attribute.js
         /**
          * @name Attribute
          * @description Attribute base class.
@@ -7120,6 +7109,31 @@
         });
         
         
+    })();    
+    (() => { // type: ./src/flair/(root)/IDisposable.js
+        /**
+         * @name IDisposable
+         * @description IDisposable interface
+         */
+        $$('ns', '(root)');
+        Interface('IDisposable', function() {
+            this.dispose = nim;
+        });
+        
+    })();    
+    (() => { // type: ./src/flair/(root)/IProgressReporter.js
+        /**
+         * @name IProgressReporter
+         * @description IProgressReporter interface
+         */
+        $$('ns', '(root)');
+        Interface('IProgressReporter', function() {
+            // progress report
+            this.progress = nie;
+        });
+        
+    })();    
+    (() => { // type: ./src/flair/(root)/Task.js
         const { IProgressReporter, IDisposable } = ns();
         
         /**
@@ -7247,18 +7261,22 @@
             $$('async');
             this.onRun = nim;
         });
-                
-        // assembly builtin-types (end)
-
-        // assembly embedded resources (not supported)
-
+        
+    })();
+        // assembly types (end)
+        
+        // assembly embedded resources (start)
+        // (not defined)
+        // assembly embedded resources (end)        
+        
         // clear assembly being loaded
         AppDomain.context.current().currentAssemblyBeingLoaded('');
 
-        // register assembly definition object (not-supported)
-
-        // assembly load complete (not-supported)
-    })();
+        // assembly load complete
+        if (typeof onLoadComplete === 'function') { 
+            onLoadComplete();   // eslint-disable-line no-undef
+        }
+    })(currentFile);
 
     // return
     return Object.freeze(flair);

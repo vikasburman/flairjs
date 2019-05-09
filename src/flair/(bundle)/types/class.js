@@ -13,7 +13,7 @@
  *                    MyClass
  *                 >> auto naming, e.g., 
  *                    '(auto)'
- *                    Use this only when putting only one class in a file and using flair.cli builder to build assembly
+ *                    Use this only when putting only one class in a file and using flairBuild builder to build assembly
  *                    And in that case, filename will be used as class name. So if file name is 'MyClass.js', name would be 'MyClass' (case sensitive)
  *                    To give namespace to a type, use $$('ns', 'com.product.feature');
  *                    Apply this attribute on class definition itself. then class can be accessed as getType('com.product.feature.MyClass');

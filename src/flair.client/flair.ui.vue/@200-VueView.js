@@ -1,5 +1,4 @@
-const Vue = await include('vue/vue{.min}.js');
-const { ViewHandler } = await ns('flair.ui', 'flair.ui.ViewHandler');
+const { ViewHandler } = ns('flair.ui');
 const { VueComponentMembers } = ns('flair.ui.vue');
 
 /**
@@ -67,6 +66,9 @@ Class('(auto)', ViewHandler, [VueComponentMembers], function() {
         if (!isLoaded) {
             isLoaded = true;
             base();
+
+            // get Vue object
+            const Vue = await include('vue/vue{.min}.js');
 
             // custom load op
             await this.load(ctx, el);

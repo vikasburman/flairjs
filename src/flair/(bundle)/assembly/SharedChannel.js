@@ -10,9 +10,9 @@ const SharedChannel = function(allADOs, onError) {
 
     // NOTE: This function's script is loaded independently by worker thread constructor as text/code.
     const remoteMessageHandler = function() {
-        let isServer = ('<<isServer>>' === 'true' ? true : false), // eslint-disable-line no-constant-condition
+        let isServer = ('<<{{isServer}}>>' === 'true' ? true : false), // eslint-disable-line no-constant-condition
             port = null;
-        // let ados = JSON.parse('<<ados>>');
+        // let ados = JSON.parse('<<{{ados}}>>');
 
         // build communication pipeline between main thread and worker thread
         const onMessageFromMain = (e) => { // message received from main thread
@@ -83,7 +83,7 @@ const SharedChannel = function(allADOs, onError) {
         // initialize environment
         if (isServer) {
             // load entry point
-            require('<<entryPoint>>');
+            require('<<{{entryPoint}}>>');
 
             // plumb to parent port for private port connection
             let parentPort = require('worker_threads').parentPort;
@@ -94,16 +94,16 @@ const SharedChannel = function(allADOs, onError) {
             });
         } else {
             // load entry point
-            importScripts('<<entryPoint>>');
+            importScripts('<<{{entryPoint}}>>');
 
             // plumb to private port 
             port = this;
             port.onmessage = onMessageFromMain;
         }
     };
-    let remoteMessageHandlerScript = remoteMessageHandler.toString().replace('<<entryPoint>>', AppDomain.entryPoint());
-    remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<isServer>>', isServer.toString());
-    // remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<ados>>', JSON.stringify(allADOs));
+    let remoteMessageHandlerScript = remoteMessageHandler.toString().replace('<<{{entryPoint}}>>', AppDomain.entryPoint());
+    remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{isServer}}>>', isServer.toString());
+    // remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{ados}}>>', JSON.stringify(allADOs));
     remoteMessageHandlerScript = `(${remoteMessageHandlerScript})();`
     // NOTE: script/end
 

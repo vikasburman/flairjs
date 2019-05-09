@@ -1,5 +1,5 @@
 const Vue = await include('vue/vue{.min}.js');
-const { ViewState } = await ns('flair.ui', 'flair.ui.ViewState');
+const { ViewState } = ns('flair.ui');
 const { VueFilter, VueMixin, VueDirective } = ns('flair.ui.vue');
 
 /**

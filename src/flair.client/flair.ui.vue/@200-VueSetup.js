@@ -1,6 +1,4 @@
 const { Bootware } = ns('flair.app');
-const Vue = await include('vue/vue{.min}.js');
-const { VueComponent, VueFilter, VueDirective, VuePlugin, VueMixin } = ns('flair.ui.vue');
 
 /**
  * @name VueSetup
@@ -16,6 +14,10 @@ Class('(auto)', Bootware, function() {
     $$('override');
     this.boot = async (base) => {
         base();
+        
+        // get Vue objects
+        const Vue = await include('vue/vue{.min}.js');
+        const { VueComponent, VueFilter, VueDirective, VuePlugin, VueMixin } = ns('flair.ui.vue');
         
         // setup Vue configuration
         // TODO:

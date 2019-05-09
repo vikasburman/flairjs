@@ -9,7 +9,7 @@
  *                    MyEnum
  *                 >> auto naming, e.g., 
  *                    '(auto)'
- *                    Use this only when putting only one enum in a file and using flair.cli builder to build assembly
+ *                    Use this only when putting only one enum in a file and using flairBuild builder to build assembly
  *                    And in that case, filename will be used as enum name. So if file name is 'MyEnum.js', name would be 'MyEnum' (case sensitive)
  *                    To give namespace to a type, use $$('ns', 'com.product.feature');
  *                    Apply this attribute on enum definition itself. then enum can be accessed as getType('com.product.feature.MyEnum');
