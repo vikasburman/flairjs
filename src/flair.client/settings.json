@@ -1,30 +1,42 @@
 {
-    "el": "main",
-    "title": "",
-    "viewTransition": "",
-    "components": [],
-    "filters": [],
-    "mixins": [],
-    "directives": [],
-    "plugins": [],
-    "pluginOptions": {
-    },    
+    "view": {
+        "el": "main",
+        "title": "",
+        "transition": ""
+    },
+
     "url": {
+        "hashbang": false,
+        "i18n": false,
         "home": "/",
         "404": "/404"
     },
-    "i18n": true,
-    "i18nUrls": false,
-    "hashbang": false,
-    "locale": "en",
-    "locales": [
-        { "code": "en", "name": "English", "native": "English" }
-    ],
-    "mounts": {
-        "main": "/"
+
+    "vue": {
+        "components": [],
+        "filters": [],
+        "mixins": [],
+        "directives": [],
+        "plugins": [],
+        "pluginOptions": {
+        }
     },
-    "main-options": [
-    ],
-    "main-interceptors": [
-    ]        
+
+    "i18n": {
+        "enabled": true,
+        "locale": "en",
+        "locales": [
+            { "code": "en", "name": "English", "native": "English" }
+        ]
+    },
+
+    "routing": {
+        "mounts": {
+            "main": "/"
+        },
+        "main-options": [
+        ],
+        "main-interceptors": [
+        ]        
+    }
 }

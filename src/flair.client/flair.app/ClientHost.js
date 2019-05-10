@@ -28,18 +28,18 @@ Class('(auto)', Host, function() {
     // localization support (start)
     $$('state');
     $$('private');
-    this.currentLocale = settings.locale;
+    this.currentLocale = settings.i18n.locale;
 
     this.defaultLocale = {
-        get: () => { return settings.locale; },
+        get: () => { return settings.i18n.locale; },
         set: noop
     };
     this.supportedLocales = {
-        get: () => { return settings.locales.slice(); },
+        get: () => { return settings.i18n.locales.slice(); },
         set: noop
     };
     this.locale = (newLocale, isSuppressRefresh) => {
-        if (!settings.i18n) { return ''; }
+        if (!settings.i18n.enabled) { return ''; }
 
         // update value and refresh for changes (if required)
         if (newLocale && this.currentLocale !== newLocale) { 
@@ -47,7 +47,7 @@ Class('(auto)', Host, function() {
 
             // change url and then redirect to new URL
             if (!isSuppressRefresh) {
-                if (settings.i18nUrls) {
+                if (settings.url.i18n) {
                     // set new path with replaced locale
                     // this change will also go in history
                     window.location.hash = this.replaceLocale(window.location.hash);
@@ -77,7 +77,7 @@ Class('(auto)', Host, function() {
     };
     $$('private');
     this.extractLocale = (path) => {
-        if (!settings.i18nUrls) { return ''; }
+        if (!settings.url.i18n) { return ''; }
 
         // pick first path element
         let idx = path.indexOf('/');
@@ -103,7 +103,7 @@ Class('(auto)', Host, function() {
     $$('private');
     this.replaceLocale = (path) => {
         // replace current locale with given locale
-        if (settings.i18nUrls) { 
+        if (settings.url.i18n) { 
             // clean path first
             path = this.cleanPath(path);
 
@@ -129,14 +129,14 @@ Class('(auto)', Host, function() {
         path = this.cleanPath(path);
 
         // add hash
-        if (settings.hashbang) {
+        if (settings.url.hashbang) {
             path = '/#!/' + path;
         } else {
             path = '/#/' + path;
         }
 
         // add i18n
-        if (settings.i18n && settings.i18nUrls) {
+        if (settings.i18n.enabled && settings.url.i18n) {
             path = (this.currentLocale || this.defaultLocale) + '/' + path;
         }
 
@@ -216,13 +216,13 @@ Class('(auto)', Host, function() {
         mainApp.base('/');
 
         // create one instance of page app for each mounted path
-        for(let mountName of Object.keys(settings.mounts)) {
+        for(let mountName of Object.keys(settings.routing.mounts)) {
             if (mountName === 'main') {
                 mountPath = '/';
                 mount = mainApp;
             } else {
                 appOptions = getOptions(mountName);
-                mountPath = settings.mounts[mountName];
+                mountPath = settings.routing.mounts[mountName];
                 mount = page.create(appOptions); // create a sub-app
                 mount.strict(appOptions.strict);
                 mount.base(mountPath);
@@ -249,8 +249,8 @@ Class('(auto)', Host, function() {
             let path = this.cleanPath(window.location.hash);
             
             // handle i18n specific routing
-            if (settings.i18n) {
-                if (settings.i18nUrls) { // if i18n type urls are being used
+            if (settings.i18n.enabled) {
+                if (settings.url.i18n) { // if i18n type urls are being used
                     // extract locale from path
                     let extractedLocale = this.extractLocale(path);
 

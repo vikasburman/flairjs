@@ -1,5 +1,5 @@
 const { Host } = ns('flair.app');
-const Server = await include(settings['server'] || 'flair.app.server.ExpressServer');
+const Server = await include(settings.types.server || 'flair.app.server.ExpressServer');
 const express = await include('express | x');
 
 /**
@@ -49,12 +49,12 @@ Class('(auto)', Host, [Server], function() {
         // create one instance of express app for each mounted path
         let mountPath = '',
             mount = null;
-        for(let mountName of Object.keys(settings.mounts)) {
+        for(let mountName of Object.keys(settings.routing.mounts)) {
             if (mountName === 'main') {
                 mountPath = '/';
                 mount = mainApp;
             } else {
-                mountPath = settings.mounts[mountName];
+                mountPath = settings.routing.mounts[mountName];
                 mount = express(); // create a sub-app
             }
 

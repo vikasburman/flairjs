@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.52.39
- *  Fri, 10 May 2019 20:48:37 GMT
+ *  Version: 0.52.45
+ *  Fri, 10 May 2019 22:26:45 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -41,7 +41,7 @@
     const { TaskInfo } = flair.Tasks;
     const { env } = flair.options;
     const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, guid, isArrowFunc, isASyncFunc, sieve,
-            b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
+            deepMerge, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
     
     // inbuilt modifiers and attributes compile-time-safe support
     const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,
@@ -58,11 +58,11 @@
     AppDomain.loadPathOf('flair.app', __currentPath);
     
     // settings of this assembly
-    let settings = JSON.parse('{"host":"flair.app.ServerHost | flair.app.ClientHost","app":"flair.app.App","load":[],"container":{}}');
+    let settings = JSON.parse('{"types":{"host":"flair.app.ServerHost | flair.app.ClientHost","app":"flair.app.App"},"boot":{"load":[]},"di":{"container":{}}}');
     let settingsReader = flair.Port('settingsReader');
     if (typeof settingsReader === 'function') {
-    let externalSettings = settingsReader('flair.app');
-    if (externalSettings) { settings = Object.assign(settings, externalSettings); }
+        let externalSettings = settingsReader('flair.app');
+        if (externalSettings) { settings = deepMerge([settings, externalSettings], false); }
     }
     settings = Object.freeze(settings);
     
@@ -269,7 +269,7 @@
                     let Item = null,
                         Bw = null,
                         bw = null;
-                    for(let item of settings.load) {
+                    for(let item of settings.boot.load) {
                         // get bootware (it could be a bootware, a simple script or a preamble)
                         item = which(item); // server/client specific version
                         if (item) { // in case no item is set for either server/client
@@ -325,7 +325,7 @@
                 };
                 const boot = async () => {
                     if (!env.isWorker) {
-                        let host = which(settings.host), // pick server/client specific host
+                        let host = which(settings.types.host), // pick server/client specific host
                             Host = as(await include(host), Bootware),
                             hostObj = null;
                         if (!Host) { throw Exception.InvalidDefinition(host, this.start); }
@@ -336,7 +336,7 @@
                     
                     await runBootwares('boot');   
                     
-                    let app = which(settings.app), // pick server/client specific host
+                    let app = which(settings.types.app), // pick server/client specific host
                     App = as(await include(app), Bootware),
                     appObj = null;
                     if (!App) { throw Exception.InvalidDefinition(app, this.start); }
@@ -410,7 +410,7 @@
             this.boot = async (base) => {
                 base();
                 
-                let containerItems = settings.container;
+                let containerItems = settings.di.container;
                 for(let alias in containerItems) {
                     if (containerItems.hasOwnProperty(alias)) {
                         Container.register(alias, containerItems[alias]);
@@ -430,7 +430,7 @@
     AppDomain.context.current().currentAssemblyBeingLoaded('');
 
     // register assembly definition object
-    AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.52.39","lupdate":"Fri, 10 May 2019 20:48:37 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Handler","flair.app.App","flair.app.Host","flair.app.BootEngine","flair.boot.DIContainer"],"resources":[],"assets":[],"routes":[]}');
+    AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.52.45","lupdate":"Fri, 10 May 2019 22:26:45 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Handler","flair.app.App","flair.app.Host","flair.app.BootEngine","flair.boot.DIContainer"],"resources":[],"assets":[],"routes":[]}');
 
     // assembly load complete
     if (typeof onLoadComplete === 'function') { 

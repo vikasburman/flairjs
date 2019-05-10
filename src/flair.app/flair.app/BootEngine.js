@@ -15,7 +15,7 @@ Class('(auto)', function() {
             let Item = null,
                 Bw = null,
                 bw = null;
-            for(let item of settings.load) {
+            for(let item of settings.boot.load) {
                 // get bootware (it could be a bootware, a simple script or a preamble)
                 item = which(item); // server/client specific version
                 if (item) { // in case no item is set for either server/client
@@ -71,7 +71,7 @@ Class('(auto)', function() {
         };
         const boot = async () => {
             if (!env.isWorker) {
-                let host = which(settings.host), // pick server/client specific host
+                let host = which(settings.types.host), // pick server/client specific host
                     Host = as(await include(host), Bootware),
                     hostObj = null;
                 if (!Host) { throw Exception.InvalidDefinition(host, this.start); }
@@ -82,7 +82,7 @@ Class('(auto)', function() {
             
             await runBootwares('boot');   
             
-            let app = which(settings.app), // pick server/client specific host
+            let app = which(settings.types.app), // pick server/client specific host
             App = as(await include(app), Bootware),
             appObj = null;
             if (!App) { throw Exception.InvalidDefinition(app, this.start); }

@@ -16,6 +16,7 @@ _utils.which = which;
 _utils.isArrowFunc = isArrow;
 _utils.isASyncFunc = isASync;
 _utils.sieve = sieve;
+_utils.deepMerge = deepMerge;
 _utils.b64EncodeUnicode = b64EncodeUnicode;
 _utils.b64DecodeUnicode = b64DecodeUnicode;
 

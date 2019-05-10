@@ -1,10 +1,16 @@
 {
-    "host": "flair.app.ServerHost | flair.app.ClientHost",
-    "app": "flair.app.App",
+    "types": {
+        "host": "flair.app.ServerHost | flair.app.ClientHost",
+        "app": "flair.app.App"
+    },
     
-    "load": [
-    ],
+    "boot": {
+        "load": [
+        ]
+    },
 
-    "container": {
+    "di": {
+        "container": {
+        }
     }
 }

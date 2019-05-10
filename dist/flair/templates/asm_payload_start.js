@@ -9,7 +9,7 @@ const { Class, Struct, Enum, Interface, Mixin, Aspects, AppDomain, $$, attr, bri
 const { TaskInfo } = flair.Tasks;
 const { env } = flair.options;
 const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, guid, isArrowFunc, isASyncFunc, sieve,
-        b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
+        deepMerge, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
 
 // inbuilt modifiers and attributes compile-time-safe support
 const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,
@@ -29,8 +29,8 @@ AppDomain.loadPathOf('<<asm>>', __currentPath);
 let settings = JSON.parse('<<settings>>');
 let settingsReader = flair.Port('settingsReader');
 if (typeof settingsReader === 'function') {
-let externalSettings = settingsReader('<<asm>>');
-if (externalSettings) { settings = Object.assign(settings, externalSettings); }
+    let externalSettings = settingsReader('<<asm>>');
+    if (externalSettings) { settings = deepMerge([settings, externalSettings], false); }
 }
 settings = Object.freeze(settings);
 

@@ -16,7 +16,7 @@ Class('(auto)', Bootware, function() {
     this.boot = async (base) => {
         base();
         
-        let containerItems = settings.container;
+        let containerItems = settings.di.container;
         for(let alias in containerItems) {
             if (containerItems.hasOwnProperty(alias)) {
                 Container.register(alias, containerItems[alias]);

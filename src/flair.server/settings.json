@@ -1,32 +1,40 @@
 {
-    "server": "flair.app.server.ExpressServer",
-
-    "server-http": {
-        "enable": false,
-        "port": 80,
-        "timeout": -1
-    },
-    "server-https": {
-        "enable": false,
-        "port": 443,
-        "timeout": -1,
-        "privateKey": "",
-        "publicCert": ""
+    "types": {
+        "server": "flair.app.server.ExpressServer"
     },
 
-    "envVars": [
-    ],
-    "envVarsloadOptions": {
-        "overwrite": true
+    "express": {
+        "server-http": {
+            "enable": false,
+            "port": 80,
+            "timeout": -1
+        },
+        "server-https": {
+            "enable": false,
+            "port": 443,
+            "timeout": -1,
+            "privateKey": "",
+            "publicCert": ""
+        }
     },
 
-    "mounts": {
-        "main": "/"
+    "envVars": {
+        "vars": [
+        ],
+        "options": {
+            "overwrite": true
+        }
     },
-    "main-appSettings": [
-    ],
-    "main-middlewares": [
-    ],
-    "main-interceptors": [
-    ]    
+
+    "routing": {
+        "mounts": {
+            "main": "/"
+        },
+        "main-appSettings": [
+        ],
+        "main-middlewares": [
+        ],
+        "main-interceptors": [
+        ]    
+    }
 }

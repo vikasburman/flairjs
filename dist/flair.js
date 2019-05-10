@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.52.39
- *  Fri, 10 May 2019 20:48:35 GMT
+ *  Version: 0.52.45
+ *  Fri, 10 May 2019 22:26:43 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -105,10 +105,10 @@
         name: 'flairjs',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.52.39',
+        version: '0.52.45',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Fri, 10 May 2019 20:48:35 GMT')
+        lupdate: new Date('Fri, 10 May 2019 22:26:43 GMT')
     });  
     
     flair.members = [];
@@ -439,6 +439,29 @@
             // start
             processItems(items.slice());
         });
+    };
+    const deepMerge = (objects, isMergeArray = true) => { // credit: https://stackoverflow.com/a/48218209
+        const isObject = obj => obj && typeof obj === 'object';
+        
+        return objects.reduce((prev, obj) => {
+            Object.keys(obj).forEach(key => {
+                const pVal = prev[key];
+                const oVal = obj[key];
+            
+                if (Array.isArray(pVal) && Array.isArray(oVal)) {
+                    if (isMergeArray) {
+                        prev[key] = pVal.concat(...oVal); // merge array
+                    } else {
+                        prev[key] = [].concat(...oVal); // overwrite as new array
+                    }
+                } else if (isObject(pVal) && isObject(oVal)) {
+                    prev[key] = deepMerge(pVal, oVal);
+                } else {
+                    prev[key] = oVal;
+                }
+            });
+            return prev;
+        }, {});
     };  
     /**
      * @name typeOf
@@ -6340,21 +6363,18 @@
              * This means, when being loaded on worker, only differentials should be defined for worker environment
              * which can be worker specific settings
              * 
-             * NOTE: under every "assemblyName", all settings underneath are treated as whole object, 
-             * and all merging happens at this level, merging does notmergin go deeper than this level
-             * 
-             * Note: merging of object properties happen via property name matching, while no merging
-             * happens for array items, they get overwritten completely
+             * NOTE: under every "assemblyName", all settings underneath are deep-merged, except arrays
+             *       arrays are always overwritten
             */
     
             // return relevant settings
             let settings = {},
                 configFileJSON = _AppDomain.config();
             if (configFileJSON && configFileJSON[asmName]) { // pick non-worker settings
-                settings = Object.assign(settings, configFileJSON[asmName]);
+                settings = deepMerge([settings, configFileJSON[asmName]], false);
             }
             if (env.isWorker && configFileJSON && configFileJSON[`worker:${asmName}`]) { // overwrite with worker section if defined
-                settings = Object.assign(settings, configFileJSON[`worker:${asmName}`]);
+                settings = deepMerge([settings, configFileJSON[`worker:${asmName}`]], false);
             }
             return settings;
         };
@@ -6872,6 +6892,7 @@
     _utils.isArrowFunc = isArrow;
     _utils.isASyncFunc = isASync;
     _utils.sieve = sieve;
+    _utils.deepMerge = deepMerge;
     _utils.b64EncodeUnicode = b64EncodeUnicode;
     _utils.b64DecodeUnicode = b64DecodeUnicode;
     
@@ -6898,7 +6919,7 @@
         const { TaskInfo } = flair.Tasks;
         const { env } = flair.options;
         const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, guid, isArrowFunc, isASyncFunc, sieve,
-                b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
+                deepMerge, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
         
         // inbuilt modifiers and attributes compile-time-safe support
         const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,
@@ -6918,8 +6939,8 @@
         let settings = JSON.parse('{}');
         let settingsReader = flair.Port('settingsReader');
         if (typeof settingsReader === 'function') {
-        let externalSettings = settingsReader('flair');
-        if (externalSettings) { settings = Object.assign(settings, externalSettings); }
+            let externalSettings = settingsReader('flair');
+            if (externalSettings) { settings = deepMerge([settings, externalSettings], false); }
         }
         settings = Object.freeze(settings);
         

@@ -243,21 +243,18 @@ const __settingsReader = (env) => {
          * This means, when being loaded on worker, only differentials should be defined for worker environment
          * which can be worker specific settings
          * 
-         * NOTE: under every "assemblyName", all settings underneath are treated as whole object, 
-         * and all merging happens at this level, merging does notmergin go deeper than this level
-         * 
-         * Note: merging of object properties happen via property name matching, while no merging
-         * happens for array items, they get overwritten completely
+         * NOTE: under every "assemblyName", all settings underneath are deep-merged, except arrays
+         *       arrays are always overwritten
         */
 
         // return relevant settings
         let settings = {},
             configFileJSON = _AppDomain.config();
         if (configFileJSON && configFileJSON[asmName]) { // pick non-worker settings
-            settings = Object.assign(settings, configFileJSON[asmName]);
+            settings = deepMerge([settings, configFileJSON[asmName]], false);
         }
         if (env.isWorker && configFileJSON && configFileJSON[`worker:${asmName}`]) { // overwrite with worker section if defined
-            settings = Object.assign(settings, configFileJSON[`worker:${asmName}`]);
+            settings = deepMerge([settings, configFileJSON[`worker:${asmName}`]], false);
         }
         return settings;
     };

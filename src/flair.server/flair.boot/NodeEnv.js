@@ -17,9 +17,9 @@ Class('(auto)', Bootware, function() {
     this.boot = async (base) => {
         base();
         
-        if (settings.envVars.length > 0) {
-            for(let envVar of settings.envVars) {
-                nodeEnv(AppDomain.resolvePath(envVar), settings.envVarsLoadOptions);
+        if (settings.envVars.vars.length > 0) {
+            for(let envVar of settings.envVars.vars) {
+                nodeEnv(AppDomain.resolvePath(envVar), settings.envVars.options);
             }
         }
     };

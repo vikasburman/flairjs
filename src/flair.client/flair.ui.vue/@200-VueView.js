@@ -11,7 +11,7 @@ Class('(auto)', ViewHandler, [VueComponentMembers], function() {
 
     $$('override');
     this.construct = (base) => {
-        base(settings.el, settings.title, settings.viewTransition);
+        base(settings.view.el, settings.view.title, settings.view.transition);
     };
 
     $$('private');

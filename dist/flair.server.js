@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.server
  *     File: ./flair.server.js
- *  Version: 0.52.39
- *  Fri, 10 May 2019 20:48:38 GMT
+ *  Version: 0.52.45
+ *  Fri, 10 May 2019 22:26:45 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -41,7 +41,7 @@
     const { TaskInfo } = flair.Tasks;
     const { env } = flair.options;
     const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, guid, isArrowFunc, isASyncFunc, sieve,
-            b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
+            deepMerge, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
     
     // inbuilt modifiers and attributes compile-time-safe support
     const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,
@@ -58,11 +58,11 @@
     AppDomain.loadPathOf('flair.server', __currentPath);
     
     // settings of this assembly
-    let settings = JSON.parse('{"server":"flair.app.server.ExpressServer","server-http":{"enable":false,"port":80,"timeout":-1},"server-https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""},"envVars":[],"envVarsloadOptions":{"overwrite":true},"mounts":{"main":"/"},"main-appSettings":[],"main-middlewares":[],"main-interceptors":[]}');
+    let settings = JSON.parse('{"types":{"server":"flair.app.server.ExpressServer"},"express":{"server-http":{"enable":false,"port":80,"timeout":-1},"server-https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""}},"envVars":{"vars":[],"options":{"overwrite":true}},"routing":{"mounts":{"main":"/"},"main-appSettings":[],"main-middlewares":[],"main-interceptors":[]}}');
     let settingsReader = flair.Port('settingsReader');
     if (typeof settingsReader === 'function') {
-    let externalSettings = settingsReader('flair.server');
-    if (externalSettings) { settings = Object.assign(settings, externalSettings); }
+        let externalSettings = settingsReader('flair.server');
+        if (externalSettings) { settings = deepMerge([settings, externalSettings], false); }
     }
     settings = Object.freeze(settings);
     
@@ -97,8 +97,8 @@
         Mixin('ExpressServer', function() {
             let httpServer = null,
                 httpsServer = null,
-                httpSettings = settings['server-http'],
-                httpsSettings = settings['server-https'];        
+                httpSettings = settings.express['server-http'],
+                httpsSettings = settings.express['server-https'];        
             
             $$('override');
             this.start = async (base) => { // configure express http and https server
@@ -196,7 +196,7 @@
     })();    
     await (async () => { // type: ./src/flair.server/flair.app/@10-ServerHost.js
         const { Host } = ns('flair.app');
-        const Server = await include(settings['server'] || 'flair.app.server.ExpressServer');
+        const Server = await include(settings.types.server || 'flair.app.server.ExpressServer');
         const express = await include('express | x');
         
         /**
@@ -246,12 +246,12 @@
                 // create one instance of express app for each mounted path
                 let mountPath = '',
                     mount = null;
-                for(let mountName of Object.keys(settings.mounts)) {
+                for(let mountName of Object.keys(settings.routing.mounts)) {
                     if (mountName === 'main') {
                         mountPath = '/';
                         mount = mainApp;
                     } else {
-                        mountPath = settings.mounts[mountName];
+                        mountPath = settings.routing.mounts[mountName];
                         mount = express(); // create a sub-app
                     }
         
@@ -421,9 +421,9 @@
             this.boot = async (base) => {
                 base();
                 
-                if (settings.envVars.length > 0) {
-                    for(let envVar of settings.envVars) {
-                        nodeEnv(AppDomain.resolvePath(envVar), settings.envVarsLoadOptions);
+                if (settings.envVars.vars.length > 0) {
+                    for(let envVar of settings.envVars.vars) {
+                        nodeEnv(AppDomain.resolvePath(envVar), settings.envVars.options);
                     }
                 }
             };
@@ -649,7 +649,7 @@
     AppDomain.context.current().currentAssemblyBeingLoaded('');
 
     // register assembly definition object
-    AppDomain.registerAdo('{"name":"flair.server","file":"./flair.server{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.52.39","lupdate":"Fri, 10 May 2019 20:48:38 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.server.ExpressServer","flair.app.ServerHost","flair.api.RestHandler","flair.api.RestInterceptor","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter"],"resources":[],"assets":[],"routes":[]}');
+    AppDomain.registerAdo('{"name":"flair.server","file":"./flair.server{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.52.45","lupdate":"Fri, 10 May 2019 22:26:45 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.server.ExpressServer","flair.app.ServerHost","flair.api.RestHandler","flair.api.RestInterceptor","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter"],"resources":[],"assets":[],"routes":[]}');
 
     // assembly load complete
     if (typeof onLoadComplete === 'function') { 

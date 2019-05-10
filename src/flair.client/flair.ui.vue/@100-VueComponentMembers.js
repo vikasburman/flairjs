@@ -32,7 +32,7 @@ Mixin('(auto)', function() {
         // each i18n resource file is defined as:
         // "ns": "json-file-name"
         // when loaded, each ns will convert into JSON object from defined file
-        if(settings.i18n && this.i18n) {
+        if(settings.i18n.enabled && this.i18n) {
             let i18ResFile = '';
             for(let i18nNs in this.i18n) {
                 if (this.i18n.hasOwnProperty(i18nNs)) {
@@ -122,7 +122,7 @@ Mixin('(auto)', function() {
         component.methods['route'] = (routeName, placeholders) => { return _this.route(routeName, placeholders); };
 
         // i18n specific built-in methods
-        if (settings.i18n) {
+        if (settings.i18n.enabled) {
             // supporting built-in method: locale 
             // e.g., {{ locale() }} will give: 'en'
             component.methods['locale'] = (value) => { return _this.locale(value); };

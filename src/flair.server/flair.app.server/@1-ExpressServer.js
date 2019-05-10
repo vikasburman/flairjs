@@ -12,8 +12,8 @@ $$('ns', '(auto)');
 Mixin('(auto)', function() {
     let httpServer = null,
         httpsServer = null,
-        httpSettings = settings['server-http'],
-        httpsSettings = settings['server-https'];        
+        httpSettings = settings.express['server-http'],
+        httpsSettings = settings.express['server-https'];        
     
     $$('override');
     this.start = async (base) => { // configure express http and https server

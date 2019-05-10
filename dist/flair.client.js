@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.client
  *     File: ./flair.client.js
- *  Version: 0.52.39
- *  Fri, 10 May 2019 20:48:38 GMT
+ *  Version: 0.52.45
+ *  Fri, 10 May 2019 22:26:45 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -41,7 +41,7 @@
     const { TaskInfo } = flair.Tasks;
     const { env } = flair.options;
     const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, guid, isArrowFunc, isASyncFunc, sieve,
-            b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
+            deepMerge, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
     
     // inbuilt modifiers and attributes compile-time-safe support
     const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,
@@ -58,11 +58,11 @@
     AppDomain.loadPathOf('flair.client', __currentPath);
     
     // settings of this assembly
-    let settings = JSON.parse('{"el":"main","title":"","viewTransition":"","components":[],"filters":[],"mixins":[],"directives":[],"plugins":[],"pluginOptions":{},"url":{"404":"/404","home":"/"},"i18n":true,"i18nUrls":false,"hashbang":false,"locale":"en","locales":[{"code":"en","name":"English","native":"English"}],"mounts":{"main":"/"},"main-options":[],"main-interceptors":[]}');
+    let settings = JSON.parse('{"view":{"el":"main","title":"","transition":""},"url":{"404":"/404","hashbang":false,"i18n":false,"home":"/"},"vue":{"components":[],"filters":[],"mixins":[],"directives":[],"plugins":[],"pluginOptions":{}},"i18n":{"enabled":true,"locale":"en","locales":[{"code":"en","name":"English","native":"English"}]},"routing":{"mounts":{"main":"/"},"main-options":[],"main-interceptors":[]}}');
     let settingsReader = flair.Port('settingsReader');
     if (typeof settingsReader === 'function') {
-    let externalSettings = settingsReader('flair.client');
-    if (externalSettings) { settings = Object.assign(settings, externalSettings); }
+        let externalSettings = settingsReader('flair.client');
+        if (externalSettings) { settings = deepMerge([settings, externalSettings], false); }
     }
     settings = Object.freeze(settings);
     
@@ -397,8 +397,8 @@
         Class('VuePlugin', function() {
             this.construct = (name) => {
                 // load options, if name and corresponding options are defined
-                if (settings.pluginOptions[name]) {
-                    this.options = Object.assign({}, settings.pluginOptions[name]); // keep a copy
+                if (settings.vue.pluginOptions[name]) {
+                    this.options = Object.assign({}, settings.vue.pluginOptions[name]); // keep a copy
                 }
             };
         
@@ -445,7 +445,7 @@
                 // each i18n resource file is defined as:
                 // "ns": "json-file-name"
                 // when loaded, each ns will convert into JSON object from defined file
-                if(settings.i18n && this.i18n) {
+                if(settings.i18n.enabled && this.i18n) {
                     let i18ResFile = '';
                     for(let i18nNs in this.i18n) {
                         if (this.i18n.hasOwnProperty(i18nNs)) {
@@ -535,7 +535,7 @@
                 component.methods['route'] = (routeName, placeholders) => { return _this.route(routeName, placeholders); };
         
                 // i18n specific built-in methods
-                if (settings.i18n) {
+                if (settings.i18n.enabled) {
                     // supporting built-in method: locale 
                     // e.g., {{ locale() }} will give: 'en'
                     component.methods['locale'] = (value) => { return _this.locale(value); };
@@ -877,7 +877,7 @@
                 // load Vue global plugins
                 // each plugin in array is defined as:
                 // { "name": "name", "type": "ns.typeName" }
-                let plugins = settings.plugins,
+                let plugins = settings.vue.plugins,
                     PluginType = null,
                     plugin = null;
                 for(let item of plugins) {
@@ -900,7 +900,7 @@
                 // load Vue global mixins
                 // each mixin in array is defined as:
                 // { "name": "name", "type": "ns.typeName" }
-                let mixins = settings.mixins,
+                let mixins = settings.vue.mixins,
                     MixinType = null,
                     mixin = null;
                 for(let item of mixins) {
@@ -923,7 +923,7 @@
                 // load Vue global directives
                 // each directive in array is defined as:
                 // { "name": "name", "type": "ns.typeName" }
-                let directives = settings.directives,
+                let directives = settings.vue.directives,
                     DirectiveType = null,
                     directive = null;
                 for(let item of directives) {
@@ -946,7 +946,7 @@
                 // load Vue global filters 
                 // each filter in array is defined as:
                 // { "name": "name", "type": "ns.typeName" }
-                let filters = settings.filters,
+                let filters = settings.vue.filters,
                     FilterType = null,
                     filter = null;
                 for(let item of filters) {
@@ -969,7 +969,7 @@
                 // register global components
                 // each component in array is defined as:
                 // { "name": "name", "type": "ns.typeName" }
-                let components = settings.components,
+                let components = settings.vue.components,
                     ComponentType = null,
                     component = null;
                 for(let item of components) {
@@ -1011,7 +1011,7 @@
         
             $$('override');
             this.construct = (base) => {
-                base(settings.el, settings.title, settings.viewTransition);
+                base(settings.view.el, settings.view.title, settings.view.transition);
             };
         
             $$('private');
@@ -1128,18 +1128,18 @@
             // localization support (start)
             $$('state');
             $$('private');
-            this.currentLocale = settings.locale;
+            this.currentLocale = settings.i18n.locale;
         
             this.defaultLocale = {
-                get: () => { return settings.locale; },
+                get: () => { return settings.i18n.locale; },
                 set: noop
             };
             this.supportedLocales = {
-                get: () => { return settings.locales.slice(); },
+                get: () => { return settings.i18n.locales.slice(); },
                 set: noop
             };
             this.locale = (newLocale, isSuppressRefresh) => {
-                if (!settings.i18n) { return ''; }
+                if (!settings.i18n.enabled) { return ''; }
         
                 // update value and refresh for changes (if required)
                 if (newLocale && this.currentLocale !== newLocale) { 
@@ -1147,7 +1147,7 @@
         
                     // change url and then redirect to new URL
                     if (!isSuppressRefresh) {
-                        if (settings.i18nUrls) {
+                        if (settings.url.i18n) {
                             // set new path with replaced locale
                             // this change will also go in history
                             window.location.hash = this.replaceLocale(window.location.hash);
@@ -1177,7 +1177,7 @@
             };
             $$('private');
             this.extractLocale = (path) => {
-                if (!settings.i18nUrls) { return ''; }
+                if (!settings.url.i18n) { return ''; }
         
                 // pick first path element
                 let idx = path.indexOf('/');
@@ -1203,7 +1203,7 @@
             $$('private');
             this.replaceLocale = (path) => {
                 // replace current locale with given locale
-                if (settings.i18nUrls) { 
+                if (settings.url.i18n) { 
                     // clean path first
                     path = this.cleanPath(path);
         
@@ -1229,14 +1229,14 @@
                 path = this.cleanPath(path);
         
                 // add hash
-                if (settings.hashbang) {
+                if (settings.url.hashbang) {
                     path = '/#!/' + path;
                 } else {
                     path = '/#/' + path;
                 }
         
                 // add i18n
-                if (settings.i18n && settings.i18nUrls) {
+                if (settings.i18n.enabled && settings.url.i18n) {
                     path = (this.currentLocale || this.defaultLocale) + '/' + path;
                 }
         
@@ -1316,13 +1316,13 @@
                 mainApp.base('/');
         
                 // create one instance of page app for each mounted path
-                for(let mountName of Object.keys(settings.mounts)) {
+                for(let mountName of Object.keys(settings.routing.mounts)) {
                     if (mountName === 'main') {
                         mountPath = '/';
                         mount = mainApp;
                     } else {
                         appOptions = getOptions(mountName);
-                        mountPath = settings.mounts[mountName];
+                        mountPath = settings.routing.mounts[mountName];
                         mount = page.create(appOptions); // create a sub-app
                         mount.strict(appOptions.strict);
                         mount.base(mountPath);
@@ -1349,8 +1349,8 @@
                     let path = this.cleanPath(window.location.hash);
                     
                     // handle i18n specific routing
-                    if (settings.i18n) {
-                        if (settings.i18nUrls) { // if i18n type urls are being used
+                    if (settings.i18n.enabled) {
+                        if (settings.url.i18n) { // if i18n type urls are being used
                             // extract locale from path
                             let extractedLocale = this.extractLocale(path);
         
@@ -1593,7 +1593,7 @@
     AppDomain.context.current().currentAssemblyBeingLoaded('');
 
     // register assembly definition object
-    AppDomain.registerAdo('{"name":"flair.client","file":"./flair.client{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.52.39","lupdate":"Fri, 10 May 2019 20:48:38 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.ui.ViewTransition","flair.ui.ViewState","flair.ui.ViewHandler","flair.ui.ViewInterceptor","flair.ui.vue.VueDirective","flair.ui.vue.VueFilter","flair.ui.vue.VueLayout","flair.ui.vue.VueMixin","flair.ui.vue.VuePlugin","flair.ui.vue.VueComponentMembers","flair.ui.vue.VueComponent","flair.ui.vue.VueSetup","flair.ui.vue.VueView","flair.app.ClientHost","flair.boot.ClientRouter"],"resources":[],"assets":[],"routes":[{"name":"flair.ui.vue.test2","mount":"main","index":101,"verbs":[],"path":"test/:id","handler":"abc.xyz.Test"},{"name":"flair.ui.vue.exit2","mount":"main","index":103,"verbs":[],"path":"exit","handler":"abc.xyz.Exit"}]}');
+    AppDomain.registerAdo('{"name":"flair.client","file":"./flair.client{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.52.45","lupdate":"Fri, 10 May 2019 22:26:45 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.ui.ViewTransition","flair.ui.ViewState","flair.ui.ViewHandler","flair.ui.ViewInterceptor","flair.ui.vue.VueDirective","flair.ui.vue.VueFilter","flair.ui.vue.VueLayout","flair.ui.vue.VueMixin","flair.ui.vue.VuePlugin","flair.ui.vue.VueComponentMembers","flair.ui.vue.VueComponent","flair.ui.vue.VueSetup","flair.ui.vue.VueView","flair.app.ClientHost","flair.boot.ClientRouter"],"resources":[],"assets":[],"routes":[{"name":"flair.ui.vue.test2","mount":"main","index":101,"verbs":[],"path":"test/:id","handler":"abc.xyz.Test"},{"name":"flair.ui.vue.exit2","mount":"main","index":103,"verbs":[],"path":"exit","handler":"abc.xyz.Exit"}]}');
 
     // assembly load complete
     if (typeof onLoadComplete === 'function') { 
