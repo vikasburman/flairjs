@@ -8,6 +8,8 @@ const { VueFilter, VueMixin, VueDirective } = ns('flair.ui.vue');
  */
 $$('ns', '(auto)');
 Mixin('(auto)', function() {
+    var _this = this;
+
     $$('private');
     this.define = async () => {
         let viewState = new ViewState(),
@@ -24,6 +26,20 @@ Mixin('(auto)', function() {
         // load html content in property
         if (this.html && this.html.endsWith('.html')) { // if html file is defined via $$('asset', '<fileName>');
             this.html = await clientFileLoader(this.html);
+        }
+
+        // local i18n resources
+        // each i18n resource file is defined as:
+        // "ns": "json-file-name"
+        // when loaded, each ns will convert into JSON object from defined file
+        if(settings.i18n && this.i18n) {
+            let i18ResFile = '';
+            for(let i18nNs in this.i18n) {
+                if (this.i18n.hasOwnProperty(i18nNs)) {
+                    i18ResFile = this.$self.assemblyName + '/locales/' + this.locale() + '/' + this.i18n[i18nNs];
+                    this.i18n[i18nNs] = await clientFileLoader(i18ResFile); // this will load defined json file as json object here
+                }
+            }
         }
 
         // template
@@ -92,6 +108,34 @@ Mixin('(auto)', function() {
                 }
             }
         }        
+
+        // supporting built-in method: path 
+        // this helps in building client side path nuances
+        // e.g., {{ path('abc/xyz') }} will give: '/#/en/abc/xyz'
+        component.methods = component.methods || {};
+        component.methods['path'] = (path) => { return _this.path(path); };
+
+        // supporting built-in method: route
+        // this helps in using path from route settings itself
+        // e.g., {{ route('home') }} will give: '/#/en/'
+        component.methods = component.methods || {};
+        component.methods['route'] = (routeName, placeholders) => { return _this.route(routeName, placeholders); };
+
+        // i18n specific built-in methods
+        if (settings.i18n) {
+            // supporting built-in method: locale 
+            // e.g., {{ locale() }} will give: 'en'
+            component.methods['locale'] = (value) => { return _this.locale(value); };
+
+            // supporting built-in method: i18n 
+            // e.g., {{ i18n('shared', 'OK', 'Ok!') }} will give: 'Ok' if this was the translation added in shared.json::OK key
+            component.methods['i18n'] = (ns, key, defaultValue) => {  
+                if (_this.i18n && _this.i18n[ns] && _this.i18n[ns][key]) {
+                    return _this.i18n[ns][key] || defaultValue || '(i18n: 404)';
+                }
+                return defaultValue || '(i18n: 404)';
+            };
+        }
 
         // watch
         // https://vuejs.org/v2/guide/computed.html#Computed-vs-Watched-Property
@@ -266,6 +310,18 @@ Mixin('(auto)', function() {
         return component;
     };    
     
+    $$('protected');
+    this.locale = (value) => { return AppDomain.host().locale(value); }
+
+    $$('protected');
+    this.path = (path) => { return AppDomain.host().path(path); }
+    
+    $$('protected');
+    this.route = (routeName, placeholders) => { return AppDomain.host().route(routeName, placeholders); }
+
+    $$('protected');
+    this.i18n = null;
+
     $$('protected');
     this.style = '';
 

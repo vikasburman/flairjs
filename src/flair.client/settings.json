@@ -13,6 +13,13 @@
         "home": "/",
         "404": "/404"
     },
+    "i18n": true,
+    "i18nUrls": false,
+    "hashbang": false,
+    "locale": "en",
+    "locales": [
+        { "code": "en", "name": "English", "native": "English" }
+    ],
     "mounts": {
         "main": "/"
     },

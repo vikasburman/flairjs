@@ -25,6 +25,158 @@ Class('(auto)', Host, function() {
         set: noop
     };
 
+    // localization support (start)
+    $$('state');
+    $$('private');
+    this.currentLocale = settings.locale;
+
+    this.defaultLocale = {
+        get: () => { return settings.locale; },
+        set: noop
+    };
+    this.supportedLocales = {
+        get: () => { return settings.locales.slice(); },
+        set: noop
+    };
+    this.locale = (newLocale, isSuppressRefresh) => {
+        if (!settings.i18n) { return ''; }
+
+        // update value and refresh for changes (if required)
+        if (newLocale && this.currentLocale !== newLocale) { 
+            this.currentLocale = newLocale;
+
+            // change url and then redirect to new URL
+            if (!isSuppressRefresh) {
+                if (settings.i18nUrls) {
+                    // set new path with replaced locale
+                    // this change will also go in history
+                    window.location.hash = this.replaceLocale(window.location.hash);
+                } else {
+                    // just refresh as is (it will pick the new currentLocale)
+                    // this change will not go in history, as there is no url change
+                    if (hashChangeHandler) { hashChangeHandler(); }
+                }
+            }
+        }
+
+        // return
+        return this.currentLocale;
+    };
+    // localization support (end)
+
+    // path support (start)
+    $$('private');
+    this.cleanPath = (path) => {
+        if (path.substr(0, 1) === '/') { path = path.substr(1); }        
+        if (path.substr(0, 3) === '#!/') { path = path.substr(3); }
+        if (path.substr(0, 2) === '#!') { path = path.substr(2); }
+        if (path.substr(0, 2) === '#/') { path = path.substr(2); }
+        if (path.substr(0, 1) === '#') { path = path.substr(1); }
+        if (path.substr(0, 1) === '/') { path = path.substr(1); }        
+        return path;
+    };
+    $$('private');
+    this.extractLocale = (path) => {
+        if (!settings.i18nUrls) { return ''; }
+
+        // pick first path element
+        let idx = path.indexOf('/');
+        if (idx !== -1) {
+            let loc = path.substr(0, idx);
+            if (this.supportedLocales.indexOf(loc) !== -1) {
+                return loc; // found locale
+            }
+        }
+
+        return '';
+    };
+    $$('private');
+    this.trimLocale = (path, locale) => {
+        let lookFor = locale + '/',
+            idx = path.indexOf(lookFor);
+        if (idx !== -1) {
+            return path.substr(idx + lookFor.length);
+        }
+        // return as is
+        return path;
+    };
+    $$('private');
+    this.replaceLocale = (path) => {
+        // replace current locale with given locale
+        if (settings.i18nUrls) { 
+            // clean path first
+            path = this.cleanPath(path);
+
+           // extract locale from path
+           let extractedLocale = this.extractLocale(path);
+           if (extractedLocale) {
+                // trim locale from path
+                path = this.trimLocale(path, extractedLocale);
+            }
+
+            // build path with new locale
+            path = this.path(path);
+        }
+
+        // return
+        return path;
+    };
+
+    this.path = (path) => {
+        if (!path) { return ''; }
+
+        // clean path
+        path = this.cleanPath(path);
+
+        // add hash
+        if (settings.hashbang) {
+            path = '/#!/' + path;
+        } else {
+            path = '/#/' + path;
+        }
+
+        // add i18n
+        if (settings.i18n && settings.i18nUrls) {
+            path = (this.currentLocale || this.defaultLocale) + '/' + path;
+        }
+
+        // return
+        return path;
+    };
+    this.route = (route, placeholders) => {
+        if (!route) { return; }
+
+        // get path
+        let path = '', 
+            routeObj = AppDomain.context.current().getRoute(route); // route = qualifiedRouteName
+        if (routeObj) {
+            path = routeObj.path;
+        }
+
+        // replace placeholders
+        // path can be like: test/:id
+        // where it is expected that placeholders.id property will have what to replace in this
+        if (path && placeholders) {
+            let idx1 = path.indexOf(':'),
+                idx2 = -1,
+                name = '';
+            while(idx1 !== -1) {
+                idx2 = path.substr(idx1 + 1).indexOf('/');
+                if (idx2 === -1) { // at the end
+                    name = path.substr(idx1 + 1);
+                } else {
+                    name = path.substr(idx1 + 1, idx2);
+                }
+                path = replaceAll(path, ':' + name, placeholders[name]);
+                idx1 = path.indexOf(':');
+            }
+        }
+
+        // build path now
+        return this.path(path);
+    };
+    // path support (end)
+
     $$('override');
     this.boot = async (base) => { // mount all page app and pseudo sub-apps
         base();
@@ -94,12 +246,31 @@ Class('(auto)', Host, function() {
 
         hashChangeHandler = () => {
             // get clean path
-            let path = window.location.hash;
-            if (path.substr(0, 3) === '#!/') { path = path.substr(3); }
-            if (path.substr(0, 2) === '#!') { path = path.substr(2); }
-            if (path.substr(0, 2) === '#/') { path = path.substr(2); }
-            if (path.substr(0, 1) === '#') { path = path.substr(1); }
+            let path = this.cleanPath(window.location.hash);
             
+            // handle i18n specific routing
+            if (settings.i18n) {
+                if (settings.i18nUrls) { // if i18n type urls are being used
+                    // extract locale from path
+                    let extractedLocale = this.extractLocale(path);
+
+                    if (extractedLocale) {
+                        // trim locale from path, so all paths here on are common across locales
+                        path = this.trimLocale(path, extractedLocale);
+
+                        // set this locale as currentLocale
+                        this.locale(extractedLocale, true); // and don't initiate refresh, as it is already in that process
+                    }
+                }
+            }
+
+            // at this point in time: 
+            // this.currentLocale has the right locale whether coming from url or otherwise
+            // path does not have any locale or hashbang and is just plain path for routing
+
+            // add a / in path, so it matches with routing definitions of mounts
+            path = ((path.substr(0, 1) !== '/') ? '/' : '') + path;
+
             // route this path to most suitable mounted app
             let app = null,
                 mountName = '';

@@ -555,6 +555,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     const self = Object.freeze({
         id: replaceAll(def.name, '.', '_'),
         name: def.name,
+        assemblyName: _getAssemblyOf(def.name),
         Type: def.Type,
         members: () => {
             let members = {};

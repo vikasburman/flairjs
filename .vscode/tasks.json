@@ -6,13 +6,13 @@
         {
             "label": "startserver",
             "type": "shell",
-            "command": "yarn server-start",
+            "command": "yarn start",
             "problemMatcher": []
         },
         {
             "label": "stopserver",
             "type": "shell",
-            "command": "yarn server-stop",
+            "command": "yarn stop",
             "problemMatcher": []
         }
 

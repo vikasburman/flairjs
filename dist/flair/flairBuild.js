@@ -493,7 +493,7 @@
             // define namespace to process
             let nsFolder = options.current.namespaces.splice(0, 1)[0]; // pick from top
             if (nsFolder.startsWith('_')) { processNamespaces(done); return; } // ignore if starts with '_'
-            if (['(assets)', '(libs)', '(bundle)', '(..)'].indexOf(nsFolder) !== -1) { processNamespaces(done); return; } // skip special folders at namespace level
+            if (['(assets)', '(libs)', '(locales)','(bundle)', '(..)'].indexOf(nsFolder) !== -1) { processNamespaces(done); return; } // skip special folders at namespace level
     
             options.current.nsName = nsFolder;
             options.current.nsPath = './' + path.join(options.current.asmPath, options.current.nsName);
@@ -683,6 +683,26 @@
                     }
                 }
             };
+            const copyLocales = () => {
+                let locSrc = './' + path.join(options.current.asmPath, '(locales)'),
+                    locDest = './' + path.join(options.current.dest, options.current.asmName, 'locales');
+                
+                if (fsx.existsSync(locSrc)) {
+                    logger(0, 'locales', locSrc);
+                    let locales = rrd(locSrc);
+                    for (let locale of locales) {
+                        if (locale.indexOf('/_') !== -1) { continue; } // either a folder or file name starts with '_'. skip it
+                        
+                        // locale file info
+                        let locFile = {
+                            ext: path.extname(locale).toLowerCase().substr(1),
+                            src: './' + locale,
+                            dest: './' + path.join(locDest, locale.replace(locSrc.replace('./', ''), ''))
+                        };
+                        fsx.copySync(libFile.src, libFile.dest, { errorOnExist: true })
+                    }
+                }
+            };            
             const copyRootFiles = () => {
                 let rootSrc = './' + path.join(options.current.asmPath, '(..)'),
                     rootDest = options.current.dest;
@@ -1038,6 +1058,9 @@
                 processAssets(() => {
                     // copy libs over assets (this will overwrite, if there are same name files in assets and libs)
                     copyLibs();
+
+                    // copy locals over assets and libs inside 'locales' folder (this will overwrite, if there same name files in assets or libs under 'locales' folder)
+                    copyLocales();
     
                     // copy root files
                     copyRootFiles();
@@ -1433,6 +1456,17 @@
      *                          (..)     - dest root folder
      *                                  > this special folder is used to put files at the root where assembly itself is being copied
      *                                  > this means, files from multiple assemblies can be placed at root and merged in same folder - may overwrite as well, (it will warn)
+     *                          (locales)   - locales folder
+     *                                  > this special folder can be used to place all localized translation files, as needed
+     *                                  > it should have folders for each locale under it, the name of each locale folder should
+     *                                    correspond to: https://www.metamodpro.com/browser-language-codes
+     *                                  > Under each of these locale folders any number of JSON files can be placed having translated
+     *                                    key:value pairs having structure:
+     *                                    { "key": "keyName", "value": "translatedValue", ... }
+     *                                  > the name of the JSON file can be anything
+     *                                  > no processing of files happen whatsoever, files are copied as is
+     *                                  > note, '(locales)' folder itself is not copied, but all contents underneath are copied
+     *                                    inside 'locales' folder under (assets) folder at destination
      *                          (libs)   - libs folder
      *                                  > this special folder can be used to place all external third-party libraries, etc.
      *                                  > it can have any structure underneath

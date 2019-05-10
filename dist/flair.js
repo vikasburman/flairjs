@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.52.32
- *  Thu, 09 May 2019 03:24:44 GMT
+ *  Version: 0.52.38
+ *  Fri, 10 May 2019 20:14:50 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -105,10 +105,10 @@
         name: 'flairjs',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.52.32',
+        version: '0.52.38',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Thu, 09 May 2019 03:24:44 GMT')
+        lupdate: new Date('Fri, 10 May 2019 20:14:50 GMT')
     });  
     
     flair.members = [];
@@ -3614,6 +3614,7 @@
         const self = Object.freeze({
             id: replaceAll(def.name, '.', '_'),
             name: def.name,
+            assemblyName: _getAssemblyOf(def.name),
             Type: def.Type,
             members: () => {
                 let members = {};
