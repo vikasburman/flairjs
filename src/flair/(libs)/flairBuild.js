@@ -546,7 +546,73 @@
                 if (options.skipPreambleFor.indexOf(options.current.asmName) === -1) { // if not to be skipped for preamble
                     options.current.adosJSON.push(options.current.ado);
                 }
-            };            
+
+                // delete old file from cache
+                if (fsx.existsSync(options.current.adoCache)) {
+                    fsx.removeSync(options.current.adoCache);
+                }
+            };
+            const appendADOFromCache = () => {
+                // read from cache file
+                options.current.ado = fsx.readJSONSync(options.current.adoCache, 'utf8');
+                
+                if (options.skipPreambleFor.indexOf(options.current.asmName) === -1) { // if not to be skipped for preamble
+                    options.current.adosJSON.push(options.current.ado);
+                }                
+            };
+            const saveADOToCache = () => {
+                // ensure dir exists
+                fsx.ensureDir(path.dirname(options.current.adoCache));
+
+                // save to cache file
+                fsx.writeJSONSync(options.current.adoCache, options.current.ado, 'utf8');
+            };
+            const isBuildAssembly = (onYes, onNo) => {
+                const goBuild = () => {
+                    // ensure file is created
+                    fsx.ensureFileSync(options.current.asm);
+
+                    // go build
+                    onYes(() => {
+                        // pick next
+                        processAssemblies(done);                        
+                    });
+                };
+                const skipBuild = () => {
+                    onNo(() => {
+                        // pick next
+                        processAssemblies(done);
+                    });
+                };
+
+                if (options.clean || options.fullBuild) { // when cleaned or fullbuild, go build
+                    goBuild();
+                } else { // else, even if this is not quickBuild, this optimization works
+                    if (fsx.existsSync(options.current.asm) && fsx.existsSync(options.current.adoCache)) { 
+                        options.current.asmLupdate = fsx.statSync(options.current.asm).mtime; 
+                        const areFilesUpdatedSinceLupdate = () => {
+                            let isChanged = false;
+                            let allFiles = rrd(options.current.asmPath);
+                            for(let f of allFiles) {
+                                if (fsx.statSync(f).mtime > options.current.asmLupdate) {
+                                    isChanged = true;
+                                    break;
+                                }
+                            }
+                            return isChanged;
+                        };
+    
+                        // check if any file for this assembly was updated since this assembly was last created
+                        if (areFilesUpdatedSinceLupdate()) {
+                            goBuild();
+                        } else {
+                            skipBuild();
+                        }
+                    } else {
+                        goBuild();
+                    }
+                }
+            };
             const collectAssets = () => {
                 let assetsInfo = [],
                     astSrc = './' + path.join(options.current.asmPath, '(assets)'),
@@ -1022,7 +1088,6 @@
             if (asmFolder.startsWith('_')) { processAssemblies(done); return; } // ignore if starts with '_'
     
             // assembly (start)
-            logger(0, 'asm', asmFolder, true); 
             options.current.asmName = asmFolder;
             options.current.asmPath = './' + path.join(options.current.src, options.current.asmName);
             options.current.asm = './' + path.join(options.current.dest, options.current.asmName + '.js');
@@ -1038,61 +1103,85 @@
             options.current.skipMinifyThisAssembly = (options.skipMinifyFor.indexOf(asmFolder) !== -1); // skip minify for this assembly, if this is a special file
             options.current.asmLupdate = null;
             options.current.asmContent = '';
+            options.current.adoCache = './temp/' + options.current.asmName + '.json';
 
-            // initialize assembly
-            if (fsx.existsSync(options.current.asm)) { 
-                options.current.asmLupdate = fsx.statSync(options.current.asm).mtime; 
-                fsx.removeSync(options.current.asm);
-            }
-            fsx.ensureFileSync(options.current.asm);            
+            isBuildAssembly((cb) => {
+                // assembly (start)
+                logger(0, 'asm', asmFolder, true); 
 
-            // append in ADO
-            appendADO();
+                // append new ADO
+                appendADO();
 
-            // process namespaces under this assembly 
-            options.current.namespaces = getFolders(options.current.asmPath, true);
-            processNamespaces(() => { 
+                // process namespaces under this assembly 
+                options.current.namespaces = getFolders(options.current.asmPath, true);
+                processNamespaces(() => { 
 
-                // process assets of the assembly
-                options.current.ado.assets = collectAssets();
-                processAssets(() => {
-                    // copy libs over assets (this will overwrite, if there are same name files in assets and libs)
-                    copyLibs();
+                    // process assets of the assembly
+                    options.current.ado.assets = collectAssets();
+                    processAssets(() => {
+                        // copy libs over assets (this will overwrite, if there are same name files in assets and libs)
+                        copyLibs();
 
-                    // copy locals over assets and libs inside 'locales' folder (this will overwrite, if there same name files in assets or libs under 'locales' folder)
-                    copyLocales();
-    
-                    // copy root files
-                    copyRootFiles();
-    
-                    // initialize assembly content
-                    initializeAssemblyContent();
-    
-                    // inject types
-                    injectTypes(() => {
+                        // copy locals over assets and libs inside 'locales' folder (this will overwrite, if there same name files in assets or libs under 'locales' folder)
+                        copyLocales();
+        
+                        // copy root files
+                        copyRootFiles();
+        
+                        // initialize assembly content
+                        initializeAssemblyContent();
+        
+                        // inject types
+                        injectTypes(() => {
 
-                        // inject resources
-                        injectResources(() => {
+                            // inject resources
+                            injectResources(() => {
 
-                            // flatten all collected routes to one list, so they can be sorted when being loaded
-                            flattenRoutes(() => {
+                                // flatten all collected routes to one list, so they can be sorted when being loaded
+                                flattenRoutes(() => {
 
-                                // finalize assembly content
-                                finalizeAssemblyContent();
+                                    // finalize assembly content
+                                    finalizeAssemblyContent();
 
-                                // create assembly
-                                createAssembly();
+                                    // create assembly
+                                    createAssembly();
 
-                                // lint, minify and gzip assembly
-                                pack(() => {
-                                    // assembly (end)
-                                    logger(0, '==>', options.current.stat); 
-                                    processAssemblies(done); // pick next
+                                    // lint, minify and gzip assembly
+                                    pack(() => {
+                                        // save ADO to cache
+                                        saveADOToCache();
+
+                                        // assembly (end)
+                                        logger(0, '==>', options.current.stat); 
+                                        cb();
+                                    });
                                 });
                             });
                         });
                     });
                 });
+            }, (cb) => {
+                // assembly (start)
+                logger(0, 'asm', asmFolder, true); 
+
+                // append ADO from cache
+                appendADOFromCache();                
+
+                // update stat (from existing file)
+                options.current.stat = options.current.asmFileName + ' (' + Math.round(fsx.statSync(options.current.asm).size / 1024) + 'kb';
+                let minFile = options.current.asm.replace('.js', '.min.js'),
+                    gzFile = minFile + '.gz';
+                if (fsx.existsSync(minFile)) {
+                    options.current.stat += ', ' + Math.round(fsx.statSync(minFile).size / 1024) + 'kb minified';
+                    if (fsx.existsSync(gzFile)) {
+                        options.current.stat += ', ' + Math.round(fsx.statSync(gzFile).size / 1024) + 'kb gzipped';
+                    }
+                }
+                options.current.stat += ') [no change, build skipped]';
+
+                // assembly (end)
+                logger(0, '==>', options.current.stat); 
+                cb();
             });
         };
 
@@ -1246,7 +1335,7 @@
                         exec: null
                     };
                     if (path.basename(p.file) === p.file) { // no path given, means it is an inbuilt plugin
-                        p.file = path.join(options.engine.replace('.js', 'plugins'),  p.file);
+                        p.file = path.join(options.engine.replace('flairBuild.js', 'plugins'),  p.file);
                     }
                     if (p.file) {
                         plugins[p.name].file = p.file;

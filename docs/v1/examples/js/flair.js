@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.52.45
- *  Fri, 10 May 2019 22:26:43 GMT
+ *  Version: 0.52.63
+ *  Sat, 11 May 2019 01:00:41 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -105,10 +105,10 @@
         name: 'flairjs',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.52.45',
+        version: '0.52.63',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Fri, 10 May 2019 22:26:43 GMT')
+        lupdate: new Date('Sat, 11 May 2019 01:00:41 GMT')
     });  
     
     flair.members = [];
@@ -455,7 +455,7 @@
                         prev[key] = [].concat(...oVal); // overwrite as new array
                     }
                 } else if (isObject(pVal) && isObject(oVal)) {
-                    prev[key] = deepMerge(pVal, oVal);
+                    prev[key] = deepMerge([pVal, oVal], isMergeArray);
                 } else {
                     prev[key] = oVal;
                 }

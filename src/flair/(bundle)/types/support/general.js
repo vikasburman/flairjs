@@ -198,7 +198,7 @@ const deepMerge = (objects, isMergeArray = true) => { // credit: https://stackov
                     prev[key] = [].concat(...oVal); // overwrite as new array
                 }
             } else if (isObject(pVal) && isObject(oVal)) {
-                prev[key] = deepMerge(pVal, oVal);
+                prev[key] = deepMerge([pVal, oVal], isMergeArray);
             } else {
                 prev[key] = oVal;
             }

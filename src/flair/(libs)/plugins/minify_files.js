@@ -1,4 +1,5 @@
 const path = require('path');
+const fsx = require('fs-extra');
 
 /**
  * @name minify_files
@@ -18,11 +19,17 @@ exports.exec = async function(settings, options, cb) { // eslint-disable no-unus
     options.logger(0, 'minify', '', true);
 
     // minify misc files on dest location
-    let src = '';
+    let src = '',
+        minFile = '';
     for(let toMinifyfile of options.profiles.current.minify) {
         src = path.resolve(path.join(options.profiles.current.dest, toMinifyfile));
-        options.logger(1, '', toMinifyfile);
-        await options.funcs.minifyFile(src);
+        minFile = src.replace('.js', '.min.js');
+        if (options.clean || options.fullBuild || !fsx.existsSync(minFile)) {
+            options.logger(1, '', toMinifyfile);
+            await options.funcs.minifyFile(src);
+        } else {
+            options.logger(1, '', '[file exists, minify skipped]');
+        }
     }
 
     // done

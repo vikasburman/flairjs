@@ -24,14 +24,18 @@ exports.exec = function(settings, options, cb) { // eslint-disable no-unused-var
     for(let fileOrFolder of options.profiles.current.copy) {
         src = path.resolve(path.join(options.src, path.join(options.profiles.current.root, fileOrFolder)));
         dest = path.resolve(path.join(options.profiles.current.dest, fileOrFolder))
-        options.logger(1, '', './' + path.join(options.src, fileOrFolder));
-        if (fsx.lstatSync(src).isDirectory()) {
-            fsx.ensureDirSync(dest);
-            copyDir.sync(src, dest);
+        if (options.clean || options.fullBuild || !fsx.existsSync(dest)) {         
+            options.logger(1, '', './' + path.join(options.src, fileOrFolder));
+            if (fsx.lstatSync(src).isDirectory()) {
+                fsx.ensureDirSync(dest);
+                copyDir.sync(src, dest);
+            } else {
+                fsx.ensureDirSync(path.dirname(dest));
+                fsx.copyFileSync(src, dest);
+            }        
         } else {
-            fsx.ensureDirSync(path.dirname(dest));
-            fsx.copyFileSync(src, dest);
-        }        
+            options.logger(1, '', './' + path.join(options.src, fileOrFolder) + ' [exists, copy skipped]');
+        }
     }
 
     // done
