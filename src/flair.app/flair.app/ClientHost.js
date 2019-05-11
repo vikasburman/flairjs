@@ -1,5 +1,4 @@
 const { Host } = ns('flair.app');
-const page = await include('page/page{.min}.js', 'page');
 
 /**
  * @name ClientHost
@@ -180,6 +179,8 @@ Class('(auto)', Host, function() {
     $$('override');
     this.boot = async (base) => { // mount all page app and pseudo sub-apps
         base();
+
+        const page = await include('page/page{.min}.js', 'page');
 
         let appOptions = null,
             mountPath = '',

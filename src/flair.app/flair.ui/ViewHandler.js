@@ -1,5 +1,4 @@
 const { Handler } = ns('flair.app');
-const { ViewTransition } = ns('flair.ui');
 
 /**
  * @name ViewHandler
@@ -33,6 +32,8 @@ Class('(auto)', Handler, function() {
     this.meta = null;
 
     this.view = async (ctx) => {
+        const { ViewTransition } = ns('flair.ui');
+
         // give it a unique name, if not already given
         this.name = this.name || (this.$self.id + '_' + guid());
 

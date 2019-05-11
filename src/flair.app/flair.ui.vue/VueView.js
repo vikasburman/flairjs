@@ -67,7 +67,6 @@ Class('(auto)', ViewHandler, [VueComponentMembers], function() {
             isLoaded = true;
             base();
 
-            // get Vue object
             const Vue = await include('vue/vue{.min}.js');
 
             // custom load op

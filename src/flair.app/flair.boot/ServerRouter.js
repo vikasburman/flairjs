@@ -1,5 +1,4 @@
 const { Bootware } = ns('flair.app');
-const { RestHandler, RestInterceptor } = ns('flair.api');
 
 /**
  * @name ServerRouter
@@ -8,7 +7,10 @@ const { RestHandler, RestInterceptor } = ns('flair.api');
 $$('sealed');
 $$('ns', '(auto)');
 Class('(auto)', Bootware, function () {
+    const { RestHandler, RestInterceptor } = ns('flair.api');
+
     let routes = null;
+    
     $$('override');
     this.construct = (base) => {
         base('Server Router', true); // mount specific 

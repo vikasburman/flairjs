@@ -1,4 +1,3 @@
-const nodeEnv = await include('node-env-file | x');
 const { Bootware } = ns('flair.app');
 
 /**
@@ -16,10 +15,14 @@ Class('(auto)', Bootware, function() {
     $$('override');
     this.boot = async (base) => {
         base();
-        
+
         if (settings.envVars.vars.length > 0) {
-            for(let envVar of settings.envVars.vars) {
-                nodeEnv(AppDomain.resolvePath(envVar), settings.envVars.options);
+            const nodeEnv = await include('node-env-file | x');
+
+            if (nodeEnv) {
+                for(let envVar of settings.envVars.vars) {
+                    nodeEnv(AppDomain.resolvePath(envVar), settings.envVars.options);
+                }
             }
         }
     };

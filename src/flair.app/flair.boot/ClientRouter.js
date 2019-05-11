@@ -1,5 +1,4 @@
 const { Bootware } = ns('flair.app');
-const { ViewHandler, ViewInterceptor } = ns('flair.ui');
 
 /**
  * @name ClientRouter
@@ -8,7 +7,10 @@ const { ViewHandler, ViewInterceptor } = ns('flair.ui');
 $$('sealed');
 $$('ns', '(auto)');
 Class('(auto)', Bootware, function () {
+    const { ViewHandler, ViewInterceptor } = ns('flair.ui');
+
     let routes = null;
+    
     $$('override');
     this.construct = (base) => {
         base('Client Router', true); // mount specific 

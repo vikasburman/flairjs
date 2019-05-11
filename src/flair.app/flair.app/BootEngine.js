@@ -70,25 +70,23 @@ Class('(auto)', function() {
             }
         };
         const boot = async () => {
+            const Host = await include('flair.app.ServerHost | flair.app.ClientHost');
+            const App = await include('flair.app.App');
+        
+            // set host
             if (!env.isWorker) {
-                let host = which(settings.types.host), // pick server/client specific host
-                    Host = as(await include(host), Bootware),
-                    hostObj = null;
-                if (!Host) { throw Exception.InvalidDefinition(host, this.start); }
-                hostObj = new Host();
+                let hostObj = new Host();
                 await hostObj.boot();
-                AppDomain.host(hostObj); // set host
+                AppDomain.host(hostObj); 
             }
             
+            // boot
             await runBootwares('boot');   
             
-            let app = which(settings.types.app), // pick server/client specific host
-            App = as(await include(app), Bootware),
-            appObj = null;
-            if (!App) { throw Exception.InvalidDefinition(app, this.start); }
-            appObj = new App();
+            // set app
+            let appObj = new App();
             await appObj.boot();
-            AppDomain.app(appObj); // set app
+            AppDomain.app(appObj); 
         };        
         const start = async () => {
             if (!env.isWorker) {

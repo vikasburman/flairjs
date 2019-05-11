@@ -1,7 +1,3 @@
-const Vue = await include('vue/vue{.min}.js');
-const { ViewState } = ns('flair.ui');
-const { VueFilter, VueMixin, VueDirective } = ns('flair.ui.vue');
-
 /**
  * @name VueComponentMembers
  * @description Vue Component Members
@@ -12,6 +8,10 @@ Mixin('(auto)', function() {
 
     $$('private');
     this.define = async () => {
+        const Vue = await include('vue/vue{.min}.js');   
+        const { ViewState } = ns('flair.ui');
+        const { VueFilter, VueMixin, VueDirective, VueComponent } = ns('flair.ui.vue');
+
         let viewState = new ViewState(),
             component = {};
 
@@ -169,7 +169,6 @@ Mixin('(auto)', function() {
         if (this.components && Array.isArray(this.components)) {
             let ComponentType = null,
                 component = null;
-            const { VueComponent } = ns('flair.ui.vue');
             for(let item of this.components) {
                 if (!item.name) { throw Exception.OperationFailed(`Component name cannot be empty. (${item.type})`); }
                 if (!item.type) { throw Exception.OperationFailed(`Component type cannot be empty. (${item.name})`); }

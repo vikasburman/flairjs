@@ -14,8 +14,7 @@ Class('(auto)', Bootware, function() {
     $$('override');
     this.boot = async (base) => {
         base();
-        
-        // get Vue objects
+
         const Vue = await include('vue/vue{.min}.js');
         const { VueComponent, VueFilter, VueDirective, VuePlugin, VueMixin } = ns('flair.ui.vue');
         

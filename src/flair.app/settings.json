@@ -1,9 +1,4 @@
 {
-    "types": {
-        "host": "flair.app.ServerHost | flair.app.ClientHost",
-        "app": "flair.app.App"
-    },
-    
     "boot": {
         "load": [
         ]
@@ -11,6 +6,86 @@
 
     "di": {
         "container": {
+        }
+    },
+
+    "client": {
+        "view": {
+            "el": "main",
+            "title": "",
+            "transition": ""
+        },
+    
+        "url": {
+            "hashbang": false,
+            "i18n": false,
+            "home": "/",
+            "404": "/404"
+        },
+    
+        "vue": {
+            "components": [],
+            "filters": [],
+            "mixins": [],
+            "directives": [],
+            "plugins": [],
+            "pluginOptions": {
+            }
+        },
+    
+        "i18n": {
+            "enabled": true,
+            "locale": "en",
+            "locales": [
+                { "code": "en", "name": "English", "native": "English" }
+            ]
+        },
+
+        "routing": {
+            "mounts": {
+                "main": "/"
+            },
+            "main-options": [
+            ],
+            "main-interceptors": [
+            ]        
+        }        
+    },
+
+    "server": {
+        "express": {
+            "server-http": {
+                "enable": false,
+                "port": 80,
+                "timeout": -1
+            },
+            "server-https": {
+                "enable": false,
+                "port": 443,
+                "timeout": -1,
+                "privateKey": "",
+                "publicCert": ""
+            }
+        },
+    
+        "envVars": {
+            "vars": [
+            ],
+            "options": {
+                "overwrite": true
+            }
+        },
+    
+        "routing": {
+            "mounts": {
+                "main": "/"
+            },
+            "main-appSettings": [
+            ],
+            "main-middlewares": [
+            ],
+            "main-interceptors": [
+            ]    
         }
     }
 }
