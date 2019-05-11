@@ -16,12 +16,12 @@ Class('(auto)', Bootware, function() {
     this.boot = async (base) => {
         base();
 
-        if (settings.envVars.vars.length > 0) {
+        if (settings.server.nsenvVars.vars.length > 0) {
             const nodeEnv = await include('node-env-file | x');
 
             if (nodeEnv) {
-                for(let envVar of settings.envVars.vars) {
-                    nodeEnv(AppDomain.resolvePath(envVar), settings.envVars.options);
+                for(let envVar of settings.server.envVars.vars) {
+                    nodeEnv(AppDomain.resolvePath(envVar), settings.server.envVars.options);
                 }
             }
         }

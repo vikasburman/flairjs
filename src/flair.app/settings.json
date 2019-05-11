@@ -85,7 +85,9 @@
             "main-middlewares": [
             ],
             "main-interceptors": [
-            ]    
+            ],
+            "main-resHeaders": [
+            ]
         }
     }
 }

@@ -10,8 +10,8 @@ Class('(auto)', Host, function() {
     let mountedApps = {},
         httpServer = null,
         httpsServer = null,
-        httpSettings = settings.express['server-http'],
-        httpsSettings = settings.express['server-https'];         
+        httpSettings = settings.server.express['server-http'],
+        httpsSettings = settings.server.express['server-https'];         
     
     $$('override');
     this.construct = (base) => {
@@ -38,7 +38,7 @@ Class('(auto)', Host, function() {
             // each item is: { name: '', value:  }
             // name: as in above link (as-is)
             // value: as defined in above link
-            let appSettings = settings[`${mountName}-appSettings`];
+            let appSettings = settings.server.routing[`${mountName}-appSettings`];
             if (appSettings && appSettings.length > 0) {
                 for(let appSetting of appSettings) {
                     mount.set(appSetting.name, appSetting.value);
@@ -53,12 +53,12 @@ Class('(auto)', Host, function() {
         // create one instance of express app for each mounted path
         let mountPath = '',
             mount = null;
-        for(let mountName of Object.keys(settings.routing.mounts)) {
+        for(let mountName of Object.keys(settings.server.routing.mounts)) {
             if (mountName === 'main') {
                 mountPath = '/';
                 mount = mainApp;
             } else {
-                mountPath = settings.routing.mounts[mountName];
+                mountPath = settings.server.routing.mounts[mountName];
                 mount = express(); // create a sub-app
             }
 

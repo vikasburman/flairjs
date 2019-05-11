@@ -6,8 +6,8 @@ $$('ns', '(auto)');
 Class('(auto)', function() {
     this.construct = (name) => {
         // load options, if name and corresponding options are defined
-        if (settings.vue.pluginOptions[name]) {
-            this.options = Object.assign({}, settings.vue.pluginOptions[name]); // keep a copy
+        if (settings.client.vue.pluginOptions[name]) {
+            this.options = Object.assign({}, settings.client.vue.pluginOptions[name]); // keep a copy
         }
     };
 

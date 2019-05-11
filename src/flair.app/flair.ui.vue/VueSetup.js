@@ -24,7 +24,7 @@ Class('(auto)', Bootware, function() {
         // load Vue global plugins
         // each plugin in array is defined as:
         // { "name": "name", "type": "ns.typeName" }
-        let plugins = settings.vue.plugins,
+        let plugins = settings.client.vue.plugins,
             PluginType = null,
             plugin = null;
         for(let item of plugins) {
@@ -47,7 +47,7 @@ Class('(auto)', Bootware, function() {
         // load Vue global mixins
         // each mixin in array is defined as:
         // { "name": "name", "type": "ns.typeName" }
-        let mixins = settings.vue.mixins,
+        let mixins = settings.client.vue.mixins,
             MixinType = null,
             mixin = null;
         for(let item of mixins) {
@@ -70,7 +70,7 @@ Class('(auto)', Bootware, function() {
         // load Vue global directives
         // each directive in array is defined as:
         // { "name": "name", "type": "ns.typeName" }
-        let directives = settings.vue.directives,
+        let directives = settings.client.vue.directives,
             DirectiveType = null,
             directive = null;
         for(let item of directives) {
@@ -93,7 +93,7 @@ Class('(auto)', Bootware, function() {
         // load Vue global filters 
         // each filter in array is defined as:
         // { "name": "name", "type": "ns.typeName" }
-        let filters = settings.vue.filters,
+        let filters = settings.client.vue.filters,
             FilterType = null,
             filter = null;
         for(let item of filters) {
@@ -116,7 +116,7 @@ Class('(auto)', Bootware, function() {
         // register global components
         // each component in array is defined as:
         // { "name": "name", "type": "ns.typeName" }
-        let components = settings.vue.components,
+        let components = settings.client.vue.components,
             ComponentType = null,
             component = null;
         for(let item of components) {

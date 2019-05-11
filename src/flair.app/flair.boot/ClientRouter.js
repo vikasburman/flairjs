@@ -108,7 +108,7 @@ Class('(auto)', Bootware, function () {
                     // each interceptor is derived from ViewInterceptor and
                     // run method of it takes ctx, can update it
                     // each item is: "InterceptorTypeQualifiedName"
-                    let mountInterceptors = settings[`${mount.name}-interceptors`] || [];
+                    let mountInterceptors = settings.client.routing[`${mount.name}-interceptors`] || [];
                     runInterceptors(mountInterceptors, ctx).then(() => {
                         if (!ctx.$stop) {
                             handleRoute();
@@ -135,7 +135,7 @@ Class('(auto)', Bootware, function () {
         // catch 404 for this mount and forward to error handler
         mount.app("*", (ctx) => { // mount.app = page object/func
             // redirect to 404 route, which has to be defined route
-            let url404 = settings.url['404'];
+            let url404 = settings.client.url['404'];
             if (url404) {
                 ctx.handled = true;
                 if (ctx.pathname !== url404) { 

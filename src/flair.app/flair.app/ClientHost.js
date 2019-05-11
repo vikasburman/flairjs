@@ -27,18 +27,18 @@ Class('(auto)', Host, function() {
     // localization support (start)
     $$('state');
     $$('private');
-    this.currentLocale = settings.i18n.locale;
+    this.currentLocale = settings.client.i18n.locale;
 
     this.defaultLocale = {
-        get: () => { return settings.i18n.locale; },
+        get: () => { return settings.client.i18n.locale; },
         set: noop
     };
     this.supportedLocales = {
-        get: () => { return settings.i18n.locales.slice(); },
+        get: () => { return settings.client.i18n.locales.slice(); },
         set: noop
     };
     this.locale = (newLocale, isSuppressRefresh) => {
-        if (!settings.i18n.enabled) { return ''; }
+        if (!settings.client.i18n.enabled) { return ''; }
 
         // update value and refresh for changes (if required)
         if (newLocale && this.currentLocale !== newLocale) { 
@@ -46,7 +46,7 @@ Class('(auto)', Host, function() {
 
             // change url and then redirect to new URL
             if (!isSuppressRefresh) {
-                if (settings.url.i18n) {
+                if (settings.client.url.i18n) {
                     // set new path with replaced locale
                     // this change will also go in history
                     window.location.hash = this.replaceLocale(window.location.hash);
@@ -76,7 +76,7 @@ Class('(auto)', Host, function() {
     };
     $$('private');
     this.extractLocale = (path) => {
-        if (!settings.url.i18n) { return ''; }
+        if (!settings.client.url.i18n) { return ''; }
 
         // pick first path element
         let idx = path.indexOf('/');
@@ -102,7 +102,7 @@ Class('(auto)', Host, function() {
     $$('private');
     this.replaceLocale = (path) => {
         // replace current locale with given locale
-        if (settings.url.i18n) { 
+        if (settings.client.url.i18n) { 
             // clean path first
             path = this.cleanPath(path);
 
@@ -128,14 +128,14 @@ Class('(auto)', Host, function() {
         path = this.cleanPath(path);
 
         // add hash
-        if (settings.url.hashbang) {
+        if (settings.client.url.hashbang) {
             path = '/#!/' + path;
         } else {
             path = '/#/' + path;
         }
 
         // add i18n
-        if (settings.i18n.enabled && settings.url.i18n) {
+        if (settings.client.i18n.enabled && settings.client.url.i18n) {
             path = (this.currentLocale || this.defaultLocale) + '/' + path;
         }
 
@@ -191,7 +191,7 @@ Class('(auto)', Host, function() {
             // each item is: { name: '', value:  }
             // name: as in above link (as-is)
             // value: as defined in above link
-            let pageOptions = settings[`${mountName}-options`];
+            let pageOptions = settings.client.routing[`${mountName}-options`];
             if (pageOptions && pageOptions.length > 0) {
                 for(let pageOption of pageOptions) {
                     appOptions[pageOption.name] = pageOption.value;
@@ -217,13 +217,13 @@ Class('(auto)', Host, function() {
         mainApp.base('/');
 
         // create one instance of page app for each mounted path
-        for(let mountName of Object.keys(settings.routing.mounts)) {
+        for(let mountName of Object.keys(settings.client.routing.mounts)) {
             if (mountName === 'main') {
                 mountPath = '/';
                 mount = mainApp;
             } else {
                 appOptions = getOptions(mountName);
-                mountPath = settings.routing.mounts[mountName];
+                mountPath = settings.client.routing.mounts[mountName];
                 mount = page.create(appOptions); // create a sub-app
                 mount.strict(appOptions.strict);
                 mount.base(mountPath);
@@ -250,8 +250,8 @@ Class('(auto)', Host, function() {
             let path = this.cleanPath(window.location.hash);
             
             // handle i18n specific routing
-            if (settings.i18n.enabled) {
-                if (settings.url.i18n) { // if i18n type urls are being used
+            if (settings.client.i18n.enabled) {
+                if (settings.client.url.i18n) { // if i18n type urls are being used
                     // extract locale from path
                     let extractedLocale = this.extractLocale(path);
 
@@ -310,7 +310,7 @@ Class('(auto)', Host, function() {
         window.addEventListener('hashchange', hashChangeHandler);
 
         // navigate to home
-        this.app.redirect(settings.url.home);
+        this.app.redirect(settings.client.url.home);
 
         // ready
         console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version}`); // eslint-disable-line no-console

@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.6.6
- *  Sat, 11 May 2019 03:36:59 GMT
+ *  Version: 0.6.7
+ *  Sat, 11 May 2019 03:55:13 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -58,7 +58,7 @@
     AppDomain.loadPathOf('flair.app', __currentPath);
     
     // settings of this assembly
-    let settings = JSON.parse('{"boot":{"load":[]},"di":{"container":{}},"client":{"view":{"el":"main","title":"","transition":""},"url":{"404":"/404","hashbang":false,"i18n":false,"home":"/"},"vue":{"components":[],"filters":[],"mixins":[],"directives":[],"plugins":[],"pluginOptions":{}},"i18n":{"enabled":true,"locale":"en","locales":[{"code":"en","name":"English","native":"English"}]},"routing":{"mounts":{"main":"/"},"main-options":[],"main-interceptors":[]}},"server":{"express":{"server-http":{"enable":false,"port":80,"timeout":-1},"server-https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""}},"envVars":{"vars":[],"options":{"overwrite":true}},"routing":{"mounts":{"main":"/"},"main-appSettings":[],"main-middlewares":[],"main-interceptors":[]}}}');
+    let settings = JSON.parse('{"boot":{"load":[]},"di":{"container":{}},"client":{"view":{"el":"main","title":"","transition":""},"url":{"404":"/404","hashbang":false,"i18n":false,"home":"/"},"vue":{"components":[],"filters":[],"mixins":[],"directives":[],"plugins":[],"pluginOptions":{}},"i18n":{"enabled":true,"locale":"en","locales":[{"code":"en","name":"English","native":"English"}]},"routing":{"mounts":{"main":"/"},"main-options":[],"main-interceptors":[]}},"server":{"express":{"server-http":{"enable":false,"port":80,"timeout":-1},"server-https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""}},"envVars":{"vars":[],"options":{"overwrite":true}},"routing":{"mounts":{"main":"/"},"main-appSettings":[],"main-middlewares":[],"main-interceptors":[],"main-resHeaders":[]}}}');
     let settingsReader = flair.Port('settingsReader');
     if (typeof settingsReader === 'function') {
         let externalSettings = settingsReader('flair.app');
@@ -286,7 +286,7 @@
                 // each i18n resource file is defined as:
                 // "ns": "json-file-name"
                 // when loaded, each ns will convert into JSON object from defined file
-                if(settings.i18n.enabled && this.i18n) {
+                if(settings.client.i18n.enabled && this.i18n) {
                     let i18ResFile = '';
                     for(let i18nNs in this.i18n) {
                         if (this.i18n.hasOwnProperty(i18nNs)) {
@@ -376,7 +376,7 @@
                 component.methods['route'] = (routeName, placeholders) => { return _this.route(routeName, placeholders); };
         
                 // i18n specific built-in methods
-                if (settings.i18n.enabled) {
+                if (settings.client.i18n.enabled) {
                     // supporting built-in method: locale 
                     // e.g., {{ locale() }} will give: 'en'
                     component.methods['locale'] = (value) => { return _this.locale(value); };
@@ -829,18 +829,18 @@
             // localization support (start)
             $$('state');
             $$('private');
-            this.currentLocale = settings.i18n.locale;
+            this.currentLocale = settings.client.i18n.locale;
         
             this.defaultLocale = {
-                get: () => { return settings.i18n.locale; },
+                get: () => { return settings.client.i18n.locale; },
                 set: noop
             };
             this.supportedLocales = {
-                get: () => { return settings.i18n.locales.slice(); },
+                get: () => { return settings.client.i18n.locales.slice(); },
                 set: noop
             };
             this.locale = (newLocale, isSuppressRefresh) => {
-                if (!settings.i18n.enabled) { return ''; }
+                if (!settings.client.i18n.enabled) { return ''; }
         
                 // update value and refresh for changes (if required)
                 if (newLocale && this.currentLocale !== newLocale) { 
@@ -848,7 +848,7 @@
         
                     // change url and then redirect to new URL
                     if (!isSuppressRefresh) {
-                        if (settings.url.i18n) {
+                        if (settings.client.url.i18n) {
                             // set new path with replaced locale
                             // this change will also go in history
                             window.location.hash = this.replaceLocale(window.location.hash);
@@ -878,7 +878,7 @@
             };
             $$('private');
             this.extractLocale = (path) => {
-                if (!settings.url.i18n) { return ''; }
+                if (!settings.client.url.i18n) { return ''; }
         
                 // pick first path element
                 let idx = path.indexOf('/');
@@ -904,7 +904,7 @@
             $$('private');
             this.replaceLocale = (path) => {
                 // replace current locale with given locale
-                if (settings.url.i18n) { 
+                if (settings.client.url.i18n) { 
                     // clean path first
                     path = this.cleanPath(path);
         
@@ -930,14 +930,14 @@
                 path = this.cleanPath(path);
         
                 // add hash
-                if (settings.url.hashbang) {
+                if (settings.client.url.hashbang) {
                     path = '/#!/' + path;
                 } else {
                     path = '/#/' + path;
                 }
         
                 // add i18n
-                if (settings.i18n.enabled && settings.url.i18n) {
+                if (settings.client.i18n.enabled && settings.client.url.i18n) {
                     path = (this.currentLocale || this.defaultLocale) + '/' + path;
                 }
         
@@ -993,7 +993,7 @@
                     // each item is: { name: '', value:  }
                     // name: as in above link (as-is)
                     // value: as defined in above link
-                    let pageOptions = settings[`${mountName}-options`];
+                    let pageOptions = settings.client.routing[`${mountName}-options`];
                     if (pageOptions && pageOptions.length > 0) {
                         for(let pageOption of pageOptions) {
                             appOptions[pageOption.name] = pageOption.value;
@@ -1019,13 +1019,13 @@
                 mainApp.base('/');
         
                 // create one instance of page app for each mounted path
-                for(let mountName of Object.keys(settings.routing.mounts)) {
+                for(let mountName of Object.keys(settings.client.routing.mounts)) {
                     if (mountName === 'main') {
                         mountPath = '/';
                         mount = mainApp;
                     } else {
                         appOptions = getOptions(mountName);
-                        mountPath = settings.routing.mounts[mountName];
+                        mountPath = settings.client.routing.mounts[mountName];
                         mount = page.create(appOptions); // create a sub-app
                         mount.strict(appOptions.strict);
                         mount.base(mountPath);
@@ -1052,8 +1052,8 @@
                     let path = this.cleanPath(window.location.hash);
                     
                     // handle i18n specific routing
-                    if (settings.i18n.enabled) {
-                        if (settings.url.i18n) { // if i18n type urls are being used
+                    if (settings.client.i18n.enabled) {
+                        if (settings.client.url.i18n) { // if i18n type urls are being used
                             // extract locale from path
                             let extractedLocale = this.extractLocale(path);
         
@@ -1112,7 +1112,7 @@
                 window.addEventListener('hashchange', hashChangeHandler);
         
                 // navigate to home
-                this.app.redirect(settings.url.home);
+                this.app.redirect(settings.client.url.home);
         
                 // ready
                 console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version}`); // eslint-disable-line no-console
@@ -1148,8 +1148,8 @@
             let mountedApps = {},
                 httpServer = null,
                 httpsServer = null,
-                httpSettings = settings.express['server-http'],
-                httpsSettings = settings.express['server-https'];         
+                httpSettings = settings.server.express['server-http'],
+                httpsSettings = settings.server.express['server-https'];         
             
             $$('override');
             this.construct = (base) => {
@@ -1176,7 +1176,7 @@
                     // each item is: { name: '', value:  }
                     // name: as in above link (as-is)
                     // value: as defined in above link
-                    let appSettings = settings[`${mountName}-appSettings`];
+                    let appSettings = settings.server.routing[`${mountName}-appSettings`];
                     if (appSettings && appSettings.length > 0) {
                         for(let appSetting of appSettings) {
                             mount.set(appSetting.name, appSetting.value);
@@ -1191,12 +1191,12 @@
                 // create one instance of express app for each mounted path
                 let mountPath = '',
                     mount = null;
-                for(let mountName of Object.keys(settings.routing.mounts)) {
+                for(let mountName of Object.keys(settings.server.routing.mounts)) {
                     if (mountName === 'main') {
                         mountPath = '/';
                         mount = mainApp;
                     } else {
-                        mountPath = settings.routing.mounts[mountName];
+                        mountPath = settings.server.routing.mounts[mountName];
                         mount = express(); // create a sub-app
                     }
         
@@ -1435,7 +1435,7 @@
                             // each interceptor is derived from ViewInterceptor and
                             // run method of it takes ctx, can update it
                             // each item is: "InterceptorTypeQualifiedName"
-                            let mountInterceptors = settings[`${mount.name}-interceptors`] || [];
+                            let mountInterceptors = settings.client.routing[`${mount.name}-interceptors`] || [];
                             runInterceptors(mountInterceptors, ctx).then(() => {
                                 if (!ctx.$stop) {
                                     handleRoute();
@@ -1462,7 +1462,7 @@
                 // catch 404 for this mount and forward to error handler
                 mount.app("*", (ctx) => { // mount.app = page object/func
                     // redirect to 404 route, which has to be defined route
-                    let url404 = settings.url['404'];
+                    let url404 = settings.client.url['404'];
                     if (url404) {
                         ctx.handled = true;
                         if (ctx.pathname !== url404) { 
@@ -1535,7 +1535,7 @@
                 //       define it as: "return (res, path, stat) => { res.set('x-timestamp', Date.now()) }"
                 //       this string will be passed to new Function(...) and returned values will be used as value of option
                 //       all object type arguments will be scanned for string values that start with 'return ' and will be tried to convert into a function
-                let middlewares = settings[`${mount.name}-middlewares`];
+                let middlewares = settings.server.routing[`${mount.name}-middlewares`];
                 if (middlewares && middlewares.length > 0) {
                     let mod = null,
                         func = null;
@@ -1608,12 +1608,12 @@
             this.boot = async (base) => {
                 base();
         
-                if (settings.envVars.vars.length > 0) {
+                if (settings.server.nsenvVars.vars.length > 0) {
                     const nodeEnv = await include('node-env-file | x');
         
                     if (nodeEnv) {
-                        for(let envVar of settings.envVars.vars) {
-                            nodeEnv(AppDomain.resolvePath(envVar), settings.envVars.options);
+                        for(let envVar of settings.server.envVars.vars) {
+                            nodeEnv(AppDomain.resolvePath(envVar), settings.server.envVars.options);
                         }
                     }
                 }
@@ -1771,7 +1771,7 @@
                                 // each interceptor is derived from RestInterceptor and
                                 // run method of it takes req, can update it, also takes res method and can generate response, in case request is being stopped
                                 // each item is: "InterceptorTypeQualifiedName"
-                                let mountInterceptors = settings[`${mount.name}-interceptors`] || [];
+                                let mountInterceptors = settings.server.routing[`${mount.name}-interceptors`] || [];
                                 runInterceptors(mountInterceptors, req, res).then(() => {
                                     if (!req.$stop) {
                                         handleRoute();
@@ -2212,8 +2212,8 @@
         Class('VuePlugin', function() {
             this.construct = (name) => {
                 // load options, if name and corresponding options are defined
-                if (settings.vue.pluginOptions[name]) {
-                    this.options = Object.assign({}, settings.vue.pluginOptions[name]); // keep a copy
+                if (settings.client.vue.pluginOptions[name]) {
+                    this.options = Object.assign({}, settings.client.vue.pluginOptions[name]); // keep a copy
                 }
             };
         
@@ -2252,7 +2252,7 @@
                 // load Vue global plugins
                 // each plugin in array is defined as:
                 // { "name": "name", "type": "ns.typeName" }
-                let plugins = settings.vue.plugins,
+                let plugins = settings.client.vue.plugins,
                     PluginType = null,
                     plugin = null;
                 for(let item of plugins) {
@@ -2275,7 +2275,7 @@
                 // load Vue global mixins
                 // each mixin in array is defined as:
                 // { "name": "name", "type": "ns.typeName" }
-                let mixins = settings.vue.mixins,
+                let mixins = settings.client.vue.mixins,
                     MixinType = null,
                     mixin = null;
                 for(let item of mixins) {
@@ -2298,7 +2298,7 @@
                 // load Vue global directives
                 // each directive in array is defined as:
                 // { "name": "name", "type": "ns.typeName" }
-                let directives = settings.vue.directives,
+                let directives = settings.client.vue.directives,
                     DirectiveType = null,
                     directive = null;
                 for(let item of directives) {
@@ -2321,7 +2321,7 @@
                 // load Vue global filters 
                 // each filter in array is defined as:
                 // { "name": "name", "type": "ns.typeName" }
-                let filters = settings.vue.filters,
+                let filters = settings.client.vue.filters,
                     FilterType = null,
                     filter = null;
                 for(let item of filters) {
@@ -2344,7 +2344,7 @@
                 // register global components
                 // each component in array is defined as:
                 // { "name": "name", "type": "ns.typeName" }
-                let components = settings.vue.components,
+                let components = settings.client.vue.components,
                     ComponentType = null,
                     component = null;
                 for(let item of components) {
@@ -2386,7 +2386,7 @@
         
             $$('override');
             this.construct = (base) => {
-                base(settings.view.el, settings.view.title, settings.view.transition);
+                base(settings.client.view.el, settings.client.view.title, settings.client.view.transition);
             };
         
             $$('private');
@@ -2481,7 +2481,7 @@
     AppDomain.context.current().currentAssemblyBeingLoaded('');
 
     // register assembly definition object
-    AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.6.6","lupdate":"Sat, 11 May 2019 03:36:59 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Handler","flair.app.App","flair.app.Host","flair.ui.vue.VueComponentMembers","flair.api.RestHandler","flair.api.RestInterceptor","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.ClientRouter","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter","flair.ui.ViewHandler","flair.ui.ViewInterceptor","flair.ui.ViewState","flair.ui.ViewTransition","flair.ui.vue.VueComponent","flair.ui.vue.VueDirective","flair.ui.vue.VueFilter","flair.ui.vue.VueLayout","flair.ui.vue.VueMixin","flair.ui.vue.VuePlugin","flair.ui.vue.VueSetup","flair.ui.vue.VueView"],"resources":[],"assets":[],"routes":[{"name":"flair.ui.vue.test2","mount":"main","index":101,"verbs":[],"path":"test/:id","handler":"abc.xyz.Test"},{"name":"flair.ui.vue.exit2","mount":"main","index":103,"verbs":[],"path":"exit","handler":"abc.xyz.Exit"}]}');
+    AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.6.7","lupdate":"Sat, 11 May 2019 03:55:13 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Handler","flair.app.App","flair.app.Host","flair.ui.vue.VueComponentMembers","flair.api.RestHandler","flair.api.RestInterceptor","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.ClientRouter","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter","flair.ui.ViewHandler","flair.ui.ViewInterceptor","flair.ui.ViewState","flair.ui.ViewTransition","flair.ui.vue.VueComponent","flair.ui.vue.VueDirective","flair.ui.vue.VueFilter","flair.ui.vue.VueLayout","flair.ui.vue.VueMixin","flair.ui.vue.VuePlugin","flair.ui.vue.VueSetup","flair.ui.vue.VueView"],"resources":[],"assets":[],"routes":[{"name":"flair.ui.vue.test2","mount":"main","index":101,"verbs":[],"path":"test/:id","handler":"abc.xyz.Test"},{"name":"flair.ui.vue.exit2","mount":"main","index":103,"verbs":[],"path":"exit","handler":"abc.xyz.Exit"}]}');
 
     // assembly load complete
     if (typeof onLoadComplete === 'function') { 
