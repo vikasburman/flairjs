@@ -18,30 +18,28 @@ exports.exec = function(settings, options, cb) { // eslint-disable no-unused-var
 
     options.logger(0, 'modules', '', true);    
 
-    let srcPkg = options.package,
-        destPkg = path.resolve(path.join(options.profiles.current.dest, srcPkg)),
-        pkgChanged = (fsx.statSync(src).mtime !== fsx.statSync(dest));
-
     // copy all defined modules from node_modules to destination's "modules" folder at root
     let src = '',
-        dest = '';
+        dest = '',
+        modName = '';
     const doCopy = () => {
-        options.logger(1, '', module);
+        options.logger(1, '', modName);
         fsx.ensureDirSync(dest);
         copyDir.sync(src, dest);
     };
     for(let module of options.profiles.current.modules) {
+        modName = module;
         src = path.resolve(path.join('node_modules', module));
         if (module.indexOf('/') !== -1) { // module and a folder is defined
             module = module.split('/')[0]; // pick first part only
         }
         dest = path.resolve(path.join(options.profiles.current.dest, 'modules', module))
         
-        if (pkgChanged || options.clean || options.fullBuild) { // module might have been updated
+        if (options.clean || options.fullBuild) { // module might have been updated
             doCopy();
         } else {
             if (fsx.existsSync(dest)) { // if exists on destination
-                options.logger(1, '', module + ' [no change, copy skipped]');
+                options.logger(1, '', module + ' [exists, copy skipped]');
             } else {
                 doCopy();
             }
