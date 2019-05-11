@@ -16,7 +16,7 @@ Class('(auto)', Bootware, function() {
     this.boot = async (base) => {
         base();
 
-        if (settings.server.nsenvVars.vars.length > 0) {
+        if (settings.server.envVars.vars.length > 0) {
             const nodeEnv = await include('node-env-file | x');
 
             if (nodeEnv) {
