@@ -38,8 +38,8 @@ This works in web browsers and in other JavaScript environments like [Node](http
 
 Features
 ---
-* Pure JavaScript, No external dependencies, ~20k min+gz.
-* **Inheritance:** Single inheritance chain, Multiple inheritance via Mixins, Restrictions via 'sealed', etc.
+* Pure JavaScript, No external dependencies, ~25k min+gz.
+* **Inheritance:** Single inheritance chain, Multiple inheritance via Mixins, Restrictions via 'sealed', etc. 
 * **Encapsulation:** True Public, Private and Protected members etc.
 * **Polymorphism:** Abstract classes, Interfaces, Method overloading and overriding, Restrictions via 'sealed', Dynamic casting via 'as', etc.
 * **Mature Base Types:** Class, Struct, Interface, Mixin, Enum, Exception, etc.
