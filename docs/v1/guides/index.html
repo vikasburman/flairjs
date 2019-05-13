@@ -23,6 +23,16 @@
         background-color: #fafafa!important;
       }
     </style>
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-140147878-1"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'UA-140147878-1');
+      ga('set', 'page', '/v1/guides');
+      ga('send', 'pageview');      
+    </script>    
   </head>
   <body>
     <div class="container-fluid">
@@ -139,6 +149,11 @@
             if (location.href.indexOf('#') !== -1) {
               hash = location.href.substr(location.href.indexOf('#')+2);
             }
+
+            // record for ga
+            ga('set', 'page', hash);
+            ga('send', 'pageview');  
+
             let items = hash.split('/');
             group = items[0];
             item = items[1];
