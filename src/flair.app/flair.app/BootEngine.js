@@ -22,12 +22,14 @@ Class('(auto)', function() {
         };
         const loadPreambles = async () => {
             // load preambles
+            let preambleLoader = null;
             for(let item of settings.boot.preambles) {
                 // get simple script file
                 item = which(item); // server/client specific version (although this will not be the case, generally)
                 if (item) { // in case no item is set for either server/client
                     // this loads it as a function which is called here
-                    await include(item)(flair);
+                    preambleLoader = await include(item);
+                    preambleLoader(flair);
                 }
             }
         };
