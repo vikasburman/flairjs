@@ -26,8 +26,10 @@
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
       gtag('config', 'UA-140147878-1');
-      ga('set', 'page', '/');
-      ga('send', 'pageview');      
+      setTimeout(() => {
+        ga('set', 'page', '/');
+        ga('send', 'pageview');      
+      }, 100);
     </script>
   </head>
   <body>
