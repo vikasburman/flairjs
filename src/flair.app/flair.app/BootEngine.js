@@ -29,7 +29,7 @@ Class('(auto)', function() {
                 if (item) { // in case no item is set for either server/client
                     // this loads it as a function which is called here
                     preambleLoader = await include(item);
-                    preambleLoader(flair);
+                    await preambleLoader(flair);
                 }
             }
         };

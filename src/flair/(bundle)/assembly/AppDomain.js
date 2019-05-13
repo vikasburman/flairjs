@@ -200,7 +200,6 @@ const AppDomain = function(name) {
         }
 
         // load flairjs preamble
-        // this loads it as a function which is called here
         let preambleFile = '';
         if(flair.info.file.indexOf('flair.js') !== -1) {
             preambleFile = flair.info.file.replace('flair.js', 'preamble.js');
@@ -208,8 +207,9 @@ const AppDomain = function(name) {
             preambleFile = flair.info.file.replace('flair.min.js', 'preamble.js');
         }
         if (preambleFile) { 
+            // this loads it as an async function which is called here
             let preambleLoader = await _include(preambleFile);
-            preambleLoader(flair);
+            await preambleLoader(flair);
         }
 
         // boot only when __entryPoint is defined

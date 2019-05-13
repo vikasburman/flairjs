@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.6.84
- *  Mon, 13 May 2019 19:21:46 GMT
+ *  Version: 0.6.86
+ *  Mon, 13 May 2019 22:32:02 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -2004,7 +2004,6 @@
             }
     
             // load flairjs preamble
-            // this loads it as a function which is called here
             let preambleFile = '';
             if(flair.info.file.indexOf('flair.js') !== -1) {
                 preambleFile = flair.info.file.replace('flair.js', 'preamble.js');
@@ -2012,8 +2011,9 @@
                 preambleFile = flair.info.file.replace('flair.min.js', 'preamble.js');
             }
             if (preambleFile) { 
+                // this loads it as an async function which is called here
                 let preambleLoader = await _include(preambleFile);
-                preambleLoader(flair);
+                await preambleLoader(flair);
             }
     
             // boot only when __entryPoint is defined
@@ -7022,10 +7022,10 @@
         name: 'flairjs',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.6.84',
+        version: '0.6.86',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Mon, 13 May 2019 19:21:46 GMT')
+        lupdate: new Date('Mon, 13 May 2019 22:32:02 GMT')
     });  
 
     // bundled assembly load process 
@@ -7422,7 +7422,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.6.84","lupdate":"Mon, 13 May 2019 19:21:46 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.6.86","lupdate":"Mon, 13 May 2019 22:32:02 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 

@@ -16,7 +16,7 @@
     } else { // expose as global on window
         root['flair.preamble'] = loader; // always overwrites
     }
-})(this, function(flair) {
+})(this, async function(flair) {
     'use strict';
 
     <<preamble_payload>>
