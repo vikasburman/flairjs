@@ -3,7 +3,11 @@
     "app": "flair.app.App",
 
     "boot": {
-        "load": [
+        "files": [
+        ],
+        "preambles": [
+        ],
+        "bootwares": [
         ]
     },
 

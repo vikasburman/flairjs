@@ -103,68 +103,50 @@ const AppDomain = function(name) {
     };
 
     // ados
-    this.registerAdo = (...ados) => {
-        // when call is coming from direct assembly loading
-        let isThrowOnDuplicate = true,
-            isCalledFromAsmLoading = false;
-        if (ados.length === 1 && typeof ados[0] === 'string') { 
-            let ado = JSON.parse(ados[0]);
-            if (Array.isArray(ado)) {
-                ados = ado;
-            } else {
-                ados = [ado];
-            }
-            isThrowOnDuplicate = false;
-            isCalledFromAsmLoading = true;
+    this.registerAdo = (ado) => {
+        if (typeof ado === 'string') { ado = JSON.parse(ado); }
+
+        // validate
+        if (_typeOf(ado.types) !== 'array' || 
+            _typeOf(ado.resources) !== 'array' ||
+            _typeOf(ado.routes) !== 'array' ||
+            _typeOf(ado.assets) !== 'array' ||
+            typeof ado.name !== 'string' ||
+            typeof ado.file !== 'string' || ado.file === '') {
+            throw _Exception.InvalidArgument('ado', this.registerAdo);
         }
 
-        // register
-        ados.forEach(ado => {
-            if (_typeOf(ado.types) !== 'array' || 
-                _typeOf(ado.resources) !== 'array' ||
-                _typeOf(ado.routes) !== 'array' ||
-                _typeOf(ado.assets) !== 'array' ||
-                typeof ado.name !== 'string' ||
-                typeof ado.file !== 'string' || ado.file === '') {
-                throw _Exception.InvalidArgument('ado', this.registerAdo);
-            }
+        // register (no overwrite ever)
+        ado.file = which(ado.file, true); // min/dev contextual pick
+        if (!asmFiles[ado.file]) {
+            asmFiles[ado.file] = Object.freeze(ado);
 
-            ado.file = which(ado.file, true); // min/dev contextual pick
-            if (asmFiles[ado.file]) {
-                if (isThrowOnDuplicate || isWorker) { throw _Exception.Duplicate(ado.file, this.registerAdo); } // in worker too, don't throw, because allADOs list may have same items which were loaded at worker's start time
-                return;
-            } else { // register
-                asmFiles[ado.file] = Object.freeze(ado);
-
-                // flatten types
-                ado.types.forEach(qualifiedName => {
-                    // qualified names across anywhere should be unique
-                    if (asmTypes[qualifiedName]) {
-                        throw _Exception.Duplicate(qualifiedName, this.registerAdo);
-                    } else {
-                        asmTypes[qualifiedName] = ado.file; // means this type can be loaded from this assembly 
-                    }
-                });
-
-                // flatten resources
-                ado.resources.forEach(qualifiedName => {
-                    // qualified names across anywhere should be unique
-                    if (asmTypes[qualifiedName]) {
-                        throw _Exception.Duplicate(qualifiedName, this.registerAdo);
-                    } else {
-                        asmTypes[qualifiedName] = ado.file; // means this resource can be loaded from this assembly
-                    }
-                });
-                
-                // register routes
-                if (!isCalledFromAsmLoading) { // since otherwise routes are registered with preamble loading itself
-                    this.context.registerRoutes(ado.routes, ado.file);
+            // flatten types
+            ado.types.forEach(qualifiedName => {
+                // qualified names across anywhere should be unique
+                if (asmTypes[qualifiedName]) {
+                    throw _Exception.Duplicate(qualifiedName, this.registerAdo);
+                } else {
+                    asmTypes[qualifiedName] = ado.file; // means this type can be loaded from this assembly 
                 }
-            }
-        });  
+            });
 
-        // store raw, for use when creating new app domain
-        allADOs.push(...ados);
+            // flatten resources
+            ado.resources.forEach(qualifiedName => {
+                // qualified names across anywhere should be unique
+                if (asmTypes[qualifiedName]) {
+                    throw _Exception.Duplicate(qualifiedName, this.registerAdo);
+                } else {
+                    asmTypes[qualifiedName] = ado.file; // means this resource can be loaded from this assembly
+                }
+            });
+                
+            // register routes
+            this.context.registerRoutes(ado.routes, ado.file);
+
+            // store raw, for later use and reference
+            allADOs.push(ado);
+        }  
     };
     this.getAdo = (file) => {
         if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.getAdo); }
@@ -180,7 +162,16 @@ const AppDomain = function(name) {
     this.allTypes = () => { return Object.keys(asmTypes); }
 
     // app domain start/restart
-    this.boot = async () => {
+    this.boot = async (__entryPoint, __config) => {
+        __config = __config || this.config();
+        __entryPoint = __entryPoint || this.entryPoint();
+
+        // don't boot if entry point is not defined
+        if (!__entryPoint) { 
+            console.log('No entry point defined, boot aborted.'); // eslint-disable-line no-console
+            return false; 
+        }
+
         // this is a place where all basic settings are done on start time
         // and now ready to start boot engine
         // also, this is called when app wants to restart
@@ -195,23 +186,39 @@ const AppDomain = function(name) {
             setNewDefaultContext();
         }
 
-        // set entry point
-        let __entryPoint = (isWorker ? '' : which(settings.entryPoint)); // server/client specific file
-        this.entryPoint(__entryPoint);
-
         // set root
         this.root(isServer ? process.cwd() : './');
 
-        // load config
-        await this.config(which(settings.config)); // server/client specific file
+        // set entry point, if defined
+        if (__entryPoint) {
+            this.entryPoint(__entryPoint);
+        }
 
-        // load preamble
-        await _include(settings.preamble);
+        // load config, if specified, otherwise ignore
+        if (__config) {
+            await this.config(__config);
+        }
 
-        // boot
+        // load flairjs preamble
+        // this loads it as a function which is called here
+        let preambleFile = '';
+        if(flair.info.file.indexOf('flair.js') !== -1) {
+            preambleFile = flair.info.file.replace('flair.js', 'preamble.js');
+        } else if (flair.info.file.indexOf('flair.min.js') !== -1) {
+            preambleFile = flair.info.file.replace('flair.min.js', 'preamble.js');
+        }
+        if (preambleFile) { 
+            let preambleLoader = await _include(preambleFile);
+            preambleLoader(flair);
+        }
+
+        // boot only when __entryPoint is defined
         let be = await _include(settings.bootEngine);
         await be.start();
         isBooted = true;
+
+        // return
+        return true;
     };
 
     // set onces, read many times

@@ -267,16 +267,18 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
                 // set this context as current context, so all types being loaded in this assembly will get attached to this context;
                 currentContexts.push(this);
 
-                // uncache module, so it's types get to register again with this new context
-                uncacheModule(file);
-
-                // get resolved file name of this assembly, in relation to mainAssembly
+                // get resolved file name of this assembly
                 let asmADO = this.domain.getAdo(file),
                     file2 = file;
-                if (asmADO && asmADO.mainAssembly) {
-                    if (file2.startsWith('./')) { file2 = file2.substr(2); }
+                if (file2.startsWith('./')) { file2 = file2.substr(2); }
+                if (asmADO && asmADO.mainAssembly) { // in relation to mainAssembly
                     file2 = this.domain.loadPathOf(asmADO.mainAssembly) + file2;
+                } else { // in relation to start location
+                    file2 = this.domain.root() + file2;
                 }
+
+                // uncache module, so it's types get to register again with this new context
+                uncacheModule(file2);
 
                 // load module
                 loadModule(file2, asmADO.name, true).then((asmFactory) => {

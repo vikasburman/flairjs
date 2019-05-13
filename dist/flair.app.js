@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.6.37
- *  Mon, 13 May 2019 03:45:10 GMT
+ *  Version: 0.6.81
+ *  Mon, 13 May 2019 19:14:05 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -21,7 +21,7 @@
             exports = module.exports = factory; // Node.js specific module.exports
         }
         module.exports = exports = factory; // CommonJS        
-    } else { // expose as global on window
+    } else { // expose as global on root
         root['flair.app'] = factory;
     }
 })(this, async function(flair, __asmFile) {
@@ -38,7 +38,7 @@
     const { TaskInfo } = flair.Tasks;
     const { env } = flair.options;
     const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, guid, isArrowFunc, isASyncFunc, sieve,
-            deepMerge, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
+            deepMerge, getLoadedScript, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
     
     // inbuilt modifiers and attributes compile-time-safe support
     const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,
@@ -55,7 +55,7 @@
     AppDomain.loadPathOf('flair.app', __currentPath);
     
     // settings of this assembly
-    let settings = JSON.parse('{"host":"flair.app.ServerHost | flair.app.ClientHost","app":"flair.app.App","boot":{"load":[]},"di":{"container":{}},"client":{"view":{"el":"main","title":"","transition":""},"url":{"404":"/404","hashbang":false,"i18n":false,"home":"/"},"vue":{"components":[],"filters":[],"mixins":[],"directives":[],"plugins":[],"pluginOptions":{}},"i18n":{"enabled":true,"locale":"en","locales":[{"code":"en","name":"English","native":"English"}]},"routing":{"mounts":{"main":"/"},"main-options":[],"main-interceptors":[]}},"server":{"express":{"server-http":{"enable":false,"port":80,"timeout":-1},"server-https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""}},"envVars":{"vars":[],"options":{"overwrite":true}},"routing":{"mounts":{"main":"/"},"main-appSettings":[],"main-middlewares":[],"main-interceptors":[],"main-resHeaders":[]}}}');
+    let settings = JSON.parse('{"host":"flair.app.ServerHost | flair.app.ClientHost","app":"flair.app.App","boot":{"files":[],"preambles":[],"bootwares":[]},"di":{"container":{}},"client":{"view":{"el":"main","title":"","transition":""},"url":{"404":"/404","hashbang":false,"i18n":false,"home":"/"},"vue":{"components":[],"filters":[],"mixins":[],"directives":[],"plugins":[],"pluginOptions":{}},"i18n":{"enabled":true,"locale":"en","locales":[{"code":"en","name":"English","native":"English"}]},"routing":{"mounts":{"main":"/"},"main-options":[],"main-interceptors":[]}},"server":{"express":{"server-http":{"enable":false,"port":80,"timeout":-1},"server-https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""}},"envVars":{"vars":[],"options":{"overwrite":true}},"routing":{"mounts":{"main":"/"},"main-appSettings":[],"main-middlewares":[],"main-interceptors":[],"main-resHeaders":[]}}}');
     let settingsReader = flair.Port('settingsReader');
     if (typeof settingsReader === 'function') {
         let externalSettings = settingsReader('flair.app');
@@ -689,13 +689,34 @@
             this.start = async function () {
                 let allBootwares = [],
                     mountSpecificBootwares = [];
-                const loadFilesAndBootwares = async () => {
-                    // load bootwares, scripts and preambles
+                const loadFiles = async () => {
+                    // load scripts
+                    for(let item of settings.boot.files) {
+                        // get simple script file
+                        item = which(item); // server/client specific version
+                        if (item) { // in case no item is set for either server/client
+                            await include(item); // script file will be loaded as is
+                        }
+                    }
+                };
+                const loadPreambles = async () => {
+                    // load preambles
+                    for(let item of settings.boot.preambles) {
+                        // get simple script file
+                        item = which(item); // server/client specific version (although this will not be the case, generally)
+                        if (item) { // in case no item is set for either server/client
+                            // this loads it as a function which is called here
+                            await include(item)(flair);
+                        }
+                    }
+                };
+                const loadBootwares = async () => {
+                    // load bootwares
                     let Item = null,
                         Bw = null,
                         bw = null;
-                    for(let item of settings.boot.load) {
-                        // get bootware (it could be a bootware, a simple script or a preamble)
+                    for(let item of settings.boot.bootwares) {
+                        // get bootware
                         item = which(item); // server/client specific version
                         if (item) { // in case no item is set for either server/client
                             Item = await include(item);
@@ -707,8 +728,8 @@
                                     if (bw.info.isMountSpecific) { // if bootware is mount specific bootware - means can run once for each mount
                                         mountSpecificBootwares.push(bw);
                                     }
-                                } // else ignore, this was something else, like a module which was just loaded
-                            } // else ignore, as it could just be a file loaded which does not return anything
+                                } // else ignore, this was something else, like a module which was just loaded, for no reason (either by mistake or to take advantage of this load cycle)
+                            } // else ignore, as it could just be a file loaded which does not return anything, for no reason (either by mistake or to take advantage of this load cycle)
                         }
                     }
                 };
@@ -805,7 +826,9 @@
                     await AppDomain.app().ready();
                 };
                   
-                await loadFilesAndBootwares();
+                await loadFiles();
+                await loadPreambles();
+                await loadBootwares();
                 await boot();
                 await start();
                 await ready();
@@ -2496,7 +2519,7 @@
     AppDomain.context.current().currentAssemblyBeingLoaded('');
     
     // register assembly definition object
-    AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.6.37","lupdate":"Mon, 13 May 2019 03:45:10 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Handler","flair.app.App","flair.app.Host","flair.ui.vue.VueComponentMembers","flair.api.RestHandler","flair.api.RestInterceptor","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.ClientRouter","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter","flair.ui.ViewHandler","flair.ui.ViewInterceptor","flair.ui.ViewState","flair.ui.ViewTransition","flair.ui.vue.VueComponent","flair.ui.vue.VueDirective","flair.ui.vue.VueFilter","flair.ui.vue.VueLayout","flair.ui.vue.VueMixin","flair.ui.vue.VuePlugin","flair.ui.vue.VueSetup","flair.ui.vue.VueView"],"resources":[],"assets":[],"routes":[]}');
+    AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.6.81","lupdate":"Mon, 13 May 2019 19:14:05 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Handler","flair.app.App","flair.app.Host","flair.ui.vue.VueComponentMembers","flair.api.RestHandler","flair.api.RestInterceptor","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.ClientRouter","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter","flair.ui.ViewHandler","flair.ui.ViewInterceptor","flair.ui.ViewState","flair.ui.ViewTransition","flair.ui.vue.VueComponent","flair.ui.vue.VueDirective","flair.ui.vue.VueFilter","flair.ui.vue.VueLayout","flair.ui.vue.VueMixin","flair.ui.vue.VuePlugin","flair.ui.vue.VueSetup","flair.ui.vue.VueView"],"resources":[],"assets":[],"routes":[]}');
     
     // assembly load complete
     if (typeof onLoadComplete === 'function') { 

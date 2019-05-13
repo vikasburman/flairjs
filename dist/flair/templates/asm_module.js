@@ -21,7 +21,7 @@
             exports = module.exports = factory; // Node.js specific module.exports
         }
         module.exports = exports = factory; // CommonJS        
-    } else { // expose as global on window
+    } else { // expose as global on root
         root['<<asm>>'] = factory;
     }
 })(this, async function(flair, __asmFile) {

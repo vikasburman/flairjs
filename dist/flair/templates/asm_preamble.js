@@ -3,7 +3,21 @@
  * Preamble for assemblies at: <<path>>
  * Created: <<lupdate>>
  */
-(() => {
-    const flair = (typeof global !== 'undefined' ? require('flairjs') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));
-    flair.AppDomain.registerAdo(...JSON.parse('<<ados>>'));
-})();
+(function(root, loader) {
+    'use strict';
+
+    if (typeof define === 'function' && define.amd) { // AMD support
+        define(loader);
+    } else if (typeof exports === 'object') { // CommonJS and Node.js module support
+        if (typeof module !== 'undefined' && module.exports) {
+            exports = module.exports = loader; // Node.js specific module.exports
+        }
+        module.exports = exports = loader; // CommonJS        
+    } else { // expose as global on window
+        root['flair.preamble'] = loader; // always overwrites
+    }
+})(this, function(flair) {
+    'use strict';
+
+    <<preamble_payload>>
+});

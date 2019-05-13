@@ -11,7 +11,7 @@
  * <<copyright>>
  * <<license>>
  */
- (function(root, factory) {
+(function(root, factory) {
     'use strict';
 
     if (typeof define === 'function' && define.amd) { // AMD support
@@ -31,7 +31,6 @@
     // locals
     let isServer = new Function("try {return this===global;}catch(e){return false;}")(),
         isWorker = isServer ? (!require('worker_threads').isMainThread) : (typeof WorkerGlobalScope !== 'undefined' ? true : false),
-        currentFile = (isServer ? __filename : (isWorker ? self.location.href : window.document.currentScript.src)),
         sym = [],
         meta = Symbol('[meta]'),
         modulesRootFolder = 'modules',
@@ -46,16 +45,14 @@
     /* eslint-enable no-unused-vars */
 
     // flairapp bootstrapper
-    let flair = async () => {
+    let flair = async (entryPoint, config) => {
         if (!isAppStarted) {
-            isAppStarted = true;
-
             // boot
-            await AppDomain.boot();
-
-            // return
-            return AppDomain.app();
+            isAppStarted = await flair.AppDomain.boot(entryPoint, config);
         }
+
+        // return
+        return flair.AppDomain.app();
     };
 
     // read symbols from environment
@@ -87,20 +84,11 @@
         isCordova: (!isServer && !!window.cordova),
         isNodeWebkit: (isServer && process.versions['node-webkit']),
         isProd: (sym.indexOf('DEBUG') === -1 && sym.indexOf('PROD') !== -1),
-        isDebug: (sym.indexOf('DEBUG') !== -1)
+        isDebug: (sym.indexOf('DEBUG') !== -1),
+        isAppMode: () => { return isAppStarted; }
     });
 
     // flair
-    flair.info = Object.freeze({
-        name: '<<name>>',
-        title: '<<title>>',
-        file: currentFile,
-        version: '<<version>>',
-        copyright: '<<copyright>>',
-        license: '<<license>>',
-        lupdate: new Date('<<lupdate>>')
-    });  
-    
     flair.members = [];
     flair.options = Object.freeze(options);
     flair.env = flair.options.env; // direct env access as well
@@ -181,6 +169,20 @@
 
     // freeze members
     flair.members = Object.freeze(flair.members);
+
+    // get current file
+    let currentFile = (isServer ? __filename : (isWorker ? self.location.href : getLoadedScript('flair.js', 'flair.min.js')));
+    
+    // info
+    flair.info = Object.freeze({
+        name: '<<name>>',
+        title: '<<title>>',
+        file: currentFile,
+        version: '<<version>>',
+        copyright: '<<copyright>>',
+        license: '<<license>>',
+        lupdate: new Date('<<lupdate>>')
+    });  
 
     // bundled assembly load process 
     let file = which('<<which_file>>', true);

@@ -102,7 +102,7 @@ const SharedChannel = function(allADOs, onError) {
         }
     };
     let remoteMessageHandlerScript = remoteMessageHandler.toString().replace('<<{{entryPoint}}>>', AppDomain.entryPoint());
-    remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{requirejs}}>>', which(settings.requirejs, true)); // dev/min file
+    remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{requirejs}}>>', getLoadedScript('require.js', 'require.min.js')); // dev/min file
     remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{isServer}}>>', isServer.toString());
     // remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{ados}}>>', JSON.stringify(allADOs));
     remoteMessageHandlerScript = `(${remoteMessageHandlerScript})();`

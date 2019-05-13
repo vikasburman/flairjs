@@ -5,13 +5,13 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.6.37
- *  Mon, 13 May 2019 03:45:07 GMT
+ *  Version: 0.6.81
+ *  Mon, 13 May 2019 19:14:03 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
  */
- (function(root, factory) {
+(function(root, factory) {
     'use strict';
 
     if (typeof define === 'function' && define.amd) { // AMD support
@@ -31,7 +31,6 @@
     // locals
     let isServer = new Function("try {return this===global;}catch(e){return false;}")(),
         isWorker = isServer ? (!require('worker_threads').isMainThread) : (typeof WorkerGlobalScope !== 'undefined' ? true : false),
-        currentFile = (isServer ? __filename : (isWorker ? self.location.href : window.document.currentScript.src)),
         sym = [],
         meta = Symbol('[meta]'),
         modulesRootFolder = 'modules',
@@ -46,16 +45,14 @@
     /* eslint-enable no-unused-vars */
 
     // flairapp bootstrapper
-    let flair = async () => {
+    let flair = async (entryPoint, config) => {
         if (!isAppStarted) {
-            isAppStarted = true;
-
             // boot
-            await AppDomain.boot();
-
-            // return
-            return AppDomain.app();
+            isAppStarted = await flair.AppDomain.boot(entryPoint, config);
         }
+
+        // return
+        return flair.AppDomain.app();
     };
 
     // read symbols from environment
@@ -87,20 +84,11 @@
         isCordova: (!isServer && !!window.cordova),
         isNodeWebkit: (isServer && process.versions['node-webkit']),
         isProd: (sym.indexOf('DEBUG') === -1 && sym.indexOf('PROD') !== -1),
-        isDebug: (sym.indexOf('DEBUG') !== -1)
+        isDebug: (sym.indexOf('DEBUG') !== -1),
+        isAppMode: () => { return isAppStarted; }
     });
 
     // flair
-    flair.info = Object.freeze({
-        name: 'flairjs',
-        title: 'Flair.js',
-        file: currentFile,
-        version: '0.6.37',
-        copyright: '(c) 2017-2019 Vikas Burman',
-        license: 'MIT',
-        lupdate: new Date('Mon, 13 May 2019 03:45:07 GMT')
-    });  
-    
     flair.members = [];
     flair.options = Object.freeze(options);
     flair.env = flair.options.env; // direct env access as well
@@ -452,6 +440,26 @@
             });
             return prev;
         }, {});
+    };
+    const getLoadedScript = (...scriptNames) => {
+        if (isServer || isWorker) { return ''; }
+        let scriptFile = '',
+            baseUri = '',
+            el = null;
+        for(let scriptName of scriptNames) {
+            for(let script of window.document.scripts) {
+                if (script.src.endsWith(scriptName)) {
+                    el = window.document.createElement('a');
+                    el.href = script.src;
+                    baseUri = el.protocol + '//' + el.host + '/';
+                    el = null;
+                    scriptFile = './' + script.src.replace(baseUri, '');
+                    break;
+                }
+            }
+            if (scriptFile) { break; }
+        }
+        return scriptFile;
     };  
     /**
      * @name typeOf
@@ -1126,16 +1134,18 @@
                     // set this context as current context, so all types being loaded in this assembly will get attached to this context;
                     currentContexts.push(this);
     
-                    // uncache module, so it's types get to register again with this new context
-                    uncacheModule(file);
-    
-                    // get resolved file name of this assembly, in relation to mainAssembly
+                    // get resolved file name of this assembly
                     let asmADO = this.domain.getAdo(file),
                         file2 = file;
-                    if (asmADO && asmADO.mainAssembly) {
-                        if (file2.startsWith('./')) { file2 = file2.substr(2); }
+                    if (file2.startsWith('./')) { file2 = file2.substr(2); }
+                    if (asmADO && asmADO.mainAssembly) { // in relation to mainAssembly
                         file2 = this.domain.loadPathOf(asmADO.mainAssembly) + file2;
+                    } else { // in relation to start location
+                        file2 = this.domain.root() + file2;
                     }
+    
+                    // uncache module, so it's types get to register again with this new context
+                    uncacheModule(file2);
     
                     // load module
                     loadModule(file2, asmADO.name, true).then((asmFactory) => {
@@ -1579,7 +1589,7 @@
             }
         };
         let remoteMessageHandlerScript = remoteMessageHandler.toString().replace('<<{{entryPoint}}>>', AppDomain.entryPoint());
-        remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{requirejs}}>>', which(settings.requirejs, true)); // dev/min file
+        remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{requirejs}}>>', getLoadedScript('require.js', 'require.min.js')); // dev/min file
         remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{isServer}}>>', isServer.toString());
         // remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{ados}}>>', JSON.stringify(allADOs));
         remoteMessageHandlerScript = `(${remoteMessageHandlerScript})();`
@@ -1897,68 +1907,50 @@
         };
     
         // ados
-        this.registerAdo = (...ados) => {
-            // when call is coming from direct assembly loading
-            let isThrowOnDuplicate = true,
-                isCalledFromAsmLoading = false;
-            if (ados.length === 1 && typeof ados[0] === 'string') { 
-                let ado = JSON.parse(ados[0]);
-                if (Array.isArray(ado)) {
-                    ados = ado;
-                } else {
-                    ados = [ado];
-                }
-                isThrowOnDuplicate = false;
-                isCalledFromAsmLoading = true;
+        this.registerAdo = (ado) => {
+            if (typeof ado === 'string') { ado = JSON.parse(ado); }
+    
+            // validate
+            if (_typeOf(ado.types) !== 'array' || 
+                _typeOf(ado.resources) !== 'array' ||
+                _typeOf(ado.routes) !== 'array' ||
+                _typeOf(ado.assets) !== 'array' ||
+                typeof ado.name !== 'string' ||
+                typeof ado.file !== 'string' || ado.file === '') {
+                throw _Exception.InvalidArgument('ado', this.registerAdo);
             }
     
-            // register
-            ados.forEach(ado => {
-                if (_typeOf(ado.types) !== 'array' || 
-                    _typeOf(ado.resources) !== 'array' ||
-                    _typeOf(ado.routes) !== 'array' ||
-                    _typeOf(ado.assets) !== 'array' ||
-                    typeof ado.name !== 'string' ||
-                    typeof ado.file !== 'string' || ado.file === '') {
-                    throw _Exception.InvalidArgument('ado', this.registerAdo);
-                }
+            // register (no overwrite ever)
+            ado.file = which(ado.file, true); // min/dev contextual pick
+            if (!asmFiles[ado.file]) {
+                asmFiles[ado.file] = Object.freeze(ado);
     
-                ado.file = which(ado.file, true); // min/dev contextual pick
-                if (asmFiles[ado.file]) {
-                    if (isThrowOnDuplicate || isWorker) { throw _Exception.Duplicate(ado.file, this.registerAdo); } // in worker too, don't throw, because allADOs list may have same items which were loaded at worker's start time
-                    return;
-                } else { // register
-                    asmFiles[ado.file] = Object.freeze(ado);
-    
-                    // flatten types
-                    ado.types.forEach(qualifiedName => {
-                        // qualified names across anywhere should be unique
-                        if (asmTypes[qualifiedName]) {
-                            throw _Exception.Duplicate(qualifiedName, this.registerAdo);
-                        } else {
-                            asmTypes[qualifiedName] = ado.file; // means this type can be loaded from this assembly 
-                        }
-                    });
-    
-                    // flatten resources
-                    ado.resources.forEach(qualifiedName => {
-                        // qualified names across anywhere should be unique
-                        if (asmTypes[qualifiedName]) {
-                            throw _Exception.Duplicate(qualifiedName, this.registerAdo);
-                        } else {
-                            asmTypes[qualifiedName] = ado.file; // means this resource can be loaded from this assembly
-                        }
-                    });
-                    
-                    // register routes
-                    if (!isCalledFromAsmLoading) { // since otherwise routes are registered with preamble loading itself
-                        this.context.registerRoutes(ado.routes, ado.file);
+                // flatten types
+                ado.types.forEach(qualifiedName => {
+                    // qualified names across anywhere should be unique
+                    if (asmTypes[qualifiedName]) {
+                        throw _Exception.Duplicate(qualifiedName, this.registerAdo);
+                    } else {
+                        asmTypes[qualifiedName] = ado.file; // means this type can be loaded from this assembly 
                     }
-                }
-            });  
+                });
     
-            // store raw, for use when creating new app domain
-            allADOs.push(...ados);
+                // flatten resources
+                ado.resources.forEach(qualifiedName => {
+                    // qualified names across anywhere should be unique
+                    if (asmTypes[qualifiedName]) {
+                        throw _Exception.Duplicate(qualifiedName, this.registerAdo);
+                    } else {
+                        asmTypes[qualifiedName] = ado.file; // means this resource can be loaded from this assembly
+                    }
+                });
+                    
+                // register routes
+                this.context.registerRoutes(ado.routes, ado.file);
+    
+                // store raw, for later use and reference
+                allADOs.push(ado);
+            }  
         };
         this.getAdo = (file) => {
             if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.getAdo); }
@@ -1974,7 +1966,16 @@
         this.allTypes = () => { return Object.keys(asmTypes); }
     
         // app domain start/restart
-        this.boot = async () => {
+        this.boot = async (__entryPoint, __config) => {
+            __config = __config || this.config();
+            __entryPoint = __entryPoint || this.entryPoint();
+    
+            // don't boot if entry point is not defined
+            if (!__entryPoint) { 
+                console.log('No entry point defined, boot aborted.'); // eslint-disable-line no-console
+                return false; 
+            }
+    
             // this is a place where all basic settings are done on start time
             // and now ready to start boot engine
             // also, this is called when app wants to restart
@@ -1989,23 +1990,39 @@
                 setNewDefaultContext();
             }
     
-            // set entry point
-            let __entryPoint = (isWorker ? '' : which(settings.entryPoint)); // server/client specific file
-            this.entryPoint(__entryPoint);
-    
             // set root
             this.root(isServer ? process.cwd() : './');
     
-            // load config
-            await this.config(which(settings.config)); // server/client specific file
+            // set entry point, if defined
+            if (__entryPoint) {
+                this.entryPoint(__entryPoint);
+            }
     
-            // load preamble
-            await _include(settings.preamble);
+            // load config, if specified, otherwise ignore
+            if (__config) {
+                await this.config(__config);
+            }
     
-            // boot
+            // load flairjs preamble
+            // this loads it as a function which is called here
+            let preambleFile = '';
+            if(flair.info.file.indexOf('flair.js') !== -1) {
+                preambleFile = flair.info.file.replace('flair.js', 'preamble.js');
+            } else if (flair.info.file.indexOf('flair.min.js') !== -1) {
+                preambleFile = flair.info.file.replace('flair.min.js', 'preamble.js');
+            }
+            if (preambleFile) { 
+                let preambleLoader = await _include(preambleFile);
+                preambleLoader(flair);
+            }
+    
+            // boot only when __entryPoint is defined
             let be = await _include(settings.bootEngine);
             await be.start();
             isBooted = true;
+    
+            // return
+            return true;
         };
     
         // set onces, read many times
@@ -6986,6 +7003,7 @@
     _utils.isASyncFunc = isASync;
     _utils.sieve = sieve;
     _utils.deepMerge = deepMerge;
+    _utils.getLoadedScript = getLoadedScript;
     _utils.b64EncodeUnicode = b64EncodeUnicode;
     _utils.b64DecodeUnicode = b64DecodeUnicode;
     
@@ -6995,6 +7013,20 @@
 
     // freeze members
     flair.members = Object.freeze(flair.members);
+
+    // get current file
+    let currentFile = (isServer ? __filename : (isWorker ? self.location.href : getLoadedScript('flair.js', 'flair.min.js')));
+    
+    // info
+    flair.info = Object.freeze({
+        name: 'flairjs',
+        title: 'Flair.js',
+        file: currentFile,
+        version: '0.6.81',
+        copyright: '(c) 2017-2019 Vikas Burman',
+        license: 'MIT',
+        lupdate: new Date('Mon, 13 May 2019 19:14:03 GMT')
+    });  
 
     // bundled assembly load process 
     let file = which('./flair{.min}.js', true);
@@ -7014,7 +7046,7 @@
         const { TaskInfo } = flair.Tasks;
         const { env } = flair.options;
         const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, guid, isArrowFunc, isASyncFunc, sieve,
-                deepMerge, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
+                deepMerge, getLoadedScript, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
         
         // inbuilt modifiers and attributes compile-time-safe support
         const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,
@@ -7031,7 +7063,7 @@
         AppDomain.loadPathOf('flair', __currentPath);
         
         // settings of this assembly
-        let settings = JSON.parse('{"preamble":"flairjs/preamble.js","bootEngine":"flair.app.BootEngine","config":"./appConfig.json | ./webConfig.json","entryPoint":"./main.js | ./index.js","requirejs":"./modules/requirejs/require{.min}.js"}');
+        let settings = JSON.parse('{"bootEngine":"flair.app.BootEngine"}');
         let settingsReader = flair.Port('settingsReader');
         if (typeof settingsReader === 'function') {
             let externalSettings = settingsReader('flair');
@@ -7390,7 +7422,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.6.37","lupdate":"Mon, 13 May 2019 03:45:07 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.6.81","lupdate":"Mon, 13 May 2019 19:14:03 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 

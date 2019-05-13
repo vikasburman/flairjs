@@ -1,7 +1,3 @@
 {
-    "preamble": "flairjs/preamble.js",
-    "bootEngine": "flair.app.BootEngine",
-    "config": "./appConfig.json | ./webConfig.json",
-    "entryPoint": "./main.js | ./index.js",
-    "requirejs": "./modules/requirejs/require{.min}.js"
+    "bootEngine": "flair.app.BootEngine"
 }

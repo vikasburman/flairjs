@@ -10,13 +10,34 @@ Class('(auto)', function() {
     this.start = async function () {
         let allBootwares = [],
             mountSpecificBootwares = [];
-        const loadFilesAndBootwares = async () => {
-            // load bootwares, scripts and preambles
+        const loadFiles = async () => {
+            // load scripts
+            for(let item of settings.boot.files) {
+                // get simple script file
+                item = which(item); // server/client specific version
+                if (item) { // in case no item is set for either server/client
+                    await include(item); // script file will be loaded as is
+                }
+            }
+        };
+        const loadPreambles = async () => {
+            // load preambles
+            for(let item of settings.boot.preambles) {
+                // get simple script file
+                item = which(item); // server/client specific version (although this will not be the case, generally)
+                if (item) { // in case no item is set for either server/client
+                    // this loads it as a function which is called here
+                    await include(item)(flair);
+                }
+            }
+        };
+        const loadBootwares = async () => {
+            // load bootwares
             let Item = null,
                 Bw = null,
                 bw = null;
-            for(let item of settings.boot.load) {
-                // get bootware (it could be a bootware, a simple script or a preamble)
+            for(let item of settings.boot.bootwares) {
+                // get bootware
                 item = which(item); // server/client specific version
                 if (item) { // in case no item is set for either server/client
                     Item = await include(item);
@@ -28,8 +49,8 @@ Class('(auto)', function() {
                             if (bw.info.isMountSpecific) { // if bootware is mount specific bootware - means can run once for each mount
                                 mountSpecificBootwares.push(bw);
                             }
-                        } // else ignore, this was something else, like a module which was just loaded
-                    } // else ignore, as it could just be a file loaded which does not return anything
+                        } // else ignore, this was something else, like a module which was just loaded, for no reason (either by mistake or to take advantage of this load cycle)
+                    } // else ignore, as it could just be a file loaded which does not return anything, for no reason (either by mistake or to take advantage of this load cycle)
                 }
             }
         };
@@ -126,7 +147,9 @@ Class('(auto)', function() {
             await AppDomain.app().ready();
         };
           
-        await loadFilesAndBootwares();
+        await loadFiles();
+        await loadPreambles();
+        await loadBootwares();
         await boot();
         await start();
         await ready();

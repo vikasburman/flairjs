@@ -206,3 +206,23 @@ const deepMerge = (objects, isMergeArray = true) => { // credit: https://stackov
         return prev;
     }, {});
 };
+const getLoadedScript = (...scriptNames) => {
+    if (isServer || isWorker) { return ''; }
+    let scriptFile = '',
+        baseUri = '',
+        el = null;
+    for(let scriptName of scriptNames) {
+        for(let script of window.document.scripts) {
+            if (script.src.endsWith(scriptName)) {
+                el = window.document.createElement('a');
+                el.href = script.src;
+                baseUri = el.protocol + '//' + el.host + '/';
+                el = null;
+                scriptFile = './' + script.src.replace(baseUri, '');
+                break;
+            }
+        }
+        if (scriptFile) { break; }
+    }
+    return scriptFile;
+};

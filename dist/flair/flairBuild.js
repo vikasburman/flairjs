@@ -49,6 +49,7 @@
     const asm_type_sync = fsx.readFileSync(path.join(__dirname, 'templates/asm_type_sync.js'), 'utf8');
     const asm_resource = fsx.readFileSync(path.join(__dirname, 'templates/asm_resource.js'), 'utf8');
     const asm_preamble = fsx.readFileSync(path.join(__dirname, 'templates/asm_preamble.js'), 'utf8');
+    const asm_preamble_line = fsx.readFileSync(path.join(__dirname, 'templates/asm_preamble_line.js'), 'utf8');
 
     // support functions
     const getFolders = (root, excludeRoot) => {
@@ -1193,11 +1194,19 @@
         
                 logger(0, 'preamble', options.current.preamble.replace(options.dest, '.'), true);
                 
+                // build preamble lines
+                let preamble_lines = '',
+                    isFirst = true;
+                for(let _ado of options.current.adosJSON) {
+                    preamble_lines += (isFirst ? '' : '\t') + replaceAll(asm_preamble_line, '<<ado>>', JSON.stringify(_ado));
+                    isFirst = false;
+                }
+
                 // create preamble content
                 let preambleContent = replaceAll(asm_preamble, '<<path>>', options.current.dest.replace(options.dest, './'));
                 preambleContent = replaceAll(preambleContent, '<<lupdate>>', new Date().toUTCString());
-                preambleContent = replaceAll(preambleContent, '<<ados>>', JSON.stringify(options.current.adosJSON));
-
+                preambleContent = replaceAll(preambleContent, '<<preamble_payload>>', preamble_lines);
+                
                 // write preamble file
                 fsx.writeFileSync(options.current.preamble, preambleContent, 'utf8');
             };            
