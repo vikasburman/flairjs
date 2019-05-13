@@ -1,4 +1,7 @@
 {
+    "host": "flair.app.ServerHost | flair.app.ClientHost",
+    "app": "flair.app.App",
+
     "boot": {
         "load": [
         ]

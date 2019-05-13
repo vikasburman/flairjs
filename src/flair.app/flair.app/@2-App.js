@@ -15,37 +15,67 @@ Class('(auto)', Bootware, [IDisposable], function() {
     };
     
     $$('override');
+    $$('sealed');
     this.boot = async (base) => {
         base();
-        AppDomain.host().error.add(this.onError); // host's errors are handled here
+        AppDomain.host().error.add(this.handleError); // host's errors are handled here
     };
 
-    $$('virtual');
     this.start = async () => {
         // initialize view state
         if (!env.isServer && !env.isWorker) {
             const { ViewState } = ns('flair.ui');
             new ViewState(); // this initializes the global view state store's persistance via this singleton object
         }
+
+        // do more
+        await this.onStart();
     };
 
     $$('virtual');
+    $$('async');
+    this.onStart = noop;
+
+    $$('override');
+    $$('sealed');
+    this.ready = async () => {
+        // do more
+        await this.onReady();
+    };
+
+    $$('virtual');
+    $$('async');
+    this.onReady = noop;
+
     this.stop = async () => {
         // clear view state
         if (!env.isServer && !env.isWorker) {
             const { ViewState } = ns('flair.ui');
             new ViewState().clear();
         }
+
+        // do more
+        await this.onStop();
     };
 
     $$('virtual');
-    this.onError = (e) => {
-        throw Exception.OperationFailed(e.error, this.onError);
+    $$('async');
+    this.onStop = noop;
+
+    $$('private');
+    this.handleError = (e) => {
+        // do more
+        this.onError(e.error);
+    };
+
+    $$('virtual');
+    this.onError = (err) => {
+        throw Exception.OperationFailed(err, this.onError);
     };
 
     $$('override');
     this.dispose = (base) => {
         base();
-        AppDomain.host().error.remove(this.onError); // remove error handler
+        AppDomain.host().error.remove(this.handleError); // remove error handler
     };
 });

@@ -27,6 +27,7 @@
 })(this, function() {
     'use strict';
 
+    /* eslint-disable no-unused-vars */
     // locals
     let isServer = new Function("try {return this===global;}catch(e){return false;}")(),
         isWorker = isServer ? (!require('worker_threads').isMainThread) : (typeof WorkerGlobalScope !== 'undefined' ? true : false),
@@ -39,32 +40,21 @@
         flairTypes = ['class', 'enum', 'interface', 'mixin', 'struct'],
         flairInstances = ['instance', 'sinstance'],
         argsString = '',
+        settings = {},
+        config = {},
         isAppStarted = false;
+    /* eslint-enable no-unused-vars */
 
     // flairapp bootstrapper
-    let flair = async (configFile, entryPoint) => {
+    let flair = async () => {
         if (!isAppStarted) {
             isAppStarted = true;
 
-            // settings
-            const { AppDomain, include, env } = flair;
-            let __currentScript = (env.isServer ? '' : window.document.scripts[window.document.scripts.length - 1].src),
-                __entryPoint = (env.isServer ? (env.isWorker ? '' : entryPoint) : (env.isWorker ? '' : __currentScript)),
-                __rootPath = (env.isServer ? (__entryPoint.substr(0, __entryPoint.lastIndexOf('/') + 1)) : './'),
-                __preamble = 'flairjs/preamble.js',
-                __config = configFile,
-                __BootEngine = 'flair.app.BootEngine',
-                be = null;
+            // boot
+            await AppDomain.boot();
 
-            // initialize
-            AppDomain.root(__rootPath);
-            AppDomain.entryPoint(__entryPoint);
-            await AppDomain.config(__config);
-            await include(__preamble);
-            be = await include(__BootEngine);
-
-            // start boot engine
-            be.start();
+            // return
+            return AppDomain.app();
         }
     };
 
@@ -192,16 +182,21 @@
     // freeze members
     flair.members = Object.freeze(flair.members);
 
-    // assembly payload
-    ((__asmFile) => {
+    // bundled assembly load process 
+    let file = which('<<which_file>>', true);
+    _AppDomain.context.current().loadBundledAssembly(file, currentFile, (flair, __asmFile) => {
         // NOTES: 
-        // 1. Since this is a custom assembly index.js file, types built-in here does not support await type calls, as this outer closure is not an async function
+        // 1. Since this is a custom assembly index.js file, types built-in here does not support 
+        //    await type calls, as this outer closure is not an async function
 
-        <<asm_payload_start>>
+        <<asm_payload>>
+    });
 
-        <<asm_payload_close>>
-    })(currentFile);
-
+    // set settings and config for uniform access anywhere in this closure
+    let asm = _getAssembly('[flair]');
+    settings = asm.settings();
+    config = asm.config();
+    
     // return
     return Object.freeze(flair);
 });    

@@ -40,8 +40,6 @@ Class('(auto)', function() {
 
     /**  
      * @name ready
-     * @arguments
-     *  mount: object - mount object
     */
     $$('virtual');
     $$('async');

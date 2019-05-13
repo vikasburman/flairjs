@@ -93,8 +93,8 @@ const SharedChannel = function(allADOs, onError) {
                 port.on('message', onMessageFromMain);
             });
         } else {
-            // load entry point
-            importScripts('<<{{entryPoint}}>>');
+            // load requirejs and entry point
+            importScripts('<<{{requirejs}}>>', '<<{{entryPoint}}>>');
 
             // plumb to private port 
             port = this;
@@ -102,6 +102,7 @@ const SharedChannel = function(allADOs, onError) {
         }
     };
     let remoteMessageHandlerScript = remoteMessageHandler.toString().replace('<<{{entryPoint}}>>', AppDomain.entryPoint());
+    remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{requirejs}}>>', which(settings.requirejs, true)); // dev/min file
     remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{isServer}}>>', isServer.toString());
     // remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{ados}}>>', JSON.stringify(allADOs));
     remoteMessageHandlerScript = `(${remoteMessageHandlerScript})();`

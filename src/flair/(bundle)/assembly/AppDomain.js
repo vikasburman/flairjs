@@ -19,15 +19,9 @@ const AppDomain = function(name) {
         host = null,
         defaultLoadContext = null,
         unloadDefaultContext = null,
-        isUnloaded = false;
+        isUnloaded = false,
+        isBooted = false;
     
-    // default load context
-    defaultLoadContext = new AssemblyLoadContext('default', this, null, currentContexts, contexts),
-    unloadDefaultContext = defaultLoadContext.unload;
-    delete defaultLoadContext.unload; // default load context cannot be unloaded directly, unless app domain is unloaded
-    defaultLoadContext = Object.freeze(defaultLoadContext);
-    contexts[defaultLoadContext.name] = defaultLoadContext;
-
     // app domain
     domains[name] = this;
     this.name = name;
@@ -38,10 +32,10 @@ const AppDomain = function(name) {
             // mark unloaded
             isUnloaded = true;
 
-            // stop app (sync mode)
+            // stop app 
             if (app && typeof app.stop === 'function') { await app.stop(); _dispose(app); }
 
-            // stop host (sync mode)
+            // stop host 
             if (host && typeof host.stop === 'function') { await host.stop(); _dispose(host); }
 
             // unload all contexts of this domain, including default one (async)
@@ -61,15 +55,21 @@ const AppDomain = function(name) {
                 }
             }
 
-            // clear registries
+            // clear registries and vars
             asmFiles = {},
             asmTypes = {};
             contexts = {};
             domains = {};
+            currentContexts = [];
+            allADOs = [];
             loadPaths = {};
             entryPoint = '';
             rootPath = '';
-            allADOs = [];
+            configFileJSON = null;
+            app = null;
+            host = null;
+            defaultLoadContext = null;
+            unloadDefaultContext = null;
         }
     };
     this.createDomain = (name) => {
@@ -83,7 +83,15 @@ const AppDomain = function(name) {
     this.domains = (name) => { return domains[name] || null; }
    
     // assembly load context
-    this.context = defaultLoadContext;
+    const setNewDefaultContext = () => {
+        defaultLoadContext = new AssemblyLoadContext('default', this, null, currentContexts, contexts),
+        unloadDefaultContext = defaultLoadContext.unload;
+        delete defaultLoadContext.unload; // default load context cannot be unloaded directly, unless app domain is unloaded
+        defaultLoadContext = Object.freeze(defaultLoadContext);
+        contexts[defaultLoadContext.name] = defaultLoadContext;
+        return defaultLoadContext;
+    };
+    this.context = setNewDefaultContext();
     this.contexts = (name) => { return contexts[name] || null; }
     this.createContext = (name) => {
         return new Promise((resolve, reject) => {
@@ -171,6 +179,41 @@ const AppDomain = function(name) {
     };
     this.allTypes = () => { return Object.keys(asmTypes); }
 
+    // app domain start/restart
+    this.boot = async () => {
+        // this is a place where all basic settings are done on start time
+        // and now ready to start boot engine
+        // also, this is called when app wants to restart
+        // in that case, it do the same operations again
+
+        // if this is a restart scenario, these will exist
+        if (isBooted) { // if already booted, unload domain first
+            await this.unload();
+            isUnloaded = false; // so for next unload it remains same as on first load
+
+            // initialize new default load context (for reboot context only)
+            setNewDefaultContext();
+        }
+
+        // set entry point
+        let __entryPoint = (isWorker ? '' : which(settings.entryPoint)); // server/client specific file
+        this.entryPoint(__entryPoint);
+
+        // set root
+        this.root(isServer ? process.cwd() : './');
+
+        // load config
+        await this.config(which(settings.config)); // server/client specific file
+
+        // load preamble
+        await _include(settings.preamble);
+
+        // boot
+        let be = await _include(settings.bootEngine);
+        await be.start();
+        isBooted = true;
+    };
+
     // set onces, read many times
     this.config = (configFile) => {
         if (!configFileJSON && configFile) { // load only when not already loaded
@@ -188,12 +231,7 @@ const AppDomain = function(name) {
         }
     };
     this.entryPoint = (file) => {
-        if (!entryPoint) {
-            if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.entryPoint); }
-            if (!isWorker) { // when running in context of worker, this will not be needed to set, as a new appdomain cannot be created from inside worker, so it will never be read
-                entryPoint = which(file || ''); // main entry point file
-            }
-        }
+        if (typeof file === 'string' && !entryPoint) { entryPoint = file; }
         return entryPoint;
     };
     this.app = (appObj) => {
@@ -214,9 +252,8 @@ const AppDomain = function(name) {
         return loadPaths[file] || '';
     };
     this.root = (path) => {
-        if (!rootPath) {
-            if (typeof path !== 'string') { throw _Exception.InvalidArgument('path', this.root); }
-            rootPath = path;
+        if (typeof path === 'string' && !rootPath) { 
+            rootPath = path; 
             if (!rootPath.endsWith('/')) { rootPath += '/'; }
         }
         return rootPath;

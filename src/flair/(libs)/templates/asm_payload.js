@@ -58,3 +58,18 @@ AppDomain.context.current().currentAssemblyBeingLoaded('<<which_file>>');
 
 // clear assembly being loaded
 AppDomain.context.current().currentAssemblyBeingLoaded('');
+
+// register assembly definition object
+AppDomain.registerAdo('<<ado>>');
+
+// assembly load complete
+if (typeof onLoadComplete === 'function') { 
+    onLoadComplete();   // eslint-disable-line no-undef
+}
+
+// return settings and config
+return Object.freeze({
+    name: '<<asm>>',
+    settings: settings,
+    config: config
+});

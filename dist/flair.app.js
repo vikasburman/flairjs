@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.6.7
- *  Sat, 11 May 2019 03:55:13 GMT
+ *  Version: 0.6.37
+ *  Mon, 13 May 2019 03:45:10 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -24,11 +24,8 @@
     } else { // expose as global on window
         root['flair.app'] = factory;
     }
-})(this, async function(__asmFile) {
+})(this, async function(flair, __asmFile) {
     'use strict';
-
-    // flair object
-    const flair = (typeof global !== 'undefined' ? require('flairjs') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));
 
     // assembly closure init (start)
     /* eslint-disable no-unused-vars */
@@ -58,7 +55,7 @@
     AppDomain.loadPathOf('flair.app', __currentPath);
     
     // settings of this assembly
-    let settings = JSON.parse('{"boot":{"load":[]},"di":{"container":{}},"client":{"view":{"el":"main","title":"","transition":""},"url":{"404":"/404","hashbang":false,"i18n":false,"home":"/"},"vue":{"components":[],"filters":[],"mixins":[],"directives":[],"plugins":[],"pluginOptions":{}},"i18n":{"enabled":true,"locale":"en","locales":[{"code":"en","name":"English","native":"English"}]},"routing":{"mounts":{"main":"/"},"main-options":[],"main-interceptors":[]}},"server":{"express":{"server-http":{"enable":false,"port":80,"timeout":-1},"server-https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""}},"envVars":{"vars":[],"options":{"overwrite":true}},"routing":{"mounts":{"main":"/"},"main-appSettings":[],"main-middlewares":[],"main-interceptors":[],"main-resHeaders":[]}}}');
+    let settings = JSON.parse('{"host":"flair.app.ServerHost | flair.app.ClientHost","app":"flair.app.App","boot":{"load":[]},"di":{"container":{}},"client":{"view":{"el":"main","title":"","transition":""},"url":{"404":"/404","hashbang":false,"i18n":false,"home":"/"},"vue":{"components":[],"filters":[],"mixins":[],"directives":[],"plugins":[],"pluginOptions":{}},"i18n":{"enabled":true,"locale":"en","locales":[{"code":"en","name":"English","native":"English"}]},"routing":{"mounts":{"main":"/"},"main-options":[],"main-interceptors":[]}},"server":{"express":{"server-http":{"enable":false,"port":80,"timeout":-1},"server-https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""}},"envVars":{"vars":[],"options":{"overwrite":true}},"routing":{"mounts":{"main":"/"},"main-appSettings":[],"main-middlewares":[],"main-interceptors":[],"main-resHeaders":[]}}}');
     let settingsReader = flair.Port('settingsReader');
     if (typeof settingsReader === 'function') {
         let externalSettings = settingsReader('flair.app');
@@ -127,8 +124,6 @@
         
             /**  
              * @name ready
-             * @arguments
-             *  mount: object - mount object
             */
             $$('virtual');
             $$('async');
@@ -177,38 +172,68 @@
             };
             
             $$('override');
+            $$('sealed');
             this.boot = async (base) => {
                 base();
-                AppDomain.host().error.add(this.onError); // host's errors are handled here
+                AppDomain.host().error.add(this.handleError); // host's errors are handled here
             };
         
-            $$('virtual');
             this.start = async () => {
                 // initialize view state
                 if (!env.isServer && !env.isWorker) {
                     const { ViewState } = ns('flair.ui');
                     new ViewState(); // this initializes the global view state store's persistance via this singleton object
                 }
+        
+                // do more
+                await this.onStart();
             };
         
             $$('virtual');
+            $$('async');
+            this.onStart = noop;
+        
+            $$('override');
+            $$('sealed');
+            this.ready = async () => {
+                // do more
+                await this.onReady();
+            };
+        
+            $$('virtual');
+            $$('async');
+            this.onReady = noop;
+        
             this.stop = async () => {
                 // clear view state
                 if (!env.isServer && !env.isWorker) {
                     const { ViewState } = ns('flair.ui');
                     new ViewState().clear();
                 }
+        
+                // do more
+                await this.onStop();
             };
         
             $$('virtual');
-            this.onError = (e) => {
-                throw Exception.OperationFailed(e.error, this.onError);
+            $$('async');
+            this.onStop = noop;
+        
+            $$('private');
+            this.handleError = (e) => {
+                // do more
+                this.onError(e.error);
+            };
+        
+            $$('virtual');
+            this.onError = (err) => {
+                throw Exception.OperationFailed(err, this.onError);
             };
         
             $$('override');
             this.dispose = (base) => {
                 base();
-                AppDomain.host().error.remove(this.onError); // remove error handler
+                AppDomain.host().error.remove(this.handleError); // remove error handler
             };
         });
         
@@ -223,23 +248,13 @@
          */
         $$('ns', 'flair.app');
         Class('Host', Bootware, [IDisposable], function() {
-            $$('privateSet');
-            this.isStarted = false;
+            $$('virtual');
+            $$('async');
+            this.start = noop;
         
             $$('virtual');
-            this.start = async () => {
-                this.isStarted = true;
-            };
-        
-            $$('virtual');
-            this.stop = async () => {
-                this.isStarted = false;
-            };
-        
-            this.restart = async () => {
-                await this.stop();
-                await this.start();
-            };
+            $$('async');
+            this.stop = noop;
         
             this.error = event((err) => {
                 return { error: err };
@@ -734,8 +749,8 @@
                     }
                 };
                 const boot = async () => {
-                    const Host = await include('flair.app.ServerHost | flair.app.ClientHost');
-                    const App = await include('flair.app.App');
+                    const Host = await include(settings.host);
+                    const App = await include(settings.app);
                 
                     // set host
                     if (!env.isWorker) {
@@ -1608,7 +1623,7 @@
             this.boot = async (base) => {
                 base();
         
-                if (settings.server.nsenvVars.vars.length > 0) {
+                if (settings.server.envVars.vars.length > 0) {
                     const nodeEnv = await include('node-env-file | x');
         
                     if (nodeEnv) {
@@ -2479,12 +2494,19 @@
     
     // clear assembly being loaded
     AppDomain.context.current().currentAssemblyBeingLoaded('');
-
+    
     // register assembly definition object
-    AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.6.7","lupdate":"Sat, 11 May 2019 03:55:13 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Handler","flair.app.App","flair.app.Host","flair.ui.vue.VueComponentMembers","flair.api.RestHandler","flair.api.RestInterceptor","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.ClientRouter","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter","flair.ui.ViewHandler","flair.ui.ViewInterceptor","flair.ui.ViewState","flair.ui.ViewTransition","flair.ui.vue.VueComponent","flair.ui.vue.VueDirective","flair.ui.vue.VueFilter","flair.ui.vue.VueLayout","flair.ui.vue.VueMixin","flair.ui.vue.VuePlugin","flair.ui.vue.VueSetup","flair.ui.vue.VueView"],"resources":[],"assets":[],"routes":[{"name":"flair.ui.vue.test2","mount":"main","index":101,"verbs":[],"path":"test/:id","handler":"abc.xyz.Test"},{"name":"flair.ui.vue.exit2","mount":"main","index":103,"verbs":[],"path":"exit","handler":"abc.xyz.Exit"}]}');
-
+    AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.6.37","lupdate":"Mon, 13 May 2019 03:45:10 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Handler","flair.app.App","flair.app.Host","flair.ui.vue.VueComponentMembers","flair.api.RestHandler","flair.api.RestInterceptor","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.ClientRouter","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter","flair.ui.ViewHandler","flair.ui.ViewInterceptor","flair.ui.ViewState","flair.ui.ViewTransition","flair.ui.vue.VueComponent","flair.ui.vue.VueDirective","flair.ui.vue.VueFilter","flair.ui.vue.VueLayout","flair.ui.vue.VueMixin","flair.ui.vue.VuePlugin","flair.ui.vue.VueSetup","flair.ui.vue.VueView"],"resources":[],"assets":[],"routes":[]}');
+    
     // assembly load complete
     if (typeof onLoadComplete === 'function') { 
         onLoadComplete();   // eslint-disable-line no-undef
     }
+    
+    // return settings and config
+    return Object.freeze({
+        name: 'flair.app',
+        settings: settings,
+        config: config
+    });
 });

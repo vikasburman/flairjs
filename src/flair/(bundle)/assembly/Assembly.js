@@ -2,7 +2,7 @@
  * @name Assembly
  * @description Assembly object.
  */ 
-const Assembly = function (ado, alc) {
+const Assembly = function (ado, alc, asmClosureVars) {
     this.context = alc;
 
     this.name = ado.name;
@@ -15,7 +15,7 @@ const Assembly = function (ado, alc) {
     this.license = ado.license;
     this.lupdate = ado.lupdate;
     this.builder = ado.builder.name;
-    this.flairVersion = ado.builder.version;
+    this.builderVersion = ado.builder.version;
     this.format = Object.freeze({
         name: ado.builder.format,
         version: ado.builder.formatVersion,
@@ -73,4 +73,10 @@ const Assembly = function (ado, alc) {
         if (ado.assets.indexOf(file) === -1) {  throw _Exception.NotFound(astFile, this.getAsset); }
         return astFile;        
     };
+
+    // config
+    this.config = () => { return asmClosureVars.config; }
+    
+    // settings
+    this.settings = () => { return asmClosureVars.settings; }
 };

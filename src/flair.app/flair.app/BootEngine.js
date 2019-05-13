@@ -70,8 +70,8 @@ Class('(auto)', function() {
             }
         };
         const boot = async () => {
-            const Host = await include('flair.app.ServerHost | flair.app.ClientHost');
-            const App = await include('flair.app.App');
+            const Host = await include(settings.host);
+            const App = await include(settings.app);
         
             // set host
             if (!env.isWorker) {

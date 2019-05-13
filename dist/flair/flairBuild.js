@@ -805,9 +805,7 @@
                 options.current.asmContent = injector(options.current.asmPath, options.current.asmContent); 
 
                 // replace payload placeholders and injections
-                options.current.asmContent = replaceAll(options.current.asmContent, '<<asm_payload_start>>', '<!-- inject: ./templates/asm_payload_start.js -->');
-                options.current.asmContent = replaceAll(options.current.asmContent, '<<asm_payload_extra>>', '<!-- inject: ./templates/asm_payload_extra.js -->');
-                options.current.asmContent = replaceAll(options.current.asmContent, '<<asm_payload_close>>', '<!-- inject: ./templates/asm_payload_close.js -->');
+                options.current.asmContent = replaceAll(options.current.asmContent, '<<asm_payload>>', '<!-- inject: ./templates/asm_payload.js -->');
                 options.current.asmContent = injector(__dirname, options.current.asmContent); 
 
                 // replace placeholders
@@ -1698,11 +1696,9 @@
 
         // exclude files from being registered
         options.skipRegistrationsFor = [
-            'flair',
         ];
         // exclude files from being added to preamble
         options.skipPreambleFor = [
-            'flair',
         ];  
         // exclude files from being added to minified
         options.skipMinifyFor = [

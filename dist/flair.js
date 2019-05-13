@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.6.7
- *  Sat, 11 May 2019 03:55:11 GMT
+ *  Version: 0.6.37
+ *  Mon, 13 May 2019 03:45:07 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -27,6 +27,7 @@
 })(this, function() {
     'use strict';
 
+    /* eslint-disable no-unused-vars */
     // locals
     let isServer = new Function("try {return this===global;}catch(e){return false;}")(),
         isWorker = isServer ? (!require('worker_threads').isMainThread) : (typeof WorkerGlobalScope !== 'undefined' ? true : false),
@@ -39,32 +40,21 @@
         flairTypes = ['class', 'enum', 'interface', 'mixin', 'struct'],
         flairInstances = ['instance', 'sinstance'],
         argsString = '',
+        settings = {},
+        config = {},
         isAppStarted = false;
+    /* eslint-enable no-unused-vars */
 
     // flairapp bootstrapper
-    let flair = async (configFile, entryPoint) => {
+    let flair = async () => {
         if (!isAppStarted) {
             isAppStarted = true;
 
-            // settings
-            const { AppDomain, include, env } = flair;
-            let __currentScript = (env.isServer ? '' : window.document.scripts[window.document.scripts.length - 1].src),
-                __entryPoint = (env.isServer ? (env.isWorker ? '' : entryPoint) : (env.isWorker ? '' : __currentScript)),
-                __rootPath = (env.isServer ? (__entryPoint.substr(0, __entryPoint.lastIndexOf('/') + 1)) : './'),
-                __preamble = 'flairjs/preamble.js',
-                __config = configFile,
-                __BootEngine = 'flair.app.BootEngine',
-                be = null;
+            // boot
+            await AppDomain.boot();
 
-            // initialize
-            AppDomain.root(__rootPath);
-            AppDomain.entryPoint(__entryPoint);
-            await AppDomain.config(__config);
-            await include(__preamble);
-            be = await include(__BootEngine);
-
-            // start boot engine
-            be.start();
+            // return
+            return AppDomain.app();
         }
     };
 
@@ -105,10 +95,10 @@
         name: 'flairjs',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.6.7',
+        version: '0.6.37',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sat, 11 May 2019 03:55:11 GMT')
+        lupdate: new Date('Mon, 13 May 2019 03:45:07 GMT')
     });  
     
     flair.members = [];
@@ -877,6 +867,7 @@
             alcRoutes = {},
             instances = {},
             asmFiles = {},
+            asmNames = {},
             namespaces = {},
             isUnloaded = false,
             currentAssemblyBeingLoaded = '';
@@ -903,6 +894,7 @@
                 // clear registries
                 alcTypes = {};
                 asmFiles = {};
+                asmNames = {};
                 alcResources = {};
                 alcRoutes = {};
                 instances = {};
@@ -1119,6 +1111,13 @@
             }
             return currentAssemblyBeingLoaded;
         }
+        const assemblyLoaded = (file, ado, alc, asmClosureVars) => {
+            if (typeof file === 'string' && !asmFiles[file] && ado && alc && asmClosureVars) {
+                // add to list
+                asmFiles[file] = Object.freeze(new Assembly(ado, alc, asmClosureVars));
+                asmNames[asmClosureVars.name] = asmFiles[file];
+            }
+        };
         this.loadAssembly = (file) => {
             return new Promise((resolve, reject) => {
                 if (this.isUnloaded()) { reject(_Exception.InvalidOperation(`Context is already unloaded. (${this.name})`)); return; }
@@ -1141,12 +1140,15 @@
                     // load module
                     loadModule(file2, asmADO.name, true).then((asmFactory) => {
                         // run asm factory to load assembly
-                        asmFactory(file2).then(() => {
+                        asmFactory(flair, file2).then((asmClosureVars) => {
+                            // current context where this was loaded
+                            let loadedInContext = this.current();
+    
                             // remove this from current context list
                             currentContexts.pop();
     
-                            // add to list
-                            asmFiles[file] = Object.freeze(new Assembly(asmADO, this));
+                            // assembly loaded
+                            assemblyLoaded(file, asmADO, loadedInContext, asmClosureVars);
     
                             // resolve
                             resolve();
@@ -1168,11 +1170,49 @@
                     resolve();
                 }
             });        
-        };    
+        };  
+        this.loadBundledAssembly = (file, loadedFile, asmFactory) => {
+            if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`); }
+    
+            let asmClosureVars = {};
+    
+            // set this context as current context, so all types being loaded in this assembly will get attached to this context;
+            currentContexts.push(this);
+    
+            // get resolved file name of this assembly, in ths case it is loadedFile
+            let file2 = loadedFile;
+            try {
+                // run given asm factory (sync)
+                // this means embedded types built-in here in this factory does not support await 
+                // type calls, as this factory's outer closure is not an async function
+                asmClosureVars = asmFactory(flair, file2); // let it throw error, if any
+    
+                // current context where this was loaded
+                let loadedInContext = this.current();
+    
+                // remove this from current context list
+                currentContexts.pop();
+    
+                // assembly loaded
+                let asmADO = this.domain.getAdo(file);
+                assemblyLoaded(file, asmADO, loadedInContext, asmClosureVars);
+            } finally {
+                // remove this from current context list
+                currentContexts.pop();
+            }
+                
+            // return
+            return asmClosureVars;
+        };  
         this.getAssembly = (file) => {
             if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.getAssembly); }
             if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.getAssembly); }
             return asmFiles[file] || null;
+        };
+        this.getAssemblyByName = (name) => {
+            if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.getAssemblyByName); }
+            if (typeof name !== 'string') { throw _Exception.InvalidArgument('name', this.getAssemblyByName); }
+            return asmNames[name] || null;
         };
         this.allAssemblies = (isRaw) => { 
             if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.allAssemblies); }
@@ -1300,7 +1340,7 @@
      * @name Assembly
      * @description Assembly object.
      */ 
-    const Assembly = function (ado, alc) {
+    const Assembly = function (ado, alc, asmClosureVars) {
         this.context = alc;
     
         this.name = ado.name;
@@ -1313,7 +1353,7 @@
         this.license = ado.license;
         this.lupdate = ado.lupdate;
         this.builder = ado.builder.name;
-        this.flairVersion = ado.builder.version;
+        this.builderVersion = ado.builder.version;
         this.format = Object.freeze({
             name: ado.builder.format,
             version: ado.builder.formatVersion,
@@ -1371,6 +1411,12 @@
             if (ado.assets.indexOf(file) === -1) {  throw _Exception.NotFound(astFile, this.getAsset); }
             return astFile;        
         };
+    
+        // config
+        this.config = () => { return asmClosureVars.config; }
+        
+        // settings
+        this.settings = () => { return asmClosureVars.settings; }
     };
       
     /**
@@ -1524,8 +1570,8 @@
                     port.on('message', onMessageFromMain);
                 });
             } else {
-                // load entry point
-                importScripts('<<{{entryPoint}}>>');
+                // load requirejs and entry point
+                importScripts('<<{{requirejs}}>>', '<<{{entryPoint}}>>');
     
                 // plumb to private port 
                 port = this;
@@ -1533,6 +1579,7 @@
             }
         };
         let remoteMessageHandlerScript = remoteMessageHandler.toString().replace('<<{{entryPoint}}>>', AppDomain.entryPoint());
+        remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{requirejs}}>>', which(settings.requirejs, true)); // dev/min file
         remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{isServer}}>>', isServer.toString());
         // remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{ados}}>>', JSON.stringify(allADOs));
         remoteMessageHandlerScript = `(${remoteMessageHandlerScript})();`
@@ -1766,15 +1813,9 @@
             host = null,
             defaultLoadContext = null,
             unloadDefaultContext = null,
-            isUnloaded = false;
+            isUnloaded = false,
+            isBooted = false;
         
-        // default load context
-        defaultLoadContext = new AssemblyLoadContext('default', this, null, currentContexts, contexts),
-        unloadDefaultContext = defaultLoadContext.unload;
-        delete defaultLoadContext.unload; // default load context cannot be unloaded directly, unless app domain is unloaded
-        defaultLoadContext = Object.freeze(defaultLoadContext);
-        contexts[defaultLoadContext.name] = defaultLoadContext;
-    
         // app domain
         domains[name] = this;
         this.name = name;
@@ -1785,10 +1826,10 @@
                 // mark unloaded
                 isUnloaded = true;
     
-                // stop app (sync mode)
+                // stop app 
                 if (app && typeof app.stop === 'function') { await app.stop(); _dispose(app); }
     
-                // stop host (sync mode)
+                // stop host 
                 if (host && typeof host.stop === 'function') { await host.stop(); _dispose(host); }
     
                 // unload all contexts of this domain, including default one (async)
@@ -1808,15 +1849,21 @@
                     }
                 }
     
-                // clear registries
+                // clear registries and vars
                 asmFiles = {},
                 asmTypes = {};
                 contexts = {};
                 domains = {};
+                currentContexts = [];
+                allADOs = [];
                 loadPaths = {};
                 entryPoint = '';
                 rootPath = '';
-                allADOs = [];
+                configFileJSON = null;
+                app = null;
+                host = null;
+                defaultLoadContext = null;
+                unloadDefaultContext = null;
             }
         };
         this.createDomain = (name) => {
@@ -1830,7 +1877,15 @@
         this.domains = (name) => { return domains[name] || null; }
        
         // assembly load context
-        this.context = defaultLoadContext;
+        const setNewDefaultContext = () => {
+            defaultLoadContext = new AssemblyLoadContext('default', this, null, currentContexts, contexts),
+            unloadDefaultContext = defaultLoadContext.unload;
+            delete defaultLoadContext.unload; // default load context cannot be unloaded directly, unless app domain is unloaded
+            defaultLoadContext = Object.freeze(defaultLoadContext);
+            contexts[defaultLoadContext.name] = defaultLoadContext;
+            return defaultLoadContext;
+        };
+        this.context = setNewDefaultContext();
         this.contexts = (name) => { return contexts[name] || null; }
         this.createContext = (name) => {
             return new Promise((resolve, reject) => {
@@ -1918,6 +1973,41 @@
         };
         this.allTypes = () => { return Object.keys(asmTypes); }
     
+        // app domain start/restart
+        this.boot = async () => {
+            // this is a place where all basic settings are done on start time
+            // and now ready to start boot engine
+            // also, this is called when app wants to restart
+            // in that case, it do the same operations again
+    
+            // if this is a restart scenario, these will exist
+            if (isBooted) { // if already booted, unload domain first
+                await this.unload();
+                isUnloaded = false; // so for next unload it remains same as on first load
+    
+                // initialize new default load context (for reboot context only)
+                setNewDefaultContext();
+            }
+    
+            // set entry point
+            let __entryPoint = (isWorker ? '' : which(settings.entryPoint)); // server/client specific file
+            this.entryPoint(__entryPoint);
+    
+            // set root
+            this.root(isServer ? process.cwd() : './');
+    
+            // load config
+            await this.config(which(settings.config)); // server/client specific file
+    
+            // load preamble
+            await _include(settings.preamble);
+    
+            // boot
+            let be = await _include(settings.bootEngine);
+            await be.start();
+            isBooted = true;
+        };
+    
         // set onces, read many times
         this.config = (configFile) => {
             if (!configFileJSON && configFile) { // load only when not already loaded
@@ -1935,12 +2025,7 @@
             }
         };
         this.entryPoint = (file) => {
-            if (!entryPoint) {
-                if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.entryPoint); }
-                if (!isWorker) { // when running in context of worker, this will not be needed to set, as a new appdomain cannot be created from inside worker, so it will never be read
-                    entryPoint = which(file || ''); // main entry point file
-                }
-            }
+            if (typeof file === 'string' && !entryPoint) { entryPoint = file; }
             return entryPoint;
         };
         this.app = (appObj) => {
@@ -1961,9 +2046,8 @@
             return loadPaths[file] || '';
         };
         this.root = (path) => {
-            if (!rootPath) {
-                if (typeof path !== 'string') { throw _Exception.InvalidArgument('path', this.root); }
-                rootPath = path;
+            if (typeof path === 'string' && !rootPath) { 
+                rootPath = path; 
                 if (!rootPath.endsWith('/')) { rootPath += '/'; }
             }
             return rootPath;
@@ -2067,8 +2151,10 @@
      * @params
      *  Type: type/instance/string - flair type or instance whose assembly is required
      *                               qualified type name, if it is needed to know in which assembly this exists
-     *                               (if assembly is not loaded, it will )
-     * @returns object - assembly which contains this type
+     *                               assembly name, if assembly is to be looked for by assembly name
+     *                               (since this is also string, this must be enclosed in [] to represent this is assembly name and not qualified type name)
+     *                               (if assembly is not loaded, it will return null)
+     * @returns object - assembly object
      */ 
     const _getAssembly = (Type) => { 
         let args = _Args('Type: flairtype',
@@ -2076,15 +2162,22 @@
                          'Type: string')(Type); args.throwOnError(_getAssembly);
     
         let result = null,
-            asmFile = '';
+            asmFile = '',
+            asmName = '';
         switch(args.index) {
             case 0: // type
                 result = Type[meta].assembly(); break;
             case 1: // instance
                 result = Type[meta].Type[meta].assembly(); break;
-            case 2: // qualifiedName
-                asmFile = _AppDomain.resolve(Type);
-                if (asmFile) { result = _AppDomain.context.getAssembly(asmFile); } break;
+            case 2: // qualifiedName or assembly name
+                if (Type.startsWith('[') && Type.endsWith(']')) { // assembly name
+                    asmName = Type.substr(1, Type.length - 2); // remove [ and ]
+                    result = _AppDomain.context.getAssemblyByName(asmName);
+                } else { // qualified type name
+                    asmFile = _AppDomain.resolve(Type);
+                    if (asmFile) { result = _AppDomain.context.getAssembly(asmFile); } 
+                }
+                break;
         }
         return result;
     };
@@ -6903,10 +6996,12 @@
     // freeze members
     flair.members = Object.freeze(flair.members);
 
-    // assembly payload
-    ((__asmFile) => {
+    // bundled assembly load process 
+    let file = which('./flair{.min}.js', true);
+    _AppDomain.context.current().loadBundledAssembly(file, currentFile, (flair, __asmFile) => {
         // NOTES: 
-        // 1. Since this is a custom assembly index.js file, types built-in here does not support await type calls, as this outer closure is not an async function
+        // 1. Since this is a custom assembly index.js file, types built-in here does not support 
+        //    await type calls, as this outer closure is not an async function
 
         // assembly closure init (start)
         /* eslint-disable no-unused-vars */
@@ -6936,7 +7031,7 @@
         AppDomain.loadPathOf('flair', __currentPath);
         
         // settings of this assembly
-        let settings = JSON.parse('{}');
+        let settings = JSON.parse('{"preamble":"flairjs/preamble.js","bootEngine":"flair.app.BootEngine","config":"./appConfig.json | ./webConfig.json","entryPoint":"./main.js | ./index.js","requirejs":"./modules/requirejs/require{.min}.js"}');
         let settingsReader = flair.Port('settingsReader');
         if (typeof settingsReader === 'function') {
             let externalSettings = settingsReader('flair');
@@ -7293,13 +7388,28 @@
         
         // clear assembly being loaded
         AppDomain.context.current().currentAssemblyBeingLoaded('');
-
+        
+        // register assembly definition object
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.6.37","lupdate":"Mon, 13 May 2019 03:45:07 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
             onLoadComplete();   // eslint-disable-line no-undef
         }
-    })(currentFile);
+        
+        // return settings and config
+        return Object.freeze({
+            name: 'flair',
+            settings: settings,
+            config: config
+        });
+    });
 
+    // set settings and config for uniform access anywhere in this closure
+    let asm = _getAssembly('[flair]');
+    settings = asm.settings();
+    config = asm.config();
+    
     // return
     return Object.freeze(flair);
 });

@@ -24,15 +24,8 @@
     } else { // expose as global on window
         root['<<asm>>'] = factory;
     }
-})(this, async function(__asmFile) {
+})(this, async function(flair, __asmFile) {
     'use strict';
 
-    // flair object
-    const flair = (typeof global !== 'undefined' ? require('flairjs') : (typeof WorkerGlobalScope !== 'undefined' ? WorkerGlobalScope.flair : window.flair));
-
-    <<asm_payload_start>>
-
-    <<asm_payload_extra>>
-
-    <<asm_payload_close>>
+    <<asm_payload>>
 });

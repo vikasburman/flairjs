@@ -7,23 +7,13 @@ const { Bootware } = ns('flair.app');
  */
 $$('ns', '(auto)');
 Class('(auto)', Bootware, [IDisposable], function() {
-    $$('privateSet');
-    this.isStarted = false;
+    $$('virtual');
+    $$('async');
+    this.start = noop;
 
     $$('virtual');
-    this.start = async () => {
-        this.isStarted = true;
-    };
-
-    $$('virtual');
-    this.stop = async () => {
-        this.isStarted = false;
-    };
-
-    this.restart = async () => {
-        await this.stop();
-        await this.start();
-    };
+    $$('async');
+    this.stop = noop;
 
     this.error = event((err) => {
         return { error: err };

@@ -8,6 +8,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         alcRoutes = {},
         instances = {},
         asmFiles = {},
+        asmNames = {},
         namespaces = {},
         isUnloaded = false,
         currentAssemblyBeingLoaded = '';
@@ -34,6 +35,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
             // clear registries
             alcTypes = {};
             asmFiles = {};
+            asmNames = {};
             alcResources = {};
             alcRoutes = {};
             instances = {};
@@ -250,6 +252,13 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         }
         return currentAssemblyBeingLoaded;
     }
+    const assemblyLoaded = (file, ado, alc, asmClosureVars) => {
+        if (typeof file === 'string' && !asmFiles[file] && ado && alc && asmClosureVars) {
+            // add to list
+            asmFiles[file] = Object.freeze(new Assembly(ado, alc, asmClosureVars));
+            asmNames[asmClosureVars.name] = asmFiles[file];
+        }
+    };
     this.loadAssembly = (file) => {
         return new Promise((resolve, reject) => {
             if (this.isUnloaded()) { reject(_Exception.InvalidOperation(`Context is already unloaded. (${this.name})`)); return; }
@@ -272,12 +281,15 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
                 // load module
                 loadModule(file2, asmADO.name, true).then((asmFactory) => {
                     // run asm factory to load assembly
-                    asmFactory(file2).then(() => {
+                    asmFactory(flair, file2).then((asmClosureVars) => {
+                        // current context where this was loaded
+                        let loadedInContext = this.current();
+
                         // remove this from current context list
                         currentContexts.pop();
 
-                        // add to list
-                        asmFiles[file] = Object.freeze(new Assembly(asmADO, this));
+                        // assembly loaded
+                        assemblyLoaded(file, asmADO, loadedInContext, asmClosureVars);
 
                         // resolve
                         resolve();
@@ -299,11 +311,49 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
                 resolve();
             }
         });        
-    };    
+    };  
+    this.loadBundledAssembly = (file, loadedFile, asmFactory) => {
+        if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`); }
+
+        let asmClosureVars = {};
+
+        // set this context as current context, so all types being loaded in this assembly will get attached to this context;
+        currentContexts.push(this);
+
+        // get resolved file name of this assembly, in ths case it is loadedFile
+        let file2 = loadedFile;
+        try {
+            // run given asm factory (sync)
+            // this means embedded types built-in here in this factory does not support await 
+            // type calls, as this factory's outer closure is not an async function
+            asmClosureVars = asmFactory(flair, file2); // let it throw error, if any
+
+            // current context where this was loaded
+            let loadedInContext = this.current();
+
+            // remove this from current context list
+            currentContexts.pop();
+
+            // assembly loaded
+            let asmADO = this.domain.getAdo(file);
+            assemblyLoaded(file, asmADO, loadedInContext, asmClosureVars);
+        } finally {
+            // remove this from current context list
+            currentContexts.pop();
+        }
+            
+        // return
+        return asmClosureVars;
+    };  
     this.getAssembly = (file) => {
         if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.getAssembly); }
         if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.getAssembly); }
         return asmFiles[file] || null;
+    };
+    this.getAssemblyByName = (name) => {
+        if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.getAssemblyByName); }
+        if (typeof name !== 'string') { throw _Exception.InvalidArgument('name', this.getAssemblyByName); }
+        return asmNames[name] || null;
     };
     this.allAssemblies = (isRaw) => { 
         if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.allAssemblies); }
