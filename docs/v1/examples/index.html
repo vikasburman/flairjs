@@ -177,10 +177,7 @@
 
             // record for ga
             if (tracker && tracker.set && tracker.send) { 
-              tracker.set('page', {
-                page: hash,
-                title: data.current.title
-              }); 
+              tracker.set('page', group + '/' + data.current.title);
               tracker.send('pageview'); 
             }
 
