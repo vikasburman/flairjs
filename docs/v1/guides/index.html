@@ -134,6 +134,7 @@
     <!-- load data and bind -->
     <script>$(document).ready(function() { 
       let data = {};
+      const tracker = window.ga.getAll()[0];  
       $.getJSON("../../versions.json", (versions) => {
         $.getJSON("./guides.json", (root) => {
           data = root;
@@ -149,7 +150,7 @@
             }
 
             // record for ga
-            ga('send', 'pageview', { 'page': hash});  
+            if (tracker && tracker.set && tracker.send) { tracker.set('page', hash); tracker.send('pageview'); }
 
             let items = hash.split('/');
             group = items[0];
