@@ -149,9 +149,6 @@
               hash = location.href.substr(location.href.indexOf('#')+2);
             }
 
-            // record for ga
-            if (tracker && tracker.set && tracker.send) { tracker.set('page', hash); tracker.send('pageview'); }
-
             let items = hash.split('/');
             group = items[0];
             item = items[1];
@@ -168,6 +165,15 @@
                 data.current = data.groups[idx].list[idx2];
                 data.current.group = data.groups[idx];
               }
+            }
+
+            // record for ga
+            if (tracker && tracker.set && tracker.send) { 
+              tracker.set('page', {
+                page: hash,
+                title: data.current.title
+              }); 
+              tracker.send('pageview'); 
             }
 
             // side menu
