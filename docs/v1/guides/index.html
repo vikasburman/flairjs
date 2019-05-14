@@ -169,7 +169,7 @@
 
             // record for ga
             if (tracker && tracker.set && tracker.send) { 
-              tracker.set('page', group + '/' + data.current.title);
+              tracker.set('page', '/v1/guides/' + group + '/' + data.current.title);
               tracker.send('pageview'); 
             }
 
