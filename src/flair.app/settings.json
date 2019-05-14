@@ -30,16 +30,6 @@
             "404": "/404"
         },
     
-        "vue": {
-            "components": [],
-            "filters": [],
-            "mixins": [],
-            "directives": [],
-            "plugins": [],
-            "pluginOptions": {
-            }
-        },
-    
         "i18n": {
             "enabled": true,
             "locale": "en",

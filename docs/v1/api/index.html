@@ -134,7 +134,7 @@
     <!-- load data and bind -->
     <script>$(document).ready(function() { 
       let data = {};
-      const tracker = window.ga.getAll()[0];  
+      let tracker = null;
       $.getJSON("../../versions.json", (versions) => {
         $.getJSON("./apidocs.json", (root) => {
           data = root;
@@ -168,6 +168,7 @@
             }
 
             // record for ga
+            if (!tracker && window.ga) { tracker = window.ga.getAll()[0]; }
             if (tracker && tracker.set && tracker.send) { 
               tracker.set('page', '/v1/api/' + group + '/' + data.current.title);
               tracker.send('pageview'); 
