@@ -30,10 +30,6 @@
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
       gtag('config', 'UA-140147878-1');
-      setTimeout(() => {
-        ga('set', 'page', '/v1/guides/');
-        ga('send', 'pageview');      
-      }, 100);
     </script>    
   </head>
   <body>
@@ -153,8 +149,7 @@
             }
 
             // record for ga
-            ga('set', 'page', '/' + hash + '/');
-            ga('send', 'pageview');  
+            ga('send', 'pageview', { 'page': hash});  
 
             let items = hash.split('/');
             group = items[0];
