@@ -12,7 +12,12 @@ Class('(auto)', Handler, function() {
     this.construct = (base, el, title, transition) => {
         base();
 
-        mainEl = el || 'main';
+        // read from setting which are not specified
+        el = el || settings.client.view.el || 'main';
+        title = title || settings.client.view.title || '';
+        transition = transition || settings.client.view.transition || '';
+
+        mainEl = el;
         this.viewTransition = transition;
         this.title = this.title + (title ? ' - ' + title : '');
     };
@@ -35,7 +40,7 @@ Class('(auto)', Handler, function() {
         const { ViewTransition } = ns('flair.ui');
 
         // give it a unique name, if not already given
-        this.name = this.name || (this.$self.id + '_' + guid());
+        this.name = this.name || this.$obj.id; // $obj is the main view which is finally inheriting this ViewHandler
 
         // load view transition
         if (this.viewTransition) {
@@ -55,7 +60,7 @@ Class('(auto)', Handler, function() {
         parentEl.appendChild(el);
         
         // load view
-        this.load(ctx, el);
+        await this.loadView(ctx, el);
 
         // swap views (old one is replaced with this new one)
         await this.swap();
@@ -75,8 +80,10 @@ Class('(auto)', Handler, function() {
             let currentViewEl = DOC.getElementById(this.$static.currentView);
 
             // remove outgoing view meta   
-            for(let meta of this.meta) {
-                DOC.head.removeChild(DOC.querySelector('meta[name="' + meta + '"]'));
+            if (this.$static.currentViewMeta) {
+                for(let meta of this.$static.currentViewMeta) {
+                    DOC.head.removeChild(DOC.querySelector('meta[name="' + meta + '"]'));
+                }
             }
                 
             // apply transitions
@@ -86,22 +93,24 @@ Class('(auto)', Handler, function() {
                 await this.viewTransition.enter(thisViewEl, currentViewEl);
             } else {
                 // default is no transition
-                currentViewEl.hidden = true;
+                if (currentViewEl) { currentViewEl.hidden = true; }
                 thisViewEl.hidden = false;
             }
 
             // remove outgoing view
-            let parentEl = DOC.getElementById(mainEl);            
-            parentEl.removeChild(currentViewEl);
+            let parentEl = DOC.getElementById(mainEl);  
+            if (currentViewEl) { parentEl.removeChild(currentViewEl); }
         }
 
         // add incoming view meta
-        for(let meta of this.meta) {
-            var metaEl = document.createElement('meta');
-            for(let metaAttr in meta) {
-                metaEl[metaAttr] = meta[metaAttr];
+        if (this.meta) {
+            for(let meta of this.meta) {
+                var metaEl = document.createElement('meta');
+                for(let metaAttr in meta) {
+                    metaEl[metaAttr] = meta[metaAttr];
+                }
+                DOC.head.appendChild(metaEl);
             }
-            DOC.head.appendChild(metaEl);
         }
 
         // in case there was no previous view
@@ -118,8 +127,8 @@ Class('(auto)', Handler, function() {
     };
 
     $$('static');
-    this.currentView = '';
+    this.currentView = null;
 
     $$('static');
-    this.currentViewMeta = [];
+    this.currentViewMeta = null;
 });

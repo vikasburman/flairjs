@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.vue
  *     File: ./flair.vue.js
- *  Version: 0.6.91
- *  Tue, 14 May 2019 01:40:41 GMT
+ *  Version: 0.7.85
+ *  Mon, 20 May 2019 02:01:32 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -37,7 +37,7 @@
             getTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;
     const { TaskInfo } = flair.Tasks;
     const { env } = flair.options;
-    const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, guid, isArrowFunc, isASyncFunc, sieve,
+    const { guid, forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve,
             deepMerge, getLoadedScript, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
     
     // inbuilt modifiers and attributes compile-time-safe support
@@ -80,6 +80,8 @@
     // assembly types (start)
         
     await (async () => { // type: ./src/flair.vue/flair.ui.vue/@1-VueComponentMembers.js
+        const { View } = ns('flair.ui');
+        
         /**
          * @name VueComponentMembers
          * @description Vue Component Members
@@ -110,11 +112,18 @@
                     this.html = await clientFileLoader(this.html);
                 }
         
+                // merge html and style
+                if (this.html && this.style) { // merge style as scoped style
+                    this.html = '<div><style scoped>' + this.style.trim() +'</style>' + this.html.trim() + '</div>';
+                } else if (this.style) {
+                    this.html = '<div><style scoped>' + this.style.trim() +'</style></div>';
+                }
+        
                 // local i18n resources
                 // each i18n resource file is defined as:
                 // "ns": "json-file-name"
                 // when loaded, each ns will convert into JSON object from defined file
-                if(settings.client.i18n.enabled && this.i18n) {
+                if(View.i18n && this.i18n) {
                     let i18ResFile = '';
                     for(let i18nNs in this.i18n) {
                         if (this.i18n.hasOwnProperty(i18nNs)) {
@@ -124,19 +133,6 @@
                     }
                 }
         
-                // template
-                // https://vuejs.org/v2/api/#template
-                // either manually defined, or loaded from html and style combination as fallback
-                if (this.template) {
-                    component.template = this.template;
-                } else {
-                    if (this.style && this.html) {
-                        component.template = '<div><style scoped>' + this.style.trim() +'</style><div>' + this.html.trim() + '</div></div>';
-                    } else if (this.html) {
-                        component.template = this.html.trim();
-                    }
-                }
-                
                 // render
                 // https://vuejs.org/v2/api/#render
                 // https://vuejs.org/v2/guide/render-function.html#Functional-Components
@@ -204,7 +200,7 @@
                 component.methods['route'] = (routeName, placeholders) => { return _this.route(routeName, placeholders); };
         
                 // i18n specific built-in methods
-                if (settings.client.i18n.enabled) {
+                if (View.i18n) {
                     // supporting built-in method: locale 
                     // e.g., {{ locale() }} will give: 'en'
                     component.methods['locale'] = (value) => { return _this.locale(value); };
@@ -250,24 +246,25 @@
                 // https://vuejs.org/v2/api/#components
                 if (this.components && Array.isArray(this.components)) {
                     let ComponentType = null,
-                        component = null;
+                        componentObj = null;
                     for(let item of this.components) {
                         if (!item.name) { throw Exception.OperationFailed(`Component name cannot be empty. (${item.type})`); }
                         if (!item.type) { throw Exception.OperationFailed(`Component type cannot be empty. (${item.name})`); }
         
+                        // check for duplicate (global)
+                        if (Vue.options.components[item.name]) { throw Exception.Duplicate(`Component already registered. (${item.name})`); }
                         
-                        ComponentType = as(await include(item.name), VueComponent);
+                        ComponentType = as(await include(item.type), VueComponent);
                         if (ComponentType) {
                             try {
-                                component = new ComponentType();
+                                componentObj = new ComponentType();
         
-                                // check for duplicate (global & local)
-                                if (Vue.options.components[item.name]) { throw Exception.Duplicate(`Component already registered. (${item.name})`); }
+                                // check for duplicate (local)
                                 if (component.components && component.components[item.name]) { throw Exception.Duplicate(`Component already registered. (${item.name})`); }
         
                                 // register locally
                                 component.components = component.components || {};
-                                component.components[item.name] = await component.factory();
+                                component.components[item.name] = await componentObj.factory();
                             } catch (err) {
                                 throw Exception.OperationFailed(`Component registration failed. (${item.type})`, err);
                             }
@@ -545,7 +542,14 @@
             this.factory = async () => {
                 // shared between view and component both
                 // coming from VueComponentMembers mixin
-                let component = this.define();
+                let component = await this.define();
+        
+                // template
+                // https://vuejs.org/v2/api/#template
+                // built from html and css settings
+                if (this.html) {
+                    component.template = this.html.trim();
+                }
         
                 // props
                 // https://vuejs.org/v2/guide/components-props.html
@@ -557,8 +561,13 @@
         
                 // data
                 // https://vuejs.org/v2/api/#data
-                if (this.data && typeof this.data === 'function') { 
-                    component.data = this.data;
+                if (this.data) { 
+                    let _this = this;
+                    if (typeof this.data === 'function') {
+                        component.data = function() { return _this.data(); }
+                    } else {
+                        component.data = function() { return _this.data; }
+                    }
                 }
         
                 // name
@@ -583,11 +592,14 @@
                 return component;
             };
         
+            $$('protectedSet');
+            this.name = '';
+        
             $$('protected');
             this.props = null;
         
             $$('protected');
-            this.data = null;    
+            this.data = null;
         
             $$('protected');
             this.model = null;    
@@ -642,7 +654,8 @@
         
             // each area here can be as:
             // { "area: "", component": "", "type": "" } 
-            // "area" is the div-id (in defined html) where the component needs to be placed
+            // "area" is the placeholder-text where the component needs to be placed
+            // "area" placeholder can be defined as: [[area_name]]
             // "component" is the name of the component
             // "type" is the qualified component type name
             $$('protectedSet');
@@ -660,47 +673,28 @@
                 // load html content in property
                 if (this.html && this.html.endsWith('.html')) { // if html file is defined via $$('asset', '<fileName>');
                     this.html = await clientFileLoader(this.html);
-                }
-        
-                // root
-                let rootEl = DOC.createElement('div');
-                if (this.style) {
-                    let styleEl = DOC.createElement('style');
-                    styleEl.innerHTML = this.style.trim();
-                    styleEl.setAttribute('scoped', '');
-                    rootEl.append(styleEl);
                 } 
-                if (this.html) {
-                    let htmlEl = DOC.createElement('div');
-                    htmlEl.innerHTML = this.html.trim();
-                    rootEl.append(htmlEl);
-                }
-                
-                // merge view area
-                this.viewArea = this.viewArea || 'view'; // inbuilt default value
-                let viewAreaEl = rootEl.content.getElementById(this.viewArea);
-                if (viewAreaEl) { viewAreaEl.innerHTML = viewHtml; }
         
-                // merge all other areas with component name placeholders
-                // each area here can be as:
-                // { "area: "", component": "", "type": "" } 
-                // "area" is the div-id (in defined html) where the component needs to be placed
-                // "component" is the name of the component
-                // "type" is the qualified component type name         
-                let areaEl = null;
-                if (this.layout && this.layout.areas && Array.isArray(this.layout.areas)) {
-                    for(let area of this.layout.areas) {
-                        areaEl = rootEl.content.getElementById(area.area);
-                        if (areaEl) { 
-                            let componentEl = DOC.createElement('component');
-                            componentEl.setAttribute('is', area.component);
-                            areaEl.append(componentEl);
-                        }
+                // merge html and style
+                if (this.html && this.style) { // merge style as scoped style
+                    this.html = '<div><style scoped>' + this.style.trim() +'</style>' + this.html.trim() + '</div>';
+                } else if (this.style) {
+                    this.html = '<div><style scoped>' + this.style.trim() +'</style></div>';
+                }        
+                
+                // inject components
+                let layoutHtml = this.html;
+                if (this.areas && Array.isArray(this.areas)) {
+                    for(let area of this.areas) {
+                        layoutHtml = replaceAll(layoutHtml, `[[${area.area}]]`, `<component is="${area.component}"></component>`);
                     }
                 }       
-                
+        
+                // inject view 
+                layoutHtml = layoutHtml.replace(`[[${this.viewArea}]]`, viewHtml);
+        
                 // done
-                return rootEl.innerHTML;
+                return layoutHtml;
             };
         });
         
@@ -743,11 +737,6 @@
         Class('VueView', ViewHandler, [VueComponentMembers], function() {
             let isLoaded = false;
         
-            $$('override');
-            this.construct = (base) => {
-                base(settings.client.view.el, settings.client.view.title, settings.client.view.transition);
-            };
-        
             $$('private');
             this.factory = async () => {
                 // merge layout's components
@@ -759,14 +748,14 @@
                 if (this.layout && this.layout.areas && Array.isArray(this.layout.areas)) {
                     this.components = this.components || [];
                     for(let area of this.layout.areas) {
-                        // each component arrat item is: { "name": "name", "type": "ns.typeName" }
+                        // each component array item is: { "name": "name", "type": "ns.typeName" }
                         this.components.push({ name: area.component, type: area.type });
                     }
                 }
         
                 // shared between view and component both
                 // coming from VueComponentMembers mixin
-                let component = this.define();
+                let component = await this.define();
         
                 // el
                 // https://vuejs.org/v2/api/#el
@@ -780,13 +769,12 @@
         
                 // data
                 // https://vuejs.org/v2/api/#data
-                if (this.data && typeof this.data !== 'function') {
-                    component.data = this.data;
-                }
-        
-                // merge view and view' layout's template
-                if (this.layout) {
-                    component.template = await this.layout.merge(component.template);
+                if (this.data) {
+                    if (typeof this.data === 'function') {
+                        component.data = this.data();
+                    } else {
+                        component.data = this.data;
+                    }
                 }
         
                 // done
@@ -803,11 +791,22 @@
         
                     const Vue = await include('vue/vue{.min}.js');
         
+                    // get component
+                    let component = await this.factory();
+        
+                    // set view Html
+                    let viewHtml = this.html || '';
+                    if (this.layout) {
+                        el.innerHTML = await this.layout.merge(viewHtml);
+                    } else {
+                        el.innerHTML = viewHtml;
+                    }            
+        
                     // custom load op
                     await this.load(ctx, el);
         
                     // setup Vue view instance
-                    new Vue(await this.factory());
+                    new Vue(component);
                 }
             };
         
@@ -840,7 +839,7 @@
     AppDomain.context.current().currentAssemblyBeingLoaded('');
     
     // register assembly definition object
-    AppDomain.registerAdo('{"name":"flair.vue","file":"./flair.vue{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.6.91","lupdate":"Tue, 14 May 2019 01:40:41 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.ui.vue.VueComponentMembers","flair.boot.vue.VueSetup","flair.ui.vue.VueComponent","flair.ui.vue.VueDirective","flair.ui.vue.VueFilter","flair.ui.vue.VueLayout","flair.ui.vue.VueMixin","flair.ui.vue.VuePlugin","flair.ui.vue.VueView"],"resources":[],"assets":[],"routes":[]}');
+    AppDomain.registerAdo('{"name":"flair.vue","file":"./flair.vue{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.7.85","lupdate":"Mon, 20 May 2019 02:01:32 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.ui.vue.VueComponentMembers","flair.boot.vue.VueSetup","flair.ui.vue.VueComponent","flair.ui.vue.VueDirective","flair.ui.vue.VueFilter","flair.ui.vue.VueLayout","flair.ui.vue.VueMixin","flair.ui.vue.VuePlugin","flair.ui.vue.VueView"],"resources":[],"assets":[],"routes":[]}');
     
     // assembly load complete
     if (typeof onLoadComplete === 'function') { 

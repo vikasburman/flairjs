@@ -26,8 +26,10 @@
         "url": {
             "hashbang": false,
             "i18n": false,
-            "home": "/",
-            "404": "/404"
+            "routes": {
+                "home": "",
+                "notfound": ""
+            }
         },
     
         "i18n": {

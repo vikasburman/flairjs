@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.6.91
- *  Tue, 14 May 2019 01:40:40 GMT
+ *  Version: 0.7.85
+ *  Mon, 20 May 2019 02:01:32 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -37,7 +37,7 @@
             getTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;
     const { TaskInfo } = flair.Tasks;
     const { env } = flair.options;
-    const { forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, guid, isArrowFunc, isASyncFunc, sieve,
+    const { guid, forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve,
             deepMerge, getLoadedScript, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
     
     // inbuilt modifiers and attributes compile-time-safe support
@@ -55,7 +55,7 @@
     AppDomain.loadPathOf('flair.app', __currentPath);
     
     // settings of this assembly
-    let settings = JSON.parse('{"host":"flair.app.ServerHost | flair.app.ClientHost","app":"flair.app.App","boot":{"files":[],"preambles":[],"bootwares":[]},"di":{"container":{}},"client":{"view":{"el":"main","title":"","transition":""},"url":{"404":"/404","hashbang":false,"i18n":false,"home":"/"},"i18n":{"enabled":true,"locale":"en","locales":[{"code":"en","name":"English","native":"English"}]},"routing":{"mounts":{"main":"/"},"main-options":[],"main-interceptors":[]}},"server":{"express":{"server-http":{"enable":false,"port":80,"timeout":-1},"server-https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""}},"envVars":{"vars":[],"options":{"overwrite":true}},"routing":{"mounts":{"main":"/"},"main-appSettings":[],"main-middlewares":[],"main-interceptors":[],"main-resHeaders":[]}}}');
+    let settings = JSON.parse('{"host":"flair.app.ServerHost | flair.app.ClientHost","app":"flair.app.App","boot":{"files":[],"preambles":[],"bootwares":[]},"di":{"container":{}},"client":{"view":{"el":"main","title":"","transition":""},"url":{"hashbang":false,"i18n":false,"routes":{"home":"","notfound":""}},"i18n":{"enabled":true,"locale":"en","locales":[{"code":"en","name":"English","native":"English"}]},"routing":{"mounts":{"main":"/"},"main-options":[],"main-interceptors":[]}},"server":{"express":{"server-http":{"enable":false,"port":80,"timeout":-1},"server-https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""}},"envVars":{"vars":[],"options":{"overwrite":true}},"routing":{"mounts":{"main":"/"},"main-appSettings":[],"main-middlewares":[],"main-interceptors":[],"main-resHeaders":[]}}}');
     let settingsReader = flair.Port('settingsReader');
     if (typeof settingsReader === 'function') {
         let externalSettings = settingsReader('flair.app');
@@ -222,7 +222,7 @@
             $$('private');
             this.handleError = (e) => {
                 // do more
-                this.onError(e.error);
+                this.onError(e.args.error);
             };
         
             $$('virtual');
@@ -262,6 +262,193 @@
             
             this.raiseError = (err) => {
                 this.error(err);
+            };
+        });
+        
+    })();    
+    await (async () => { // type: ./src/flair.app/flair.ui/@2-ViewHandler.js
+        const { Handler } = ns('flair.app');
+        
+        /**
+         * @name ViewHandler
+         * @description GUI View Handler
+         */
+        $$('ns', 'flair.ui');
+        Class('ViewHandler', Handler, function() {
+            let mainEl = '';
+        
+            $$('override');
+            this.construct = (base, el, title, transition) => {
+                base();
+        
+                // read from setting which are not specified
+                el = el || settings.client.view.el || 'main';
+                title = title || settings.client.view.title || '';
+                transition = transition || settings.client.view.transition || '';
+        
+                mainEl = el;
+                this.viewTransition = transition;
+                this.title = this.title + (title ? ' - ' + title : '');
+            };
+        
+            $$('privateSet');
+            this.viewTransition = '';
+        
+            $$('protectedSet');
+            this.name = '';
+        
+            $$('protectedSet');
+            this.title = '';
+        
+            // each meta in array can be defined as:
+            // { "<nameOfAttribute>": "<contentOfAttribute>", "<nameOfAttribute>": "<contentOfAttribute>", ... }
+            $$('protectedSet');
+            this.meta = null;
+        
+            this.view = async (ctx) => {
+                const { ViewTransition } = ns('flair.ui');
+        
+                // give it a unique name, if not already given
+                this.name = this.name || this.$obj.id; // $obj is the main view which is finally inheriting this ViewHandler
+        
+                // load view transition
+                if (this.viewTransition) {
+                    let ViewTransitionType = as(await include(this.viewTransition), ViewTransition);
+                    if (ViewTransitionType) {
+                        this.viewTransition = new ViewTransitionType();
+                    } else {
+                        this.viewTransition = '';
+                    }
+                }
+        
+                // add view el to parent
+                let el = DOC.createElement('div'),
+                    parentEl = DOC.getElementById(mainEl);
+                el.id = this.name;
+                el.setAttribute('hidden', '');
+                parentEl.appendChild(el);
+                
+                // load view
+                await this.loadView(ctx, el);
+        
+                // swap views (old one is replaced with this new one)
+                await this.swap();
+            };
+        
+            $$('protected');
+            $$('virtual');
+            $$('async');
+            this.loadView = noop;
+        
+            $$('private');
+            this.swap = async () => {
+                let thisViewEl = DOC.getElementById(this.name);
+        
+                // outgoing view
+                if (this.$static.currentView) {
+                    let currentViewEl = DOC.getElementById(this.$static.currentView);
+        
+                    // remove outgoing view meta   
+                    if (this.$static.currentViewMeta) {
+                        for(let meta of this.$static.currentViewMeta) {
+                            DOC.head.removeChild(DOC.querySelector('meta[name="' + meta + '"]'));
+                        }
+                    }
+                        
+                    // apply transitions
+                    if (this.viewTransition) {
+                        // leave outgoing, enter incoming
+                        await this.viewTransition.leave(currentViewEl, thisViewEl);
+                        await this.viewTransition.enter(thisViewEl, currentViewEl);
+                    } else {
+                        // default is no transition
+                        if (currentViewEl) { currentViewEl.hidden = true; }
+                        thisViewEl.hidden = false;
+                    }
+        
+                    // remove outgoing view
+                    let parentEl = DOC.getElementById(mainEl);  
+                    if (currentViewEl) { parentEl.removeChild(currentViewEl); }
+                }
+        
+                // add incoming view meta
+                if (this.meta) {
+                    for(let meta of this.meta) {
+                        var metaEl = document.createElement('meta');
+                        for(let metaAttr in meta) {
+                            metaEl[metaAttr] = meta[metaAttr];
+                        }
+                        DOC.head.appendChild(metaEl);
+                    }
+                }
+        
+                // in case there was no previous view
+                if (!this.$static.currentView) {
+                    thisViewEl.hidden = false;
+                }
+        
+                // update title
+                DOC.title = this.title;
+        
+                // set new current
+                this.$static.currentView = this.name;
+                this.$static.currentViewMeta = this.meta;
+            };
+        
+            $$('static');
+            this.currentView = null;
+        
+            $$('static');
+            this.currentViewMeta = null;
+        });
+        
+    })();    
+    await (async () => { // type: ./src/flair.app/flair.ui/@3-View.js
+        const { ViewHandler } = ns('flair.ui');
+        
+        /**
+         * @name View
+         * @description GUI View Controller
+         */
+        $$('static');
+        $$('ns', 'flair.ui');
+        Class('View', function() {
+            this.current = {
+                get: function() { return ViewHandler.currentView; },
+                set: function() {}
+            };
+        
+            $$('readonly');
+            this.i18n = settings.client.i18n.enabled;
+        
+            $$('overload', 'string');
+            this.navigate = function(routeName) {
+                return this.navigate(routeName, {});
+            };
+            $$('overload', 'string, object');
+            this.navigate = function(routeName, params) {
+                // get url from route
+                let url = AppDomain.host().route(routeName, params);
+        
+                // pick 404, if not found
+                if (!url && routeName !== settings.client.url.routes['404']) { 
+                    url = AppDomain.host().route(settings.client.url.routes['404'], { notfound: routeName });
+                }
+        
+                // navigate
+                let isFailed = true;
+                if (url) {
+                    if (!(params && params.notfound === url)) {
+                        isFailed = false;
+                        if (url.substr(0, 1) === '#') { url = url.substr(1); } // remove #, because it will automatically be added
+                        setTimeout(() => {
+                            window.location.hash = url;
+                        }, 0);
+                    }
+                } 
+                if (isFailed) {
+                    throw Exception.NotFound(routeName, this.navigate);
+                }
             };
         });
         
@@ -467,7 +654,8 @@
     })();    
     await (async () => { // type: ./src/flair.app/flair.app/ClientHost.js
         const { Host } = ns('flair.app');
-        
+        const { View } = ns('flair.ui');
+         
         /**
          * @name ClientHost
          * @description Client host implementation
@@ -595,16 +783,16 @@
                 // clean path
                 path = this.cleanPath(path);
         
-                // add hash
-                if (settings.client.url.hashbang) {
-                    path = '/#!/' + path;
-                } else {
-                    path = '/#/' + path;
-                }
-        
                 // add i18n
                 if (settings.client.i18n.enabled && settings.client.url.i18n) {
                     path = (this.currentLocale || this.defaultLocale) + '/' + path;
+                }
+        
+                // add hash
+                if (settings.client.url.hashbang) {
+                    path = '#!/' + path;
+                } else {
+                    path = '#/' + path;
                 }
         
                 // return
@@ -743,12 +931,14 @@
                     // route this path to most suitable mounted app
                     let app = null,
                         mountName = '';
-                    for(let mount of this.mounts) {
-                        if (path.startsWith(mount.root)) { 
-                            app = mount.app; 
-                            path = path.substr(mount.root.length); // remove all base path, so it becomes at part the way paths were added to this app
-                            mountName = mount;
-                            break; 
+                    for(let mount in this.mounts) {
+                        if (this.mounts.hasOwnProperty(mount)) {
+                            if (path.startsWith(mount.root)) { 
+                                app = mount.app; 
+                                path = path.substr(mount.root.length); // remove all base path, so it becomes at part the way paths were added to this app
+                                mountName = mount;
+                                break; 
+                            }
                         }
                     }
                     if (!app) { // when nothing matches, give it to main
@@ -762,7 +952,7 @@
                     // run app to initiate routing
                     setTimeout(() => { 
                         try {
-                            app(path);
+                            app.app(path);
                         } catch (err) {
                             this.error(err); // pass-through event
                         }
@@ -777,8 +967,8 @@
                 // attach event handler
                 window.addEventListener('hashchange', hashChangeHandler);
         
-                // navigate to home
-                this.app.redirect(settings.client.url.home);
+                // redirect to home
+                View.navigate(settings.client.url.routes.home); // redirect, instead of navigate
         
                 // ready
                 console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version}`); // eslint-disable-line no-console
@@ -1055,87 +1245,90 @@
                         }).catch(reject);
                     });
                 };
+                const getHandler = function(__routePath, __routeHandler) {
+                    let verb = 'view', // only view verb is supported on client
+                        _routePath = __routePath,
+                        _routeHandler = __routeHandler;
+                    
+                    return function(ctx) { // mount.app = page object/func
+                        const onError = (err) => {
+                            AppDomain.host().raiseError(err);
+                        };
+                        const onRedirect = (url) => {
+                            mount.app.redirect(url);
+                        };
+                        const handleRoute = () => {
+                            let x = _routePath; // eslint-disable-line  no-unused-vars
+                            include(_routeHandler).then((theType) => {
+                                let RouteHandler = as(theType, ViewHandler);
+                                if (RouteHandler) {
+                                    try {
+                                        using(new RouteHandler(), (routeHandler) => {
+                                            // ctx.params has all the route parameters.
+                                            // e.g., for route "/users/:userId/books/:bookId" ctx.params will 
+                                            // have "ctx.params: { "userId": "34", "bookId": "8989" }"
+                                            routeHandler[verb](ctx).then(() => {
+                                                ctx.handled = true;
+                                                if (ctx.$redirect) {
+                                                    onRedirect(ctx.$redirect);
+                                                }
+                                            }).catch(onError);
+                                        });
+                                    } catch (err) {
+                                        onError(err);
+                                    }
+                                } else {
+                                    onError(Exception.InvalidDefinition(`Invalid route handler. (${_routeHandler})`));
+                                }
+                            }).catch(onError);
+                        };
+        
+                        // add special properties to context
+                        ctx.$stop = false;
+                        ctx.$redirect = '';
+        
+                        // run mount specific interceptors
+                        // each interceptor is derived from ViewInterceptor and
+                        // run method of it takes ctx, can update it
+                        // each item is: "InterceptorTypeQualifiedName"
+                        let mountInterceptors = settings.client.routing[`${mount.name}-interceptors`] || [];
+                        runInterceptors(mountInterceptors, ctx).then(() => {
+                            if (!ctx.$stop) {
+                                handleRoute();
+                            } else {
+                                ctx.handled = true;
+                                if (ctx.$redirect) {
+                                    onRedirect(ctx.$redirect);
+                                }
+                            }
+                        }).catch((err) => {
+                            if (ctx.$stop) { // reject might also be because of stop done by an interceptor
+                                ctx.handled = true;
+                                if (ctx.$redirect) {
+                                    onRedirect(ctx.$redirect);
+                                }
+                            } else {
+                                onError(err);
+                            }
+                        });
+                    };
+                };
         
                 // add routes related to current mount
-                let verb = 'view'; // only view verb is supported on client
                 for (let route of routes) {
                     if (route.mount === mount.name) { // add route-handler
-                        // NOTE: verbs are ignored for client routing, only 'view' verb is processed
-                        mount.app(route.path, (ctx) => { // mount.app = page object/func
-                            const onError = (err) => {
-                                AppDomain.host().raiseError(err);
-                            };
-                            const onRedirect = (url) => {
-                                mount.app.redirect(url);
-                            };
-                            const handleRoute = () => {
-                                include(route.handler).then((theType) => {
-                                    let RouteHandler = as(theType, ViewHandler);
-                                    if (RouteHandler) {
-                                        try {
-                                            using(new RouteHandler(), (routeHandler) => {
-                                                // ctx.params has all the route parameters.
-                                                // e.g., for route "/users/:userId/books/:bookId" ctx.params will 
-                                                // have "ctx.params: { "userId": "34", "bookId": "8989" }"
-                                                routeHandler[verb](ctx).then(() => {
-                                                    ctx.handled = true;
-                                                    if (ctx.$redirect) {
-                                                        onRedirect(ctx.$redirect);
-                                                    }
-                                                }).catch(onError);
-                                            });
-                                        } catch (err) {
-                                            onError(err);
-                                        }
-                                    } else {
-                                        onError(Exception.InvalidDefinition(`Invalid route handler. (${route.handler})`));
-                                    }
-                                }).catch(onError);
-                            };
-        
-                            // add special properties to context
-                            ctx.$stop = false;
-                            ctx.$redirect = '';
-        
-                            // run mount specific interceptors
-                            // each interceptor is derived from ViewInterceptor and
-                            // run method of it takes ctx, can update it
-                            // each item is: "InterceptorTypeQualifiedName"
-                            let mountInterceptors = settings.client.routing[`${mount.name}-interceptors`] || [];
-                            runInterceptors(mountInterceptors, ctx).then(() => {
-                                if (!ctx.$stop) {
-                                    handleRoute();
-                                } else {
-                                    ctx.handled = true;
-                                    if (ctx.$redirect) {
-                                        onRedirect(ctx.$redirect);
-                                    }
-                                }
-                            }).catch((err) => {
-                                if (ctx.$stop) { // reject might also be because of stop done by an interceptor
-                                    ctx.handled = true;
-                                    if (ctx.$redirect) {
-                                        onRedirect(ctx.$redirect);
-                                    }
-                                } else {
-                                    onError(err);
-                                }
-                            });
-                        });
+                        mount.app(route.path, getHandler(route.path, route.handler));
                     }
                 }
         
                 // catch 404 for this mount and forward to error handler
                 mount.app("*", (ctx) => { // mount.app = page object/func
                     // redirect to 404 route, which has to be defined route
-                    let url404 = settings.client.url['404'];
-                    if (url404) {
+                    let route404 = settings.client.url.routes['404'];
+                    if (route404) {
                         ctx.handled = true;
-                        if (ctx.pathname !== url404) { 
-                            mount.app.redirect(url404);
-                        } else { // when even 404 is not handled
-                            // just mark as handled, and don't do anything
-                        }
+                        let url = AppDomain.host().route(route404, { notfound: ctx.pathname });
+                        mount.app.redirect(url); // redirect
                     } else {
                         window.history.back(); // nothing else can be done
                     }
@@ -1498,134 +1691,6 @@
             };
         });
     })();    
-    await (async () => { // type: ./src/flair.app/flair.ui/ViewHandler.js
-        const { Handler } = ns('flair.app');
-        
-        /**
-         * @name ViewHandler
-         * @description GUI View Handler
-         */
-        $$('ns', 'flair.ui');
-        Class('ViewHandler', Handler, function() {
-            let mainEl = '';
-        
-            $$('override');
-            this.construct = (base, el, title, transition) => {
-                base();
-        
-                mainEl = el || 'main';
-                this.viewTransition = transition;
-                this.title = this.title + (title ? ' - ' + title : '');
-            };
-        
-            $$('privateSet');
-            this.viewTransition = '';
-        
-            $$('protectedSet');
-            this.name = '';
-        
-            $$('protectedSet');
-            this.title = '';
-        
-            // each meta in array can be defined as:
-            // { "<nameOfAttribute>": "<contentOfAttribute>", "<nameOfAttribute>": "<contentOfAttribute>", ... }
-            $$('protectedSet');
-            this.meta = null;
-        
-            this.view = async (ctx) => {
-                const { ViewTransition } = ns('flair.ui');
-        
-                // give it a unique name, if not already given
-                this.name = this.name || (this.$self.id + '_' + guid());
-        
-                // load view transition
-                if (this.viewTransition) {
-                    let ViewTransitionType = as(await include(this.viewTransition), ViewTransition);
-                    if (ViewTransitionType) {
-                        this.viewTransition = new ViewTransitionType();
-                    } else {
-                        this.viewTransition = '';
-                    }
-                }
-        
-                // add view el to parent
-                let el = DOC.createElement('div'),
-                    parentEl = DOC.getElementById(mainEl);
-                el.id = this.name;
-                el.setAttribute('hidden', '');
-                parentEl.appendChild(el);
-                
-                // load view
-                this.load(ctx, el);
-        
-                // swap views (old one is replaced with this new one)
-                await this.swap();
-            };
-        
-            $$('protected');
-            $$('virtual');
-            $$('async');
-            this.loadView = noop;
-        
-            $$('private');
-            this.swap = async () => {
-                let thisViewEl = DOC.getElementById(this.name);
-        
-                // outgoing view
-                if (this.$static.currentView) {
-                    let currentViewEl = DOC.getElementById(this.$static.currentView);
-        
-                    // remove outgoing view meta   
-                    for(let meta of this.meta) {
-                        DOC.head.removeChild(DOC.querySelector('meta[name="' + meta + '"]'));
-                    }
-                        
-                    // apply transitions
-                    if (this.viewTransition) {
-                        // leave outgoing, enter incoming
-                        await this.viewTransition.leave(currentViewEl, thisViewEl);
-                        await this.viewTransition.enter(thisViewEl, currentViewEl);
-                    } else {
-                        // default is no transition
-                        currentViewEl.hidden = true;
-                        thisViewEl.hidden = false;
-                    }
-        
-                    // remove outgoing view
-                    let parentEl = DOC.getElementById(mainEl);            
-                    parentEl.removeChild(currentViewEl);
-                }
-        
-                // add incoming view meta
-                for(let meta of this.meta) {
-                    var metaEl = document.createElement('meta');
-                    for(let metaAttr in meta) {
-                        metaEl[metaAttr] = meta[metaAttr];
-                    }
-                    DOC.head.appendChild(metaEl);
-                }
-        
-                // in case there was no previous view
-                if (!this.$static.currentView) {
-                    thisViewEl.hidden = false;
-                }
-        
-                // update title
-                DOC.title = this.title;
-        
-                // set new current
-                this.$static.currentView = this.name;
-                this.$static.currentViewMeta = this.meta;
-            };
-        
-            $$('static');
-            this.currentView = '';
-        
-            $$('static');
-            this.currentViewMeta = [];
-        });
-        
-    })();    
     await (async () => { // type: ./src/flair.app/flair.ui/ViewInterceptor.js
         /**
          * @name ViewInterceptor
@@ -1694,7 +1759,7 @@
     AppDomain.context.current().currentAssemblyBeingLoaded('');
     
     // register assembly definition object
-    AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.6.91","lupdate":"Tue, 14 May 2019 01:40:40 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Handler","flair.app.App","flair.app.Host","flair.api.RestHandler","flair.api.RestInterceptor","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.ClientRouter","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter","flair.ui.ViewHandler","flair.ui.ViewInterceptor","flair.ui.ViewState","flair.ui.ViewTransition"],"resources":[],"assets":[],"routes":[]}');
+    AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.7.85","lupdate":"Mon, 20 May 2019 02:01:32 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Handler","flair.app.App","flair.app.Host","flair.ui.ViewHandler","flair.ui.View","flair.api.RestHandler","flair.api.RestInterceptor","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.ClientRouter","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter","flair.ui.ViewInterceptor","flair.ui.ViewState","flair.ui.ViewTransition"],"resources":[],"assets":[],"routes":[]}');
     
     // assembly load complete
     if (typeof onLoadComplete === 'function') { 

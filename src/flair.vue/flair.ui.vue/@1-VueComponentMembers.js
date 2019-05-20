@@ -1,3 +1,5 @@
+const { View } = ns('flair.ui');
+
 /**
  * @name VueComponentMembers
  * @description Vue Component Members
@@ -28,11 +30,18 @@ Mixin('(auto)', function() {
             this.html = await clientFileLoader(this.html);
         }
 
+        // merge html and style
+        if (this.html && this.style) { // merge style as scoped style
+            this.html = '<div><style scoped>' + this.style.trim() +'</style>' + this.html.trim() + '</div>';
+        } else if (this.style) {
+            this.html = '<div><style scoped>' + this.style.trim() +'</style></div>';
+        }
+
         // local i18n resources
         // each i18n resource file is defined as:
         // "ns": "json-file-name"
         // when loaded, each ns will convert into JSON object from defined file
-        if(settings.client.i18n.enabled && this.i18n) {
+        if(View.i18n && this.i18n) {
             let i18ResFile = '';
             for(let i18nNs in this.i18n) {
                 if (this.i18n.hasOwnProperty(i18nNs)) {
@@ -42,19 +51,6 @@ Mixin('(auto)', function() {
             }
         }
 
-        // template
-        // https://vuejs.org/v2/api/#template
-        // either manually defined, or loaded from html and style combination as fallback
-        if (this.template) {
-            component.template = this.template;
-        } else {
-            if (this.style && this.html) {
-                component.template = '<div><style scoped>' + this.style.trim() +'</style><div>' + this.html.trim() + '</div></div>';
-            } else if (this.html) {
-                component.template = this.html.trim();
-            }
-        }
-        
         // render
         // https://vuejs.org/v2/api/#render
         // https://vuejs.org/v2/guide/render-function.html#Functional-Components
@@ -122,7 +118,7 @@ Mixin('(auto)', function() {
         component.methods['route'] = (routeName, placeholders) => { return _this.route(routeName, placeholders); };
 
         // i18n specific built-in methods
-        if (settings.client.i18n.enabled) {
+        if (View.i18n) {
             // supporting built-in method: locale 
             // e.g., {{ locale() }} will give: 'en'
             component.methods['locale'] = (value) => { return _this.locale(value); };
@@ -168,24 +164,25 @@ Mixin('(auto)', function() {
         // https://vuejs.org/v2/api/#components
         if (this.components && Array.isArray(this.components)) {
             let ComponentType = null,
-                component = null;
+                componentObj = null;
             for(let item of this.components) {
                 if (!item.name) { throw Exception.OperationFailed(`Component name cannot be empty. (${item.type})`); }
                 if (!item.type) { throw Exception.OperationFailed(`Component type cannot be empty. (${item.name})`); }
 
+                // check for duplicate (global)
+                if (Vue.options.components[item.name]) { throw Exception.Duplicate(`Component already registered. (${item.name})`); }
                 
-                ComponentType = as(await include(item.name), VueComponent);
+                ComponentType = as(await include(item.type), VueComponent);
                 if (ComponentType) {
                     try {
-                        component = new ComponentType();
+                        componentObj = new ComponentType();
 
-                        // check for duplicate (global & local)
-                        if (Vue.options.components[item.name]) { throw Exception.Duplicate(`Component already registered. (${item.name})`); }
+                        // check for duplicate (local)
                         if (component.components && component.components[item.name]) { throw Exception.Duplicate(`Component already registered. (${item.name})`); }
 
                         // register locally
                         component.components = component.components || {};
-                        component.components[item.name] = await component.factory();
+                        component.components[item.name] = await componentObj.factory();
                     } catch (err) {
                         throw Exception.OperationFailed(`Component registration failed. (${item.type})`, err);
                     }

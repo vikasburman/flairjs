@@ -16,7 +16,8 @@ Class('(auto)', function() {
 
     // each area here can be as:
     // { "area: "", component": "", "type": "" } 
-    // "area" is the div-id (in defined html) where the component needs to be placed
+    // "area" is the placeholder-text where the component needs to be placed
+    // "area" placeholder can be defined as: [[area_name]]
     // "component" is the name of the component
     // "type" is the qualified component type name
     $$('protectedSet');
@@ -34,46 +35,27 @@ Class('(auto)', function() {
         // load html content in property
         if (this.html && this.html.endsWith('.html')) { // if html file is defined via $$('asset', '<fileName>');
             this.html = await clientFileLoader(this.html);
-        }
-
-        // root
-        let rootEl = DOC.createElement('div');
-        if (this.style) {
-            let styleEl = DOC.createElement('style');
-            styleEl.innerHTML = this.style.trim();
-            styleEl.setAttribute('scoped', '');
-            rootEl.append(styleEl);
         } 
-        if (this.html) {
-            let htmlEl = DOC.createElement('div');
-            htmlEl.innerHTML = this.html.trim();
-            rootEl.append(htmlEl);
-        }
-        
-        // merge view area
-        this.viewArea = this.viewArea || 'view'; // inbuilt default value
-        let viewAreaEl = rootEl.content.getElementById(this.viewArea);
-        if (viewAreaEl) { viewAreaEl.innerHTML = viewHtml; }
 
-        // merge all other areas with component name placeholders
-        // each area here can be as:
-        // { "area: "", component": "", "type": "" } 
-        // "area" is the div-id (in defined html) where the component needs to be placed
-        // "component" is the name of the component
-        // "type" is the qualified component type name         
-        let areaEl = null;
-        if (this.layout && this.layout.areas && Array.isArray(this.layout.areas)) {
-            for(let area of this.layout.areas) {
-                areaEl = rootEl.content.getElementById(area.area);
-                if (areaEl) { 
-                    let componentEl = DOC.createElement('component');
-                    componentEl.setAttribute('is', area.component);
-                    areaEl.append(componentEl);
-                }
+        // merge html and style
+        if (this.html && this.style) { // merge style as scoped style
+            this.html = '<div><style scoped>' + this.style.trim() +'</style>' + this.html.trim() + '</div>';
+        } else if (this.style) {
+            this.html = '<div><style scoped>' + this.style.trim() +'</style></div>';
+        }        
+        
+        // inject components
+        let layoutHtml = this.html;
+        if (this.areas && Array.isArray(this.areas)) {
+            for(let area of this.areas) {
+                layoutHtml = replaceAll(layoutHtml, `[[${area.area}]]`, `<component is="${area.component}"></component>`);
             }
         }       
-        
+
+        // inject view 
+        layoutHtml = layoutHtml.replace(`[[${this.viewArea}]]`, viewHtml);
+
         // done
-        return rootEl.innerHTML;
+        return layoutHtml;
     };
 });

@@ -536,6 +536,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             Type: Type,
             level: 'object',
             members: {}, // each named item here defines the type of member: func, prop, event, construct, etc.
+            scope: {},  // each names item here defined the scope of the member: private, protected, public
             attrs: { 
                 members: {} // each named item array in here will have: {name, cfg, isCustom, attr, args}
             },
@@ -557,6 +558,16 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         name: def.name,
         assemblyName: _getAssemblyOf(def.name),
         Type: def.Type,
+        obj: () => {
+            let obj_def = obj[meta].Type[meta].def();
+            return Object.freeze({
+                id: replaceAll(obj_def.name, '.', '_'),
+                name: obj_def.name,
+                assemblyName: _getAssemblyOf(obj_def.name),
+                Type: obj_def.Type
+            });
+        },
+        static: def.Type, // NOTE: since static must be tied to the level where a static is being defined, therefore at runtime, it must be read from same level type itself
         members: () => {
             let members = {};
             for(let memberName in def.members) {
@@ -694,7 +705,10 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
 
                 // rewire event definition when at the top level object creation step
                 if (isCopy && !params.isNeedProtected && modifiers.members.isEvent(memberName)) { 
-                    exposed_obj[memberName].strip(exposed_obj);
+                    let desc = Object.getOwnPropertyDescriptor(exposed_obj, memberName);
+                    desc.enumerable = false;   
+                    desc.value = exposed_obj[memberName].strip();
+                    Object.defineProperty(exposed_obj, memberName, desc);
                 }
             }
         }
@@ -773,7 +787,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         }
         return memberType;
     };
-    const validateMemberDefinitionFeasibility = (memberName, memberType, memberDef) => {
+    const validateMemberDefinitionFeasibility = (bindingHost, memberName, memberType, memberDef) => {
         let result = true;
         // conditional check using AND - means, all specified conditions must be true to include this
         let the_attr = attrs.members.probe('conditional', memberName).current();
@@ -828,9 +842,22 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         }
         
         // duplicate check, if not overriding
+        // special case for setting property values
         if (Object.keys(obj).indexOf(memberName) !== -1 && 
             (!cfg.inheritance || (cfg.inheritance && !modifiers.members.probe('override', memberName).current()))) {
-                throw _Exception.Duplicate(def.name + '::' + memberName, builder); 
+                if (memberType === 'prop' && 
+                    def.attrs.members[memberName].length === 0 && def.modifiers.members[memberName].length === 0
+                    && (!memberDef || (memberDef && !memberDef.get && !memberDef.set))) {
+                        // when property and no attributes or modifiers are defined 
+                        // and the value does not container get and set definitions
+                        // then treat it as a value definition and define the value
+                        bindingHost[memberName] = memberDef;
+
+                        // return
+                        return false; // don't go for definition, value updated here
+                } else {
+                    throw _Exception.Duplicate(def.name + '::' + memberName, builder); 
+                }
         }
 
         // overriding member must be present and of the same type
@@ -849,12 +876,12 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                     throw _Exception.InvalidDefinition(`Static functions cannot be defined as an arrow function. (${def.name}::${memberName})`, builder); 
                 }
             } else if (memberType === 'prop') {
-                if (memberDef.get && typeof memberDef.get === 'function') {
+                if (memberDef && memberDef.get && typeof memberDef.get === 'function') {
                     if (isArrow(memberDef)) { 
                         throw _Exception.InvalidDefinition(`Static property getters cannot be defined as an arrow function. (${def.name}::${memberName})`, builder); 
                     }
                 }
-                if (memberDef.set && typeof memberDef.set === 'function') {
+                if (memberDef && memberDef.set && typeof memberDef.set === 'function') {
                     if (isArrow(memberDef)) { 
                         throw _Exception.InvalidDefinition(`Static property setters cannot be defined as an arrow function. (${def.name}::${memberName})`, builder); 
                     }
@@ -864,12 +891,12 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
 
         // session/state properties cannot have custom getter/setter and also relevant port must be configured
         if (cfg.storage && attrs.members.probe('session', memberName).current()) {
-            if (memberDef.get && typeof memberDef.get === 'function') {
+            if (memberDef && memberDef.get && typeof memberDef.get === 'function') {
                 throw _Exception.InvalidDefinition(`Session properties cannot be defined with a custom getter/setter. (${def.name}::${memberName})`, builder); 
             }
         }
         if (cfg.storage && attrs.members.probe('state', memberName).current()) {
-            if (memberDef.get && typeof memberDef.get === 'function') {
+            if (memberDef && memberDef.get && typeof memberDef.get === 'function') {
                 throw _Exception.InvalidDefinition(`State properties cannot be defined with a custom getter/setter. (${def.name}::${memberName})`, builder); 
             }
             if (!_localStorage) { throw _Exception.InvalidOperation('Port is not configured. (localStorage)', builder); }
@@ -1060,6 +1087,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                 if (bindingHost[memberName]) { 
                     // throw, if any other attribute is defined other than overload
                     if (_attr.count() > 1) { throw _Exception.InvalidDefinition(`Overloaded function cannot define additional modifiers or attributes. (${def.name}::${memberName})`, builder); }
+                    _attr.collect(); // so _attr array is cleaned
                     return true; // handled, don't go normal definition route
                 }
             }
@@ -1307,19 +1335,15 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         });
         _member.add = (handler) => { _member_dispatcher.add(memberName, handler); };
         _member.remove = (handler) => { _member_dispatcher.remove(memberName, handler); };
-        _member.strip = (_exposed_obj) => {
+        _member.strip = () => {
             // returns the stripped version of the event without event raising ability
             let strippedEvent = shallowCopy({}, _member, true, ['strip']);
 
             // delete strip feature now, it is no longer needed
             delete _member.strip;
-            delete _exposed_obj.strip;
             
-            // redefine event function as event object
-            Object.defineProperty(exposed_obj, memberName, {
-                configurable: true, enumerable: true,
-                value: Object.freeze(strippedEvent)
-            });
+            // send redefined event function as event object
+            return Object.freeze(strippedEvent);
         }
 
         // return
@@ -1367,7 +1391,8 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         }
 
         // validate feasibility of member definition - throw when failed
-        if (!validateMemberDefinitionFeasibility(memberName, memberType, memberDef)) { return; } // skip defining this member
+        // it may update the property value, if situation is
+        if (!validateMemberDefinitionFeasibility(bindingHost, memberName, memberType, memberDef)) { return; } // skip defining this member
 
         // member type specific logic
         switch(memberType) {
@@ -1392,6 +1417,15 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                     value: memberValue
                 });
                 break;
+        }
+
+        // add to private list, if this is private
+        if (modifiers.members.probe('private', memberName).current()) { 
+            def.scope[memberName] = 'private';
+        } else if (modifiers.members.probe('protected', memberName).current()) {
+            def.scope[memberName] = 'protected';
+        } else {
+            def.scope[memberName] = 'public';
         }
     };
     const addDisposable = (disposableType, data) => {
@@ -1479,14 +1513,46 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     // define proxy for clean syntax inside factory
     proxy = new Proxy({}, {
         get: (_obj, name) => { 
-            if (cfg.new) {
+            if (cfg.new && name !== meta && name.substr(0, 1) === '$') {
                 if (name === '$self') { return self; }
-                if (name === '$static') { return params.staticInterface; }
+                if (name === '$static') { return self.static; }
+                if (name === '$obj') { return self.obj(); }
             }
-            return obj[name]; 
+            if (name === 'construct') {
+                name = _constructName;
+            } else if (name === 'dispose') {
+                name = _disposeName;
+            }
+            let read_obj = null;
+            if (name !== meta) {
+                switch(def.scope[name]) {
+                    case 'private': read_obj = obj; break;
+                    case 'protected': read_obj = (typeof exposed_obj[name] !== 'undefined' ? exposed_obj : obj); break;
+                    case 'public': 
+                        if (def.members[name] === 'event') { // events carry different interface for public and private/protected case
+                            read_obj = (typeof obj[name] !== 'undefined' ? obj : exposed_obj); break;                             
+                        } else {
+                            read_obj = exposed_obj; 
+                        }
+                        break;
+                    default: // when member is not defined here then it must be protected or public at parent level
+                        // special case for events 
+                        if (typeof obj[name] === 'function' && typeof exposed_obj[name].add === 'function' && typeof exposed_obj[name].remove === 'function') { 
+                            // this is a protected function, hence pick from obj and not from exposed_obj
+                            read_obj = obj;
+                        } else if (typeof exposed_obj[name] !== 'undefined') {
+                            read_obj = exposed_obj;
+                        } else {
+                            throw _Exception.NotDefined(name, builder);
+                        }
+                }
+            } else {
+                read_obj = obj;
+            }
+            return read_obj[name];
         },
         set: (_obj, name, value) => {
-            if (cfg.new && ['$self', '$static'].indexOf(name) !== -1) { throw _Exception.InvalidOperation(`Special members cannot be custom defined. (${name})`, builder); }
+            if (cfg.new && name !== meta && name.substr(0, 1) === '$') { throw _Exception.InvalidOperation(`Special members cannot be custom defined. (${name})`, builder); }
             if (isBuildingObj) {
                 // get member type
                 let memberType = '';
@@ -1518,7 +1584,23 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                 if (typeof value === 'function') { throw _Exception.InvalidOperation(`Redefinition of members is not allowed. (${name})`, builder); }
 
                 // allow setting property values
-                obj[name] = value;
+                let write_obj = null;
+                if (name !== meta) {
+                    switch(def.scope[name]) {
+                        case 'private': write_obj = obj; break;
+                        case 'protected': write_obj = (typeof exposed_obj[name] !== 'undefined' ? exposed_obj : obj); break;
+                        case 'public': write_obj = exposed_obj; break;
+                        default: // when member is not defined here then it must be protected or public at parent level
+                            if (typeof exposed_obj[name] !== 'undefined') {
+                                write_obj = exposed_obj; break;
+                            } else { // some undefined member or a private member at a parent level
+                                throw _Exception.NotDefined(name, builder);
+                            }
+                    } 
+                } else {
+                    write_obj = obj;
+                }
+                write_obj[name] = value;
             }
             return true;
         }
@@ -1774,6 +1856,8 @@ const builder = (cfg) => {
             }
         }
     }
+    _Object.typeName = () => { return cfg.params.typeName; };
+    _Object.typeType = () => { return cfg.params.type; };
 
     // type def
     let typeDef = { 

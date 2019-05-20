@@ -65,7 +65,7 @@ Class('(auto)', Bootware, [IDisposable], function() {
     $$('private');
     this.handleError = (e) => {
         // do more
-        this.onError(e.error);
+        this.onError(e.args.error);
     };
 
     $$('virtual');

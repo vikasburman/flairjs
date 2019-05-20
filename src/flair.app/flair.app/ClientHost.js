@@ -1,4 +1,8 @@
 const { Host } = ns('flair.app');
+const { View } = ns('flair.ui');
+ 
+// TODO: Rewrite using snippets of page.js --- to have self-routing engine
+// and then remove dependency on page.js
 
 /**
  * @name ClientHost
@@ -127,16 +131,16 @@ Class('(auto)', Host, function() {
         // clean path
         path = this.cleanPath(path);
 
-        // add hash
-        if (settings.client.url.hashbang) {
-            path = '/#!/' + path;
-        } else {
-            path = '/#/' + path;
-        }
-
         // add i18n
         if (settings.client.i18n.enabled && settings.client.url.i18n) {
             path = (this.currentLocale || this.defaultLocale) + '/' + path;
+        }
+
+        // add hash
+        if (settings.client.url.hashbang) {
+            path = '#!/' + path;
+        } else {
+            path = '#/' + path;
         }
 
         // return
@@ -275,12 +279,14 @@ Class('(auto)', Host, function() {
             // route this path to most suitable mounted app
             let app = null,
                 mountName = '';
-            for(let mount of this.mounts) {
-                if (path.startsWith(mount.root)) { 
-                    app = mount.app; 
-                    path = path.substr(mount.root.length); // remove all base path, so it becomes at part the way paths were added to this app
-                    mountName = mount;
-                    break; 
+            for(let mount in this.mounts) {
+                if (this.mounts.hasOwnProperty(mount)) {
+                    if (path.startsWith(mount.root)) { 
+                        app = mount.app; 
+                        path = path.substr(mount.root.length); // remove all base path, so it becomes at part the way paths were added to this app
+                        mountName = mount;
+                        break; 
+                    }
                 }
             }
             if (!app) { // when nothing matches, give it to main
@@ -294,7 +300,7 @@ Class('(auto)', Host, function() {
             // run app to initiate routing
             setTimeout(() => { 
                 try {
-                    app(path);
+                    app.app(path);
                 } catch (err) {
                     this.error(err); // pass-through event
                 }
@@ -309,8 +315,8 @@ Class('(auto)', Host, function() {
         // attach event handler
         window.addEventListener('hashchange', hashChangeHandler);
 
-        // navigate to home
-        this.app.redirect(settings.client.url.home);
+        // redirect to home
+        View.navigate(settings.client.url.routes.home); // redirect, instead of navigate
 
         // ready
         console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version}`); // eslint-disable-line no-console

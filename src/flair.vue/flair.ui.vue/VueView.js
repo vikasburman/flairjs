@@ -9,11 +9,6 @@ $$('ns', '(auto)');
 Class('(auto)', ViewHandler, [VueComponentMembers], function() {
     let isLoaded = false;
 
-    $$('override');
-    this.construct = (base) => {
-        base(settings.client.view.el, settings.client.view.title, settings.client.view.transition);
-    };
-
     $$('private');
     this.factory = async () => {
         // merge layout's components
@@ -25,14 +20,14 @@ Class('(auto)', ViewHandler, [VueComponentMembers], function() {
         if (this.layout && this.layout.areas && Array.isArray(this.layout.areas)) {
             this.components = this.components || [];
             for(let area of this.layout.areas) {
-                // each component arrat item is: { "name": "name", "type": "ns.typeName" }
+                // each component array item is: { "name": "name", "type": "ns.typeName" }
                 this.components.push({ name: area.component, type: area.type });
             }
         }
 
         // shared between view and component both
         // coming from VueComponentMembers mixin
-        let component = this.define();
+        let component = await this.define();
 
         // el
         // https://vuejs.org/v2/api/#el
@@ -46,13 +41,12 @@ Class('(auto)', ViewHandler, [VueComponentMembers], function() {
 
         // data
         // https://vuejs.org/v2/api/#data
-        if (this.data && typeof this.data !== 'function') {
-            component.data = this.data;
-        }
-
-        // merge view and view' layout's template
-        if (this.layout) {
-            component.template = await this.layout.merge(component.template);
+        if (this.data) {
+            if (typeof this.data === 'function') {
+                component.data = this.data();
+            } else {
+                component.data = this.data;
+            }
         }
 
         // done
@@ -69,11 +63,22 @@ Class('(auto)', ViewHandler, [VueComponentMembers], function() {
 
             const Vue = await include('vue/vue{.min}.js');
 
+            // get component
+            let component = await this.factory();
+
+            // set view Html
+            let viewHtml = this.html || '';
+            if (this.layout) {
+                el.innerHTML = await this.layout.merge(viewHtml);
+            } else {
+                el.innerHTML = viewHtml;
+            }            
+
             // custom load op
             await this.load(ctx, el);
 
             // setup Vue view instance
-            new Vue(await this.factory());
+            new Vue(component);
         }
     };
 
