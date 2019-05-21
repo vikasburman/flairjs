@@ -15,7 +15,7 @@ Class('(auto)', Host, function() {
     
     $$('override');
     this.construct = (base) => {
-        base('Express', '4.x');
+        base('Server');
     };
 
     this.app = {
@@ -38,7 +38,7 @@ Class('(auto)', Host, function() {
             // each item is: { name: '', value:  }
             // name: as in above link (as-is)
             // value: as defined in above link
-            let appSettings = settings.server.routing[`${mountName}-appSettings`];
+            let appSettings = settings.server.routing[`${mountName}-settings`];
             if (appSettings && appSettings.length > 0) {
                 for(let appSetting of appSettings) {
                     mount.set(appSetting.name, appSetting.value);

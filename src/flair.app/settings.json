@@ -23,28 +23,28 @@
             "transition": ""
         },
     
-        "url": {
-            "hashbang": false,
-            "i18n": false,
-            "routes": {
-                "home": "",
-                "notfound": ""
-            }
+        "routes": {
+            "home": "",
+            "notfound": ""
         },
     
         "i18n": {
-            "enabled": true,
-            "locale": "en",
-            "locales": [
-                { "code": "en", "name": "English", "native": "English" }
-            ]
+            "lang": {
+                "default": "en",
+                "locales": [
+                    { "code": "en", "name": "English", "native": "English" }
+                ]
+            }
         },
 
         "routing": {
             "mounts": {
                 "main": "/"
             },
-            "main-options": [
+            "main-settings": [
+                { "name": "hashbang", "value": false },
+                { "name": "lang", "value": false },
+                { "name": "sensitive", "value": false }
             ],
             "main-interceptors": [
             ]        
@@ -79,7 +79,7 @@
             "mounts": {
                 "main": "/"
             },
-            "main-appSettings": [
+            "main-settings": [
             ],
             "main-middlewares": [
             ],

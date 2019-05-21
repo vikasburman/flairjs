@@ -1,8 +1,5 @@
 const { Host } = ns('flair.app');
-const { View } = ns('flair.ui');
- 
-// TODO: Rewrite using snippets of page.js --- to have self-routing engine
-// and then remove dependency on page.js
+const { ViewHandler, Page } = ns('flair.ui');
 
 /**
  * @name ClientHost
@@ -16,7 +13,7 @@ Class('(auto)', Host, function() {
 
     $$('override');
     this.construct = (base) => {
-        base('Page', '1.x'); // https://www.npmjs.com/package/page
+        base('Client'); 
     };
 
     this.app = {
@@ -31,34 +28,25 @@ Class('(auto)', Host, function() {
     // localization support (start)
     $$('state');
     $$('private');
-    this.currentLocale = settings.client.i18n.locale;
+    this.currentLocale = settings.client.i18n.lang.default;
 
     this.defaultLocale = {
-        get: () => { return settings.client.i18n.locale; },
+        get: () => { return settings.client.i18n.lang.default; },
         set: noop
     };
     this.supportedLocales = {
-        get: () => { return settings.client.i18n.locales.slice(); },
+        get: () => { return settings.client.i18n.lang.locales.slice(); },
         set: noop
     };
-    this.locale = (newLocale, isSuppressRefresh) => {
-        if (!settings.client.i18n.enabled) { return ''; }
-
+    this.locale = (newLocale, isRefresh) => {
         // update value and refresh for changes (if required)
         if (newLocale && this.currentLocale !== newLocale) { 
             this.currentLocale = newLocale;
 
-            // change url and then redirect to new URL
-            if (!isSuppressRefresh) {
-                if (settings.client.url.i18n) {
-                    // set new path with replaced locale
-                    // this change will also go in history
-                    window.location.hash = this.replaceLocale(window.location.hash);
-                } else {
-                    // just refresh as is (it will pick the new currentLocale)
-                    // this change will not go in history, as there is no url change
-                    if (hashChangeHandler) { hashChangeHandler(); }
-                }
+            if (isRefresh) {
+                let app = this(window.location.hash);
+                let updatedUrl = app.rebuildUrl(window.location.hash);
+                this.go(updatedUrl);
             }
         }
 
@@ -68,175 +56,128 @@ Class('(auto)', Host, function() {
     // localization support (end)
 
     // path support (start)
-    $$('private');
-    this.cleanPath = (path) => {
-        if (path.substr(0, 1) === '/') { path = path.substr(1); }        
-        if (path.substr(0, 3) === '#!/') { path = path.substr(3); }
-        if (path.substr(0, 2) === '#!') { path = path.substr(2); }
-        if (path.substr(0, 2) === '#/') { path = path.substr(2); }
-        if (path.substr(0, 1) === '#') { path = path.substr(1); }
-        if (path.substr(0, 1) === '/') { path = path.substr(1); }        
-        return path;
-    };
-    $$('private');
-    this.extractLocale = (path) => {
-        if (!settings.client.url.i18n) { return ''; }
+    this.routeToUrl = (route, params) => {
+        if (!route) { return null; }
 
-        // pick first path element
-        let idx = path.indexOf('/');
-        if (idx !== -1) {
-            let loc = path.substr(0, idx);
-            if (this.supportedLocales.indexOf(loc) !== -1) {
-                return loc; // found locale
-            }
+        // get route object
+        let routeObj = AppDomain.context.current().getRoute(route); // route = qualifiedRouteName
+        if (!routeObj) {
+            return replaceAll(route, '.', '_'); // convert route qualified name in a non-existent utl, so it will automatically go to notfound view
         }
 
-        return '';
-    };
-    $$('private');
-    this.trimLocale = (path, locale) => {
-        let lookFor = locale + '/',
-            idx = path.indexOf(lookFor);
-        if (idx !== -1) {
-            return path.substr(idx + lookFor.length);
-        }
-        // return as is
-        return path;
-    };
-    $$('private');
-    this.replaceLocale = (path) => {
-        // replace current locale with given locale
-        if (settings.client.url.i18n) { 
-            // clean path first
-            path = this.cleanPath(path);
-
-           // extract locale from path
-           let extractedLocale = this.extractLocale(path);
-           if (extractedLocale) {
-                // trim locale from path
-                path = this.trimLocale(path, extractedLocale);
-            }
-
-            // build path with new locale
-            path = this.path(path);
-        }
+        // get app
+        let app = this.mounts[routeObj.mount].app;
 
         // return
-        return path;
+        return app.buildUrl(routeObj.path, params);
     };
-
-    this.path = (path) => {
-        if (!path) { return ''; }
-
-        // clean path
-        path = this.cleanPath(path);
-
-        // add i18n
-        if (settings.client.i18n.enabled && settings.client.url.i18n) {
-            path = (this.currentLocale || this.defaultLocale) + '/' + path;
-        }
-
-        // add hash
-        if (settings.client.url.hashbang) {
-            path = '#!/' + path;
-        } else {
-            path = '#/' + path;
-        }
-
-        // return
-        return path;
+    this.pathToUrl = (path, params) => {
+        let app = this.urlToApp(path); // it will still work even if this is not url
+        return app.buildUrl(path, params);
     };
-    this.route = (route, placeholders) => {
-        if (!route) { return; }
+    $$('private');
+    this.urlToApp = (url) => {
+        // remove any # or #! and start with /
+        if (url.substr(0, 3) === '#!/') { url = url.substr(3); }
+        if (url.substr(0, 2) === '#!') { url = url.substr(2); }
+        if (!url.startsWith('/')) { url = '/' + url }
 
-        // get path
-        let path = '', 
-            routeObj = AppDomain.context.current().getRoute(route); // route = qualifiedRouteName
-        if (routeObj) {
-            path = routeObj.path;
-        }
-
-        // replace placeholders
-        // path can be like: test/:id
-        // where it is expected that placeholders.id property will have what to replace in this
-        if (path && placeholders) {
-            let idx1 = path.indexOf(':'),
-                idx2 = -1,
-                name = '';
-            while(idx1 !== -1) {
-                idx2 = path.substr(idx1 + 1).indexOf('/');
-                if (idx2 === -1) { // at the end
-                    name = path.substr(idx1 + 1);
-                } else {
-                    name = path.substr(idx1 + 1, idx2);
+        // look for all mounted apps and find the best (longest) matched base path
+        let lastFoundMount = null;
+        for(let mount in this.mounts) {
+            if (this.mounts.hasOwnProperty(mount)) {
+                if (url.startsWith(mount.base)) { 
+                    if (mount.base.length > lastFoundMount.base.length) {
+                        lastFoundMount = mount;
+                    }
                 }
-                path = replaceAll(path, ':' + name, placeholders[name]);
-                idx1 = path.indexOf(':');
             }
         }
 
-        // build path now
-        return this.path(path);
+        // return
+        return (lastFoundMount ? lastFoundMount.app : this.app);
     };
     // path support (end)
+
+    // view (start)
+    this.view = {
+        get: () => { return ViewHandler.currentView; },
+        set: noop
+    };
+    this.redirect = async (route, params, isRefresh) => {
+        await this.navigate(route, params, true);
+        if (isRefresh) { await this.refresh(); }
+    };
+    this.navigate = async (route, params, isReplace) => {
+        params = params || {};
+
+        // get url from route
+        // routeName: qualifiedRouteName
+        // url: hash part of url 
+        let url = this.routeToUrl(route, params);
+
+        // navigate/replace
+        if (url) {
+            await this.go(url, isReplace);
+        } else {
+            this.raiseError(Exception.NotFound(route, this.navigate));
+        }
+    };  
+    this.go = async (url, isReplace) => {
+        if (isReplace) {
+            // this will not trigger hanschange event, neither will add a history entry
+            history.replaceState(null, null, window.document.location.pathname + url);
+        } else {
+            // this will trigger hanschange event, and will add a history entry
+            if (url.substr(0, 1) === '#') { url = url.substr(1); } // remove #, because it will automatically be added when setting hash below
+            window.location.hash = url;
+        }
+    };
+    this.refresh = async () => {
+        setTimeout(() => {
+            hashChangeHandler(); // force refresh
+        }, 0)
+    };
+    // view (end)
 
     $$('override');
     this.boot = async (base) => { // mount all page app and pseudo sub-apps
         base();
 
-        const page = await include('page/page{.min}.js', 'page');
-
-        let appOptions = null,
-            mountPath = '',
+        let appSettings = {},
             mount = null;
-        const getOptions = (mountName) => {
-            let appOptions = {};
-            // app options: https://www.npmjs.com/package/page#pageoptions
+        const getSettings = (mountName) => {
             // each item is: { name: '', value:  }
-            // name: as in above link (as-is)
-            // value: as defined in above link
-            let pageOptions = settings.client.routing[`${mountName}-options`];
-            if (pageOptions && pageOptions.length > 0) {
-                for(let pageOption of pageOptions) {
-                    appOptions[pageOption.name] = pageOption.value;
+            let pageSettings = settings.client.routing[`${mountName}-settings`];
+            if (pageSettings && pageSettings.length > 0) {
+                for(let pageSetting of pageSettings) {
+                    appSettings[pageSetting.name] = pageSetting.value;
                 }
             }   
 
-            // inbuilt fixed options, overwrite even if defined outside
-            appOptions.click = false;
-            appOptions.popstate = false;
-            appOptions.dispatch = false;
-            appOptions.hashbang = false;
-            appOptions.decodeURLComponents = true;
-            appOptions.window = window; // always this is main window (even for sub-apps) - since we are not binding any handlers here, this is fine to have same window
+            // special settings
+            appSettings.base = settings.client.routing.mounts[mountName];
 
-            return appOptions;         
+            return appSettings;         
         };
 
         // create main app instance of page
-        appOptions = getOptions('main');
-        page(appOptions); // configure main app
-        let mainApp = page; // main-app is this object itself
-        mainApp.strict(appOptions.strict);
-        mainApp.base('/');
+        appSettings = getSettings('main');
+        let mainApp = new Page(appSettings);
 
         // create one instance of page app for each mounted path
         for(let mountName of Object.keys(settings.client.routing.mounts)) {
             if (mountName === 'main') {
-                mountPath = '/';
                 mount = mainApp;
             } else {
-                appOptions = getOptions(mountName);
-                mountPath = settings.client.routing.mounts[mountName];
-                mount = page.create(appOptions); // create a sub-app
-                mount.strict(appOptions.strict);
-                mount.base(mountPath);
+                appSettings = getSettings(mountName);
+                mount = new Page(appSettings); 
             }
 
             // attach
             mountedApps[mountName] = Object.freeze({
                 name: mountName,
-                root: mountPath,
+                root: mount.base,
                 app: mount
             });
         }
@@ -249,62 +190,12 @@ Class('(auto)', Host, function() {
     this.start = async (base) => { // configure hashchange handler
         base();
 
-        hashChangeHandler = () => {
-            // get clean path
-            let path = this.cleanPath(window.location.hash);
-            
-            // handle i18n specific routing
-            if (settings.client.i18n.enabled) {
-                if (settings.client.url.i18n) { // if i18n type urls are being used
-                    // extract locale from path
-                    let extractedLocale = this.extractLocale(path);
-
-                    if (extractedLocale) {
-                        // trim locale from path, so all paths here on are common across locales
-                        path = this.trimLocale(path, extractedLocale);
-
-                        // set this locale as currentLocale
-                        this.locale(extractedLocale, true); // and don't initiate refresh, as it is already in that process
-                    }
-                }
-            }
-
-            // at this point in time: 
-            // this.currentLocale has the right locale whether coming from url or otherwise
-            // path does not have any locale or hashbang and is just plain path for routing
-
-            // add a / in path, so it matches with routing definitions of mounts
-            path = ((path.substr(0, 1) !== '/') ? '/' : '') + path;
-
-            // route this path to most suitable mounted app
-            let app = null,
-                mountName = '';
-            for(let mount in this.mounts) {
-                if (this.mounts.hasOwnProperty(mount)) {
-                    if (path.startsWith(mount.root)) { 
-                        app = mount.app; 
-                        path = path.substr(mount.root.length); // remove all base path, so it becomes at part the way paths were added to this app
-                        mountName = mount;
-                        break; 
-                    }
-                }
-            }
-            if (!app) { // when nothing matches, give it to main
-                mountName = 'main';
-                app = this.mounts[mountName]; 
-            } 
-            
-            // add initial /
-            if (path.substr(0, 1) !== '/') { path = '/' + path; }
+        hashChangeHandler = async () => {
+            // get page app mount to handle the url
+            let app = this.urlToApp(window.location.hash);
 
             // run app to initiate routing
-            setTimeout(() => { 
-                try {
-                    app.app(path);
-                } catch (err) {
-                    this.error(err); // pass-through event
-                }
-            }, 0); 
+            await app.run(window.location.hash);
         };
     };
 
@@ -316,7 +207,9 @@ Class('(auto)', Host, function() {
         window.addEventListener('hashchange', hashChangeHandler);
 
         // redirect to home
-        View.navigate(settings.client.url.routes.home); // redirect, instead of navigate
+        if (settings.client.routes.home) {
+            await this.redirect(settings.client.routes.home, {}, true); // force refresh but don't let history entry added for first page
+        }
 
         // ready
         console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version}`); // eslint-disable-line no-console

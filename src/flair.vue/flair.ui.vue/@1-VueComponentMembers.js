@@ -1,5 +1,3 @@
-const { View } = ns('flair.ui');
-
 /**
  * @name VueComponentMembers
  * @description Vue Component Members
@@ -41,7 +39,7 @@ Mixin('(auto)', function() {
         // each i18n resource file is defined as:
         // "ns": "json-file-name"
         // when loaded, each ns will convert into JSON object from defined file
-        if(View.i18n && this.i18n) {
+        if(this.i18n) {
             let i18ResFile = '';
             for(let i18nNs in this.i18n) {
                 if (this.i18n.hasOwnProperty(i18nNs)) {
@@ -108,17 +106,18 @@ Mixin('(auto)', function() {
         // supporting built-in method: path 
         // this helps in building client side path nuances
         // e.g., {{ path('abc/xyz') }} will give: '/#/en/abc/xyz'
+        // e.g., {{ path('abc/:xyz', { xyz: 1}) }} will give: '/#/en/abc/1'
         component.methods = component.methods || {};
-        component.methods['path'] = (path) => { return _this.path(path); };
+        component.methods['path'] = (path, params) => { return _this.path(path, params); };
 
         // supporting built-in method: route
         // this helps in using path from route settings itself
         // e.g., {{ route('home') }} will give: '/#/en/'
         component.methods = component.methods || {};
-        component.methods['route'] = (routeName, placeholders) => { return _this.route(routeName, placeholders); };
+        component.methods['route'] = (routeName, params) => { return _this.route(routeName, params); };
 
         // i18n specific built-in methods
-        if (View.i18n) {
+        if (this.i18n) {
             // supporting built-in method: locale 
             // e.g., {{ locale() }} will give: 'en'
             component.methods['locale'] = (value) => { return _this.locale(value); };
@@ -310,10 +309,10 @@ Mixin('(auto)', function() {
     this.locale = (value) => { return AppDomain.host().locale(value); }
 
     $$('protected');
-    this.path = (path) => { return AppDomain.host().path(path); }
+    this.path = (path, params) => { return AppDomain.host().pathToUrl(path, params); }
     
     $$('protected');
-    this.route = (routeName, placeholders) => { return AppDomain.host().route(routeName, placeholders); }
+    this.route = (routeName, params) => { return AppDomain.host().routeToUrl(routeName, params); }
 
     $$('protected');
     this.i18n = null;

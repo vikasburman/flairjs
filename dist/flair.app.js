@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.7.85
- *  Mon, 20 May 2019 02:01:32 GMT
+ *  Version: 0.8.46
+ *  Tue, 21 May 2019 01:56:47 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -55,7 +55,7 @@
     AppDomain.loadPathOf('flair.app', __currentPath);
     
     // settings of this assembly
-    let settings = JSON.parse('{"host":"flair.app.ServerHost | flair.app.ClientHost","app":"flair.app.App","boot":{"files":[],"preambles":[],"bootwares":[]},"di":{"container":{}},"client":{"view":{"el":"main","title":"","transition":""},"url":{"hashbang":false,"i18n":false,"routes":{"home":"","notfound":""}},"i18n":{"enabled":true,"locale":"en","locales":[{"code":"en","name":"English","native":"English"}]},"routing":{"mounts":{"main":"/"},"main-options":[],"main-interceptors":[]}},"server":{"express":{"server-http":{"enable":false,"port":80,"timeout":-1},"server-https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""}},"envVars":{"vars":[],"options":{"overwrite":true}},"routing":{"mounts":{"main":"/"},"main-appSettings":[],"main-middlewares":[],"main-interceptors":[],"main-resHeaders":[]}}}');
+    let settings = JSON.parse('{"host":"flair.app.ServerHost | flair.app.ClientHost","app":"flair.app.App","boot":{"files":[],"preambles":[],"bootwares":[]},"di":{"container":{}},"client":{"view":{"el":"main","title":"","transition":""},"routes":{"home":"","notfound":""},"i18n":{"lang":{"default":"en","locales":[{"code":"en","name":"English","native":"English"}]}},"routing":{"mounts":{"main":"/"},"main-settings":[{"name":"hashbang","value":false},{"name":"lang","value":false},{"name":"sensitive","value":false}],"main-interceptors":[]}},"server":{"express":{"server-http":{"enable":false,"port":80,"timeout":-1},"server-https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""}},"envVars":{"vars":[],"options":{"overwrite":true}},"routing":{"mounts":{"main":"/"},"main-settings":[],"main-middlewares":[],"main-interceptors":[],"main-resHeaders":[]}}}');
     let settingsReader = flair.Port('settingsReader');
     if (typeof settingsReader === 'function') {
         let externalSettings = settingsReader('flair.app');
@@ -403,51 +403,301 @@
         });
         
     })();    
-    await (async () => { // type: ./src/flair.app/flair.ui/@3-View.js
-        const { ViewHandler } = ns('flair.ui');
-        
+    await (async () => { // type: ./src/flair.app/flair.ui/@3-Page.js
         /**
-         * @name View
-         * @description GUI View Controller
+         * @name Page
+         * @description Page routing (inspired from (https://www.npmjs.com/package/page))
          */
-        $$('static');
+        $$('sealed');
         $$('ns', 'flair.ui');
-        Class('View', function() {
-            this.current = {
-                get: function() { return ViewHandler.currentView; },
-                set: function() {}
+        Class('Page', function() {
+            let handlers = [],
+                defaultHandler;
+        
+            this.construct = (options) => {
+                // settings
+                this.hasbang = options.hasbang || false;
+                this.lang = options.lang || false;
+                this.base = options.base || '';
+                this.sensitive = options.sensitive || false;
+        
+                // ensure base has start '/' and no end '/'
+                if (this.base.endsWith('/')) { this.base = this.base.substr(0, this.base.length - 1); }
+                if (!this.base.startsWith('/')) { this.base = '/' + this.base; }
             };
         
             $$('readonly');
-            this.i18n = settings.client.i18n.enabled;
+            this.hasbang = false;
         
-            $$('overload', 'string');
-            this.navigate = function(routeName) {
-                return this.navigate(routeName, {});
-            };
-            $$('overload', 'string, object');
-            this.navigate = function(routeName, params) {
-                // get url from route
-                let url = AppDomain.host().route(routeName, params);
+            $$('readonly');
+            this.lang = false;
         
-                // pick 404, if not found
-                if (!url && routeName !== settings.client.url.routes['404']) { 
-                    url = AppDomain.host().route(settings.client.url.routes['404'], { notfound: routeName });
+            $$('readonly');
+            this.base = '';
+        
+            $$('readonly');
+            this.sensitive = false;
+        
+            $$('private');
+            this.pathToRegExp = (path, keys) => {
+                /* eslint-disable no-useless-escape */
+                // remove first and last slash
+                if (path.startsWith('/')) { path = path.substr(1); }
+                if (path.endsWith('/')) { path = path.substr(0, path.length - 1); }
+        
+                // break path into pieces and process
+                let items = (path ? path.split('/') : []),
+                    regex = '',
+                    idx = 0;
+                for(let item of items) {
+                    item = item.trim();
+                    if (item.startsWith(':')) { // param
+                        keys.push({ name: item.substr(1), index: idx });
+                        regex += '\/.[^\/]*'; // match anything till next /
+                    } else {
+                        regex += '\/' + item; // match exact
+                    }
+                    idx++;
                 }
         
-                // navigate
-                let isFailed = true;
-                if (url) {
-                    if (!(params && params.notfound === url)) {
-                        isFailed = false;
-                        if (url.substr(0, 1) === '#') { url = url.substr(1); } // remove #, because it will automatically be added
-                        setTimeout(() => {
-                            window.location.hash = url;
-                        }, 0);
+                // end with a slash
+                regex += '\/';
+        
+                // case sensitive
+                let regEx = null;
+                if (!this.sensitive) {
+                    regEx = new RegExp(regex, "i"); // case in-sensitive
+                } else {
+                    regEx = new RegExp(regex);
+                }
+        
+                // NOTE: regular expression supports only placeholder
+                // no optional params etc. are supported
+        
+                // done
+                return regEx;
+                /* eslint-enable no-useless-escape */
+            };
+        
+            this.breakUrl = (url) => {
+                let parts = {
+                    url: url,
+                    path: '',
+                    loc: '',
+                    params: {},
+                    handler: null,
+                    route: null
+                },
+                path = url;
+        
+                // remove hash etc.
+                if (path.substr(0, 1) === '/') { path = path.substr(1); }        
+                if (path.substr(0, 3) === '#!/') { path = path.substr(3); }
+                if (path.substr(0, 2) === '#!') { path = path.substr(2); }
+                if (path.substr(0, 2) === '#/') { path = path.substr(2); }
+                if (path.substr(0, 1) === '#') { path = path.substr(1); }
+                if (path.substr(0, 1) === '/') { path = path.substr(1); }
+                path = '/' + path; // add initial slash 
+        
+                // remove base
+                if (path.startsWith(this.base)) {
+                    path = path.substr(this.base.length);
+                }
+        
+                // extract and strip locale
+                if (this.lang) { 
+                    if (path.startsWith('/')) { path = path.substr(1); } // remove initial slash 
+                    let items = path.split('/');
+                    if (items.length > 0) {
+                        let loc = items[0].trim();
+                        if (AppDomain.host().supportedLocales.indexOf(loc) !== -1) {
+                            parts.loc = loc;
+                        }
+                        items.shift(); // remove first
+                        path = items.join('/');
+                        if (!path.startsWith('/')) { path = '/' + path; } // add initial slash 
+                    }    
+                }
+        
+                // add initial slash 
+                if (!path.startsWith('/')) { path = '/' + path; }
+        
+                // extract query strings (?varName=value)
+                let qsIndex = path.indexOf('?'),
+                    qs = '',
+                    qvars = null;
+                if (qsIndex !== -1) { 
+                    qs = path.substr(qsIndex + 1);
+                    path = path.substr(0, qsIndex);
+                    let items = qs.split('&'),
+                        qitems = null;
+                    for(let item of items) {
+                        qitems = item.split('=');
+                        qvars = qvars || {};
+                        qvars[qitems[0].trim()] = decodeURIComponent(qitems[1].trim());
                     }
-                } 
-                if (isFailed) {
-                    throw Exception.NotFound(routeName, this.navigate);
+                }     
+        
+                // add trailing slash 
+                if (!path.endsWith('/')) { path += '/'; }
+        
+                // store
+                parts.path = path;
+        
+                // find best matched handler and extract params
+                for(let item of handlers) {
+                    let m = item.regex.exec(decodeURIComponent(path));
+                    if (m && m.input === m[0]) { // fully matched
+                        // remove first and last slash
+                        if (path.startsWith('/')) { path = path.substr(1); }
+                        if (path.endsWith('/')) { path = path.substr(0, path.length - 1); }
+                        let pathItems = (path ? path.split('/') : []);
+                        
+                        // pick key values from known index
+                        for(let key of item.keys) {
+                            parts.params[key.name] = pathItems[key.index];
+                        }
+        
+                        // set handler
+                        parts.handler = item.handler; 
+        
+                        // set route
+                        parts.route = item.route; 
+                        break;
+                    }
+                }
+        
+                // overwrite/merge params with qvars (if there were conflict)
+                if (qvars) {
+                    parts.params = Object.assign(parts.params, qvars);
+                }
+        
+                // done
+                return parts;
+            };
+            this.buildUrl = (path, params) => {
+                // start with base
+                let url = this.base;
+                if (!url.endsWith('/')) { url += '/'; }
+        
+                // add locale next to base
+                if (this.lang) {
+                    url += AppDomain.host().currentLocale + '/';
+                }
+        
+                // add path after base
+                if (path.startsWith('/')) { path = path.substr(1); }
+                url += path;
+                if (!url.startsWith('/')) { url = '/' +  url; }
+                
+                // add # in the beginning
+                if (this.hasbang) {
+                    url = '#!' + url;
+                } else {
+                    url = '#' + url;
+                }
+        
+                // end in /
+                if (!url.endsWith('/')) { url += '/'; }
+        
+                // replace params
+                // path can be like: test/:id
+                // where it is expected that params.id property will 
+                // have what to replace in this
+                // If param var not found in path, it will be added as query string
+                if (params) {
+                    let idx = -1,
+                        qs = '?',
+                        value = null;
+                    for(let p in params) {
+                        if (params.hasOwnProperty(p)) {
+                            idx = url.indexOf(`:${p}`);
+                            value = encodeURIComponent(params[p].toString());
+                            if (idx !== -1) { 
+                                url = replaceAll(url, `:${p}`, value); 
+                            } else {
+                                qs += `${p}=${value}`;
+                            }
+                        }
+                    }
+                    if (qs !== '?') { url += qs; }            
+                }
+        
+                // done
+                return url;
+            };
+            this.rebuildUrl = (url) => {
+                // this will consider any change in locale (and any such other things in future)
+                let parts = this.breakUrl(url);
+                return this.buildUrl(parts.path, parts.params);
+            };
+        
+            this.add = (route, handler) => {
+                let keys = []; // contains { name: name, index: indexPosition }
+                handlers.push({
+                    route: route,
+                    path: route.path,
+                    keys: keys,
+                    regex: this.pathToRegExp(route.path, keys),
+                    handler: handler
+                });
+            };
+            this.add404 = (handler) => {
+                defaultHandler = handler;
+            };
+            this.run = async (url) => {
+                // default ctx
+                let ctx = {
+                    $url: url,
+                    $route: '',
+                    $handler: '',
+                    $mount: '',
+                    $path: '',
+                    $stop: false,  // if no further processing to be done
+                    $redirect: {
+                        route: '',
+                        params: {}
+                    } // route to redirect to
+                };
+        
+                // get path parts
+                let parts = this.breakUrl(url),
+                    loc = parts.loc,
+                    params = parts.params;
+                
+                // enrich ctx
+                if (parts.route) {
+                    ctx.$route = parts.route.name;
+                    ctx.$handler = parts.route.handler;
+                    ctx.$mount = parts.route.mount;
+                    ctx.$path = parts.route.path;
+                }
+        
+                // add params to ctx
+                if (params) { ctx = Object.assign(ctx, params); }
+        
+                try {
+                    if (parts.handler) {
+                        // set locale
+                        if (this.lang) { 
+                            AppDomain.host().locale(loc); // this will set only if changed
+                        }
+        
+                        // run handler
+                        await parts.handler(ctx);
+        
+                        // redirect if configured
+                        if (ctx.$redirect.route) {
+                            let route = ctx.$redirect,
+                                params = ctx.$params;
+                            setTimeout(() => { AppDomain.host().redirect(route, params) }, 0);
+                        }                
+                    } else {
+                        // run default handler 
+                        await defaultHandler(ctx);
+                    }
+                } catch (err) {
+                    AppDomain.host().raiseError(err);
                 }
             };
         });
@@ -654,8 +904,8 @@
     })();    
     await (async () => { // type: ./src/flair.app/flair.app/ClientHost.js
         const { Host } = ns('flair.app');
-        const { View } = ns('flair.ui');
-         
+        const { ViewHandler, Page } = ns('flair.ui');
+        
         /**
          * @name ClientHost
          * @description Client host implementation
@@ -668,7 +918,7 @@
         
             $$('override');
             this.construct = (base) => {
-                base('Page', '1.x'); // https://www.npmjs.com/package/page
+                base('Client'); 
             };
         
             this.app = {
@@ -683,34 +933,25 @@
             // localization support (start)
             $$('state');
             $$('private');
-            this.currentLocale = settings.client.i18n.locale;
+            this.currentLocale = settings.client.i18n.lang.default;
         
             this.defaultLocale = {
-                get: () => { return settings.client.i18n.locale; },
+                get: () => { return settings.client.i18n.lang.default; },
                 set: noop
             };
             this.supportedLocales = {
-                get: () => { return settings.client.i18n.locales.slice(); },
+                get: () => { return settings.client.i18n.lang.locales.slice(); },
                 set: noop
             };
-            this.locale = (newLocale, isSuppressRefresh) => {
-                if (!settings.client.i18n.enabled) { return ''; }
-        
+            this.locale = (newLocale, isRefresh) => {
                 // update value and refresh for changes (if required)
                 if (newLocale && this.currentLocale !== newLocale) { 
                     this.currentLocale = newLocale;
         
-                    // change url and then redirect to new URL
-                    if (!isSuppressRefresh) {
-                        if (settings.client.url.i18n) {
-                            // set new path with replaced locale
-                            // this change will also go in history
-                            window.location.hash = this.replaceLocale(window.location.hash);
-                        } else {
-                            // just refresh as is (it will pick the new currentLocale)
-                            // this change will not go in history, as there is no url change
-                            if (hashChangeHandler) { hashChangeHandler(); }
-                        }
+                    if (isRefresh) {
+                        let app = this(window.location.hash);
+                        let updatedUrl = app.rebuildUrl(window.location.hash);
+                        this.go(updatedUrl);
                     }
                 }
         
@@ -720,175 +961,128 @@
             // localization support (end)
         
             // path support (start)
-            $$('private');
-            this.cleanPath = (path) => {
-                if (path.substr(0, 1) === '/') { path = path.substr(1); }        
-                if (path.substr(0, 3) === '#!/') { path = path.substr(3); }
-                if (path.substr(0, 2) === '#!') { path = path.substr(2); }
-                if (path.substr(0, 2) === '#/') { path = path.substr(2); }
-                if (path.substr(0, 1) === '#') { path = path.substr(1); }
-                if (path.substr(0, 1) === '/') { path = path.substr(1); }        
-                return path;
-            };
-            $$('private');
-            this.extractLocale = (path) => {
-                if (!settings.client.url.i18n) { return ''; }
+            this.routeToUrl = (route, params) => {
+                if (!route) { return null; }
         
-                // pick first path element
-                let idx = path.indexOf('/');
-                if (idx !== -1) {
-                    let loc = path.substr(0, idx);
-                    if (this.supportedLocales.indexOf(loc) !== -1) {
-                        return loc; // found locale
-                    }
+                // get route object
+                let routeObj = AppDomain.context.current().getRoute(route); // route = qualifiedRouteName
+                if (!routeObj) {
+                    return replaceAll(route, '.', '_'); // convert route qualified name in a non-existent utl, so it will automatically go to notfound view
                 }
         
-                return '';
-            };
-            $$('private');
-            this.trimLocale = (path, locale) => {
-                let lookFor = locale + '/',
-                    idx = path.indexOf(lookFor);
-                if (idx !== -1) {
-                    return path.substr(idx + lookFor.length);
-                }
-                // return as is
-                return path;
-            };
-            $$('private');
-            this.replaceLocale = (path) => {
-                // replace current locale with given locale
-                if (settings.client.url.i18n) { 
-                    // clean path first
-                    path = this.cleanPath(path);
-        
-                   // extract locale from path
-                   let extractedLocale = this.extractLocale(path);
-                   if (extractedLocale) {
-                        // trim locale from path
-                        path = this.trimLocale(path, extractedLocale);
-                    }
-        
-                    // build path with new locale
-                    path = this.path(path);
-                }
+                // get app
+                let app = this.mounts[routeObj.mount].app;
         
                 // return
-                return path;
+                return app.buildUrl(routeObj.path, params);
             };
-        
-            this.path = (path) => {
-                if (!path) { return ''; }
-        
-                // clean path
-                path = this.cleanPath(path);
-        
-                // add i18n
-                if (settings.client.i18n.enabled && settings.client.url.i18n) {
-                    path = (this.currentLocale || this.defaultLocale) + '/' + path;
-                }
-        
-                // add hash
-                if (settings.client.url.hashbang) {
-                    path = '#!/' + path;
-                } else {
-                    path = '#/' + path;
-                }
-        
-                // return
-                return path;
+            this.pathToUrl = (path, params) => {
+                let app = this.urlToApp(path); // it will still work even if this is not url
+                return app.buildUrl(path, params);
             };
-            this.route = (route, placeholders) => {
-                if (!route) { return; }
+            $$('private');
+            this.urlToApp = (url) => {
+                // remove any # or #! and start with /
+                if (url.substr(0, 3) === '#!/') { url = url.substr(3); }
+                if (url.substr(0, 2) === '#!') { url = url.substr(2); }
+                if (!url.startsWith('/')) { url = '/' + url }
         
-                // get path
-                let path = '', 
-                    routeObj = AppDomain.context.current().getRoute(route); // route = qualifiedRouteName
-                if (routeObj) {
-                    path = routeObj.path;
-                }
-        
-                // replace placeholders
-                // path can be like: test/:id
-                // where it is expected that placeholders.id property will have what to replace in this
-                if (path && placeholders) {
-                    let idx1 = path.indexOf(':'),
-                        idx2 = -1,
-                        name = '';
-                    while(idx1 !== -1) {
-                        idx2 = path.substr(idx1 + 1).indexOf('/');
-                        if (idx2 === -1) { // at the end
-                            name = path.substr(idx1 + 1);
-                        } else {
-                            name = path.substr(idx1 + 1, idx2);
+                // look for all mounted apps and find the best (longest) matched base path
+                let lastFoundMount = null;
+                for(let mount in this.mounts) {
+                    if (this.mounts.hasOwnProperty(mount)) {
+                        if (url.startsWith(mount.base)) { 
+                            if (mount.base.length > lastFoundMount.base.length) {
+                                lastFoundMount = mount;
+                            }
                         }
-                        path = replaceAll(path, ':' + name, placeholders[name]);
-                        idx1 = path.indexOf(':');
                     }
                 }
         
-                // build path now
-                return this.path(path);
+                // return
+                return (lastFoundMount ? lastFoundMount.app : this.app);
             };
             // path support (end)
+        
+            // view (start)
+            this.view = {
+                get: () => { return ViewHandler.currentView; },
+                set: noop
+            };
+            this.redirect = async (route, params, isRefresh) => {
+                await this.navigate(route, params, true);
+                if (isRefresh) { await this.refresh(); }
+            };
+            this.navigate = async (route, params, isReplace) => {
+                params = params || {};
+        
+                // get url from route
+                // routeName: qualifiedRouteName
+                // url: hash part of url 
+                let url = this.routeToUrl(route, params);
+        
+                // navigate/replace
+                if (url) {
+                    await this.go(url, isReplace);
+                } else {
+                    this.raiseError(Exception.NotFound(route, this.navigate));
+                }
+            };  
+            this.go = async (url, isReplace) => {
+                if (isReplace) {
+                    // this will not trigger hanschange event, neither will add a history entry
+                    history.replaceState(null, null, window.document.location.pathname + url);
+                } else {
+                    // this will trigger hanschange event, and will add a history entry
+                    if (url.substr(0, 1) === '#') { url = url.substr(1); } // remove #, because it will automatically be added when setting hash below
+                    window.location.hash = url;
+                }
+            };
+            this.refresh = async () => {
+                setTimeout(() => {
+                    hashChangeHandler(); // force refresh
+                }, 0)
+            };
+            // view (end)
         
             $$('override');
             this.boot = async (base) => { // mount all page app and pseudo sub-apps
                 base();
         
-                const page = await include('page/page{.min}.js', 'page');
-        
-                let appOptions = null,
-                    mountPath = '',
+                let appSettings = {},
                     mount = null;
-                const getOptions = (mountName) => {
-                    let appOptions = {};
-                    // app options: https://www.npmjs.com/package/page#pageoptions
+                const getSettings = (mountName) => {
                     // each item is: { name: '', value:  }
-                    // name: as in above link (as-is)
-                    // value: as defined in above link
-                    let pageOptions = settings.client.routing[`${mountName}-options`];
-                    if (pageOptions && pageOptions.length > 0) {
-                        for(let pageOption of pageOptions) {
-                            appOptions[pageOption.name] = pageOption.value;
+                    let pageSettings = settings.client.routing[`${mountName}-settings`];
+                    if (pageSettings && pageSettings.length > 0) {
+                        for(let pageSetting of pageSettings) {
+                            appSettings[pageSetting.name] = pageSetting.value;
                         }
                     }   
         
-                    // inbuilt fixed options, overwrite even if defined outside
-                    appOptions.click = false;
-                    appOptions.popstate = false;
-                    appOptions.dispatch = false;
-                    appOptions.hashbang = false;
-                    appOptions.decodeURLComponents = true;
-                    appOptions.window = window; // always this is main window (even for sub-apps) - since we are not binding any handlers here, this is fine to have same window
+                    // special settings
+                    appSettings.base = settings.client.routing.mounts[mountName];
         
-                    return appOptions;         
+                    return appSettings;         
                 };
         
                 // create main app instance of page
-                appOptions = getOptions('main');
-                page(appOptions); // configure main app
-                let mainApp = page; // main-app is this object itself
-                mainApp.strict(appOptions.strict);
-                mainApp.base('/');
+                appSettings = getSettings('main');
+                let mainApp = new Page(appSettings);
         
                 // create one instance of page app for each mounted path
                 for(let mountName of Object.keys(settings.client.routing.mounts)) {
                     if (mountName === 'main') {
-                        mountPath = '/';
                         mount = mainApp;
                     } else {
-                        appOptions = getOptions(mountName);
-                        mountPath = settings.client.routing.mounts[mountName];
-                        mount = page.create(appOptions); // create a sub-app
-                        mount.strict(appOptions.strict);
-                        mount.base(mountPath);
+                        appSettings = getSettings(mountName);
+                        mount = new Page(appSettings); 
                     }
         
                     // attach
                     mountedApps[mountName] = Object.freeze({
                         name: mountName,
-                        root: mountPath,
+                        root: mount.base,
                         app: mount
                     });
                 }
@@ -901,62 +1095,12 @@
             this.start = async (base) => { // configure hashchange handler
                 base();
         
-                hashChangeHandler = () => {
-                    // get clean path
-                    let path = this.cleanPath(window.location.hash);
-                    
-                    // handle i18n specific routing
-                    if (settings.client.i18n.enabled) {
-                        if (settings.client.url.i18n) { // if i18n type urls are being used
-                            // extract locale from path
-                            let extractedLocale = this.extractLocale(path);
-        
-                            if (extractedLocale) {
-                                // trim locale from path, so all paths here on are common across locales
-                                path = this.trimLocale(path, extractedLocale);
-        
-                                // set this locale as currentLocale
-                                this.locale(extractedLocale, true); // and don't initiate refresh, as it is already in that process
-                            }
-                        }
-                    }
-        
-                    // at this point in time: 
-                    // this.currentLocale has the right locale whether coming from url or otherwise
-                    // path does not have any locale or hashbang and is just plain path for routing
-        
-                    // add a / in path, so it matches with routing definitions of mounts
-                    path = ((path.substr(0, 1) !== '/') ? '/' : '') + path;
-        
-                    // route this path to most suitable mounted app
-                    let app = null,
-                        mountName = '';
-                    for(let mount in this.mounts) {
-                        if (this.mounts.hasOwnProperty(mount)) {
-                            if (path.startsWith(mount.root)) { 
-                                app = mount.app; 
-                                path = path.substr(mount.root.length); // remove all base path, so it becomes at part the way paths were added to this app
-                                mountName = mount;
-                                break; 
-                            }
-                        }
-                    }
-                    if (!app) { // when nothing matches, give it to main
-                        mountName = 'main';
-                        app = this.mounts[mountName]; 
-                    } 
-                    
-                    // add initial /
-                    if (path.substr(0, 1) !== '/') { path = '/' + path; }
+                hashChangeHandler = async () => {
+                    // get page app mount to handle the url
+                    let app = this.urlToApp(window.location.hash);
         
                     // run app to initiate routing
-                    setTimeout(() => { 
-                        try {
-                            app.app(path);
-                        } catch (err) {
-                            this.error(err); // pass-through event
-                        }
-                    }, 0); 
+                    await app.run(window.location.hash);
                 };
             };
         
@@ -968,7 +1112,9 @@
                 window.addEventListener('hashchange', hashChangeHandler);
         
                 // redirect to home
-                View.navigate(settings.client.url.routes.home); // redirect, instead of navigate
+                if (settings.client.routes.home) {
+                    await this.redirect(settings.client.routes.home, {}, true); // force refresh but don't let history entry added for first page
+                }
         
                 // ready
                 console.log(`${AppDomain.app().info.name}, v${AppDomain.app().info.version}`); // eslint-disable-line no-console
@@ -1009,7 +1155,7 @@
             
             $$('override');
             this.construct = (base) => {
-                base('Express', '4.x');
+                base('Server');
             };
         
             this.app = {
@@ -1032,7 +1178,7 @@
                     // each item is: { name: '', value:  }
                     // name: as in above link (as-is)
                     // value: as defined in above link
-                    let appSettings = settings.server.routing[`${mountName}-appSettings`];
+                    let appSettings = settings.server.routing[`${mountName}-settings`];
                     if (appSettings && appSettings.length > 0) {
                         for(let appSetting of appSettings) {
                             mount.set(appSetting.name, appSetting.value);
@@ -1217,121 +1363,73 @@
                     });
                 }
         
-                const runInterceptor = (IC, ctx) => {
-                    return new Promise((resolve, reject) => {
-                        try {
-                            let aic = new IC();
-                            aic.run(ctx).then(() => {
-                                if (ctx.$stop) {
-                                    reject();
-                                } else {
-                                    resolve();
-                                }
-                            }).catch(reject);
-                        } catch (err) {
-                            reject(err);
-                        }
-                    });
-                };
-                const runInterceptors = (interceptors, ctx) => {
-                    return forEachAsync(interceptors, (resolve, reject, ic) => {
-                        include(ic).then((theType) => {
-                            let RequiredICType = as(theType, ViewInterceptor);
-                            if (RequiredICType) {
-                                runInterceptor(RequiredICType, ctx).then(resolve).catch(reject);
-                            } else {
-                                reject(Exception.InvalidDefinition(`Invalid interceptor type. (${ic})`));
-                            }
-                        }).catch(reject);
-                    });
-                };
-                const getHandler = function(__routePath, __routeHandler) {
-                    let verb = 'view', // only view verb is supported on client
-                        _routePath = __routePath,
-                        _routeHandler = __routeHandler;
-                    
-                    return function(ctx) { // mount.app = page object/func
-                        const onError = (err) => {
-                            AppDomain.host().raiseError(err);
-                        };
-                        const onRedirect = (url) => {
-                            mount.app.redirect(url);
-                        };
-                        const handleRoute = () => {
-                            let x = _routePath; // eslint-disable-line  no-unused-vars
-                            include(_routeHandler).then((theType) => {
-                                let RouteHandler = as(theType, ViewHandler);
-                                if (RouteHandler) {
-                                    try {
-                                        using(new RouteHandler(), (routeHandler) => {
-                                            // ctx.params has all the route parameters.
-                                            // e.g., for route "/users/:userId/books/:bookId" ctx.params will 
-                                            // have "ctx.params: { "userId": "34", "bookId": "8989" }"
-                                            routeHandler[verb](ctx).then(() => {
-                                                ctx.handled = true;
-                                                if (ctx.$redirect) {
-                                                    onRedirect(ctx.$redirect);
-                                                }
-                                            }).catch(onError);
-                                        });
-                                    } catch (err) {
-                                        onError(err);
-                                    }
-                                } else {
-                                    onError(Exception.InvalidDefinition(`Invalid route handler. (${_routeHandler})`));
-                                }
-                            }).catch(onError);
-                        };
+                const runInterceptor = async (interceptor, ctx) => {
+                    let ICType = as(await include(interceptor), ViewInterceptor);
+                    if (ICType) {
+                        let ic = new ICType();
+                        await ic.run(ctx);
+                    } else {
+                        throw Exception.InvalidDefinition(`Invalid interceptor type. (${interceptor})`);
+                    }                    
         
-                        // add special properties to context
-                        ctx.$stop = false;
-                        ctx.$redirect = '';
+                };
+                const runHandler = async (routeHandler, ctx) => {
+                    let RouteHandler = as(await include(routeHandler), ViewHandler);
+                    if (RouteHandler) {
+                        let rh = new RouteHandler();
+                        await rh.view(ctx);
+                    } else {
+                        throw Exception.InvalidDefinition(`Invalid route handler. (${routeHandler})`);
+                    }
+                };
+                const getHandler = function(route) {
+                    return async (ctx) => {
+                        // ctx.params has all the route parameters.
+                        // e.g., for route "/users/:userId/books/:bookId" ctx.params will 
+                        // have "ctx.params: { "userId": "34", "bookId": "8989" }"
+                        // it supports everything in here: https://www.npmjs.com/package/path-to-regexp
         
                         // run mount specific interceptors
                         // each interceptor is derived from ViewInterceptor and
-                        // run method of it takes ctx, can update it
+                        // async run method of it takes ctx, can update it
                         // each item is: "InterceptorTypeQualifiedName"
-                        let mountInterceptors = settings.client.routing[`${mount.name}-interceptors`] || [];
-                        runInterceptors(mountInterceptors, ctx).then(() => {
-                            if (!ctx.$stop) {
-                                handleRoute();
-                            } else {
-                                ctx.handled = true;
-                                if (ctx.$redirect) {
-                                    onRedirect(ctx.$redirect);
-                                }
-                            }
-                        }).catch((err) => {
-                            if (ctx.$stop) { // reject might also be because of stop done by an interceptor
-                                ctx.handled = true;
-                                if (ctx.$redirect) {
-                                    onRedirect(ctx.$redirect);
-                                }
-                            } else {
-                                onError(err);
-                            }
-                        });
+                        let mountInterceptors = settings.client.routing[`${route.mount}-interceptors`] || [];
+                        for(let interceptor of mountInterceptors) {
+                            await runInterceptor(interceptor, ctx);
+                            if (ctx.$stop) { break; }
+                        }
+        
+                        // handle route
+                        if (!ctx.$stop) {
+                            await runHandler(route.handler, ctx);
+                        }
                     };
                 };
         
                 // add routes related to current mount
+                let app = mount.app;
                 for (let route of routes) {
                     if (route.mount === mount.name) { // add route-handler
-                        mount.app(route.path, getHandler(route.path, route.handler));
+                        if (route.name !== settings.client.routes.notfound) { // add all except the 404 route
+                            app.add(route, getHandler(route));
+                        } 
                     }
                 }
         
-                // catch 404 for this mount and forward to error handler
-                mount.app("*", (ctx) => { // mount.app = page object/func
-                    // redirect to 404 route, which has to be defined route
-                    let route404 = settings.client.url.routes['404'];
-                    if (route404) {
-                        ctx.handled = true;
-                        let url = AppDomain.host().route(route404, { notfound: ctx.pathname });
-                        mount.app.redirect(url); // redirect
-                    } else {
-                        window.history.back(); // nothing else can be done
+                // catch 404 for this mount
+                app.add404(async (ctx) => {
+                    // 404 handler does not run interceptors
+                    // and instead of running the route (for which this ctx was setup)
+                    // it will pick the handler of notfound route and show that view with this ctx
+                    let route404 = settings.client.routes.notfound;
+                    if (route404) { route404 = AppDomain.context.current().getRoute(route404); }
+                    if (!route404) { // nothing else can be done
+                        setTimeout(() => { window.history.back(); }, 0);
+                        return;
                     }
+        
+                    // use route404 handler
+                    await runHandler(route404.handler, ctx);
                 });
             };
         });
@@ -1759,7 +1857,7 @@
     AppDomain.context.current().currentAssemblyBeingLoaded('');
     
     // register assembly definition object
-    AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.7.85","lupdate":"Mon, 20 May 2019 02:01:32 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Handler","flair.app.App","flair.app.Host","flair.ui.ViewHandler","flair.ui.View","flair.api.RestHandler","flair.api.RestInterceptor","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.ClientRouter","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter","flair.ui.ViewInterceptor","flair.ui.ViewState","flair.ui.ViewTransition"],"resources":[],"assets":[],"routes":[]}');
+    AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.8.46","lupdate":"Tue, 21 May 2019 01:56:47 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Handler","flair.app.App","flair.app.Host","flair.ui.ViewHandler","flair.ui.Page","flair.api.RestHandler","flair.api.RestInterceptor","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.ClientRouter","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter","flair.ui.ViewInterceptor","flair.ui.ViewState","flair.ui.ViewTransition"],"resources":[],"assets":[],"routes":[]}');
     
     // assembly load complete
     if (typeof onLoadComplete === 'function') { 
