@@ -549,6 +549,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
 
     // define vars
     let exposed_obj = {},
+        parentObjs = 'parentObjs',
         objMeta = null,
         exposed_objMeta = null,
         mixin_being_applied = null,
@@ -633,6 +634,63 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         // return weaved or unchanged member
         return member;
     };
+    const getObjToOperateOn = (memberName, memberType, memberScope, isWrite) => {
+        let operate_obj = null;
+        if (memberName !== meta) {
+            switch(memberScope) {
+                case 'private': // always read/write on local interface
+                    operate_obj = obj; break;
+                case 'protected': 
+                    // obj.parentObjs[] array contains all parent objects' 'obj' object in reverse order
+                    // e.g, if D derives from C, which derives from B, which derives from A, this array will contain [D, C, B, A]
+                    // if A defines a virtual method, which gets overridden on B and then on C also and not on D
+                    // it will pick the C's overridden version, (which with the help of 'base' automatically will call B's and A's versions , if base() was called in tjese override)
+                    // in case at no place it was overridden, it will call A's virtual itself
+                    for(let ___obj of obj[parentObjs]) {
+                        if (typeof ___obj[memberName] !== 'undefined') {
+                            operate_obj = ___obj; break; 
+                        }
+                    }
+                    if (!operate_obj) { // will never be a case, yet handled
+                        operate_obj = obj;
+                    }
+                    break;
+                case 'public':
+                    if (isWrite) { // write case
+                        operate_obj = exposed_obj; break;
+                    } else { // read case
+                        if (memberType === 'event') { 
+                            // events carry different interface for public and private/protected case
+                            // therefore, if event is defined locally, read from here, else read from exposed interface
+                            operate_obj = (typeof obj[memberName] !== 'undefined' ? obj : exposed_obj); break;                             
+                        } else { // all non-events, read from exposed interface
+                            operate_obj = exposed_obj; 
+                        }
+                    }
+                    break;
+                default: // when member is not defined here then it must be protected or public at some parent level (and must be present in exposed_obj)
+                    if (isWrite) { // write case
+                        if (typeof exposed_obj[memberName] !== 'undefined') {
+                            operate_obj = exposed_obj; break;
+                        } else { // some undefined member or a private member at a parent level
+                            throw _Exception.NotDefined(memberName, builder);
+                        }
+                    } else { // read case
+                        // special case for events (is a function locally, and do have .add and .remove on exposed)
+                        if (typeof obj[memberName] === 'function' && typeof exposed_obj[memberName].add === 'function' && typeof exposed_obj[memberName].remove === 'function') { 
+                            // this is a protected function (event raiser), hence pick from obj and not from exposed_obj (where it is just an object)
+                            operate_obj = obj;
+                        } else if (typeof exposed_obj[memberName] !== 'undefined') {
+                            operate_obj = exposed_obj;
+                        } else {
+                            throw _Exception.NotDefined(memberName, builder);
+                        }
+                    }
+            }
+        } else {
+            operate_obj = obj;
+        }
+    };
     const buildExposedObj = () => {
         let isCopy = false,
         doCopy = (memberName) => { Object.defineProperty(exposed_obj, memberName, Object.getOwnPropertyDescriptor(obj, memberName)); };
@@ -646,7 +704,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         // copy other members, excluding static members
         for(let memberName in obj) { 
             isCopy = false;
-            if (obj.hasOwnProperty(memberName) && memberName !== meta) { 
+            if (obj.hasOwnProperty(memberName) && memberName !== meta && memberName !== parentObjs) { 
                 isCopy = true;
                 if (def.members[memberName]) { // member is defined here
                     if (modifiers.members.probe('private', memberName).current()) { isCopy = false; }   // private members don't get out
@@ -719,6 +777,11 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         if (!params.isTopLevelInstance) {
             exposed_objMeta.def = def; // this will be deleted as soon as picked at top level
         }
+
+        // create/update parentObjs array
+        if (typeof obj[parentObjs] === 'undefined') { obj[parentObjs] = []; }
+        obj[parentObjs].unshift(obj); // insert this level object in the array on top (so when looking for overrides, it look from top (last added first))
+        if (!params.isTopLevelInstance) { exposed_obj[parentObjs] = obj[parentObjs]; } // same object
     };
     const validateMember = (memberName, interface_being_validated) => {
         // member must exists check + member type must match
@@ -1506,6 +1569,8 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         }
     }
 
+
+
     // define proxy for clean syntax inside factory
     proxy = new Proxy({}, {
         get: (_obj, name) => { 
@@ -1518,32 +1583,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             } else if (name === 'dispose') {
                 name = _disposeName;
             }
-            let read_obj = null;
-            if (name !== meta) {
-                switch(def.scope[name]) {
-                    case 'private': read_obj = obj; break;
-                    case 'protected': read_obj = (typeof exposed_obj[name] !== 'undefined' ? exposed_obj : obj); break;
-                    case 'public': 
-                        if (def.members[name] === 'event') { // events carry different interface for public and private/protected case
-                            read_obj = (typeof obj[name] !== 'undefined' ? obj : exposed_obj); break;                             
-                        } else {
-                            read_obj = exposed_obj; 
-                        }
-                        break;
-                    default: // when member is not defined here then it must be protected or public at parent level
-                        // special case for events 
-                        if (typeof obj[name] === 'function' && typeof exposed_obj[name].add === 'function' && typeof exposed_obj[name].remove === 'function') { 
-                            // this is a protected function, hence pick from obj and not from exposed_obj
-                            read_obj = obj;
-                        } else if (typeof exposed_obj[name] !== 'undefined') {
-                            read_obj = exposed_obj;
-                        } else {
-                            throw _Exception.NotDefined(name, builder);
-                        }
-                }
-            } else {
-                read_obj = obj;
-            }
+            let read_obj = getObjToOperateOn(name, def.members[name], def.scope[name]);
             return read_obj[name];
         },
         set: (_obj, name, value) => {
@@ -1579,22 +1619,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                 if (typeof value === 'function') { throw _Exception.InvalidOperation(`Redefinition of members is not allowed. (${name})`, builder); }
 
                 // allow setting property values
-                let write_obj = null;
-                if (name !== meta) {
-                    switch(def.scope[name]) {
-                        case 'private': write_obj = obj; break;
-                        case 'protected': write_obj = (typeof exposed_obj[name] !== 'undefined' ? exposed_obj : obj); break;
-                        case 'public': write_obj = exposed_obj; break;
-                        default: // when member is not defined here then it must be protected or public at parent level
-                            if (typeof exposed_obj[name] !== 'undefined') {
-                                write_obj = exposed_obj; break;
-                            } else { // some undefined member or a private member at a parent level
-                                throw _Exception.NotDefined(name, builder);
-                            }
-                    } 
-                } else {
-                    write_obj = obj;
-                }
+                let write_obj = getObjToOperateOn(name, def.members[name], def.scope[name], true); // true = write case
                 write_obj[name] = value;
             }
             return true;

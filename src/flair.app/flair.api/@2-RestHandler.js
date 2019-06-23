@@ -24,4 +24,36 @@ Class('(auto)', Handler, function() {
     this.put = async (req, res) => { await this.run(this.onPut, req, res); };
     this.patch = async (req, res) => { await this.run(this.onPatch, req, res); };
     this.delete = async (req, res) => { await this.run(this.onDelete, req, res); };
+    
+    $$('protected');
+    $$('virtual');
+    this.onGet = async (req, res) => { // eslint-disable-line no-unused-vars
+        res.send(501); // Not Implemented
+    };
+
+    $$('protected');
+    $$('virtual');
+    this.onPost = async (req, res) => { // eslint-disable-line no-unused-vars
+        res.send(501); // Not Implemented
+    };
+
+
+    $$('protected');
+    $$('virtual');
+    this.onPut = async (req, res) => { // eslint-disable-line no-unused-vars
+        res.send(501); // Not Implemented
+    };
+
+
+    $$('protected');
+    $$('virtual');
+    this.onPatch = async (req, res) => { // eslint-disable-line no-unused-vars
+        res.send(501); // Not Implemented
+    };
+
+    $$('protected');
+    $$('virtual');
+    this.onDelete = async (req, res) => { // eslint-disable-line no-unused-vars
+        res.send(501); // Not Implemented
+    };    
 });
