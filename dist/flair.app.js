@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.8.82
- *  Sun, 23 Jun 2019 23:32:56 GMT
+ *  Version: 0.8.84
+ *  Sun, 23 Jun 2019 23:43:54 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -172,7 +172,7 @@
                         res.status(err.status || 500).json({status: err.status, message: err.message})
                     }
                 } else {
-                    res.status(501).json({status: '501', message: 'Not Implemented'})
+                    res.status(501).json({status: '501', message: 'Not Implemented'});
                 }
             };
         
@@ -181,38 +181,6 @@
             this.put = async (req, res) => { await this.run(this.onPut, req, res); };
             this.patch = async (req, res) => { await this.run(this.onPatch, req, res); };
             this.delete = async (req, res) => { await this.run(this.onDelete, req, res); };
-            
-            $$('protected');
-            $$('virtual');
-            this.onGet = async (req, res) => { // eslint-disable-line no-unused-vars
-                res.send(501); // Not Implemented
-            };
-        
-            $$('protected');
-            $$('virtual');
-            this.onPost = async (req, res) => { // eslint-disable-line no-unused-vars
-                res.send(501); // Not Implemented
-            };
-        
-        
-            $$('protected');
-            $$('virtual');
-            this.onPut = async (req, res) => { // eslint-disable-line no-unused-vars
-                res.send(501); // Not Implemented
-            };
-        
-        
-            $$('protected');
-            $$('virtual');
-            this.onPatch = async (req, res) => { // eslint-disable-line no-unused-vars
-                res.send(501); // Not Implemented
-            };
-        
-            $$('protected');
-            $$('virtual');
-            this.onDelete = async (req, res) => { // eslint-disable-line no-unused-vars
-                res.send(501); // Not Implemented
-            };    
         });
         
     })();    
@@ -1909,7 +1877,7 @@
     AppDomain.context.current().currentAssemblyBeingLoaded('');
     
     // register assembly definition object
-    AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.8.82","lupdate":"Sun, 23 Jun 2019 23:32:56 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Handler","flair.api.RestHandler","flair.app.App","flair.app.Host","flair.ui.ViewHandler","flair.ui.Page","flair.api.RESTfulService","flair.api.RestInterceptor","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.ClientRouter","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter","flair.ui.ViewInterceptor","flair.ui.ViewState","flair.ui.ViewTransition"],"resources":[],"assets":[],"routes":[]}');
+    AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.8.84","lupdate":"Sun, 23 Jun 2019 23:43:54 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Handler","flair.api.RestHandler","flair.app.App","flair.app.Host","flair.ui.ViewHandler","flair.ui.Page","flair.api.RESTfulService","flair.api.RestInterceptor","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.ClientRouter","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter","flair.ui.ViewInterceptor","flair.ui.ViewState","flair.ui.ViewTransition"],"resources":[],"assets":[],"routes":[]}');
     
     // assembly load complete
     if (typeof onLoadComplete === 'function') { 
