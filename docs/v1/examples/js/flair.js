@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.8.81
- *  Sun, 23 Jun 2019 23:30:58 GMT
+ *  Version: 0.8.82
+ *  Sun, 23 Jun 2019 23:32:54 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -3923,6 +3923,7 @@
             } else {
                 operate_obj = obj;
             }
+            return operate_obj;
         };
         const buildExposedObj = () => {
             let isCopy = false,
@@ -7167,10 +7168,10 @@
         name: 'flairjs',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.8.81',
+        version: '0.8.82',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 23 Jun 2019 23:30:58 GMT')
+        lupdate: new Date('Sun, 23 Jun 2019 23:32:54 GMT')
     });  
 
     // bundled assembly load process 
@@ -7567,7 +7568,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.8.81","lupdate":"Sun, 23 Jun 2019 23:30:58 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.8.82","lupdate":"Sun, 23 Jun 2019 23:32:54 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 

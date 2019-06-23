@@ -690,6 +690,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         } else {
             operate_obj = obj;
         }
+        return operate_obj;
     };
     const buildExposedObj = () => {
         let isCopy = false,
