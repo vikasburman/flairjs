@@ -253,6 +253,7 @@ const AppDomain = function(name) {
         if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.loadPath); }
         if (path) { // set
             if (!loadPaths[file]) {
+                if (!path.endsWith('/')) { path += '/'; }
                 loadPaths[file] = path;
             }
         }

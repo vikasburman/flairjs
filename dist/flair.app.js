@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.8.47
- *  Tue, 21 May 2019 02:01:08 GMT
+ *  Version: 0.8.72
+ *  Thu, 23 May 2019 02:00:39 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -151,6 +151,36 @@
             $$('virtual');
             this.dispose = () => {
             };
+        });
+        
+    })();    
+    await (async () => { // type: ./src/flair.app/flair.api/@2-RestHandler.js
+        const { Handler } = ns('flair.app');
+        
+        /**
+         * @name RestHandler
+         * @description Restful API Handler
+         */
+        $$('ns', 'flair.api');
+        Class('RestHandler', Handler, function() {
+            $$('private');
+            this.run = async (fn, req, res) => {
+                if (typeof fn === 'function') {
+                    try {
+                        await fn(req, res);
+                    } catch (err) {
+                        res.status(err.status || 500).json({status: err.status, message: err.message})
+                    }
+                } else {
+                    res.status(501).json({status: '501', message: 'Not Implemented'})
+                }
+            };
+        
+            this.get = async (req, res) => { await this.run(this.onGet, req, res); };
+            this.post = async (req, res) => { await this.run(this.onPost, req, res); };
+            this.put = async (req, res) => { await this.run(this.onPut, req, res); };
+            this.patch = async (req, res) => { await this.run(this.onPatch, req, res); };
+            this.delete = async (req, res) => { await this.run(this.onDelete, req, res); };
         });
         
     })();    
@@ -309,7 +339,7 @@
                 const { ViewTransition } = ns('flair.ui');
         
                 // give it a unique name, if not already given
-                this.name = this.name || this.$obj.id; // $obj is the main view which is finally inheriting this ViewHandler
+                this.name = this.name || this.$Type.getName(true); // $Type is the main view which is finally inheriting this ViewHandler
         
                 // load view transition
                 if (this.viewTransition) {
@@ -328,8 +358,8 @@
                 el.setAttribute('hidden', '');
                 parentEl.appendChild(el);
                 
-                // load view
-                await this.loadView(ctx, el);
+                // view
+                await this.onView(ctx, el);
         
                 // swap views (old one is replaced with this new one)
                 await this.swap();
@@ -338,19 +368,19 @@
             $$('protected');
             $$('virtual');
             $$('async');
-            this.loadView = noop;
+            this.onView = noop;
         
             $$('private');
             this.swap = async () => {
                 let thisViewEl = DOC.getElementById(this.name);
         
                 // outgoing view
-                if (this.$static.currentView) {
-                    let currentViewEl = DOC.getElementById(this.$static.currentView);
+                if (this.$Type.currentView) {
+                    let currentViewEl = DOC.getElementById(this.$Type.currentView);
         
                     // remove outgoing view meta   
-                    if (this.$static.currentViewMeta) {
-                        for(let meta of this.$static.currentViewMeta) {
+                    if (this.$Type.currentViewMeta) {
+                        for(let meta of this.$Type.currentViewMeta) {
                             DOC.head.removeChild(DOC.querySelector('meta[name="' + meta + '"]'));
                         }
                     }
@@ -383,7 +413,7 @@
                 }
         
                 // in case there was no previous view
-                if (!this.$static.currentView) {
+                if (!this.$Type.currentView) {
                     thisViewEl.hidden = false;
                 }
         
@@ -703,26 +733,16 @@
         });
         
     })();    
-    await (async () => { // type: ./src/flair.app/flair.api/RestHandler.js
-        const { Handler } = ns('flair.app');
+    await (async () => { // type: ./src/flair.app/flair.api/RESTfulService.js
+        const { RestHandler } = ns('flair.api');
         
         /**
-         * @name RestHandler
-         * @description Restful API Handler
+         * @name RESTfulService
+         * @description RESTful Service
          */
         $$('ns', 'flair.api');
-        Class('RestHandler', Handler, function() {
-            $$('virtual');
-            this.get = noop;
-        
-            $$('virtual');
-            this.post = noop;
-        
-            $$('virtual');
-            this.put = noop;
-        
-            $$('virtual');
-            this.delete = noop;
+        Class('RESTfulService', RestHandler, function() {
+            // nothing specific as of now    
         });
         
     })();    
@@ -1857,7 +1877,7 @@
     AppDomain.context.current().currentAssemblyBeingLoaded('');
     
     // register assembly definition object
-    AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.8.47","lupdate":"Tue, 21 May 2019 02:01:08 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Handler","flair.app.App","flair.app.Host","flair.ui.ViewHandler","flair.ui.Page","flair.api.RestHandler","flair.api.RestInterceptor","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.ClientRouter","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter","flair.ui.ViewInterceptor","flair.ui.ViewState","flair.ui.ViewTransition"],"resources":[],"assets":[],"routes":[]}');
+    AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.8.72","lupdate":"Thu, 23 May 2019 02:00:39 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Handler","flair.api.RestHandler","flair.app.App","flair.app.Host","flair.ui.ViewHandler","flair.ui.Page","flair.api.RESTfulService","flair.api.RestInterceptor","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.ClientRouter","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter","flair.ui.ViewInterceptor","flair.ui.ViewState","flair.ui.ViewTransition"],"resources":[],"assets":[],"routes":[]}');
     
     // assembly load complete
     if (typeof onLoadComplete === 'function') { 

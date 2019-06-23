@@ -9,6 +9,7 @@
  *  attrArgs: any - Any arguments that may be needed by attribute
  * @returns void
  */ 
+let isInsertAttrOnTop = false;
 const _$$ = (name, ...attrArgs) => {
     let args = _Args('name: string',
                      'name: Attribute')(name); args.throwOnError(_$$);
@@ -42,7 +43,11 @@ const _$$ = (name, ...attrArgs) => {
     }
 
     // store
-    _attrMeta.bucket.push({name: name, cfg: cfg, isCustom: (attrInstance !== null), attr: attrInstance, args: attrArgs});
+    if (isInsertAttrOnTop) {
+        _attrMeta.bucket.unshift({name: name, cfg: cfg, isCustom: (attrInstance !== null), attr: attrInstance, args: attrArgs});
+    } else {
+        _attrMeta.bucket.push({name: name, cfg: cfg, isCustom: (attrInstance !== null), attr: attrInstance, args: attrArgs});
+    }
 };
 
 /**
@@ -106,6 +111,12 @@ const _attrConfig = function(isModifier, constraints) {
 
 const _attr = (name, ...attrArgs) => { // _attr is for internal use only, so collect/clear etc. are not exposed out)
     return _$$(name, ...attrArgs);
+};
+const _attr_i = (name, ...attrArgs) => { // _attr is for internal use only, so collect/clear etc. are not exposed out)
+    isInsertAttrOnTop = true;
+    let result = _$$(name, ...attrArgs);
+    isInsertAttrOnTop = false;
+    return result;
 };
 const _attrMeta = _attr[meta] = Object.freeze({
     bucket: [],

@@ -43,7 +43,7 @@ Mixin('(auto)', function() {
             let i18ResFile = '';
             for(let i18nNs in this.i18n) {
                 if (this.i18n.hasOwnProperty(i18nNs)) {
-                    i18ResFile = this.$self.assemblyName + '/locales/' + this.locale() + '/' + this.i18n[i18nNs];
+                    i18ResFile = this.$Type.getAssembly().getLocaleFilePath(this.locale(), this.i18n[i18nNs]);
                     this.i18n[i18nNs] = await clientFileLoader(i18ResFile); // this will load defined json file as json object here
                 }
             }
@@ -125,6 +125,7 @@ Mixin('(auto)', function() {
             // supporting built-in method: i18n 
             // e.g., {{ i18n('shared', 'OK', 'Ok!') }} will give: 'Ok' if this was the translation added in shared.json::OK key
             component.methods['i18n'] = (ns, key, defaultValue) => {  
+                if (env.isDebug && defaultValue) { defaultValue = ':' + defaultValue + ':'; } // so it becomes visible that this is default value and string is not found
                 if (_this.i18n && _this.i18n[ns] && _this.i18n[ns][key]) {
                     return _this.i18n[ns][key] || defaultValue || '(i18n: 404)';
                 }

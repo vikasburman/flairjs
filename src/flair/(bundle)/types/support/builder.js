@@ -421,12 +421,34 @@ const defineExtensions = (cfg) => {
 
     // type extensions
     let _tex = { // every type will have this, that means all types are derived from this common type
-        getName: function() {
+        getName: function(isFlat) {
             // get internal information { type.{Type, def, attrs, modifiers}}
             let typeDef = this.type.def;
             
             // return
-            return typeDef.name;
+            return isFlat ? typeDef.flatname : typeDef.name;
+        },
+        getType: function() {
+            // get internal information { type.{Type, def, attrs, modifiers}}
+            let typeDef = this.type.def;
+
+            return typeDef.type;
+        },
+        getAssembly: function() {
+            // get internal information { type.{Type, def, attrs, modifiers}}
+            let _Object = this.type.Type,
+                _meta = this.type.meta,
+                _ObjectMeta = _Object[_meta];
+            
+            return _ObjectMeta.assembly();
+        },
+        getNamespace: function() {
+            // get internal information { type.{Type, def, attrs, modifiers}}
+            let _Object = this.type.Type,
+                _meta = this.type.meta,
+                _ObjectMeta = _Object[_meta];
+            
+            return _ObjectMeta.namespace;
         }
     }; 
     let _tmex = { // every type's meta will have this
@@ -435,13 +457,14 @@ const defineExtensions = (cfg) => {
     cfg.ex.type = shallowCopy(cfg.ex.type, _tex, false); // don't override, which means defaults overriding is allowed
     cfg.mex.type = shallowCopy(cfg.mex.type, _tmex, false); // don't override, which means defaults overriding is allowed
 };
-const addTypeExtensions = (typeEx, Type, addTarget, typeDef, type_attrs, type_modifiers) => {
+const addTypeExtensions = (typeEx, Type, addTarget, typeDef, type_attrs, type_modifiers, meta) => {
     let bindWith = {
         type: {
             Type: Type,
             def: typeDef,
             attrs: type_attrs,
-            modifiers: type_modifiers
+            modifiers: type_modifiers,
+            meta: meta
         }
     }
     for(let ex in typeEx) {
@@ -460,19 +483,21 @@ const addTypeExtensions = (typeEx, Type, addTarget, typeDef, type_attrs, type_mo
         }
     }
 };
-const addInstanceExtensions = (instanceEx, obj, addTarget, Type, def, typeDef, attrs, modifiers, type_attrs, type_modifiers) => {
+const addInstanceExtensions = (instanceEx, obj, addTarget, Type, def, typeDef, attrs, modifiers, type_attrs, type_modifiers, meta) => {
     let bindWith = {
         instance: {
             obj: obj,
             def: def,
             attrs: attrs,
-            modifiers: modifiers
+            modifiers: modifiers,
+            meta: meta
         },
         type: {
             Type: Type,
             typeDef: typeDef,
             attrs: type_attrs,
-            modifiers: type_modifiers
+            modifiers: type_modifiers,
+            meta: meta
         }
     }
     for(let ex in instanceEx) {
@@ -492,6 +517,7 @@ const addInstanceExtensions = (instanceEx, obj, addTarget, Type, def, typeDef, a
 const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     // define parameters and context
     let TypeMeta = Type[meta],
+        $Type = null, 
         typeDef = TypeMeta.def(),
         _flagName = '___flag___',
         params = {
@@ -516,6 +542,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             params.args = []; // no args
         }
     }
+    $Type = params.staticInterface || Type; // if a type is coming as staticInterface - means that is the main Type being created, else Type (the actual type being created (in case of inheritance - this will be consistently same for all levels - the top level Type that is being created)
 
     // singleton specific case
     if (cfg.singleton && !typeDef.staticConstructionCycle && !isNewFromReflector && params.isTopLevelInstance && TypeMeta.singleInstance.value) { return TypeMeta.singleInstance.value; }
@@ -532,6 +559,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         _previousDef = null,
         def = { 
             name: cfg.params.typeName,
+            flatname: replaceAll(cfg.params.typeName, '.', '_'),
             type: cfg.types.type, // the type of the type itself: class, struct, etc.
             Type: Type,
             level: 'object',
@@ -553,43 +581,6 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         _sessionStorage = (cfg.storage ? _Port('sessionStorage') : null),
         _localStorage = (cfg.storage ? _Port('localStorage') : null);
 
-    const self = Object.freeze({
-        id: replaceAll(def.name, '.', '_'),
-        name: def.name,
-        assemblyName: _getAssemblyOf(def.name),
-        Type: def.Type,
-        obj: () => {
-            let obj_def = obj[meta].Type[meta].def();
-            return Object.freeze({
-                id: replaceAll(obj_def.name, '.', '_'),
-                name: obj_def.name,
-                assemblyName: _getAssemblyOf(obj_def.name),
-                Type: obj_def.Type
-            });
-        },
-        static: def.Type, // NOTE: since static must be tied to the level where a static is being defined, therefore at runtime, it must be read from same level type itself
-        members: () => {
-            let members = {};
-            for(let memberName in def.members) {
-                members[memberName] = {
-                    name: memberName,
-                    type: def.members[memberName],
-                    modifiers: [],
-                    attrs: []
-                };
-                for(let ___modifier of def.modifiers.members[memberName]) {
-                    members[memberName].modifiers.push(___modifier.name)
-                }
-                for(let ___attr of def.attrs.members[memberName]) {
-                    members[memberName].attrs.push(___attr.name)
-                }
-                members[memberName].modifiers = Object.freeze(members[memberName].modifiers);
-                members[memberName].attrs = Object.freeze(members[memberName].attrs);
-                members[memberName] = Object.freeze(members[memberName]);
-            }
-            return Object.freeze(members);
-        }
-    });
     const applyCustomAttributes = (bindingHost, memberName, memberType, member) => {
         for(let appliedAttr of attrs.members.all(memberName).current()) {
             if (appliedAttr.isCustom) { // custom attribute instance
@@ -718,10 +709,10 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         // and only missing ones
         if (params.isTopLevelInstance) {
             // add instance level extensions
-            addInstanceExtensions(cfg.ex.instance, exposed_obj, exposed_obj, Type, def, typeDef, attrs, modifiers, TypeMeta.attrs, TypeMeta.modifiers); 
+            addInstanceExtensions(cfg.ex.instance, exposed_obj, exposed_obj, Type, def, typeDef, attrs, modifiers, TypeMeta.attrs, TypeMeta.modifiers, meta); 
 
             // add instance meta level extensions
-            addInstanceExtensions(cfg.mex.instance, exposed_obj, exposed_objMeta, Type, def, typeDef, attrs, modifiers, TypeMeta.attrs, TypeMeta.modifiers);
+            addInstanceExtensions(cfg.mex.instance, exposed_obj, exposed_objMeta, Type, def, typeDef, attrs, modifiers, TypeMeta.attrs, TypeMeta.modifiers, meta);
         }
 
         // expose def of this level for upper level to access if not on top level
@@ -925,10 +916,10 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         _deprecate_message = (_isDeprecate ? (_deprecate_attr.args[0] || `Event is marked as deprecate. (${def.name}::${memberName})`) : ''),
         propHost = _props, // default place to store property values inside closure
         bindingHost = obj,
-        uniqueName = def.name + '_' + memberName,
-        isStorageHost = false,
-        _injections = null;     
-
+        isStorageHost = (cfg.storage && (_isSession || _isState)),
+        uniqueName = def.flatname + '_' + memberName,
+        _injections = null;  
+        
         // NOTE: no check for isOverriding, because properties are always fully defined,
         // when being overridden 
 
@@ -963,7 +954,6 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                 if (type_attr && type_attr.args[0] && !_is(memberDef, type_attr.args[0])) { throw _Exception.InvalidArgument('value', builder); } // type attribute is defined
                 propHost[uniqueName] = memberDef;
             } else if (cfg.storage && (_isSession || _isState)) {
-                isStorageHost = true;
                 if (_isSession) { // session
                     propHost = _sessionStorage;
                     uniqueName = obj[meta].id + '_' + uniqueName; // because multiple instances of same object will have different id
@@ -972,7 +962,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                     // no change in unique-name, so all instances of same object share same state, this is because at every new instance id is changed, and since state is supposed to persist, to reach back to same state, name has to be same
                 }
                 addDisposable((_isSession ? 'session' : 'state'), uniqueName);
-                if (!propHost.key(uniqueName)) { 
+                if (!propHost.getItem(uniqueName)) { 
                     if (type_attr && type_attr.args[0] && !_is(memberDef, type_attr.args[0])) { throw _Exception.InvalidArgument('value', builder); } // type attribute is defined
                     propHost.setItem(uniqueName, JSON.stringify({value: memberDef})); 
                 }
@@ -983,7 +973,10 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             }
             _member.get = function() {
                 if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
-                if (isStorageHost) { return JSON.parse(propHost.getItem(uniqueName)).value; }
+                if (isStorageHost) { 
+                    let _json = propHost.getItem(uniqueName);
+                    return (_json ? JSON.parse(_json).value : null);
+                }
                 return propHost[uniqueName];             
             }.bind(bindingHost);
             _member.set = function(value) {
@@ -991,7 +984,8 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                 if (_isReadOnly && !bindingHost[meta].constructing) { throw _Exception.InvalidOperation(`Property is readonly. (${def.name}::${memberName})`, builder); } // readonly props can be set only when object is being constructed 
                 if (type_attr && type_attr.args[0] && !_is(value, type_attr.args[0])) { throw _Exception.InvalidArgument('value', builder); } // type attribute is defined
                 if (isStorageHost) {
-                    propHost.setItem(uniqueName, JSON.stringify({value: value}));
+                    let _json = {value: value};
+                    propHost.setItem(uniqueName, JSON.stringify(_json));
                 } else {
                     propHost[uniqueName] = value;
                 }
@@ -1053,12 +1047,9 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                     resOrAssetData = _getResource(resource_attr.args[0]); 
                 }
             } else { // asset_attr
-                if (asset_attr.args[0]) { // asset file name with relative path within asset folder of assembly
-                    let astPath = asset_attr.args[0];
-                    if (astPath.startsWith('../')) { astPath = astPath.substr(3); }
-                    if (astPath.startsWith('./')) { astPath = astPath.substr(2); }
-                    if (astPath.startsWith('/')) { astPath = astPath.substr(1); }
-                    resOrAssetData = _getAssemblyOf(def.name) + '/' + astPath;
+                if (asset_attr.args[0]) { // asset file name with relative path within assets folder of assembly and must start with ./
+                    let astFile = asset_attr.args[0];
+                    resOrAssetData = $Type.getAssembly().getAssetFilePath(astFile);
                 }
             }
             if (resOrAssetData) {
@@ -1377,6 +1368,11 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             }
         }
 
+        // add async attribute, if member is async function and async attribute is not added manually
+        if (memberType === 'func' && isASync(memberDef) && !_attr.has('async'))  {
+            _attr_i('async'); // insert on top, so other dependent attributes (like fetch) gets validated successfully
+        }
+
         // collect attributes and modifiers - validate applied attributes as per attribute configuration - throw when failed
         attributesAndModifiers(def, typeDef, memberName, false, cfg.customAttrs);
 
@@ -1514,9 +1510,8 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     proxy = new Proxy({}, {
         get: (_obj, name) => { 
             if (cfg.new && name !== meta && name.substr(0, 1) === '$') {
-                if (name === '$self') { return self; }
-                if (name === '$static') { return self.static; }
-                if (name === '$obj') { return self.obj(); }
+                if (name === '$Type') { return $Type; } // since when a class is inheriting from other class, it is actually the Type of the type being created, and not the chain of classes it is inheriting - so at any level, it will be same
+                if (name === '$static') { return def.Type; } // since static must be tied to the level where a static is being defined, therefore at runtime, it must be read from same level type itself
             }
             if (name === 'construct') {
                 name = _constructName;
@@ -1820,9 +1815,6 @@ const builder = (cfg) => {
     // pick current context in which this type is being registered
     let currentContext = _AppDomain.context.current();
 
-    // pick current assembly in which this type was bundled
-    let currentAssembly = currentContext.currentAssemblyBeingLoaded() || '';
-
     // base type definition
     let _Object = null,
         _ObjectMeta = null;
@@ -1856,12 +1848,11 @@ const builder = (cfg) => {
             }
         }
     }
-    _Object.typeName = () => { return cfg.params.typeName; };
-    _Object.typeType = () => { return cfg.params.type; };
 
     // type def
     let typeDef = { 
         name: cfg.params.typeName,
+        flatname: replaceAll(cfg.params.typeName, '.', '_'),
         type: cfg.types.type, // the type of the type itself: class, struct, etc.
         Type: _Object,
         level: 'type',
@@ -1884,7 +1875,10 @@ const builder = (cfg) => {
     _ObjectMeta.name = cfg.params.typeName;
     _ObjectMeta.type = cfg.types.type;
     _ObjectMeta.namespace = null;
-    _ObjectMeta.assembly = () => { return currentContext.getAssembly(currentAssembly) || null; };
+    _ObjectMeta.assembly = () => { 
+        let currentAssembly = _getAssemblyOf(cfg.params.typeName);
+        return currentContext.getAssembly(currentAssembly) || null; 
+    };
     _ObjectMeta.context = currentContext;
     if (cfg.inheritance) {
         _ObjectMeta.inherits = cfg.params.inherits || null;
@@ -1988,11 +1982,11 @@ const builder = (cfg) => {
 
     // extend type itself with type's extensions
     // it may overwrite inbuilt defaults
-    addTypeExtensions(cfg.ex.type, _Object, _Object, typeDef, attrs, modifiers);
+    addTypeExtensions(cfg.ex.type, _Object, _Object, typeDef, attrs, modifiers, meta);
 
     // extend type meta  with type's meta extensions
     // it may overwrite inbuilt defaults
-    addTypeExtensions(cfg.mex.type, _Object, _ObjectMeta, typeDef, attrs, modifiers);
+    addTypeExtensions(cfg.mex.type, _Object, _ObjectMeta, typeDef, attrs, modifiers, meta);
 
     // get final return value
     let _finalObject = null,

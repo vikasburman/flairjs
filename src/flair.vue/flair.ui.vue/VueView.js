@@ -56,12 +56,15 @@ Class('(auto)', ViewHandler, [VueComponentMembers], function() {
     $$('protected');
     $$('override');
     $$('sealed');
-    this.loadView = async (base, ctx, el) => {
+    this.onView = async (base, ctx, el) => {
         if (!isLoaded) {
             isLoaded = true;
             base();
 
             const Vue = await include('vue/vue{.min}.js');
+
+            // custom load op
+            await this.beforeLoad(ctx, el);            
 
             // get component
             let component = await this.factory();
@@ -75,7 +78,7 @@ Class('(auto)', ViewHandler, [VueComponentMembers], function() {
             }            
 
             // custom load op
-            await this.load(ctx, el);
+            await this.afterLoad(ctx, el);
 
             // setup Vue view instance
             new Vue(component);
@@ -85,7 +88,12 @@ Class('(auto)', ViewHandler, [VueComponentMembers], function() {
     $$('protected');
     $$('virtual');
     $$('async');
-    this.load = noop;
+    this.beforeLoad = noop;
+
+    $$('protected');
+    $$('virtual');
+    $$('async');
+    this.afterLoad = noop;
 
     $$('protected');
     this.el = null;

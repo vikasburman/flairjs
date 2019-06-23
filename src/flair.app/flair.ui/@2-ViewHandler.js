@@ -40,7 +40,7 @@ Class('(auto)', Handler, function() {
         const { ViewTransition } = ns('flair.ui');
 
         // give it a unique name, if not already given
-        this.name = this.name || this.$obj.id; // $obj is the main view which is finally inheriting this ViewHandler
+        this.name = this.name || this.$Type.getName(true); // $Type is the main view which is finally inheriting this ViewHandler
 
         // load view transition
         if (this.viewTransition) {
@@ -59,8 +59,8 @@ Class('(auto)', Handler, function() {
         el.setAttribute('hidden', '');
         parentEl.appendChild(el);
         
-        // load view
-        await this.loadView(ctx, el);
+        // view
+        await this.onView(ctx, el);
 
         // swap views (old one is replaced with this new one)
         await this.swap();
@@ -69,19 +69,19 @@ Class('(auto)', Handler, function() {
     $$('protected');
     $$('virtual');
     $$('async');
-    this.loadView = noop;
+    this.onView = noop;
 
     $$('private');
     this.swap = async () => {
         let thisViewEl = DOC.getElementById(this.name);
 
         // outgoing view
-        if (this.$static.currentView) {
-            let currentViewEl = DOC.getElementById(this.$static.currentView);
+        if (this.$Type.currentView) {
+            let currentViewEl = DOC.getElementById(this.$Type.currentView);
 
             // remove outgoing view meta   
-            if (this.$static.currentViewMeta) {
-                for(let meta of this.$static.currentViewMeta) {
+            if (this.$Type.currentViewMeta) {
+                for(let meta of this.$Type.currentViewMeta) {
                     DOC.head.removeChild(DOC.querySelector('meta[name="' + meta + '"]'));
                 }
             }
@@ -114,7 +114,7 @@ Class('(auto)', Handler, function() {
         }
 
         // in case there was no previous view
-        if (!this.$static.currentView) {
+        if (!this.$Type.currentView) {
             thisViewEl.hidden = false;
         }
 

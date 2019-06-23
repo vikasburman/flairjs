@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.vue
  *     File: ./flair.vue.js
- *  Version: 0.8.47
- *  Tue, 21 May 2019 02:01:09 GMT
+ *  Version: 0.8.72
+ *  Thu, 23 May 2019 02:00:39 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -125,7 +125,7 @@
                     let i18ResFile = '';
                     for(let i18nNs in this.i18n) {
                         if (this.i18n.hasOwnProperty(i18nNs)) {
-                            i18ResFile = this.$self.assemblyName + '/locales/' + this.locale() + '/' + this.i18n[i18nNs];
+                            i18ResFile = this.$Type.getAssembly().getLocaleFilePath(this.locale(), this.i18n[i18nNs]);
                             this.i18n[i18nNs] = await clientFileLoader(i18ResFile); // this will load defined json file as json object here
                         }
                     }
@@ -207,6 +207,7 @@
                     // supporting built-in method: i18n 
                     // e.g., {{ i18n('shared', 'OK', 'Ok!') }} will give: 'Ok' if this was the translation added in shared.json::OK key
                     component.methods['i18n'] = (ns, key, defaultValue) => {  
+                        if (env.isDebug && defaultValue) { defaultValue = ':' + defaultValue + ':'; } // so it becomes visible that this is default value and string is not found
                         if (_this.i18n && _this.i18n[ns] && _this.i18n[ns][key]) {
                             return _this.i18n[ns][key] || defaultValue || '(i18n: 404)';
                         }
@@ -783,12 +784,15 @@
             $$('protected');
             $$('override');
             $$('sealed');
-            this.loadView = async (base, ctx, el) => {
+            this.onView = async (base, ctx, el) => {
                 if (!isLoaded) {
                     isLoaded = true;
                     base();
         
                     const Vue = await include('vue/vue{.min}.js');
+        
+                    // custom load op
+                    await this.beforeLoad(ctx, el);            
         
                     // get component
                     let component = await this.factory();
@@ -802,7 +806,7 @@
                     }            
         
                     // custom load op
-                    await this.load(ctx, el);
+                    await this.afterLoad(ctx, el);
         
                     // setup Vue view instance
                     new Vue(component);
@@ -812,7 +816,12 @@
             $$('protected');
             $$('virtual');
             $$('async');
-            this.load = noop;
+            this.beforeLoad = noop;
+        
+            $$('protected');
+            $$('virtual');
+            $$('async');
+            this.afterLoad = noop;
         
             $$('protected');
             this.el = null;
@@ -838,7 +847,7 @@
     AppDomain.context.current().currentAssemblyBeingLoaded('');
     
     // register assembly definition object
-    AppDomain.registerAdo('{"name":"flair.vue","file":"./flair.vue{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.8.47","lupdate":"Tue, 21 May 2019 02:01:09 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.ui.vue.VueComponentMembers","flair.boot.vue.VueSetup","flair.ui.vue.VueComponent","flair.ui.vue.VueDirective","flair.ui.vue.VueFilter","flair.ui.vue.VueLayout","flair.ui.vue.VueMixin","flair.ui.vue.VuePlugin","flair.ui.vue.VueView"],"resources":[],"assets":[],"routes":[]}');
+    AppDomain.registerAdo('{"name":"flair.vue","file":"./flair.vue{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.8.72","lupdate":"Thu, 23 May 2019 02:00:39 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.ui.vue.VueComponentMembers","flair.boot.vue.VueSetup","flair.ui.vue.VueComponent","flair.ui.vue.VueDirective","flair.ui.vue.VueFilter","flair.ui.vue.VueLayout","flair.ui.vue.VueMixin","flair.ui.vue.VuePlugin","flair.ui.vue.VueView"],"resources":[],"assets":[],"routes":[]}');
     
     // assembly load complete
     if (typeof onLoadComplete === 'function') { 

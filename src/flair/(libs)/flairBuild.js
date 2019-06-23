@@ -766,7 +766,7 @@
                             src: './' + locale,
                             dest: './' + path.join(locDest, locale.replace(locSrc.replace('./', ''), ''))
                         };
-                        fsx.copySync(libFile.src, libFile.dest, { errorOnExist: true })
+                        fsx.copySync(locFile.src, locFile.dest, { errorOnExist: true })
                     }
                 }
             };            

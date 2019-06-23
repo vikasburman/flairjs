@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.8.47
- *  Tue, 21 May 2019 02:01:06 GMT
+ *  Version: 0.8.72
+ *  Thu, 23 May 2019 02:00:36 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -1127,6 +1127,25 @@
                 asmNames[asmClosureVars.name] = asmFiles[file];
             }
         };
+        this.getAssemblyFile = (file) => {
+            let asmADO = this.domain.getAdo(file),
+                file2 = file;
+            if (file2.startsWith('./')) { file2 = file2.substr(2); }
+            if (asmADO && asmADO.mainAssembly) { // in relation to mainAssembly
+                file2 = this.domain.loadPathOf(asmADO.mainAssembly) + file2;
+            } else { // in relation to start location
+                file2 = this.domain.root() + file2;
+            }
+            return file2;
+        };
+        this.getAssemblyAssetsPath = (file) => {
+            let file2 = this.getAssemblyFile(file);
+            if (file2.indexOf('.min.js') !== -1) {
+                return file2.replace('.min.js', '/');
+            } else {
+                return file2.replace('.js', '/');
+            }
+        };
         this.loadAssembly = (file) => {
             return new Promise((resolve, reject) => {
                 if (this.isUnloaded()) { reject(_Exception.InvalidOperation(`Context is already unloaded. (${this.name})`)); return; }
@@ -1137,13 +1156,7 @@
     
                     // get resolved file name of this assembly
                     let asmADO = this.domain.getAdo(file),
-                        file2 = file;
-                    if (file2.startsWith('./')) { file2 = file2.substr(2); }
-                    if (asmADO && asmADO.mainAssembly) { // in relation to mainAssembly
-                        file2 = this.domain.loadPathOf(asmADO.mainAssembly) + file2;
-                    } else { // in relation to start location
-                        file2 = this.domain.root() + file2;
-                    }
+                        file2 = this.getAssemblyFile(file);
     
                     // uncache module, so it's types get to register again with this new context
                     uncacheModule(file2);
@@ -1353,6 +1366,7 @@
      */ 
     const Assembly = function (ado, alc, asmClosureVars) {
         this.context = alc;
+        this.domain = alc.domain;
     
         this.name = ado.name;
         this.file = ado.file;
@@ -1412,15 +1426,29 @@
     
         // assets
         this.assets = () => { return ado.assets.slice(); }
-        this.assetsRoot = this.file.replace('.js', '/');
-        this.getAsset = (file) => { 
-            if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.getAsset); }
+        this.path = () => {
+            return this.alc.getAssemblyFile(this.file);
+        };
+        this.assetsPath = () => {
+            return alc.getAssemblyAssetsPath(this.file);
+        };
+        this.getAssetFilePath = (file) => { 
+            if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.getAssetFilePath); }
     
             // file: will be in local context of assembly, e.g., <asmFolder>/(assets)/myCSS.css will be referred everywhere as './myCSS.css'
             // passing ./myCSS.css to this method will return './<asmFolder>/myCSS.css'
-            let astFile = file.replace('./', this.assetsRoot);
-            if (ado.assets.indexOf(file) === -1) {  throw _Exception.NotFound(astFile, this.getAsset); }
+            let astFile = file.replace('./', this.assetsPath());
+            if (ado.assets.indexOf(file) === -1) {  throw _Exception.NotFound(astFile, this.getAssetFilePath); }
             return astFile;        
+        };
+        this.getLocaleFilePath = (locale, file) => {
+            if (typeof locale !== 'string') { throw _Exception.InvalidArgument('locale', this.getLocaleFilePath); }
+            if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.getLocaleFilePath); }
+    
+            // file: will be in local context of assembly, e.g., <asmFolder>/(locale)/strings.json will be referred everywhere as './strings.json'
+            // passing ./strings.json to this method will return './<asmFolder>/locales/<given-locale>/strings.json'
+            let localeFile = file.replace('./', this.assetsPath() + 'locales/' + locale + '/');
+            return localeFile;        
         };
     
         // config
@@ -2058,6 +2086,7 @@
             if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.loadPath); }
             if (path) { // set
                 if (!loadPaths[file]) {
+                    if (!path.endsWith('/')) { path += '/'; }
                     loadPaths[file] = path;
                 }
             }
@@ -3015,6 +3044,7 @@
      *  attrArgs: any - Any arguments that may be needed by attribute
      * @returns void
      */ 
+    let isInsertAttrOnTop = false;
     const _$$ = (name, ...attrArgs) => {
         let args = _Args('name: string',
                          'name: Attribute')(name); args.throwOnError(_$$);
@@ -3048,7 +3078,11 @@
         }
     
         // store
-        _attrMeta.bucket.push({name: name, cfg: cfg, isCustom: (attrInstance !== null), attr: attrInstance, args: attrArgs});
+        if (isInsertAttrOnTop) {
+            _attrMeta.bucket.unshift({name: name, cfg: cfg, isCustom: (attrInstance !== null), attr: attrInstance, args: attrArgs});
+        } else {
+            _attrMeta.bucket.push({name: name, cfg: cfg, isCustom: (attrInstance !== null), attr: attrInstance, args: attrArgs});
+        }
     };
     
     /**
@@ -3112,6 +3146,12 @@
     
     const _attr = (name, ...attrArgs) => { // _attr is for internal use only, so collect/clear etc. are not exposed out)
         return _$$(name, ...attrArgs);
+    };
+    const _attr_i = (name, ...attrArgs) => { // _attr is for internal use only, so collect/clear etc. are not exposed out)
+        isInsertAttrOnTop = true;
+        let result = _$$(name, ...attrArgs);
+        isInsertAttrOnTop = false;
+        return result;
     };
     const _attrMeta = _attr[meta] = Object.freeze({
         bucket: [],
@@ -3614,12 +3654,34 @@
     
         // type extensions
         let _tex = { // every type will have this, that means all types are derived from this common type
-            getName: function() {
+            getName: function(isFlat) {
                 // get internal information { type.{Type, def, attrs, modifiers}}
                 let typeDef = this.type.def;
                 
                 // return
-                return typeDef.name;
+                return isFlat ? typeDef.flatname : typeDef.name;
+            },
+            getType: function() {
+                // get internal information { type.{Type, def, attrs, modifiers}}
+                let typeDef = this.type.def;
+    
+                return typeDef.type;
+            },
+            getAssembly: function() {
+                // get internal information { type.{Type, def, attrs, modifiers}}
+                let _Object = this.type.Type,
+                    _meta = this.type.meta,
+                    _ObjectMeta = _Object[_meta];
+                
+                return _ObjectMeta.assembly();
+            },
+            getNamespace: function() {
+                // get internal information { type.{Type, def, attrs, modifiers}}
+                let _Object = this.type.Type,
+                    _meta = this.type.meta,
+                    _ObjectMeta = _Object[_meta];
+                
+                return _ObjectMeta.namespace;
             }
         }; 
         let _tmex = { // every type's meta will have this
@@ -3628,13 +3690,14 @@
         cfg.ex.type = shallowCopy(cfg.ex.type, _tex, false); // don't override, which means defaults overriding is allowed
         cfg.mex.type = shallowCopy(cfg.mex.type, _tmex, false); // don't override, which means defaults overriding is allowed
     };
-    const addTypeExtensions = (typeEx, Type, addTarget, typeDef, type_attrs, type_modifiers) => {
+    const addTypeExtensions = (typeEx, Type, addTarget, typeDef, type_attrs, type_modifiers, meta) => {
         let bindWith = {
             type: {
                 Type: Type,
                 def: typeDef,
                 attrs: type_attrs,
-                modifiers: type_modifiers
+                modifiers: type_modifiers,
+                meta: meta
             }
         }
         for(let ex in typeEx) {
@@ -3653,19 +3716,21 @@
             }
         }
     };
-    const addInstanceExtensions = (instanceEx, obj, addTarget, Type, def, typeDef, attrs, modifiers, type_attrs, type_modifiers) => {
+    const addInstanceExtensions = (instanceEx, obj, addTarget, Type, def, typeDef, attrs, modifiers, type_attrs, type_modifiers, meta) => {
         let bindWith = {
             instance: {
                 obj: obj,
                 def: def,
                 attrs: attrs,
-                modifiers: modifiers
+                modifiers: modifiers,
+                meta: meta
             },
             type: {
                 Type: Type,
                 typeDef: typeDef,
                 attrs: type_attrs,
-                modifiers: type_modifiers
+                modifiers: type_modifiers,
+                meta: meta
             }
         }
         for(let ex in instanceEx) {
@@ -3685,6 +3750,7 @@
     const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         // define parameters and context
         let TypeMeta = Type[meta],
+            $Type = null, 
             typeDef = TypeMeta.def(),
             _flagName = '___flag___',
             params = {
@@ -3709,6 +3775,7 @@
                 params.args = []; // no args
             }
         }
+        $Type = params.staticInterface || Type; // if a type is coming as staticInterface - means that is the main Type being created, else Type (the actual type being created (in case of inheritance - this will be consistently same for all levels - the top level Type that is being created)
     
         // singleton specific case
         if (cfg.singleton && !typeDef.staticConstructionCycle && !isNewFromReflector && params.isTopLevelInstance && TypeMeta.singleInstance.value) { return TypeMeta.singleInstance.value; }
@@ -3725,6 +3792,7 @@
             _previousDef = null,
             def = { 
                 name: cfg.params.typeName,
+                flatname: replaceAll(cfg.params.typeName, '.', '_'),
                 type: cfg.types.type, // the type of the type itself: class, struct, etc.
                 Type: Type,
                 level: 'object',
@@ -3746,43 +3814,6 @@
             _sessionStorage = (cfg.storage ? _Port('sessionStorage') : null),
             _localStorage = (cfg.storage ? _Port('localStorage') : null);
     
-        const self = Object.freeze({
-            id: replaceAll(def.name, '.', '_'),
-            name: def.name,
-            assemblyName: _getAssemblyOf(def.name),
-            Type: def.Type,
-            obj: () => {
-                let obj_def = obj[meta].Type[meta].def();
-                return Object.freeze({
-                    id: replaceAll(obj_def.name, '.', '_'),
-                    name: obj_def.name,
-                    assemblyName: _getAssemblyOf(obj_def.name),
-                    Type: obj_def.Type
-                });
-            },
-            static: def.Type, // NOTE: since static must be tied to the level where a static is being defined, therefore at runtime, it must be read from same level type itself
-            members: () => {
-                let members = {};
-                for(let memberName in def.members) {
-                    members[memberName] = {
-                        name: memberName,
-                        type: def.members[memberName],
-                        modifiers: [],
-                        attrs: []
-                    };
-                    for(let ___modifier of def.modifiers.members[memberName]) {
-                        members[memberName].modifiers.push(___modifier.name)
-                    }
-                    for(let ___attr of def.attrs.members[memberName]) {
-                        members[memberName].attrs.push(___attr.name)
-                    }
-                    members[memberName].modifiers = Object.freeze(members[memberName].modifiers);
-                    members[memberName].attrs = Object.freeze(members[memberName].attrs);
-                    members[memberName] = Object.freeze(members[memberName]);
-                }
-                return Object.freeze(members);
-            }
-        });
         const applyCustomAttributes = (bindingHost, memberName, memberType, member) => {
             for(let appliedAttr of attrs.members.all(memberName).current()) {
                 if (appliedAttr.isCustom) { // custom attribute instance
@@ -3911,10 +3942,10 @@
             // and only missing ones
             if (params.isTopLevelInstance) {
                 // add instance level extensions
-                addInstanceExtensions(cfg.ex.instance, exposed_obj, exposed_obj, Type, def, typeDef, attrs, modifiers, TypeMeta.attrs, TypeMeta.modifiers); 
+                addInstanceExtensions(cfg.ex.instance, exposed_obj, exposed_obj, Type, def, typeDef, attrs, modifiers, TypeMeta.attrs, TypeMeta.modifiers, meta); 
     
                 // add instance meta level extensions
-                addInstanceExtensions(cfg.mex.instance, exposed_obj, exposed_objMeta, Type, def, typeDef, attrs, modifiers, TypeMeta.attrs, TypeMeta.modifiers);
+                addInstanceExtensions(cfg.mex.instance, exposed_obj, exposed_objMeta, Type, def, typeDef, attrs, modifiers, TypeMeta.attrs, TypeMeta.modifiers, meta);
             }
     
             // expose def of this level for upper level to access if not on top level
@@ -4118,10 +4149,10 @@
             _deprecate_message = (_isDeprecate ? (_deprecate_attr.args[0] || `Event is marked as deprecate. (${def.name}::${memberName})`) : ''),
             propHost = _props, // default place to store property values inside closure
             bindingHost = obj,
-            uniqueName = def.name + '_' + memberName,
-            isStorageHost = false,
-            _injections = null;     
-    
+            isStorageHost = (cfg.storage && (_isSession || _isState)),
+            uniqueName = def.flatname + '_' + memberName,
+            _injections = null;  
+            
             // NOTE: no check for isOverriding, because properties are always fully defined,
             // when being overridden 
     
@@ -4156,7 +4187,6 @@
                     if (type_attr && type_attr.args[0] && !_is(memberDef, type_attr.args[0])) { throw _Exception.InvalidArgument('value', builder); } // type attribute is defined
                     propHost[uniqueName] = memberDef;
                 } else if (cfg.storage && (_isSession || _isState)) {
-                    isStorageHost = true;
                     if (_isSession) { // session
                         propHost = _sessionStorage;
                         uniqueName = obj[meta].id + '_' + uniqueName; // because multiple instances of same object will have different id
@@ -4165,7 +4195,7 @@
                         // no change in unique-name, so all instances of same object share same state, this is because at every new instance id is changed, and since state is supposed to persist, to reach back to same state, name has to be same
                     }
                     addDisposable((_isSession ? 'session' : 'state'), uniqueName);
-                    if (!propHost.key(uniqueName)) { 
+                    if (!propHost.getItem(uniqueName)) { 
                         if (type_attr && type_attr.args[0] && !_is(memberDef, type_attr.args[0])) { throw _Exception.InvalidArgument('value', builder); } // type attribute is defined
                         propHost.setItem(uniqueName, JSON.stringify({value: memberDef})); 
                     }
@@ -4176,7 +4206,10 @@
                 }
                 _member.get = function() {
                     if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
-                    if (isStorageHost) { return JSON.parse(propHost.getItem(uniqueName)).value; }
+                    if (isStorageHost) { 
+                        let _json = propHost.getItem(uniqueName);
+                        return (_json ? JSON.parse(_json).value : null);
+                    }
                     return propHost[uniqueName];             
                 }.bind(bindingHost);
                 _member.set = function(value) {
@@ -4184,7 +4217,8 @@
                     if (_isReadOnly && !bindingHost[meta].constructing) { throw _Exception.InvalidOperation(`Property is readonly. (${def.name}::${memberName})`, builder); } // readonly props can be set only when object is being constructed 
                     if (type_attr && type_attr.args[0] && !_is(value, type_attr.args[0])) { throw _Exception.InvalidArgument('value', builder); } // type attribute is defined
                     if (isStorageHost) {
-                        propHost.setItem(uniqueName, JSON.stringify({value: value}));
+                        let _json = {value: value};
+                        propHost.setItem(uniqueName, JSON.stringify(_json));
                     } else {
                         propHost[uniqueName] = value;
                     }
@@ -4246,12 +4280,9 @@
                         resOrAssetData = _getResource(resource_attr.args[0]); 
                     }
                 } else { // asset_attr
-                    if (asset_attr.args[0]) { // asset file name with relative path within asset folder of assembly
-                        let astPath = asset_attr.args[0];
-                        if (astPath.startsWith('../')) { astPath = astPath.substr(3); }
-                        if (astPath.startsWith('./')) { astPath = astPath.substr(2); }
-                        if (astPath.startsWith('/')) { astPath = astPath.substr(1); }
-                        resOrAssetData = _getAssemblyOf(def.name) + '/' + astPath;
+                    if (asset_attr.args[0]) { // asset file name with relative path within assets folder of assembly and must start with ./
+                        let astFile = asset_attr.args[0];
+                        resOrAssetData = $Type.getAssembly().getAssetFilePath(astFile);
                     }
                 }
                 if (resOrAssetData) {
@@ -4570,6 +4601,11 @@
                 }
             }
     
+            // add async attribute, if member is async function and async attribute is not added manually
+            if (memberType === 'func' && isASync(memberDef) && !_attr.has('async'))  {
+                _attr_i('async'); // insert on top, so other dependent attributes (like fetch) gets validated successfully
+            }
+    
             // collect attributes and modifiers - validate applied attributes as per attribute configuration - throw when failed
             attributesAndModifiers(def, typeDef, memberName, false, cfg.customAttrs);
     
@@ -4707,9 +4743,8 @@
         proxy = new Proxy({}, {
             get: (_obj, name) => { 
                 if (cfg.new && name !== meta && name.substr(0, 1) === '$') {
-                    if (name === '$self') { return self; }
-                    if (name === '$static') { return self.static; }
-                    if (name === '$obj') { return self.obj(); }
+                    if (name === '$Type') { return $Type; } // since when a class is inheriting from other class, it is actually the Type of the type being created, and not the chain of classes it is inheriting - so at any level, it will be same
+                    if (name === '$static') { return def.Type; } // since static must be tied to the level where a static is being defined, therefore at runtime, it must be read from same level type itself
                 }
                 if (name === 'construct') {
                     name = _constructName;
@@ -5013,9 +5048,6 @@
         // pick current context in which this type is being registered
         let currentContext = _AppDomain.context.current();
     
-        // pick current assembly in which this type was bundled
-        let currentAssembly = currentContext.currentAssemblyBeingLoaded() || '';
-    
         // base type definition
         let _Object = null,
             _ObjectMeta = null;
@@ -5049,12 +5081,11 @@
                 }
             }
         }
-        _Object.typeName = () => { return cfg.params.typeName; };
-        _Object.typeType = () => { return cfg.params.type; };
     
         // type def
         let typeDef = { 
             name: cfg.params.typeName,
+            flatname: replaceAll(cfg.params.typeName, '.', '_'),
             type: cfg.types.type, // the type of the type itself: class, struct, etc.
             Type: _Object,
             level: 'type',
@@ -5077,7 +5108,10 @@
         _ObjectMeta.name = cfg.params.typeName;
         _ObjectMeta.type = cfg.types.type;
         _ObjectMeta.namespace = null;
-        _ObjectMeta.assembly = () => { return currentContext.getAssembly(currentAssembly) || null; };
+        _ObjectMeta.assembly = () => { 
+            let currentAssembly = _getAssemblyOf(cfg.params.typeName);
+            return currentContext.getAssembly(currentAssembly) || null; 
+        };
         _ObjectMeta.context = currentContext;
         if (cfg.inheritance) {
             _ObjectMeta.inherits = cfg.params.inherits || null;
@@ -5181,11 +5215,11 @@
     
         // extend type itself with type's extensions
         // it may overwrite inbuilt defaults
-        addTypeExtensions(cfg.ex.type, _Object, _Object, typeDef, attrs, modifiers);
+        addTypeExtensions(cfg.ex.type, _Object, _Object, typeDef, attrs, modifiers, meta);
     
         // extend type meta  with type's meta extensions
         // it may overwrite inbuilt defaults
-        addTypeExtensions(cfg.mex.type, _Object, _ObjectMeta, typeDef, attrs, modifiers);
+        addTypeExtensions(cfg.mex.type, _Object, _ObjectMeta, typeDef, attrs, modifiers, meta);
     
         // get final return value
         let _finalObject = null,
@@ -7108,10 +7142,10 @@
         name: 'flairjs',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.8.47',
+        version: '0.8.72',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Tue, 21 May 2019 02:01:06 GMT')
+        lupdate: new Date('Thu, 23 May 2019 02:00:36 GMT')
     });  
 
     // bundled assembly load process 
@@ -7508,7 +7542,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.8.47","lupdate":"Tue, 21 May 2019 02:01:06 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.8.72","lupdate":"Thu, 23 May 2019 02:00:36 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 

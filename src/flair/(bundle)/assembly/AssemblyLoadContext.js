@@ -259,6 +259,25 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
             asmNames[asmClosureVars.name] = asmFiles[file];
         }
     };
+    this.getAssemblyFile = (file) => {
+        let asmADO = this.domain.getAdo(file),
+            file2 = file;
+        if (file2.startsWith('./')) { file2 = file2.substr(2); }
+        if (asmADO && asmADO.mainAssembly) { // in relation to mainAssembly
+            file2 = this.domain.loadPathOf(asmADO.mainAssembly) + file2;
+        } else { // in relation to start location
+            file2 = this.domain.root() + file2;
+        }
+        return file2;
+    };
+    this.getAssemblyAssetsPath = (file) => {
+        let file2 = this.getAssemblyFile(file);
+        if (file2.indexOf('.min.js') !== -1) {
+            return file2.replace('.min.js', '/');
+        } else {
+            return file2.replace('.js', '/');
+        }
+    };
     this.loadAssembly = (file) => {
         return new Promise((resolve, reject) => {
             if (this.isUnloaded()) { reject(_Exception.InvalidOperation(`Context is already unloaded. (${this.name})`)); return; }
@@ -269,13 +288,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
 
                 // get resolved file name of this assembly
                 let asmADO = this.domain.getAdo(file),
-                    file2 = file;
-                if (file2.startsWith('./')) { file2 = file2.substr(2); }
-                if (asmADO && asmADO.mainAssembly) { // in relation to mainAssembly
-                    file2 = this.domain.loadPathOf(asmADO.mainAssembly) + file2;
-                } else { // in relation to start location
-                    file2 = this.domain.root() + file2;
-                }
+                    file2 = this.getAssemblyFile(file);
 
                 // uncache module, so it's types get to register again with this new context
                 uncacheModule(file2);
