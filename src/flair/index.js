@@ -106,6 +106,7 @@
     <!-- inject: ./(bundle)/types/support/general.js -->  
     <!-- inject: ./(bundle)/types/get/typeOf.js -->   
     <!-- inject: ./(bundle)/types/check/is.js --> 
+    <!-- inject: ./(bundle)/types/check/isDefined.js --> 
     <!-- inject: ./(bundle)/types/support/args.js -->   
     <!-- inject: ./(bundle)/types/support/event.js -->   
     <!-- inject: ./(bundle)/types/support/nie.js -->   

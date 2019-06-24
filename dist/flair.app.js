@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.8.84
- *  Sun, 23 Jun 2019 23:43:54 GMT
+ *  Version: 0.8.93
+ *  Mon, 24 Jun 2019 01:16:01 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -32,7 +32,7 @@
     
     // flair types, variables and functions
     const { Class, Struct, Enum, Interface, Mixin, Aspects, AppDomain, $$, attr, bring, Container, include, Port, on, post, telemetry,
-            Reflector, Serializer, Tasks, as, is, isComplies, isDerivedFrom, isAbstract, isSealed, isStatic, isSingleton, isDeprecated,
+            Reflector, Serializer, Tasks, as, is, isDefined, isComplies, isDerivedFrom, isAbstract, isSealed, isStatic, isSingleton, isDeprecated,
             isImplements, isInstanceOf, isMixed, getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf,
             getTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;
     const { TaskInfo } = flair.Tasks;
@@ -165,22 +165,50 @@
         Class('RestHandler', Handler, function() {
             $$('private');
             this.run = async (fn, req, res) => {
-                if (typeof fn === 'function') {
+                let result = null;
+                if (fn !== noop) {
                     try {
-                        await fn(req, res);
+                        result = await fn(req, res);
                     } catch (err) {
                         res.status(err.status || 500).json({status: err.status, message: err.message})
                     }
                 } else {
                     res.status(501).json({status: '501', message: 'Not Implemented'});
                 }
+                return result;
             };
         
-            this.get = async (req, res) => { await this.run(this.onGet, req, res); };
-            this.post = async (req, res) => { await this.run(this.onPost, req, res); };
-            this.put = async (req, res) => { await this.run(this.onPut, req, res); };
-            this.patch = async (req, res) => { await this.run(this.onPatch, req, res); };
-            this.delete = async (req, res) => { await this.run(this.onDelete, req, res); };
+            this.get = async (req, res) => { return await this.run(this.onGet, req, res); };
+            this.post = async (req, res) => { return await this.run(this.onPost, req, res); };
+            this.put = async (req, res) => { return await this.run(this.onPut, req, res); };
+            this.patch = async (req, res) => { return await this.run(this.onPatch, req, res); };
+            this.delete = async (req, res) => { return await this.run(this.onDelete, req, res); };
+        
+            $$('protected');
+            $$('virtual');
+            $$('async');
+            this.onGet = noop;
+        
+            $$('protected');
+            $$('virtual');
+            $$('async');
+            this.onPost = noop;
+        
+        
+            $$('protected');
+            $$('virtual');
+            $$('async');
+            this.onPut = noop;
+        
+            $$('protected');
+            $$('virtual');
+            $$('async');
+            this.onPatch = noop;
+        
+            $$('protected');
+            $$('virtual');
+            $$('async');
+            this.onDelete = noop;
         });
         
     })();    
@@ -1877,7 +1905,7 @@
     AppDomain.context.current().currentAssemblyBeingLoaded('');
     
     // register assembly definition object
-    AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.8.84","lupdate":"Sun, 23 Jun 2019 23:43:54 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Handler","flair.api.RestHandler","flair.app.App","flair.app.Host","flair.ui.ViewHandler","flair.ui.Page","flair.api.RESTfulService","flair.api.RestInterceptor","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.ClientRouter","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter","flair.ui.ViewInterceptor","flair.ui.ViewState","flair.ui.ViewTransition"],"resources":[],"assets":[],"routes":[]}');
+    AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.8.93","lupdate":"Mon, 24 Jun 2019 01:16:01 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Handler","flair.api.RestHandler","flair.app.App","flair.app.Host","flair.ui.ViewHandler","flair.ui.Page","flair.api.RESTfulService","flair.api.RestInterceptor","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.ClientRouter","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter","flair.ui.ViewInterceptor","flair.ui.ViewState","flair.ui.ViewTransition"],"resources":[],"assets":[],"routes":[]}');
     
     // assembly load complete
     if (typeof onLoadComplete === 'function') { 

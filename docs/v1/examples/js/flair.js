@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.8.84
- *  Sun, 23 Jun 2019 23:43:52 GMT
+ *  Version: 0.8.93
+ *  Mon, 24 Jun 2019 01:15:59 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -594,6 +594,36 @@
     
     // attach to flair
     a2f('is', _is);
+     
+    /**
+     * @name is
+     * @description Checks if given object has specified member defined
+     * @example
+     *  isDefined(obj, memberName)
+     * @params
+     *  obj: object - object that needs to be checked
+     *  memberName: string - name of the member to check
+     * @returns boolean - true/false
+     */ 
+    const _isDefined = (obj, memberName) => {
+        // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
+    
+        let isErrorOccured = false;
+        try {
+            obj[memberName]; // try to access it, it will throw error if not defined on an object which is a flair-object
+    
+            // if error does not occur above, means either member is defined or it was not a flairjs object, in that case check for 'undefined'
+            isErrorOccured = (typeof obj[memberName] === 'undefined');
+        } catch (err) {
+            isErrorOccured = true;
+        }
+        
+        // return
+        return !isErrorOccured;
+    };
+    
+    // attach to flair
+    a2f('isDefined', _isDefined);
      
     /**
      * @name Args
@@ -7168,10 +7198,10 @@
         name: 'flairjs',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.8.84',
+        version: '0.8.93',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 23 Jun 2019 23:43:52 GMT')
+        lupdate: new Date('Mon, 24 Jun 2019 01:15:59 GMT')
     });  
 
     // bundled assembly load process 
@@ -7186,7 +7216,7 @@
         
         // flair types, variables and functions
         const { Class, Struct, Enum, Interface, Mixin, Aspects, AppDomain, $$, attr, bring, Container, include, Port, on, post, telemetry,
-                Reflector, Serializer, Tasks, as, is, isComplies, isDerivedFrom, isAbstract, isSealed, isStatic, isSingleton, isDeprecated,
+                Reflector, Serializer, Tasks, as, is, isDefined, isComplies, isDerivedFrom, isAbstract, isSealed, isStatic, isSingleton, isDeprecated,
                 isImplements, isInstanceOf, isMixed, getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf,
                 getTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;
         const { TaskInfo } = flair.Tasks;
@@ -7568,7 +7598,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.8.84","lupdate":"Sun, 23 Jun 2019 23:43:52 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.8.93","lupdate":"Mon, 24 Jun 2019 01:15:59 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
