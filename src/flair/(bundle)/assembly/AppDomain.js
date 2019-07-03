@@ -209,16 +209,15 @@ const AppDomain = function(name) {
         if (preambleFile) { 
             // this loads it as an async function which is called here
             let preambleLoader = await _include(preambleFile);
-            await preambleLoader(flair);
+            if (preambleLoader) { await preambleLoader(flair); }
         }
 
         // boot only when __entryPoint is defined
         let be = await _include(settings.bootEngine);
-        await be.start();
-        isBooted = true;
+        if (be) { await be.start(); isBooted = true; }
 
         // return
-        return true;
+        return isBooted;
     };
 
     // set onces, read many times

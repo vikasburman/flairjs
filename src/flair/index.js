@@ -45,14 +45,18 @@
     /* eslint-enable no-unused-vars */
 
     // flairapp bootstrapper
-    let flair = async (entryPoint, config) => {
-        if (!isAppStarted) {
-            // boot
-            isAppStarted = await flair.AppDomain.boot(entryPoint, config);
+    let flair = async (entryPointOrADO, config) => {
+        // register ADO or start App
+        if (entryPointOrADO !== null && typeof entryPointOrADO === 'object') {
+            flair.AppDomain.registerAdo(entryPointOrADO);
+        } else {
+            if (!isAppStarted) {
+                // boot
+                isAppStarted = await flair.AppDomain.boot(entryPointOrADO, config);
+            }
+            // return
+            return flair.AppDomain.app();
         }
-
-        // return
-        return flair.AppDomain.app();
     };
 
     // read symbols from environment

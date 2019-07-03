@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.8.93
- *  Mon, 24 Jun 2019 01:15:59 GMT
+ *  Version: 0.8.99
+ *  Thu, 27 Jun 2019 12:17:16 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -45,14 +45,18 @@
     /* eslint-enable no-unused-vars */
 
     // flairapp bootstrapper
-    let flair = async (entryPoint, config) => {
-        if (!isAppStarted) {
-            // boot
-            isAppStarted = await flair.AppDomain.boot(entryPoint, config);
+    let flair = async (entryPointOrADO, config) => {
+        // register ADO or start App
+        if (entryPointOrADO !== null && typeof entryPointOrADO === 'object') {
+            flair.AppDomain.registerAdo(entryPointOrADO);
+        } else {
+            if (!isAppStarted) {
+                // boot
+                isAppStarted = await flair.AppDomain.boot(entryPointOrADO, config);
+            }
+            // return
+            return flair.AppDomain.app();
         }
-
-        // return
-        return flair.AppDomain.app();
     };
 
     // read symbols from environment
@@ -2072,16 +2076,15 @@
             if (preambleFile) { 
                 // this loads it as an async function which is called here
                 let preambleLoader = await _include(preambleFile);
-                await preambleLoader(flair);
+                if (preambleLoader) { await preambleLoader(flair); }
             }
     
             // boot only when __entryPoint is defined
             let be = await _include(settings.bootEngine);
-            await be.start();
-            isBooted = true;
+            if (be) { await be.start(); isBooted = true; }
     
             // return
-            return true;
+            return isBooted;
         };
     
         // set onces, read many times
@@ -7198,10 +7201,10 @@
         name: 'flairjs',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.8.93',
+        version: '0.8.99',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Mon, 24 Jun 2019 01:15:59 GMT')
+        lupdate: new Date('Thu, 27 Jun 2019 12:17:16 GMT')
     });  
 
     // bundled assembly load process 
@@ -7598,7 +7601,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.8.93","lupdate":"Mon, 24 Jun 2019 01:15:59 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.8.99","lupdate":"Thu, 27 Jun 2019 12:17:16 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 

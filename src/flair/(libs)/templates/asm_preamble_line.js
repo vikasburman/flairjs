@@ -1,1 +1,1 @@
-flair.AppDomain.registerAdo(JSON.parse('<<ado>>'));
+flair(JSON.parse('<<ado>>'));

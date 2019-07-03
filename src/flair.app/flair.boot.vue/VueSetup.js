@@ -24,7 +24,7 @@ Class('(auto)', Bootware, function() {
         // load Vue extensions
         // each plugin in array is defined as:
         // { "name": "name", "type": "ns.typeName", "options": {} }
-        let extensions = settings.extensions,
+        let extensions = settings.client.ui.vue.extensions,
             ExtType = null,
             ext = null;
         for (let item of extensions) {

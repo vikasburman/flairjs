@@ -23,6 +23,12 @@
             "transition": ""
         },
     
+        "ui": {
+            "vue": {
+                "extensions": []
+            }
+        },
+                
         "routes": {
             "home": "",
             "notfound": ""

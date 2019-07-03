@@ -23,7 +23,11 @@ const NPM = (options) => {
         if (fsx.lstatSync(_src).isDirectory()) {
             _dest = path.join(dest, (file.dest || '')) || dest; // if destination is defined for item level
             fsx.ensureDirSync(dest);
-            copyDir.sync(_src, _dest);
+            copyDir.sync(_src, _dest, {
+                utimes: true,
+                mode: true,
+                cover: true
+              });
         } else {
             _dest = path.join(dest, (file.dest || path.basename(_src)));
             fsx.ensureDirSync(path.dirname(_dest));
