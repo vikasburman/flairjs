@@ -1708,6 +1708,7 @@
         ];
         // exclude files from being added to preamble
         options.skipPreambleFor = [
+            "flair"
         ];  
         // exclude files from being added to minified
         options.skipMinifyFor = [

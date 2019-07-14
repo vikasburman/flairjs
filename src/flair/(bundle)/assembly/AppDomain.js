@@ -166,6 +166,12 @@ const AppDomain = function(name) {
         __config = __config || this.config();
         __entryPoint = __entryPoint || this.entryPoint();
 
+        // don't boot if bootEngine is not configured
+        if (!settings.bootEngine) {
+            console.log('No boot engine is configured, boot aborted.'); // eslint-disable-line no-console
+            return false; 
+        }
+
         // don't boot if entry point is not defined
         if (!__entryPoint) { 
             console.log('No entry point defined, boot aborted.'); // eslint-disable-line no-console
@@ -189,7 +195,7 @@ const AppDomain = function(name) {
         // set root
         this.root(isServer ? process.cwd() : './');
 
-        // set entry point, if defined
+        // set entry point, if specified, otherwise ignore
         if (__entryPoint) {
             this.entryPoint(__entryPoint);
         }
@@ -199,22 +205,13 @@ const AppDomain = function(name) {
             await this.config(__config);
         }
 
-        // load flairjs preamble
-        let preambleFile = '';
-        if(flair.info.file.indexOf('flair.js') !== -1) {
-            preambleFile = flair.info.file.replace('flair.js', 'preamble.js');
-        } else if (flair.info.file.indexOf('flair.min.js') !== -1) {
-            preambleFile = flair.info.file.replace('flair.min.js', 'preamble.js');
-        }
-        if (preambleFile) { 
-            // this loads it as an async function which is called here
-            let preambleLoader = await _include(preambleFile);
-            if (preambleLoader) { await preambleLoader(flair); }
-        }
-
-        // boot only when __entryPoint is defined
+        // boot 
         let be = await _include(settings.bootEngine);
-        if (be) { await be.start(); isBooted = true; }
+        if (!be) { 
+            console.log('Could not load configured boot engine, boot aborted.'); // eslint-disable-line no-console
+            return false; 
+        }
+        isBooted = await be.start(); 
 
         // return
         return isBooted;

@@ -1,3 +1,0 @@
-// global handler
-let onLoadComplete = () => {
-};

@@ -6,7 +6,7 @@
  * Assembly: flair
  *     File: ./flair.js
  *  Version: 0.9.0
- *  Sun, 14 Jul 2019 17:34:18 GMT
+ *  Sun, 14 Jul 2019 19:31:41 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -2033,6 +2033,12 @@
             __config = __config || this.config();
             __entryPoint = __entryPoint || this.entryPoint();
     
+            // don't boot if bootEngine is not configured
+            if (!settings.bootEngine) {
+                console.log('No boot engine is configured, boot aborted.'); // eslint-disable-line no-console
+                return false; 
+            }
+    
             // don't boot if entry point is not defined
             if (!__entryPoint) { 
                 console.log('No entry point defined, boot aborted.'); // eslint-disable-line no-console
@@ -2056,7 +2062,7 @@
             // set root
             this.root(isServer ? process.cwd() : './');
     
-            // set entry point, if defined
+            // set entry point, if specified, otherwise ignore
             if (__entryPoint) {
                 this.entryPoint(__entryPoint);
             }
@@ -2066,22 +2072,13 @@
                 await this.config(__config);
             }
     
-            // load flairjs preamble
-            let preambleFile = '';
-            if(flair.info.file.indexOf('flair.js') !== -1) {
-                preambleFile = flair.info.file.replace('flair.js', 'preamble.js');
-            } else if (flair.info.file.indexOf('flair.min.js') !== -1) {
-                preambleFile = flair.info.file.replace('flair.min.js', 'preamble.js');
-            }
-            if (preambleFile) { 
-                // this loads it as an async function which is called here
-                let preambleLoader = await _include(preambleFile);
-                if (preambleLoader) { await preambleLoader(flair); }
-            }
-    
-            // boot only when __entryPoint is defined
+            // boot 
             let be = await _include(settings.bootEngine);
-            if (be) { await be.start(); isBooted = true; }
+            if (!be) { 
+                console.log('Could not load configured boot engine, boot aborted.'); // eslint-disable-line no-console
+                return false; 
+            }
+            isBooted = await be.start(); 
     
             // return
             return isBooted;
@@ -7204,7 +7201,7 @@
         version: '0.9.0',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 14 Jul 2019 17:34:18 GMT')
+        lupdate: new Date('Sun, 14 Jul 2019 19:31:41 GMT')
     });  
 
     // bundled assembly load process 
@@ -7601,7 +7598,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.9.0","lupdate":"Sun, 14 Jul 2019 17:34:18 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.9.0","lupdate":"Sun, 14 Jul 2019 19:31:41 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 

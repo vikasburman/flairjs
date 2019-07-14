@@ -1,1 +1,1 @@
-flair(JSON.parse('<<ado>>'));
+await flair(JSON.parse('<<ado>>'));
