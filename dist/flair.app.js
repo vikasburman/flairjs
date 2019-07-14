@@ -5,8 +5,8 @@
  * 
  * Assembly: flair.app
  *     File: ./flair.app.js
- *  Version: 0.8.99
- *  Thu, 27 Jun 2019 12:17:19 GMT
+ *  Version: 0.9.0
+ *  Sun, 14 Jul 2019 17:34:21 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -55,7 +55,7 @@
     AppDomain.loadPathOf('flair.app', __currentPath);
     
     // settings of this assembly
-    let settings = JSON.parse('{"host":"flair.app.ServerHost | flair.app.ClientHost","app":"flair.app.App","boot":{"files":[],"preambles":[],"bootwares":[]},"di":{"container":{}},"client":{"view":{"el":"main","title":"","transition":""},"ui.vue":{"extensions":[]},"routes":{"home":"","notfound":""},"i18n":{"lang":{"default":"en","locales":[{"code":"en","name":"English","native":"English"}]}},"routing":{"mounts":{"main":"/"},"main-settings":[{"name":"hashbang","value":false},{"name":"lang","value":false},{"name":"sensitive","value":false}],"main-interceptors":[]}},"server":{"express":{"server-http":{"enable":false,"port":80,"timeout":-1},"server-https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""}},"envVars":{"vars":[],"options":{"overwrite":true}},"routing":{"mounts":{"main":"/"},"main-settings":[],"main-middlewares":[],"main-interceptors":[],"main-resHeaders":[]}}}');
+    let settings = JSON.parse('{"host":"flair.app.ServerHost | flair.app.ClientHost","app":"flair.app.App","boot":{"files":[],"preambles":[],"bootwares":[]},"di":{"container":{}},"client":{"view":{"el":"main","title":"","transition":""},"ui":{"vue":{"extensions":[]}},"routes":{"home":"","notfound":""},"i18n":{"lang":{"default":"en","locales":[{"code":"en","name":"English","native":"English"}]}},"routing":{"mounts":{"main":"/"},"main-settings":[{"name":"hashbang","value":false},{"name":"lang","value":false},{"name":"sensitive","value":false}],"main-interceptors":[]}},"server":{"express":{"server-http":{"enable":false,"port":80,"timeout":-1},"server-https":{"enable":false,"port":443,"timeout":-1,"privateKey":"","publicCert":""}},"envVars":{"vars":[],"options":{"overwrite":true}},"routing":{"mounts":{"main":"/"},"main-settings":[],"main-middlewares":[],"main-interceptors":[],"main-resHeaders":[]}}}');
     let settingsReader = flair.Port('settingsReader');
     if (typeof settingsReader === 'function') {
         let externalSettings = settingsReader('flair.app');
@@ -1132,195 +1132,6 @@
         });
         
     })();    
-    await (async () => { // type: ./src/flair.app/flair.api/RESTfulService.js
-        const { RestHandler } = ns('flair.api');
-        
-        /**
-         * @name RESTfulService
-         * @description RESTful Service
-         */
-        $$('ns', 'flair.api');
-        Class('RESTfulService', RestHandler, function() {
-            // nothing specific as of now    
-        });
-        
-    })();    
-    await (async () => { // type: ./src/flair.app/flair.api/RestInterceptor.js
-        /**
-         * @name RestInterceptor
-         * @description Api Interceptor
-         */
-        $$('ns', 'flair.api');
-        Class('RestInterceptor', function() {
-            $$('virtual');
-            $$('async');
-            this.run = noop;
-        });
-        
-    })();    
-    await (async () => { // type: ./src/flair.app/flair.app/BootEngine.js
-        const { Bootware } = ns('flair.app');
-        
-        /**
-         * @name BootEngine
-         * @description Bootstrapper functionality
-         */
-        $$('static');
-        $$('ns', 'flair.app');
-        Class('BootEngine', function() {
-            this.start = async function () {
-                let allBootwares = [],
-                    mountSpecificBootwares = [];
-                const loadFiles = async () => {
-                    // load scripts
-                    for(let item of settings.boot.files) {
-                        // get simple script file
-                        item = which(item); // server/client specific version
-                        if (item) { // in case no item is set for either server/client
-                            await include(item); // script file will be loaded as is
-                        }
-                    }
-                };
-                const loadPreambles = async () => {
-                    // load preambles
-                    let preambleLoader = null;
-                    for(let item of settings.boot.preambles) {
-                        // get simple script file
-                        item = which(item); // server/client specific version (although this will not be the case, generally)
-                        if (item) { // in case no item is set for either server/client
-                            // this loads it as a function which is called here
-                            preambleLoader = await include(item);
-                            await preambleLoader(flair);
-                        }
-                    }
-                };
-                const loadBootwares = async () => {
-                    // load bootwares
-                    let Item = null,
-                        Bw = null,
-                        bw = null;
-                    for(let item of settings.boot.bootwares) {
-                        // get bootware
-                        item = which(item); // server/client specific version
-                        if (item) { // in case no item is set for either server/client
-                            Item = await include(item);
-                            if (Item && typeof Item !== 'boolean') {
-                                Bw = as(Item, Bootware);
-                                if (Bw) { // if boot
-                                    bw = new Bw(); 
-                                    allBootwares.push(bw); // push in array, so boot and ready would be called for them
-                                    if (bw.info.isMountSpecific) { // if bootware is mount specific bootware - means can run once for each mount
-                                        mountSpecificBootwares.push(bw);
-                                    }
-                                } // else ignore, this was something else, like a module which was just loaded, for no reason (either by mistake or to take advantage of this load cycle)
-                            } // else ignore, as it could just be a file loaded which does not return anything, for no reason (either by mistake or to take advantage of this load cycle)
-                        }
-                    }
-                };
-                const runBootwares = async (method) => {
-                    if (!env.isWorker) { // main env
-                        let mounts = AppDomain.host().mounts,
-                            mountNames = Object.keys(mounts),
-                            mountName = '',
-                            mount = null;
-                    
-                        // run all bootwares for main
-                        mountName = 'main';
-                        mount = mounts[mountName];
-                        for(let bw of allBootwares) {
-                            await bw[method](mount);
-                        }
-        
-                        // run all bootwares which are mount specific for all other mounts (except main)
-                        for(let mountName of mountNames) {
-                            if (mountName === 'main') { continue; }
-                            mount = mounts[mountName];
-                            for(let bw of mountSpecificBootwares) {
-                                await bw[method](mount);
-                            }
-                        }
-                    } else { // worker env
-                        // in this case as per load[] setting, no nountspecific bootwares should be present
-                        if (mountSpecificBootwares.length !== 0) { 
-                            console.warn('Mount specific bootwares are not supported for worker environment. Revisit worker:flair.app->load setting.'); // eslint-disable-line no-console
-                        }
-        
-                        // run all for once (ignoring the mountspecific ones)
-                        for(let bw of allBootwares) {
-                            if (!bw.info.isMountSpecific) {
-                                await bw[method]();
-                            }
-                        }
-                    }
-                };
-                const boot = async () => {
-                    const Host = await include(settings.host);
-                    const App = await include(settings.app);
-                
-                    // set host
-                    if (!env.isWorker) {
-                        let hostObj = new Host();
-                        await hostObj.boot();
-                        AppDomain.host(hostObj); 
-                    }
-                    
-                    // boot
-                    await runBootwares('boot');   
-                    
-                    // set app
-                    let appObj = new App();
-                    await appObj.boot();
-                    AppDomain.app(appObj); 
-                };        
-                const start = async () => {
-                    if (!env.isWorker) {
-                        await AppDomain.host().start();
-                    }
-                    await AppDomain.app().start();
-                };
-                const DOMReady = () => {
-                    return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
-                        if( document.readyState !== 'loading' ) {
-                            resolve();
-                        } else {
-                            window.document.addEventListener("DOMContentLoaded", () => {
-                                resolve();
-                            });
-                        }
-                    });
-                };
-                const DeviceReady = () => {
-                    return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
-                        window.document.addEventListener('deviceready', () => {
-                            // NOTE: even if the device was already ready, registering for this event will immediately fire it
-                            resolve();
-                        }, false);
-                    });
-                };
-                const ready = async () => {
-                    if (env.isClient && !env.isWorker) {
-                        await DOMReady();
-                        if (env.isCordova) { await DeviceReady(); }
-                    }
-        
-                    if (!env.isWorker) {
-                        await AppDomain.host().ready();
-                    }
-                    await runBootwares('ready');
-                    await AppDomain.app().ready();
-                };
-                  
-                await loadFiles();
-                await loadPreambles();
-                await loadBootwares();
-                await boot();
-                await start();
-                await ready();
-                console.log('ready!'); // eslint-disable-line no-console
-            };
-        });
-        
-    })();    
     await (async () => { // type: ./src/flair.app/flair.app/ClientHost.js
         const { Host } = ns('flair.app');
         const { ViewHandler, Page } = ns('flair.ui');
@@ -2032,181 +1843,18 @@
         });
         
     })();    
-    await (async () => { // type: ./src/flair.app/flair.boot/ServerRouter.js
-        const { Bootware } = ns('flair.app');
+    await (async () => { // type: ./src/flair.app/flair.api/RESTfulService.js
+        const { RestHandler } = ns('flair.api');
         
         /**
-         * @name ServerRouter
-         * @description Server Router Configuration Setup
+         * @name RESTfulService
+         * @description RESTful Service
          */
-        $$('sealed');
-        $$('ns', 'flair.boot');
-        Class('ServerRouter', Bootware, function () {
-            const { RestHandler, RestInterceptor } = ns('flair.api');
-        
-            let routes = null;
-            
-            $$('override');
-            this.construct = (base) => {
-                base('Server Router', true); // mount specific 
-            };
-        
-            $$('override');
-            this.boot = async (base, mount) => {
-                base();
-                
-                // get all registered routes, and sort by index, if was not already done in previous call
-                if (!routes) {
-                    routes = AppDomain.context.current().allRoutes(true);
-                    routes.sort((a, b) => {
-                        if (a.index < b.index) {
-                            return -1;
-                        }
-                        if (a.index > b.index) {
-                            return 1;
-                        }
-                        return 0;
-                    });
-                }
-        
-                let result = false;
-        
-                const runInterceptor = (IC, req, res) => {
-                    return new Promise((resolve, reject) => {
-                        try {
-                            let aic = new IC();
-                            aic.run(req, res).then(() => {
-                                if (req.$stop) {
-                                    reject();
-                                } else {
-                                    resolve();
-                                }
-                            }).catch(reject);
-                        } catch (err) {
-                            reject(err);
-                        }
-                    });
-                };
-                const runInterceptors = (interceptors, req, res) => {
-                    return forEachAsync(interceptors, (resolve, reject, ic) => {
-                        include(ic).then((theType) => {
-                            let RequiredICType = as(theType, RestInterceptor);
-                            if (RequiredICType) {
-                                runInterceptor(RequiredICType, req, res).then(resolve).catch(reject);
-                            } else {
-                                reject(Exception.InvalidDefinition(`Invalid interceptor type. (${ic})`));
-                            }
-                        }).catch(reject);
-                    });
-                };
-               
-                // add routes related to current mount
-                for (let route of routes) {
-                    if (route.mount === mount.name) { // add route-handler
-                        route.verbs.forEach(verb => {
-                            mount.app[verb](route.path, (req, res, next) => { // verb could be get/set/delete/put/, etc.
-                                const onError = (err) => {
-                                    next(err);
-                                };
-                                const onDone = (result) => {
-                                    if (!result) {
-                                        next();
-                                    }
-                                };
-                                const handleRoute = () => {
-                                    include(route.handler).then((theType) => {
-                                        let RouteHandler = as(theType, RestHandler);
-                                        if (RouteHandler) {
-                                            try {
-                                                using(new RouteHandler(), (routeHandler) => {
-                                                    // req.params has all the route parameters.
-                                                    // e.g., for route "/users/:userId/books/:bookId" req.params will 
-                                                    // have "req.params: { "userId": "34", "bookId": "8989" }"
-                                                    result = routeHandler[verb](req, res);
-                                                    if (result && typeof result.then === 'function') {
-                                                        result.then((delayedResult) => {
-                                                            onDone(delayedResult);
-                                                        }).catch(onError);
-                                                    } else {
-                                                        onDone(result);
-                                                    }
-                                                });
-                                            } catch (err) {
-                                                onError(err);
-                                            }
-                                        } else {
-                                            onError(Exception.InvalidDefinition(`Invalid route handler. ${route.handler}`));
-                                        }
-                                    }).catch(onError);
-                                };
-        
-                                // add special properties to req
-                                req.$stop = false;
-        
-                                // run mount specific interceptors
-                                // each interceptor is derived from RestInterceptor and
-                                // run method of it takes req, can update it, also takes res method and can generate response, in case request is being stopped
-                                // each item is: "InterceptorTypeQualifiedName"
-                                let mountInterceptors = settings.server.routing[`${mount.name}-interceptors`] || [];
-                                runInterceptors(mountInterceptors, req, res).then(() => {
-                                    if (!req.$stop) {
-                                        handleRoute();
-                                    } else {
-                                        res.end();
-                                    }
-                                }).catch((err) => {
-                                    if (req.stop) {
-                                        res.end();
-                                    } else {
-                                        onError(err);
-                                    }
-                                });
-                            });
-                        });
-                    }
-                }
-        
-                // catch 404 for this mount and forward to error handler
-                mount.app.use((req, res, next) => {
-                    var err = new Error('Not Found');
-                    err.status = 404;
-                    next(err);
-                });
-        
-                // dev/prod error handler
-                if (env.isProd) {
-                    mount.app.use((err, req, res) => {
-                        res.status(err.status || 500);
-                        if (req.xhr) {
-                            res.status(500).send({
-                                error: err.toString()
-                            });
-                        } else {
-                            res.render('error', {
-                                message: err.message,
-                                error: err
-                            });
-                        }
-                        res.end();
-                    });
-                } else {
-                    mount.app.use((err, req, res) => {
-                        res.status(err.status || 500);
-                        if (req.xhr) {
-                            res.status(500).send({
-                                error: err.toString()
-                            });
-                        } else {
-                            res.render('error', {
-                                message: err.message,
-                                error: err
-                            });
-                        }
-                        res.end();
-                    });
-                }
-            };
+        $$('ns', 'flair.api');
+        Class('RESTfulService', RestHandler, function() {
+            // nothing specific as of now    
         });
+        
     })();    
     await (async () => { // type: ./src/flair.app/flair.boot.vue/VueSetup.js
         const { Bootware } = ns('flair.app');
@@ -2288,6 +1936,131 @@
         });
         
     })();    
+    await (async () => { // type: ./src/flair.app/flair.ui.vue/VueView.js
+        const { ViewHandler } = ns('flair.ui');
+        const { VueComponentMembers } = ns('flair.ui.vue');
+        
+        /**
+         * @name VueView
+         * @description Vue View
+         */
+        $$('ns', 'flair.ui.vue');
+        Class('VueView', ViewHandler, [VueComponentMembers], function() {
+            let isLoaded = false;
+        
+            $$('private');
+            this.factory = async () => {
+                // merge layout's components
+                // each area here can be as:
+                // { "area: "", component": "", "type": "" } 
+                // "area" is the div-id (in defined html) where the component needs to be placed
+                // "component" is the name of the component
+                // "type" is the qualified component type name      
+                if (this.layout && this.layout.areas && Array.isArray(this.layout.areas)) {
+                    this.components = this.components || [];
+                    for(let area of this.layout.areas) {
+                        // each component array item is: { "name": "name", "type": "ns.typeName" }
+                        this.components.push({ name: area.component, type: area.type });
+                    }
+                }
+        
+                // shared between view and component both
+                // coming from VueComponentMembers mixin
+                let component = await this.define();
+        
+                // el
+                // https://vuejs.org/v2/api/#el
+                component.el = '#' + this.name;
+        
+                // propsData
+                // https://vuejs.org/v2/api/#propsData
+                if (this.propsData) {
+                    component.propsData = this.propsData;
+                }
+        
+                // data
+                // https://vuejs.org/v2/api/#data
+                if (this.data) {
+                    if (typeof this.data === 'function') {
+                        component.data = this.data();
+                    } else {
+                        component.data = this.data;
+                    }
+                }
+        
+                // done
+                return component;
+            };    
+            
+            $$('protected');
+            $$('override');
+            $$('sealed');
+            this.onView = async (base, ctx, el) => {
+                if (!isLoaded) {
+                    isLoaded = true;
+                    base();
+        
+                    const Vue = await include('vue/vue{.min}.js');
+        
+                    // custom load op
+                    await this.beforeLoad(ctx, el);            
+        
+                    // get component
+                    let component = await this.factory();
+        
+                    // set view Html
+                    let viewHtml = this.html || '';
+                    if (this.layout) {
+                        el.innerHTML = await this.layout.merge(viewHtml);
+                    } else {
+                        el.innerHTML = viewHtml;
+                    }            
+        
+                    // custom load op
+                    await this.afterLoad(ctx, el);
+        
+                    // setup Vue view instance
+                    new Vue(component);
+                }
+            };
+        
+            $$('protected');
+            $$('virtual');
+            $$('async');
+            this.beforeLoad = noop;
+        
+            $$('protected');
+            $$('virtual');
+            $$('async');
+            this.afterLoad = noop;
+        
+            $$('protected');
+            this.el = null;
+        
+            $$('protected');
+            this.propsData = null;
+        
+            $$('protected');
+            this.data = null;
+        
+            $$('protected');
+            this.layout = null;
+        });
+        
+    })();    
+    await (async () => { // type: ./src/flair.app/flair.api/RestInterceptor.js
+        /**
+         * @name RestInterceptor
+         * @description Api Interceptor
+         */
+        $$('ns', 'flair.api');
+        Class('RestInterceptor', function() {
+            $$('virtual');
+            $$('async');
+            this.run = noop;
+        });
+        
+    })();    
     await (async () => { // type: ./src/flair.app/flair.ui/ViewInterceptor.js
         /**
          * @name ViewInterceptor
@@ -2343,6 +2116,169 @@
             $$('virtual');
             $$('async');
             this.leave = noop;
+        });
+        
+    })();    
+    await (async () => { // type: ./src/flair.app/flair.app/BootEngine.js
+        const { Bootware } = ns('flair.app');
+        
+        /**
+         * @name BootEngine
+         * @description Bootstrapper functionality
+         */
+        $$('static');
+        $$('ns', 'flair.app');
+        Class('BootEngine', function() {
+            this.start = async function () {
+                let allBootwares = [],
+                    mountSpecificBootwares = [];
+                const loadFiles = async () => {
+                    // load scripts
+                    for(let item of settings.boot.files) {
+                        // get simple script file
+                        item = which(item); // server/client specific version
+                        if (item) { // in case no item is set for either server/client
+                            await include(item); // script file will be loaded as is
+                        }
+                    }
+                };
+                const loadPreambles = async () => {
+                    // load preambles
+                    let preambleLoader = null;
+                    for(let item of settings.boot.preambles) {
+                        // get simple script file
+                        item = which(item); // server/client specific version (although this will not be the case, generally)
+                        if (item) { // in case no item is set for either server/client
+                            // this loads it as a function which is called here
+                            preambleLoader = await include(item);
+                            await preambleLoader(flair);
+                        }
+                    }
+                };
+                const loadBootwares = async () => {
+                    // load bootwares
+                    let Item = null,
+                        Bw = null,
+                        bw = null;
+                    for(let item of settings.boot.bootwares) {
+                        // get bootware
+                        item = which(item); // server/client specific version
+                        if (item) { // in case no item is set for either server/client
+                            Item = await include(item);
+                            if (Item && typeof Item !== 'boolean') {
+                                Bw = as(Item, Bootware);
+                                if (Bw) { // if boot
+                                    bw = new Bw(); 
+                                    allBootwares.push(bw); // push in array, so boot and ready would be called for them
+                                    if (bw.info.isMountSpecific) { // if bootware is mount specific bootware - means can run once for each mount
+                                        mountSpecificBootwares.push(bw);
+                                    }
+                                } // else ignore, this was something else, like a module which was just loaded, for no reason (either by mistake or to take advantage of this load cycle)
+                            } // else ignore, as it could just be a file loaded which does not return anything, for no reason (either by mistake or to take advantage of this load cycle)
+                        }
+                    }
+                };
+                const runBootwares = async (method) => {
+                    if (!env.isWorker) { // main env
+                        let mounts = AppDomain.host().mounts,
+                            mountNames = Object.keys(mounts),
+                            mountName = '',
+                            mount = null;
+                    
+                        // run all bootwares for main
+                        mountName = 'main';
+                        mount = mounts[mountName];
+                        for(let bw of allBootwares) {
+                            await bw[method](mount);
+                        }
+        
+                        // run all bootwares which are mount specific for all other mounts (except main)
+                        for(let mountName of mountNames) {
+                            if (mountName === 'main') { continue; }
+                            mount = mounts[mountName];
+                            for(let bw of mountSpecificBootwares) {
+                                await bw[method](mount);
+                            }
+                        }
+                    } else { // worker env
+                        // in this case as per load[] setting, no nountspecific bootwares should be present
+                        if (mountSpecificBootwares.length !== 0) { 
+                            console.warn('Mount specific bootwares are not supported for worker environment. Revisit worker:flair.app->load setting.'); // eslint-disable-line no-console
+                        }
+        
+                        // run all for once (ignoring the mountspecific ones)
+                        for(let bw of allBootwares) {
+                            if (!bw.info.isMountSpecific) {
+                                await bw[method]();
+                            }
+                        }
+                    }
+                };
+                const boot = async () => {
+                    const Host = await include(settings.host);
+                    const App = await include(settings.app);
+                
+                    // set host
+                    if (!env.isWorker) {
+                        let hostObj = new Host();
+                        await hostObj.boot();
+                        AppDomain.host(hostObj); 
+                    }
+                    
+                    // boot
+                    await runBootwares('boot');   
+                    
+                    // set app
+                    let appObj = new App();
+                    await appObj.boot();
+                    AppDomain.app(appObj); 
+                };        
+                const start = async () => {
+                    if (!env.isWorker) {
+                        await AppDomain.host().start();
+                    }
+                    await AppDomain.app().start();
+                };
+                const DOMReady = () => {
+                    return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
+                        if( document.readyState !== 'loading' ) {
+                            resolve();
+                        } else {
+                            window.document.addEventListener("DOMContentLoaded", () => {
+                                resolve();
+                            });
+                        }
+                    });
+                };
+                const DeviceReady = () => {
+                    return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
+                        window.document.addEventListener('deviceready', () => {
+                            // NOTE: even if the device was already ready, registering for this event will immediately fire it
+                            resolve();
+                        }, false);
+                    });
+                };
+                const ready = async () => {
+                    if (env.isClient && !env.isWorker) {
+                        await DOMReady();
+                        if (env.isCordova) { await DeviceReady(); }
+                    }
+        
+                    if (!env.isWorker) {
+                        await AppDomain.host().ready();
+                    }
+                    await runBootwares('ready');
+                    await AppDomain.app().ready();
+                };
+                  
+                await loadFiles();
+                await loadPreambles();
+                await loadBootwares();
+                await boot();
+                await start();
+                await ready();
+                console.log('ready!'); // eslint-disable-line no-console
+            };
         });
         
     })();    
@@ -2541,117 +2477,181 @@
         });
         
     })();    
-    await (async () => { // type: ./src/flair.app/flair.ui.vue/VueView.js
-        const { ViewHandler } = ns('flair.ui');
-        const { VueComponentMembers } = ns('flair.ui.vue');
+    await (async () => { // type: ./src/flair.app/flair.boot/ServerRouter.js
+        const { Bootware } = ns('flair.app');
         
         /**
-         * @name VueView
-         * @description Vue View
+         * @name ServerRouter
+         * @description Server Router Configuration Setup
          */
-        $$('ns', 'flair.ui.vue');
-        Class('VueView', ViewHandler, [VueComponentMembers], function() {
-            let isLoaded = false;
+        $$('sealed');
+        $$('ns', 'flair.boot');
+        Class('ServerRouter', Bootware, function () {
+            const { RestHandler, RestInterceptor } = ns('flair.api');
         
-            $$('private');
-            this.factory = async () => {
-                // merge layout's components
-                // each area here can be as:
-                // { "area: "", component": "", "type": "" } 
-                // "area" is the div-id (in defined html) where the component needs to be placed
-                // "component" is the name of the component
-                // "type" is the qualified component type name      
-                if (this.layout && this.layout.areas && Array.isArray(this.layout.areas)) {
-                    this.components = this.components || [];
-                    for(let area of this.layout.areas) {
-                        // each component array item is: { "name": "name", "type": "ns.typeName" }
-                        this.components.push({ name: area.component, type: area.type });
-                    }
-                }
-        
-                // shared between view and component both
-                // coming from VueComponentMembers mixin
-                let component = await this.define();
-        
-                // el
-                // https://vuejs.org/v2/api/#el
-                component.el = '#' + this.name;
-        
-                // propsData
-                // https://vuejs.org/v2/api/#propsData
-                if (this.propsData) {
-                    component.propsData = this.propsData;
-                }
-        
-                // data
-                // https://vuejs.org/v2/api/#data
-                if (this.data) {
-                    if (typeof this.data === 'function') {
-                        component.data = this.data();
-                    } else {
-                        component.data = this.data;
-                    }
-                }
-        
-                // done
-                return component;
-            };    
+            let routes = null;
             
-            $$('protected');
             $$('override');
-            $$('sealed');
-            this.onView = async (base, ctx, el) => {
-                if (!isLoaded) {
-                    isLoaded = true;
-                    base();
-        
-                    const Vue = await include('vue/vue{.min}.js');
-        
-                    // custom load op
-                    await this.beforeLoad(ctx, el);            
-        
-                    // get component
-                    let component = await this.factory();
-        
-                    // set view Html
-                    let viewHtml = this.html || '';
-                    if (this.layout) {
-                        el.innerHTML = await this.layout.merge(viewHtml);
-                    } else {
-                        el.innerHTML = viewHtml;
-                    }            
-        
-                    // custom load op
-                    await this.afterLoad(ctx, el);
-        
-                    // setup Vue view instance
-                    new Vue(component);
-                }
+            this.construct = (base) => {
+                base('Server Router', true); // mount specific 
             };
         
-            $$('protected');
-            $$('virtual');
-            $$('async');
-            this.beforeLoad = noop;
+            $$('override');
+            this.boot = async (base, mount) => {
+                base();
+                
+                // get all registered routes, and sort by index, if was not already done in previous call
+                if (!routes) {
+                    routes = AppDomain.context.current().allRoutes(true);
+                    routes.sort((a, b) => {
+                        if (a.index < b.index) {
+                            return -1;
+                        }
+                        if (a.index > b.index) {
+                            return 1;
+                        }
+                        return 0;
+                    });
+                }
         
-            $$('protected');
-            $$('virtual');
-            $$('async');
-            this.afterLoad = noop;
+                let result = false;
         
-            $$('protected');
-            this.el = null;
+                const runInterceptor = (IC, req, res) => {
+                    return new Promise((resolve, reject) => {
+                        try {
+                            let aic = new IC();
+                            aic.run(req, res).then(() => {
+                                if (req.$stop) {
+                                    reject();
+                                } else {
+                                    resolve();
+                                }
+                            }).catch(reject);
+                        } catch (err) {
+                            reject(err);
+                        }
+                    });
+                };
+                const runInterceptors = (interceptors, req, res) => {
+                    return forEachAsync(interceptors, (resolve, reject, ic) => {
+                        include(ic).then((theType) => {
+                            let RequiredICType = as(theType, RestInterceptor);
+                            if (RequiredICType) {
+                                runInterceptor(RequiredICType, req, res).then(resolve).catch(reject);
+                            } else {
+                                reject(Exception.InvalidDefinition(`Invalid interceptor type. (${ic})`));
+                            }
+                        }).catch(reject);
+                    });
+                };
+               
+                // add routes related to current mount
+                for (let route of routes) {
+                    if (route.mount === mount.name) { // add route-handler
+                        route.verbs.forEach(verb => {
+                            mount.app[verb](route.path, (req, res, next) => { // verb could be get/set/delete/put/, etc.
+                                const onError = (err) => {
+                                    next(err);
+                                };
+                                const onDone = (result) => {
+                                    if (!result) {
+                                        next();
+                                    }
+                                };
+                                const handleRoute = () => {
+                                    include(route.handler).then((theType) => {
+                                        let RouteHandler = as(theType, RestHandler);
+                                        if (RouteHandler) {
+                                            try {
+                                                using(new RouteHandler(), (routeHandler) => {
+                                                    // req.params has all the route parameters.
+                                                    // e.g., for route "/users/:userId/books/:bookId" req.params will 
+                                                    // have "req.params: { "userId": "34", "bookId": "8989" }"
+                                                    result = routeHandler[verb](req, res);
+                                                    if (result && typeof result.then === 'function') {
+                                                        result.then((delayedResult) => {
+                                                            onDone(delayedResult);
+                                                        }).catch(onError);
+                                                    } else {
+                                                        onDone(result);
+                                                    }
+                                                });
+                                            } catch (err) {
+                                                onError(err);
+                                            }
+                                        } else {
+                                            onError(Exception.InvalidDefinition(`Invalid route handler. ${route.handler}`));
+                                        }
+                                    }).catch(onError);
+                                };
         
-            $$('protected');
-            this.propsData = null;
+                                // add special properties to req
+                                req.$stop = false;
         
-            $$('protected');
-            this.data = null;
+                                // run mount specific interceptors
+                                // each interceptor is derived from RestInterceptor and
+                                // run method of it takes req, can update it, also takes res method and can generate response, in case request is being stopped
+                                // each item is: "InterceptorTypeQualifiedName"
+                                let mountInterceptors = settings.server.routing[`${mount.name}-interceptors`] || [];
+                                runInterceptors(mountInterceptors, req, res).then(() => {
+                                    if (!req.$stop) {
+                                        handleRoute();
+                                    } else {
+                                        res.end();
+                                    }
+                                }).catch((err) => {
+                                    if (req.stop) {
+                                        res.end();
+                                    } else {
+                                        onError(err);
+                                    }
+                                });
+                            });
+                        });
+                    }
+                }
         
-            $$('protected');
-            this.layout = null;
+                // catch 404 for this mount and forward to error handler
+                mount.app.use((req, res, next) => {
+                    var err = new Error('Not Found');
+                    err.status = 404;
+                    next(err);
+                });
+        
+                // dev/prod error handler
+                if (env.isProd) {
+                    mount.app.use((err, req, res) => {
+                        res.status(err.status || 500);
+                        if (req.xhr) {
+                            res.status(500).send({
+                                error: err.toString()
+                            });
+                        } else {
+                            res.render('error', {
+                                message: err.message,
+                                error: err
+                            });
+                        }
+                        res.end();
+                    });
+                } else {
+                    mount.app.use((err, req, res) => {
+                        res.status(err.status || 500);
+                        if (req.xhr) {
+                            res.status(500).send({
+                                error: err.toString()
+                            });
+                        } else {
+                            res.render('error', {
+                                message: err.message,
+                                error: err
+                            });
+                        }
+                        res.end();
+                    });
+                }
+            };
         });
-        
     })();
     // assembly types (end)
     
@@ -2663,7 +2663,7 @@
     AppDomain.context.current().currentAssemblyBeingLoaded('');
     
     // register assembly definition object
-    AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.8.99","lupdate":"Thu, 27 Jun 2019 12:17:19 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Handler","flair.ui.vue.VueComponentMembers","flair.api.RestHandler","flair.app.App","flair.app.Host","flair.ui.ViewHandler","flair.ui.Page","flair.api.RESTfulService","flair.api.RestInterceptor","flair.app.BootEngine","flair.app.ClientHost","flair.app.ServerHost","flair.boot.ClientRouter","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.boot.ServerRouter","flair.boot.vue.VueSetup","flair.ui.ViewInterceptor","flair.ui.ViewState","flair.ui.ViewTransition","flair.ui.vue.VueComponent","flair.ui.vue.VueDirective","flair.ui.vue.VueFilter","flair.ui.vue.VueLayout","flair.ui.vue.VueMixin","flair.ui.vue.VuePlugin","flair.ui.vue.VueView"],"resources":[],"assets":[],"routes":[]}');
+    AppDomain.registerAdo('{"name":"flair.app","file":"./flair.app{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.9.0","lupdate":"Sun, 14 Jul 2019 17:34:21 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["flair.app.Bootware","flair.app.Handler","flair.ui.vue.VueComponentMembers","flair.api.RestHandler","flair.app.App","flair.app.Host","flair.ui.ViewHandler","flair.ui.Page","flair.app.ClientHost","flair.app.ServerHost","flair.boot.ClientRouter","flair.boot.DIContainer","flair.boot.Middlewares","flair.boot.NodeEnv","flair.boot.ResHeaders","flair.api.RESTfulService","flair.boot.vue.VueSetup","flair.ui.vue.VueView","flair.api.RestInterceptor","flair.ui.ViewInterceptor","flair.ui.ViewState","flair.ui.ViewTransition","flair.app.BootEngine","flair.ui.vue.VueComponent","flair.ui.vue.VueDirective","flair.ui.vue.VueFilter","flair.ui.vue.VueLayout","flair.ui.vue.VueMixin","flair.ui.vue.VuePlugin","flair.boot.ServerRouter"],"resources":[],"assets":[],"routes":[]}');
     
     // assembly load complete
     if (typeof onLoadComplete === 'function') { 
