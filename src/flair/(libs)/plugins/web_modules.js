@@ -25,7 +25,11 @@ exports.exec = function(settings, options, cb) { // eslint-disable no-unused-var
     const doCopy = () => {
         options.logger(1, '', modName);
         fsx.ensureDirSync(dest);
-        copyDir.sync(src, dest);
+        copyDir.sync(src, dest, {
+            utimes: true,
+            mode: true,
+            cover: true
+          });
     };
     for(let module of options.profiles.current.modules) {
         modName = module;

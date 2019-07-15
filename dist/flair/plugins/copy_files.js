@@ -28,7 +28,11 @@ exports.exec = function(settings, options, cb) { // eslint-disable no-unused-var
             options.logger(1, '', './' + path.join(options.src, fileOrFolder));
             if (fsx.lstatSync(src).isDirectory()) {
                 fsx.ensureDirSync(dest);
-                copyDir.sync(src, dest);
+                copyDir.sync(src, dest, {
+                    utimes: true,
+                    mode: true,
+                    cover: true
+                  });
             } else {
                 fsx.ensureDirSync(path.dirname(dest));
                 fsx.copyFileSync(src, dest);
