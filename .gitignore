@@ -1,6 +1,5 @@
 node_modules/
 publish/
--docs/
 temp/
 yarn-error.log
 .DS_Store
