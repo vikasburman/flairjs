@@ -1,4 +1,4 @@
-[![](./docs/images/logo_S.png)Flair.js](https://flairjs.com)
+[Flair.js](https://flairjs.com)
 ---
 
 _True object orientated features for plain vanilla JavaScript_
