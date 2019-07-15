@@ -1,7 +1,7 @@
 [![](./docs/images/logo_S.png)Flair.js](https://flairjs.com)
 ---
 
-_True object orientation features for plain vanilla JavaScript_
+_True object orientated features for plain vanilla JavaScript_
 
 [![Build Status](https://travis-ci.com/vikasburman/flairjs.svg?branch=master)](https://travis-ci.com/vikasburman/flairjs) 
 [![Dependencies](https://david-dm.org/vikasburman/flairjs.svg)](https://david-dm.org/vikasburman/flairjs)
