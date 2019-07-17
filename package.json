@@ -32,7 +32,7 @@
         "test": "gulp test --TEST --options ./config/test.json",
         "test-client": "gulp test --TEST --client --options ./config/test.json",
         "package": "gulp package --options ./config/pack.json && npm pack ./publish/package/npm",
-        "start": "http-server ./ -p8088 &",
+        "start": "http-server ./debug/www/ -p8088 &",
         "stop": "pkill -f http-server"
     },
     "devDependencies": {
