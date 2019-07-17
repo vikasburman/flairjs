@@ -45,17 +45,28 @@
     /* eslint-enable no-unused-vars */
 
     // flairapp bootstrapper
-    let flair = async (entryPointOrADO, config) => {
-        // register ADO or start App
-        if (entryPointOrADO !== null && typeof entryPointOrADO === 'object') {
-            flair.AppDomain.registerAdo(entryPointOrADO);
+    let flair = async (arg1, arg2) => {
+        let ADO = null,
+            options = null;
+        if (typeof arg1 === 'string') { // just the  entry point is specified
+            options = { main: arg1 };
+        } else if (arg1.main && arg1.module && arg1.engine) { // this is start options object
+            options = arg1;
         } else {
+            ADO = arg1;
+        }
+        
+        if (options) {
+            if (typeof arg2 === 'string') { options.config = arg2; } // config is also given
             if (!isAppStarted) {
                 // boot
-                isAppStarted = await flair.AppDomain.boot(entryPointOrADO, config);
+                isAppStarted = await flair.AppDomain.boot(options);
             }
+
             // return
             return flair.AppDomain.app();
+        } else if (ADO) {
+            flair.AppDomain.registerAdo(ADO);
         }
     };
 

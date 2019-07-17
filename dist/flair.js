@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.9.12
- *  Wed, 17 Jul 2019 20:47:01 GMT
+ *  Version: 0.9.20
+ *  Wed, 17 Jul 2019 22:08:48 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -45,17 +45,28 @@
     /* eslint-enable no-unused-vars */
 
     // flairapp bootstrapper
-    let flair = async (entryPointOrADO, config) => {
-        // register ADO or start App
-        if (entryPointOrADO !== null && typeof entryPointOrADO === 'object') {
-            flair.AppDomain.registerAdo(entryPointOrADO);
+    let flair = async (arg1, arg2) => {
+        let ADO = null,
+            options = null;
+        if (typeof arg1 === 'string') { // just the  entry point is specified
+            options = { main: arg1 };
+        } else if (arg1.main && arg1.module && arg1.engine) { // this is start options object
+            options = arg1;
         } else {
+            ADO = arg1;
+        }
+        
+        if (options) {
+            if (typeof arg2 === 'string') { options.config = arg2; } // config is also given
             if (!isAppStarted) {
                 // boot
-                isAppStarted = await flair.AppDomain.boot(entryPointOrADO, config);
+                isAppStarted = await flair.AppDomain.boot(options);
             }
+
             // return
             return flair.AppDomain.app();
+        } else if (ADO) {
+            flair.AppDomain.registerAdo(ADO);
         }
     };
 
@@ -2029,13 +2040,17 @@
         this.allTypes = () => { return Object.keys(asmTypes); }
     
         // app domain start/restart
-        this.boot = async (__entryPoint, __config) => {
-            __config = __config || this.config();
-            __entryPoint = __entryPoint || this.entryPoint();
+        this.boot = async (bootOptions) => {
+            bootOptions = bootOptions || {};
+    
+            let __entryPoint = bootOptions.main || this.entryPoint(),
+                __config = bootOptions.config || this.config() || which(settings.config),
+                __bootModule = bootOptions.module || settings.bootModule,
+                __bootEngine = bootOptions.engine || settings.bootEngine;
     
             // don't boot if bootEngine and fabric module is not configured
-            if (!settings.forwardLink || !settings.forwardLink.fabric || !settings.forwardLink.bootEngine) {
-                console.log('Forward links are not configured, boot aborted.'); // eslint-disable-line no-console
+            if (!__bootModule || !__bootEngine) {
+                console.log('Boot configuration is not available, boot aborted.'); // eslint-disable-line no-console
                 return false; 
             }
     
@@ -2072,19 +2087,19 @@
                 await this.config(__config);
             }
     
-            // load fabric module's preamble, if defined
-            let fabricPreambleFile = settings.forwardLink.fabric + '/preamble.js';
-            let preambleLoader = await _include(fabricPreambleFile); // this loads it as an async function which is called here
+            // load boot module's preamble, if defined
+            let bootModulePreambleFile = __bootModule + '/preamble.js';
+            let preambleLoader = await _include(bootModulePreambleFile); // this loads it as an async function which is called here
             if (!preambleLoader) { 
-                console.log('Could not load forward link preamble, boot aborted.'); // eslint-disable-line no-console
-                return false; 
+                console.log('Could not load boot module preamble, boot aborted.'); // eslint-disable-line no-console
+                return false;
             }
             await preambleLoader(flair);
     
             // boot 
-            let be = await _include(settings.bootEngine);
+            let be = await _include(__bootEngine);
             if (!be) { 
-                console.log('Could not load configured boot engine, boot aborted.'); // eslint-disable-line no-console
+                console.log('Could not load boot engine, boot aborted.'); // eslint-disable-line no-console
                 return false; 
             }
             isBooted = await be.start();
@@ -7207,10 +7222,10 @@
         name: 'flairjs',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.9.12',
+        version: '0.9.20',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Wed, 17 Jul 2019 20:47:01 GMT')
+        lupdate: new Date('Wed, 17 Jul 2019 22:08:48 GMT')
     });  
 
     // bundled assembly load process 
@@ -7248,7 +7263,7 @@
         AppDomain.loadPathOf('flair', __currentPath);
         
         // settings of this assembly
-        let settings = JSON.parse('{"forwardLink":{"fabric":"flairjs-fabric","bootEngine":"flair.app.BootEngine"}}');
+        let settings = JSON.parse('{"bootModule":"flairjs-fabric","bootEngine":"flair.app.BootEngine","config":"./appConfig.json | ./webConfig.json"}');
         let settingsReader = flair.Port('settingsReader');
         if (typeof settingsReader === 'function') {
             let externalSettings = settingsReader('flair');
@@ -7607,7 +7622,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.9.12","lupdate":"Wed, 17 Jul 2019 20:47:01 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.9.20","lupdate":"Wed, 17 Jul 2019 22:08:48 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 

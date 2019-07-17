@@ -162,13 +162,17 @@ const AppDomain = function(name) {
     this.allTypes = () => { return Object.keys(asmTypes); }
 
     // app domain start/restart
-    this.boot = async (__entryPoint, __config) => {
-        __config = __config || this.config();
-        __entryPoint = __entryPoint || this.entryPoint();
+    this.boot = async (bootOptions) => {
+        bootOptions = bootOptions || {};
+
+        let __entryPoint = bootOptions.main || this.entryPoint(),
+            __config = bootOptions.config || this.config() || which(settings.config),
+            __bootModule = bootOptions.module || settings.bootModule,
+            __bootEngine = bootOptions.engine || settings.bootEngine;
 
         // don't boot if bootEngine and fabric module is not configured
-        if (!settings.forwardLink || !settings.forwardLink.fabric || !settings.forwardLink.bootEngine) {
-            console.log('Forward links are not configured, boot aborted.'); // eslint-disable-line no-console
+        if (!__bootModule || !__bootEngine) {
+            console.log('Boot configuration is not available, boot aborted.'); // eslint-disable-line no-console
             return false; 
         }
 
@@ -205,19 +209,19 @@ const AppDomain = function(name) {
             await this.config(__config);
         }
 
-        // load fabric module's preamble, if defined
-        let fabricPreambleFile = settings.forwardLink.fabric + '/preamble.js';
-        let preambleLoader = await _include(fabricPreambleFile); // this loads it as an async function which is called here
+        // load boot module's preamble, if defined
+        let bootModulePreambleFile = __bootModule + '/preamble.js';
+        let preambleLoader = await _include(bootModulePreambleFile); // this loads it as an async function which is called here
         if (!preambleLoader) { 
-            console.log('Could not load forward link preamble, boot aborted.'); // eslint-disable-line no-console
-            return false; 
+            console.log('Could not load boot module preamble, boot aborted.'); // eslint-disable-line no-console
+            return false;
         }
         await preambleLoader(flair);
 
         // boot 
-        let be = await _include(settings.bootEngine);
+        let be = await _include(__bootEngine);
         if (!be) { 
-            console.log('Could not load configured boot engine, boot aborted.'); // eslint-disable-line no-console
+            console.log('Could not load boot engine, boot aborted.'); // eslint-disable-line no-console
             return false; 
         }
         isBooted = await be.start();

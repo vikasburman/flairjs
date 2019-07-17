@@ -15,7 +15,7 @@
         module.exports = exports = loader; // CommonJS        
     } else { // expose as global on window
         root['preambles'] = root['preambles'] || [];
-        root['preambles'][].push(loader);
+        root['preambles'].push(loader);
     }
 })(this, async function(flair) {
     'use strict';

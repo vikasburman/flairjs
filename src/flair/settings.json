@@ -1,6 +1,5 @@
 {
-    "forwardLink": {
-        "fabric": "flairjs-fabric",
-        "bootEngine": "flair.app.BootEngine"
-    }
+    "bootModule": "flairjs-fabric",
+    "bootEngine": "flair.app.BootEngine",
+    "config": "./appConfig.json | ./webConfig.json"
 }
