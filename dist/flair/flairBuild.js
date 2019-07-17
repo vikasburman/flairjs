@@ -65,7 +65,7 @@
         return ['/'].concat(_getFolders());
     };
     const delAll = (root) => {
-    del.sync([root + '/**', '!' + root]);
+        del.sync([root + '/**', '!' + root]);
     };
     const escapeRegExp = (string) => {
         return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");  // eslint-disable-line no-useless-escape
@@ -1377,8 +1377,38 @@
             }
         };
 
+        // local debug help
+        const installAsModuleForDebug = () => {
+            // copy under ./node_modules folder
+            let moduleDest = './node_modules/' + options.packageJSON.name;
+            fsx.ensureDirSync(moduleDest);
+            copyDir.sync(options.dest, moduleDest, {
+                utimes: true,
+                mode: true,
+                cover: true
+            });
+
+            // copy under modules folder
+            moduleDest = './debug/www/modules/' + options.packageJSON.name;
+            fsx.ensureDirSync(moduleDest);
+            copyDir.sync(options.dest, moduleDest, {
+                utimes: true,
+                mode: true,
+                cover: true
+            });
+        };
+
         // start
-        startBuild(buildDone);
+        startBuild(() => {
+            if (options.copyAfterBuild) {
+                // if packaged, for local testing via /debug/server.js and /debug/client.html
+                // make fake installation as module for both server and client scenarios
+                installAsModuleForDebug();
+            }
+
+            // all done
+            buildDone()
+        });
     };
 
     // engine wrapper
@@ -1431,6 +1461,8 @@
      *              }
      *              packaged: boolean - true, if whole build is being packaged as a module, false otherwise
      *                        This is forced to be false in custom build where paths are statically resolved at build time
+     *              copyAfterBuild: boolean - if packaged is true, and local debugging is required, setting this to true, will copy content of dist folder
+     *                          under node_module/<package-name>/ and debug/www/modules/<package-name> folder
      *              fullBuild: true/false   - is full build to be done
      *              skipBumpVersion: true/false - if skip bump version with build
      *              suppressLogging: true/false  - if build time log is to be shown on terminal
@@ -1646,6 +1678,7 @@
         options.customBuildConfig = options.customBuildConfig || '';
 
         options.packaged = options.customBuild ? false : (options.packaged || false);
+        options.copyAfterBuild = options.packaged ? (options.copyAfterBuild  !== undefined ? options.copyAfterBuild : false) : false;
         
         options.fullBuild = options.fullBuild || false;
         options.quickBuild = (!options.fullBuild && options.quickBuild) || false;
