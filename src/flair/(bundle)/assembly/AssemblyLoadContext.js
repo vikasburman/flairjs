@@ -263,8 +263,10 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         let asmADO = this.domain.getAdo(file),
             file2 = file;
         if (file2.startsWith('./')) { file2 = file2.substr(2); }
-        if (asmADO && asmADO.mainAssembly) { // in relation to mainAssembly
-            file2 = this.domain.loadPathOf(asmADO.mainAssembly) + file2;
+        if (asmADO && asmADO.package) { // is packaged as module
+            // on server require() finds modules automatically
+            // on client modules are supposed to be inside ./modules/ folder, therefore prefix it
+            if (!isServer) { file2 = `./${modulesRootFolder}/${asmADO.package}/${file2}`; }
         } else { // in relation to start location
             file2 = this.domain.root() + file2;
         }

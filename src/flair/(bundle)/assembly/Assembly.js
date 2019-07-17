@@ -8,7 +8,7 @@ const Assembly = function (ado, alc, asmClosureVars) {
 
     this.name = ado.name;
     this.file = ado.file;
-    this.mainAssembly = ado.mainAssembly;
+    this.package = ado.package;
     this.desc = ado.desc;
     this.title = ado.title;
     this.version = ado.version;

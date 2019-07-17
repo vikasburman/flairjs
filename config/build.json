@@ -5,7 +5,7 @@
     "customBuild": false,
     "customBuildConfig": "./config/custom.json",
 
-    "mainAssembly": "flair",
+    "packaged": true,
     
     "fullBuild": false,
     "clean": true,

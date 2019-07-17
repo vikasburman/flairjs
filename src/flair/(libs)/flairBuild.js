@@ -515,7 +515,7 @@
                 // each ADO object has:
                 //      "name": "", 
                 //      "file": "",
-                //      "mainAssembly": "",
+                //      "package": "",
                 //      "desc": "",
                 //      "title": "",
                 //      "version": "",
@@ -530,7 +530,7 @@
                 options.current.ado = {
                     name: options.current.asmName,
                     file: options.current.asmFileName.replace('.js', '{.min}.js'),
-                    mainAssembly: options.mainAssembly,
+                    package: (options.packaged ? options.packageJSON.name : ''),
                     desc: options.packageJSON.description,
                     title: options.packageJSON.title,
                     version: options.packageJSON.version,
@@ -1429,8 +1429,8 @@
      *                      }
      *                  }
      *              }
-     *              mainAssembly: string - name of the mainAssembly, whose load location will be dynamically used as reference to load other assemblies
-     *                            This is ignored in custom build where paths are statically resolved at build time
+     *              packaged: boolean - true, if whole build is being packaged as a module, false otherwise
+     *                        This is forced to be false in custom build where paths are statically resolved at build time
      *              fullBuild: true/false   - is full build to be done
      *              skipBumpVersion: true/false - if skip bump version with build
      *              suppressLogging: true/false  - if build time log is to be shown on terminal
@@ -1645,7 +1645,7 @@
         options.customBuild = options.customBuild || false; 
         options.customBuildConfig = options.customBuildConfig || '';
 
-        options.mainAssembly = options.customBuild ? '' : (options.mainAssembly || '');
+        options.packaged = options.customBuild ? false : (options.packaged || false);
         
         options.fullBuild = options.fullBuild || false;
         options.quickBuild = (!options.fullBuild && options.quickBuild) || false;
