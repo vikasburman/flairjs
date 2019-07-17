@@ -1379,6 +1379,13 @@
 
         // local debug help
         const installAsModuleForDebug = () => {
+            // NOTE: This does not copy everything and this copy does not
+            // behave as true module, e.g., package.json is not copied which means
+            // require('<package-name>'); alone will not work, instead file being required from within module
+            // must be named. 
+            // Since the purpose is only explicit debugging and ensuring that
+            // file paths of 'include' calls are resolved fine, this feature exists here
+
             // copy under ./node_modules folder
             let moduleDest = './node_modules/' + options.packageJSON.name;
             fsx.ensureDirSync(moduleDest);
