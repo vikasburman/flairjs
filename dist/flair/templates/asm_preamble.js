@@ -14,7 +14,8 @@
         }
         module.exports = exports = loader; // CommonJS        
     } else { // expose as global on window
-        root['flair.preamble'] = loader; // always overwrites
+        root['preambles'] = root['preambles'] || [];
+        root['preambles'][].push(loader);
     }
 })(this, async function(flair) {
     'use strict';
