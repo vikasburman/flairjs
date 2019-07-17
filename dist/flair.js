@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.9.7
- *  Wed, 17 Jul 2019 00:00:28 GMT
+ *  Version: 0.9.12
+ *  Wed, 17 Jul 2019 20:47:01 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -2033,9 +2033,9 @@
             __config = __config || this.config();
             __entryPoint = __entryPoint || this.entryPoint();
     
-            // don't boot if bootEngine is not configured
-            if (!settings.bootEngine) {
-                console.log('No boot engine is configured, boot aborted.'); // eslint-disable-line no-console
+            // don't boot if bootEngine and fabric module is not configured
+            if (!settings.forwardLink || !settings.forwardLink.fabric || !settings.forwardLink.bootEngine) {
+                console.log('Forward links are not configured, boot aborted.'); // eslint-disable-line no-console
                 return false; 
             }
     
@@ -2072,13 +2072,22 @@
                 await this.config(__config);
             }
     
+            // load fabric module's preamble, if defined
+            let fabricPreambleFile = settings.forwardLink.fabric + '/preamble.js';
+            let preambleLoader = await _include(fabricPreambleFile); // this loads it as an async function which is called here
+            if (!preambleLoader) { 
+                console.log('Could not load forward link preamble, boot aborted.'); // eslint-disable-line no-console
+                return false; 
+            }
+            await preambleLoader(flair);
+    
             // boot 
             let be = await _include(settings.bootEngine);
             if (!be) { 
                 console.log('Could not load configured boot engine, boot aborted.'); // eslint-disable-line no-console
                 return false; 
             }
-            isBooted = await be.start(); 
+            isBooted = await be.start();
     
             // return
             return isBooted;
@@ -7198,10 +7207,10 @@
         name: 'flairjs',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.9.7',
+        version: '0.9.12',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Wed, 17 Jul 2019 00:00:28 GMT')
+        lupdate: new Date('Wed, 17 Jul 2019 20:47:01 GMT')
     });  
 
     // bundled assembly load process 
@@ -7239,7 +7248,7 @@
         AppDomain.loadPathOf('flair', __currentPath);
         
         // settings of this assembly
-        let settings = JSON.parse('{"bootEngine":"flair.app.BootEngine"}');
+        let settings = JSON.parse('{"forwardLink":{"fabric":"flairjs-fabric","bootEngine":"flair.app.BootEngine"}}');
         let settingsReader = flair.Port('settingsReader');
         if (typeof settingsReader === 'function') {
             let externalSettings = settingsReader('flair');
@@ -7598,7 +7607,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.9.7","lupdate":"Wed, 17 Jul 2019 00:00:28 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","mainAssembly":"flair","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.9.12","lupdate":"Wed, 17 Jul 2019 20:47:01 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 

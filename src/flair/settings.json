@@ -1,3 +1,6 @@
 {
-    "bootEngine": "flair.app.BootEngine"
+    "forwardLink": {
+        "fabric": "flairjs-fabric",
+        "bootEngine": "flair.app.BootEngine"
+    }
 }

@@ -7,13 +7,19 @@
             "label": "startserver",
             "type": "shell",
             "command": "yarn start",
-            "problemMatcher": []
+            "problemMatcher": [],
+            "presentation": {
+                "showReuseMessage": false
+           }            
         },
         {
             "label": "stopserver",
             "type": "shell",
             "command": "yarn stop",
-            "problemMatcher": []
+            "problemMatcher": [],
+            "presentation": {
+                "showReuseMessage": false
+           }            
         }
 
     ]

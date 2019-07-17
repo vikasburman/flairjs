@@ -166,9 +166,9 @@ const AppDomain = function(name) {
         __config = __config || this.config();
         __entryPoint = __entryPoint || this.entryPoint();
 
-        // don't boot if bootEngine is not configured
-        if (!settings.bootEngine) {
-            console.log('No boot engine is configured, boot aborted.'); // eslint-disable-line no-console
+        // don't boot if bootEngine and fabric module is not configured
+        if (!settings.forwardLink || !settings.forwardLink.fabric || !settings.forwardLink.bootEngine) {
+            console.log('Forward links are not configured, boot aborted.'); // eslint-disable-line no-console
             return false; 
         }
 
@@ -205,13 +205,22 @@ const AppDomain = function(name) {
             await this.config(__config);
         }
 
+        // load fabric module's preamble, if defined
+        let fabricPreambleFile = settings.forwardLink.fabric + '/preamble.js';
+        let preambleLoader = await _include(fabricPreambleFile); // this loads it as an async function which is called here
+        if (!preambleLoader) { 
+            console.log('Could not load forward link preamble, boot aborted.'); // eslint-disable-line no-console
+            return false; 
+        }
+        await preambleLoader(flair);
+
         // boot 
         let be = await _include(settings.bootEngine);
         if (!be) { 
             console.log('Could not load configured boot engine, boot aborted.'); // eslint-disable-line no-console
             return false; 
         }
-        isBooted = await be.start(); 
+        isBooted = await be.start();
 
         // return
         return isBooted;

@@ -6,7 +6,8 @@
   <body>
     <script src="../dist/flair.js"></script>
     <script type="text/javascript">
-      console.log(`${flair.info.name} - v${flair.info.version} loaded!`);
+      let message = `${flair.info.name} - v${flair.info.version} loaded!`;
+      document.body.innerText = message;
       debugger;
     </script>
   </body>
