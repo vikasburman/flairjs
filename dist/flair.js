@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.9.35
- *  Thu, 18 Jul 2019 01:19:45 GMT
+ *  Version: 0.9.36
+ *  Thu, 18 Jul 2019 01:42:33 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -1177,9 +1177,13 @@
                 file2 = file;
             if (file2.startsWith('./')) { file2 = file2.substr(2); }
             if (asmADO && asmADO.package) { // is packaged as module
-                // on server require() finds modules automatically
-                // on client modules are supposed to be inside ./modules/ folder, therefore prefix it
-                if (!isServer) { file2 = `./${modulesRootFolder}/${asmADO.package}/${file2}`; }
+                if (!isServer) { 
+                    // on client modules are supposed to be inside ./modules/ folder, therefore prefix it
+                    file2 = `./${modulesRootFolder}/${asmADO.package}/${file2}`; 
+                } else {
+                    // on server require() finds modules automatically - just package-name needs to be prefixed
+                    file2 = `${asmADO.package}/${file2}`; 
+                }
             } else { // in relation to start location
                 file2 = this.domain.root() + file2;
             }
@@ -7231,10 +7235,10 @@
         name: 'flairjs',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.9.35',
+        version: '0.9.36',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Thu, 18 Jul 2019 01:19:45 GMT')
+        lupdate: new Date('Thu, 18 Jul 2019 01:42:33 GMT')
     });  
 
     // bundled assembly load process 
@@ -7631,7 +7635,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.9.35","lupdate":"Thu, 18 Jul 2019 01:19:45 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.9.36","lupdate":"Thu, 18 Jul 2019 01:42:33 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
