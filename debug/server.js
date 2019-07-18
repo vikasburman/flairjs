@@ -1,3 +1,3 @@
-const flair = require('flairjs/flair.js');
+const flair = require('../dist/flair.js');
 console.log(`${flair.info.name} - v${flair.info.version} loaded!`);
 debugger;

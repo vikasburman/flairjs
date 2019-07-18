@@ -15,6 +15,7 @@
         ],
         "globals": [
             "global",
+            "globalThis",
             "window",
             "WorkerGlobalScope",
             "flair",

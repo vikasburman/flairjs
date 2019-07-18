@@ -1,5 +1,4 @@
 node_modules/
-debug/www/modules/
 publish/
 temp/
 yarn-error.log

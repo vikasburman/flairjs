@@ -24,7 +24,7 @@
     } else { // expose as global on window
         root.flair = factory();
     }
-})(this, function() {
+})((this || globalThis), function() {
     'use strict';
 
     /* eslint-disable no-unused-vars */
