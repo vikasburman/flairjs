@@ -1263,7 +1263,7 @@
                         target = path.join(options.dest, theProfile.dest);
                     }
                 } else {
-                    target = './' + path.join(options.dest, theProfile.root); 
+                    target = './' + path.join(options.dest, (theProfile.root || profileName)); // if root is not defined, it means the folder name is same as profilename
                 }
                 return target;
             };
@@ -1304,7 +1304,16 @@
             // define profile to process
             let profileItem = options.profiles.splice(0, 1)[0]; // pick from top
             options.profiles.current = Object.assign({}, options.customBuildConfig.profiles[profileItem.profile]); // use a copy
+
+            // set defaults for profile
+            options.profiles.current.root = options.profiles.current.root || profileItem.profile;
             options.profiles.current.dest = getProfileTarget(profileItem.profile);
+            options.profiles.current.skipMinify = (typeof options.profiles.current.skipMinify !== 'undefined' ? options.profiles.current.skipMinify : false);
+            options.profiles.current.omitRoot = (typeof options.profiles.current.omitRoot !== 'undefined' ? options.profiles.current.omitRoot : false);
+            options.profiles.current.modules = options.profiles.current.modules || [];
+            options.profiles.current.copy = options.profiles.current.copy || [];
+            options.profiles.current.minify = options.profiles.current.minify || [];
+            options.profiles.current.build = options.profiles.current.build || [];
             
             // define source folders to process
             let srcList = [].concat(...options.profiles.current.build);
@@ -1412,6 +1421,7 @@
      *                  "profiles": {
      *                      "<profileName>": {
      *                          "root": ""  - root folder name where source of this profile is kept - this is used for identification of content under dest folder only - not used for any prefixing with other paths in profile
+     *                                        if this is absent or not defined, it is assumed to be same as profilename itself
      *                          "dest": "" - dest folder name where built/processed files are anchored under dest folder
      *                                      it can be:
      *                                          (empty) or absence of this, means, put it in same root folder name under dest
@@ -1419,11 +1429,13 @@
      *                                          @<profileName> - to place files in same root folder name under dest folder of given profileName
      *                          "skipMinify": true/false 
      *                                      if true, minification for assemblies under this profile will be skipped, this is useful for server side assemblies
+     *                                      default is false
      *                          "omitRoot": true/false
      *                                      if true, it will replace root folder name with "" when building assembly file path and name for preamble
      *                                      this is generally set to true for client installation, if client files are being served from inside server files
+     *                                      default is false
      *                          "modules": [ ] - copy all specified "node_modules" to a root "modules" folder as is, - to handle some modules at client-side
-     *                                           NOTE: unlike broserify, it does not check dependencies, therefore only those modules which work independently, are suited for this
+     *                                           NOTE: unlike browserify, it does not check dependencies, therefore only those modules which work independently, are suited for this
      *                          "copy": [ ] - having path (relative to src path) to copy as is on dest folder
      *                          "minify": [ ] - having path (relative to src path) of files which need to be minified (at same place, same name .min.ext file will be created)
      *                          "build": [ ] - having path (relative to src path) to treat as assembly folder group
