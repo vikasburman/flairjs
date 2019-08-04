@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.9.38
- *  Sun, 04 Aug 2019 00:34:32 GMT
+ *  Version: 0.9.49
+ *  Sun, 04 Aug 2019 04:19:44 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -17,10 +17,11 @@
     if (typeof define === 'function' && define.amd) { // AMD support
         define(factory);
     } else if (typeof exports === 'object') { // CommonJS and Node.js module support
+        let fo = factory();
         if (typeof module !== 'undefined' && module.exports) {
-            exports = module.exports = factory(); // Node.js specific `module.exports`
+            exports = module.exports = fo; // Node.js specific `module.exports`
         }
-        module.exports = exports = factory(); // CommonJS        
+        module.exports = exports = fo; // CommonJS        
     } else { // expose as global on window
         root.flair = factory();
     }
@@ -30,7 +31,7 @@
     /* eslint-disable no-unused-vars */
     // locals
     let isServer = new Function("try {return this===global;}catch(e){return false;}")(),
-        isWorker = isServer ? (!require('worker_threads').isMainThread) : (typeof WorkerGlobalScope !== 'undefined' ? true : false),
+        isWorker = false,
         sym = [],
         meta = Symbol('[meta]'),
         modulesRootFolder = 'modules',
@@ -43,6 +44,18 @@
         config = {},
         isAppStarted = false;
     /* eslint-enable no-unused-vars */
+
+    // worker setting
+    if (isServer) {
+        try {
+            let worker_threads = require('worker_threads');
+            isWorker = worker_threads.isMainThread;
+        } catch (err) { // eslint-disable-line no-unused-vars
+            isWorker = false;
+        }
+    } else { // client
+        isWorker = (typeof WorkerGlobalScope !== 'undefined' ? true : false);
+    }
 
     // flairapp bootstrapper
     let flair = async (arg1, arg2) => {
@@ -74,7 +87,8 @@
     if (isServer) {
         let argv = process.argv;
         if (isWorker) {
-            argv = require('worker_threads').workerData.argv;
+            let workerData = require('worker_threads').workerData;
+            argv = workerData ? workerData.argv : [];
         }
         let idx = argv.findIndex((item) => { return (item.startsWith('--flairSymbols') ? true : false); });
         if (idx !== -1) { argsString = argv[idx].substr(2).split('=')[1]; }
@@ -244,7 +258,8 @@
     _Exception.InvalidOperation = (name, stStart = _Exception.InvalidOperation) => { return new _Exception('InvalidOperation', `Operation is invalid in current context. (${name})`, stStart); }
     _Exception.Circular = (name, stStart = _Exception.Circular) => { return new _Exception('Circular', `Circular calls found. (${name})`, stStart); }
     _Exception.NotImplemented = (name, stStart = _Exception.NotImplemented) => { return new _Exception('NotImplemented', `Member is not implemented. (${name})`, stStart); }
-    _Exception.NotDefined = (name, stStart = _Exception.NotDefined) => { return new _Exception('NotFound', `Member is not defined or is not accessible. (${name})`, stStart); }
+    _Exception.NotDefined = (name, stStart = _Exception.NotDefined) => { return new _Exception('NotDefined', `Member is not defined or is not accessible. (${name})`, stStart); }
+    _Exception.NotAvailable = (name, stStart = _Exception.NotDefined) => { return new _Exception('NotAvailable', `Feature is not available. (${name})`, stStart); }
     
     // attach to flair
     a2f('Exception', _Exception);
@@ -1959,6 +1974,14 @@
         this.createDomain = (name) => {
             return new Promise((resolve, reject) => {
                 if(typeof name !== 'string' || (name && name === 'default') || domains[name]) { reject(_Exception.InvalidArguments('name')); return; }
+                if (isServer) {
+                    try {
+                        let worker_threads = require('worker_threads'); // eslint-disable-line no-unused-vars
+                    } catch (err) { // eslint-disable-line no-unused-vars
+                        reject(_Exception.NotAvailable('worker_threads')); 
+                        return;
+                    }
+                }
                 let proxy = Object.freeze(new AppDomainProxy(name, domains, allADOs));
                 domains[name] = proxy;
                 resolve(proxy);
@@ -7235,10 +7258,10 @@
         name: 'flairjs',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.9.38',
+        version: '0.9.49',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 04 Aug 2019 00:34:32 GMT')
+        lupdate: new Date('Sun, 04 Aug 2019 04:19:44 GMT')
     });  
 
     // bundled assembly load process 
@@ -7635,7 +7658,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.9.38","lupdate":"Sun, 04 Aug 2019 00:34:32 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.9.49","lupdate":"Sun, 04 Aug 2019 04:19:44 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 

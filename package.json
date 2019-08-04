@@ -3,7 +3,7 @@
     "title": "Flair.js",
     "description": "True Object Oriented JavaScript",
     "copyright": "(c) 2017-2019 Vikas Burman",
-    "version": "0.9.38",
+    "version": "0.9.49",
     "author": "Vikas Burman <vikasburman@gmail.com>",
     "keywords": [
         "javascript",
@@ -15,7 +15,7 @@
         "es7"
     ],
     "engines": {
-        "node": "12"
+        "node": ">=10"
     },
     "license": "MIT",
     "link": "https://flairjs.com",

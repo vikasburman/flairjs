@@ -75,6 +75,14 @@ const AppDomain = function(name) {
     this.createDomain = (name) => {
         return new Promise((resolve, reject) => {
             if(typeof name !== 'string' || (name && name === 'default') || domains[name]) { reject(_Exception.InvalidArguments('name')); return; }
+            if (isServer) {
+                try {
+                    let worker_threads = require('worker_threads'); // eslint-disable-line no-unused-vars
+                } catch (err) { // eslint-disable-line no-unused-vars
+                    reject(_Exception.NotAvailable('worker_threads')); 
+                    return;
+                }
+            }
             let proxy = Object.freeze(new AppDomainProxy(name, domains, allADOs));
             domains[name] = proxy;
             resolve(proxy);

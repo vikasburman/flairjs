@@ -17,10 +17,11 @@
     if (typeof define === 'function' && define.amd) { // AMD support
         define(factory);
     } else if (typeof exports === 'object') { // CommonJS and Node.js module support
+        let fo = factory();
         if (typeof module !== 'undefined' && module.exports) {
-            exports = module.exports = factory(); // Node.js specific `module.exports`
+            exports = module.exports = fo; // Node.js specific `module.exports`
         }
-        module.exports = exports = factory(); // CommonJS        
+        module.exports = exports = fo; // CommonJS        
     } else { // expose as global on window
         root.flair = factory();
     }
@@ -30,7 +31,7 @@
     /* eslint-disable no-unused-vars */
     // locals
     let isServer = new Function("try {return this===global;}catch(e){return false;}")(),
-        isWorker = isServer ? (!require('worker_threads').isMainThread) : (typeof WorkerGlobalScope !== 'undefined' ? true : false),
+        isWorker = false,
         sym = [],
         meta = Symbol('[meta]'),
         modulesRootFolder = 'modules',
@@ -43,6 +44,18 @@
         config = {},
         isAppStarted = false;
     /* eslint-enable no-unused-vars */
+
+    // worker setting
+    if (isServer) {
+        try {
+            let worker_threads = require('worker_threads');
+            isWorker = worker_threads.isMainThread;
+        } catch (err) { // eslint-disable-line no-unused-vars
+            isWorker = false;
+        }
+    } else { // client
+        isWorker = (typeof WorkerGlobalScope !== 'undefined' ? true : false);
+    }
 
     // flairapp bootstrapper
     let flair = async (arg1, arg2) => {
@@ -74,7 +87,8 @@
     if (isServer) {
         let argv = process.argv;
         if (isWorker) {
-            argv = require('worker_threads').workerData.argv;
+            let workerData = require('worker_threads').workerData;
+            argv = workerData ? workerData.argv : [];
         }
         let idx = argv.findIndex((item) => { return (item.startsWith('--flairSymbols') ? true : false); });
         if (idx !== -1) { argsString = argv[idx].substr(2).split('=')[1]; }

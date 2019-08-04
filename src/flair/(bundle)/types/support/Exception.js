@@ -84,7 +84,8 @@ _Exception.InvalidDefinition = (name, stStart = _Exception.InvalidDefinition) =>
 _Exception.InvalidOperation = (name, stStart = _Exception.InvalidOperation) => { return new _Exception('InvalidOperation', `Operation is invalid in current context. (${name})`, stStart); }
 _Exception.Circular = (name, stStart = _Exception.Circular) => { return new _Exception('Circular', `Circular calls found. (${name})`, stStart); }
 _Exception.NotImplemented = (name, stStart = _Exception.NotImplemented) => { return new _Exception('NotImplemented', `Member is not implemented. (${name})`, stStart); }
-_Exception.NotDefined = (name, stStart = _Exception.NotDefined) => { return new _Exception('NotFound', `Member is not defined or is not accessible. (${name})`, stStart); }
+_Exception.NotDefined = (name, stStart = _Exception.NotDefined) => { return new _Exception('NotDefined', `Member is not defined or is not accessible. (${name})`, stStart); }
+_Exception.NotAvailable = (name, stStart = _Exception.NotDefined) => { return new _Exception('NotAvailable', `Feature is not available. (${name})`, stStart); }
 
 // attach to flair
 a2f('Exception', _Exception);
