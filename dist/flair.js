@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.9.49
- *  Sun, 04 Aug 2019 04:19:44 GMT
+ *  Version: 0.9.50
+ *  Tue, 06 Aug 2019 04:09:20 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -114,7 +114,8 @@
         isNodeWebkit: (isServer && process.versions['node-webkit']),
         isProd: (sym.indexOf('DEBUG') === -1 && sym.indexOf('PROD') !== -1),
         isDebug: (sym.indexOf('DEBUG') !== -1),
-        isAppMode: () => { return isAppStarted; }
+        isAppMode: () => { return isAppStarted; },
+        isAppStarted: () => { return isAppStarted; }
     });
 
     // flair
@@ -381,10 +382,14 @@
         });
     };
     const getApiUrl = (url) => {
-        if (url && url.startsWith('/*/')) {
-            let apiRoot = '',
-                apiVersion = settings.version;
-
+        // any url can have following placeholders:
+        // '/**/.../*/...'
+        // /**/ represent the root of the url
+        // /*/ represent the version part of the url
+        // e.g. 
+        // '/**/api/*/now' --> https://us-east1-flairjs-firebase-app.cloudfunctions.net/api/v1/now
+        if (url.indexOf('/**/') !== -1) {
+            let apiRoot = '';
             if (flair.env.isTesting) {
                 apiRoot = settings.api.roots.test || '';
             } else if (flair.env.isDebug) {
@@ -392,18 +397,8 @@
             } else if (flair.env.isProd) {
                 apiRoot = settings.api.roots.prod || '';
             }
-
-            if (apiRoot) {
-                if (!apiRoot.endsWith('/')) { apiRoot += '/'; }
-                if (url.startsWith('/*/*/')) {
-                    if (apiVersion) {
-                        apiRoot += settings.version + '/'; // version should be written as 'v1', 'v2' which is url fragment also, but don't add any '/'
-                    }
-                    url = url.replace('/*/*/', apiRoot);
-                } else {
-                    url = url.replace('/*/', apiRoot);
-                }
-            }
+            if (apiRoot) { url = url.replace('/**/', apiRoot); }
+            if (url.indexOf('/*/') !== -1 && settings.api.version) { url = url.replace('/*/', settings.api.version); }
         }
         return url;
     };
@@ -7285,10 +7280,10 @@
         name: 'flairjs',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.9.49',
+        version: '0.9.50',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 04 Aug 2019 04:19:44 GMT')
+        lupdate: new Date('Tue, 06 Aug 2019 04:09:20 GMT')
     });  
 
     // bundled assembly load process 
@@ -7326,7 +7321,7 @@
         AppDomain.loadPathOf('flair', __currentPath);
         
         // settings of this assembly
-        let settings = JSON.parse('{"bootModule":"flairjs-fabric","bootEngine":"flair.app.BootEngine","config":"./appConfig.json | ./webConfig.json"}');
+        let settings = JSON.parse('{"bootModule":"flairjs-fabric","bootEngine":"flair.app.BootEngine","config":"./appConfig.json | ./webConfig.json","api":{"roots":{"dev":"","test":"","prod":""},"version":""}}');
         let settingsReader = flair.Port('settingsReader');
         if (typeof settingsReader === 'function') {
             let externalSettings = settingsReader('flair');
@@ -7685,7 +7680,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.9.49","lupdate":"Sun, 04 Aug 2019 04:19:44 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.9.50","lupdate":"Tue, 06 Aug 2019 04:09:20 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 

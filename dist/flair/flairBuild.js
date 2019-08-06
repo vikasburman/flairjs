@@ -1091,7 +1091,6 @@
             options.current.asmPath = './' + path.join(options.current.src, options.current.asmName);
             options.current.asm = './' + path.join(options.current.dest, options.current.asmName + '.js');
             options.current.asmFileName = ('./' + path.join(options.current.dest, options.current.asmName) + '.js').replace(options.dest, '.');
-            console.log(options.profiles.current.omitRoot);
             if (options.customBuild && options.profiles.current.omitRoot) {
                 options.current.asmFileName = options.current.asmFileName.replace(options.profiles.current.destRoot, '');
             }
