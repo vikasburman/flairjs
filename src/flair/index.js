@@ -114,8 +114,7 @@
         isNodeWebkit: (isServer && process.versions['node-webkit']),
         isProd: (sym.indexOf('DEBUG') === -1 && sym.indexOf('PROD') !== -1),
         isDebug: (sym.indexOf('DEBUG') !== -1),
-        isAppMode: () => { return isAppStarted; },
-        isAppStarted: () => { return isAppStarted; }
+        isAppMode: () => { return isAppStarted; }
     });
 
     // flair

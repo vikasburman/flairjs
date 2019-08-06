@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.9.54
- *  Tue, 06 Aug 2019 17:16:18 GMT
+ *  Version: 0.9.55
+ *  Tue, 06 Aug 2019 21:16:36 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -114,8 +114,7 @@
         isNodeWebkit: (isServer && process.versions['node-webkit']),
         isProd: (sym.indexOf('DEBUG') === -1 && sym.indexOf('PROD') !== -1),
         isDebug: (sym.indexOf('DEBUG') !== -1),
-        isAppMode: () => { return isAppStarted; },
-        isAppStarted: () => { return isAppStarted; }
+        isAppMode: () => { return isAppStarted; }
     });
 
     // flair
@@ -7280,10 +7279,10 @@
         name: 'flairjs',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.9.54',
+        version: '0.9.55',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Tue, 06 Aug 2019 17:16:18 GMT')
+        lupdate: new Date('Tue, 06 Aug 2019 21:16:36 GMT')
     });  
 
     // bundled assembly load process 
@@ -7680,7 +7679,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.9.54","lupdate":"Tue, 06 Aug 2019 17:16:18 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.9.55","lupdate":"Tue, 06 Aug 2019 21:16:36 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
