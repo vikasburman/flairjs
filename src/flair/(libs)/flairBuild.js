@@ -1447,7 +1447,7 @@
      *                  }
      *              }
      *              packaged: boolean - true, if whole build is being packaged as a module, false otherwise
-     *                        This is forced to be false in custom build where paths are statically resolved at build time
+     *                        This is forced to be false in custom build 
      *              fullBuild: true/false   - is full build to be done
      *              skipBumpVersion: true/false - if skip bump version with build
      *              suppressLogging: true/false  - if build time log is to be shown on terminal
