@@ -114,6 +114,27 @@ const loadModule = (module, globalObjName, isDelete) => {
         }
     });
 };
+const getApiUrl = (url) => {
+    // any url can have following placeholders:
+    // '/**/.../*/...'
+    // /**/ represent the root of the url
+    // /*/ represent the version part of the url
+    // e.g. 
+    // '/**/api/*/now' --> https://us-east1-flairjs-firebase-app.cloudfunctions.net/api/v1/now
+    if (url.indexOf('/**/') !== -1) {
+        let apiRoot = '';
+        if (flair.env.isTesting) {
+            apiRoot = settings.api.roots.test || '';
+        } else if (flair.env.isDebug) {
+            apiRoot = settings.api.roots.dev || '';
+        } else if (flair.env.isProd) {
+            apiRoot = settings.api.roots.prod || '';
+        }
+        if (apiRoot) { url = url.replace('/**/', apiRoot); }
+        if (url.indexOf('/*/') !== -1 && settings.api.version) { url = url.replace('/*/', settings.api.version); }
+    }
+    return url;
+};
 const apiCall = (url, resDataType, reqData) => { 
     return new Promise((resolve, reject) => {
         let fetchCaller = null;
@@ -122,7 +143,7 @@ const apiCall = (url, resDataType, reqData) => {
         } else { // client
             fetchCaller = _Port('clientFetch');
         }
-        fetchCaller(url, resDataType, reqData).then(resolve).catch(reject);
+        fetchCaller(getApiUrl(url), resDataType, reqData).then(resolve).catch(reject);
     });
 };
 const sieve = (obj, props, isFreeze, add) => {

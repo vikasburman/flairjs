@@ -380,6 +380,33 @@
             }
         });
     };
+    const getApiUrl = (url) => {
+        if (url && url.startsWith('/*/')) {
+            let apiRoot = '',
+                apiVersion = settings.version;
+
+            if (flair.env.isTesting) {
+                apiRoot = settings.api.roots.test || '';
+            } else if (flair.env.isDebug) {
+                apiRoot = settings.api.roots.dev || '';
+            } else if (flair.env.isProd) {
+                apiRoot = settings.api.roots.prod || '';
+            }
+
+            if (apiRoot) {
+                if (!apiRoot.endsWith('/')) { apiRoot += '/'; }
+                if (url.startsWith('/*/*/')) {
+                    if (apiVersion) {
+                        apiRoot += settings.version + '/'; // version should be written as 'v1', 'v2' which is url fragment also, but don't add any '/'
+                    }
+                    url = url.replace('/*/*/', apiRoot);
+                } else {
+                    url = url.replace('/*/', apiRoot);
+                }
+            }
+        }
+        return url;
+    };
     const apiCall = (url, resDataType, reqData) => { 
         return new Promise((resolve, reject) => {
             let fetchCaller = null;
@@ -388,7 +415,7 @@
             } else { // client
                 fetchCaller = _Port('clientFetch');
             }
-            fetchCaller(url, resDataType, reqData).then(resolve).catch(reject);
+            fetchCaller(getApiUrl(url), resDataType, reqData).then(resolve).catch(reject);
         });
     };
     const sieve = (obj, props, isFreeze, add) => {

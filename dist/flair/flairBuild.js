@@ -529,7 +529,7 @@
                 //      "routes": [{}, {}, ...]
                 options.current.ado = {
                     name: options.current.asmName,
-                    file: options.current.asmFileName.replace('.js', '{.min}.js'),
+                    file: ((options.minify && !options.current.skipMinify && !options.current.skipMinifyThisAssembly) ? options.current.asmFileName.replace('.js', '{.min}.js') : options.current.asmFileName),
                     package: (options.packaged ? options.packageJSON.name : ''),
                     desc: options.packageJSON.description,
                     title: options.packageJSON.title,
@@ -1091,8 +1091,9 @@
             options.current.asmPath = './' + path.join(options.current.src, options.current.asmName);
             options.current.asm = './' + path.join(options.current.dest, options.current.asmName + '.js');
             options.current.asmFileName = ('./' + path.join(options.current.dest, options.current.asmName) + '.js').replace(options.dest, '.');
+            console.log(options.profiles.current.omitRoot);
             if (options.customBuild && options.profiles.current.omitRoot) {
-                options.current.asmFileName = options.current.asmFileName.replace(options.profiles.current.root + '/', '');
+                options.current.asmFileName = options.current.asmFileName.replace(options.profiles.current.destRoot, '');
             }
             options.current.asmMain = './' + path.join(options.current.src, options.current.asmName, 'index.js');
             options.current.asyncTypeLoading = true;
@@ -1308,6 +1309,8 @@
             // set defaults for profile
             options.profiles.current.root = options.profiles.current.root || profileItem.profile;
             options.profiles.current.dest = getProfileTarget(profileItem.profile);
+            options.profiles.current.destRoot = ('./' + options.profiles.current.dest).replace(options.dest, '');
+            if (options.profiles.current.destRoot.startsWith('.//')) { options.profiles.current.destRoot = options.profiles.current.destRoot.replace('.//', '/') }
             options.profiles.current.skipMinify = (typeof options.profiles.current.skipMinify !== 'undefined' ? options.profiles.current.skipMinify : false);
             options.profiles.current.omitRoot = (typeof options.profiles.current.omitRoot !== 'undefined' ? options.profiles.current.omitRoot : false);
             options.profiles.current.modules = options.profiles.current.modules || [];
