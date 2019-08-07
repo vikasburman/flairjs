@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.9.58
- *  Wed, 07 Aug 2019 02:20:24 GMT
+ *  Version: 0.9.64
+ *  Wed, 07 Aug 2019 02:55:03 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -381,16 +381,18 @@
         });
     };
     const isLocalhost = () => {
+        let hostName = '';
         if (isServer) {
             let os = require('os');
-            return os.hostname().indexOf('local') !== -1;
+            hostName = os.hostname();
         } else {
-            return self.location.host === "localhost";
+            hostName = self.location.host;
         }
+        return hostName.indexOf('local') !== -1;
     };
     const lens = (obj, path) => path.split(".").reduce((o, key) => o && o[key] ? o[key] : null, obj);
     const globalSetting = (path, defaultValue) => {
-        let _globalSettings = options.env.isAppMode() ? AppDomain.config().global : {};
+        let _globalSettings = options.env.isAppMode() ? _AppDomain.config().global : {};
         return lens(_globalSettings, path) || defaultValue;
     };
     const getApiUrl = (url) => {
@@ -401,7 +403,8 @@
         // e.g. 
         // '/**/api/*/now' --> https://us-east1-flairjs-firebase-app.cloudfunctions.net/api/v1/now
         if (url.indexOf('/**/') !== -1) {
-            let apiRoot = '';
+            let apiRoot = '',
+                apiVersion = globalSetting('api.version', '');
             if (isLocalhost()) {
                 apiRoot = globalSetting('api.roots.local', '');
             } else if (flair.env.isTesting) {
@@ -410,9 +413,16 @@
                 apiRoot = globalSetting('api.roots.dev', '');
             } else if (flair.env.isProd) {
                 apiRoot = globalSetting('api.roots.prod', '');
+            } else { // default to dev setting finally
+                apiRoot = globalSetting('api.roots.dev', '');
             }
+            if (!apiRoot.endsWith('/')) { apiRoot += '/'; }
             if (apiRoot) { url = url.replace('/**/', apiRoot); }
-            if (url.indexOf('/*/') !== -1 && settings.api.version) { url = url.replace('/*/', settings.api.version); }
+            if (url.indexOf('/*/') !== -1 && apiVersion) { 
+                if (!apiVersion.startsWith('/')) { apiVersion = '/' + apiVersion; }
+                if (!apiVersion.endsWith('/')) { apiVersion += '/'; }
+                url = url.replace('/*/', apiVersion); 
+            }
         }
         return url;
     };
@@ -7297,10 +7307,10 @@
         name: 'flairjs',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.9.58',
+        version: '0.9.64',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Wed, 07 Aug 2019 02:20:24 GMT')
+        lupdate: new Date('Wed, 07 Aug 2019 02:55:03 GMT')
     });  
 
     // bundled assembly load process 
@@ -7697,7 +7707,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.9.58","lupdate":"Wed, 07 Aug 2019 02:20:24 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.9.64","lupdate":"Wed, 07 Aug 2019 02:55:03 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
