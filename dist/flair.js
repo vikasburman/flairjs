@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.9.65
- *  Wed, 07 Aug 2019 03:42:35 GMT
+ *  Version: 0.9.78
+ *  Wed, 07 Aug 2019 16:58:53 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -109,11 +109,12 @@
         isClient: !isServer,
         isWorker : isWorker,
         isMain: !isWorker,
+        isLocalhost: ((isServer ? require('os').hostname() : self.location.host).indexOf('local') !== -1),
         cores: ((isServer ? (require('os').cpus().length) : window.navigator.hardwareConcurrency) || 4),
         isCordova: (!isServer && !!window.cordova),
         isNodeWebkit: (isServer && process.versions['node-webkit']),
         isProd: (sym.indexOf('DEBUG') === -1 && sym.indexOf('PROD') !== -1),
-        isDebug: (sym.indexOf('DEBUG') !== -1),
+        isDebug: (sym.indexOf('PROD') === -1),
         isAppMode: () => { return isAppStarted; }
     });
 
@@ -380,16 +381,6 @@
             }
         });
     };
-    const isLocalhost = () => {
-        let hostName = '';
-        if (isServer) {
-            let os = require('os');
-            hostName = os.hostname();
-        } else {
-            hostName = self.location.host;
-        }
-        return hostName.indexOf('local') !== -1;
-    };
     const lens = (obj, path) => path.split(".").reduce((o, key) => o && o[key] ? o[key] : null, obj);
     const globalSetting = (path, defaultValue) => {
         let _globalSettings = options.env.isAppMode() ? _AppDomain.config().global : {};
@@ -405,12 +396,10 @@
         if (url.indexOf('/**/') !== -1) {
             let apiRoot = '',
                 apiVersion = globalSetting('api.version', '');
-            if (isLocalhost()) {
+            if (options.env.isLocalhost) {
                 apiRoot = globalSetting('api.roots.local', '');
             } else if (flair.env.isTesting) {
                 apiRoot = globalSetting('api.roots.test', '');
-            } else if (flair.env.isDebug) {
-                apiRoot = globalSetting('api.roots.dev', '');
             } else if (flair.env.isProd) {
                 apiRoot = globalSetting('api.roots.prod', '');
             } else { // default to dev setting finally
@@ -2123,14 +2112,14 @@
     
             let __config = '',
                 __entryPoint = bootOptions.main || this.entryPoint(),
-                __bootModule = bootOptions.module || settings.bootModule,
-                __bootEngine = bootOptions.engine || settings.bootEngine;
+                __bootModule = bootOptions.module || config.bootModule,
+                __bootEngine = bootOptions.engine || config.bootEngine;
     
             // config might be empty as well
             if (typeof bootOptions.config === 'string') {
                 __config = bootOptions.config;
             } else {
-                __config = this.config() || which(settings.config);
+                __config = this.config() || which(config.config);
             }
     
             // don't boot if bootEngine and fabric module is not configured
@@ -7291,7 +7280,6 @@
     _utils.getLoadedScript = getLoadedScript;
     _utils.b64EncodeUnicode = b64EncodeUnicode;
     _utils.b64DecodeUnicode = b64DecodeUnicode;
-    _utils.isLocalhost = isLocalhost;
     _utils.lens = lens;
     _utils.globalSetting = globalSetting;
     
@@ -7309,11 +7297,13 @@
     flair.info = Object.freeze({
         name: 'flairjs',
         title: 'Flair.js',
+        desc: 'True Object Oriented JavaScript',
+        asm: 'flair',
         file: currentFile,
-        version: '0.9.65',
+        version: '0.9.78',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Wed, 07 Aug 2019 03:42:35 GMT')
+        lupdate: new Date('Wed, 07 Aug 2019 16:58:53 GMT')
     });  
 
     // bundled assembly load process 
@@ -7334,7 +7324,7 @@
         const { TaskInfo } = flair.Tasks;
         const { env } = flair.options;
         const { guid, forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve,
-                deepMerge, getLoadedScript, b64EncodeUnicode, b64DecodeUnicode, isLocalhost, lens, globalSetting } = flair.utils;
+                deepMerge, getLoadedScript, b64EncodeUnicode, b64DecodeUnicode, lens, globalSetting } = flair.utils;
         
         // inbuilt modifiers and attributes compile-time-safe support
         const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,
@@ -7351,7 +7341,7 @@
         AppDomain.loadPathOf('flair', __currentPath);
         
         // settings of this assembly
-        let settings = JSON.parse('{"bootModule":"flairjs-fabric","bootEngine":"flair.app.BootEngine","config":"./appConfig.json | ./webConfig.json"}');
+        let settings = JSON.parse('{}');
         let settingsReader = flair.Port('settingsReader');
         if (typeof settingsReader === 'function') {
             let externalSettings = settingsReader('flair');
@@ -7360,7 +7350,7 @@
         settings = Object.freeze(settings);
         
         // config of this assembly
-        let config = JSON.parse('{}');
+        let config = JSON.parse('{"bootModule":"flairjs-fabric","bootEngine":"flair.app.BootEngine","config":"./appConfig.json | ./webConfig.json"}');
         config = Object.freeze(config);
         
         /* eslint-enable no-unused-vars */
@@ -7710,7 +7700,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.9.65","lupdate":"Wed, 07 Aug 2019 03:42:35 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.9.78","lupdate":"Wed, 07 Aug 2019 16:58:53 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 

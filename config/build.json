@@ -1,6 +1,7 @@
 {
     "dest": "./dist",
     "src": "./src",
+    "cache": "./temp",
 
     "customBuild": false,
     "customBuildConfig": "./config/custom.json",

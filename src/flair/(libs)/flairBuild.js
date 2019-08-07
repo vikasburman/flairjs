@@ -109,7 +109,7 @@
         ver[0] = parseInt(ver[0]);
         ver[1] = parseInt(ver[1]);
         ver[2] = parseInt(ver[2]);
-        if (ver[2] >= 99) {
+        if (ver[2] >= 999) {
             ver[2] = 0
             if (ver[1] >= 99) {
                 ver[1] = 0
@@ -563,7 +563,7 @@
             };
             const saveADOToCache = () => {
                 // ensure dir exists
-                fsx.ensureDir(path.dirname(options.current.adoCache));
+                fsx.ensureDirSync(path.dirname(options.current.adoCache));
 
                 // save to cache file
                 fsx.writeJSONSync(options.current.adoCache, options.current.ado, 'utf8');
@@ -1102,7 +1102,7 @@
             options.current.skipMinifyThisAssembly = (options.skipMinifyFor.indexOf(asmFolder) !== -1); // skip minify for this assembly, if this is a special file
             options.current.asmLupdate = null;
             options.current.asmContent = '';
-            options.current.adoCache = './temp/' + options.current.asmName + '.json';
+            options.current.adoCache = path.join(options.cache, options.current.asmPath + '.json');
 
             isBuildAssembly((cb) => {
                 // assembly (start)
@@ -1658,6 +1658,7 @@
 
         options.dest = options.dest || './dist';
         options.src = options.src || './src';
+        options.cache = options.cache || './temp';
     
         options.customBuild = options.customBuild || false; 
         options.customBuildConfig = options.customBuildConfig || '';
@@ -1794,6 +1795,7 @@
         // delete all dest files
         if (options.clean) {
             delAll(options.dest);
+            delAll(options.cache);
             logger(0, 'clean', 'done');
         }
 

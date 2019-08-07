@@ -175,14 +175,14 @@ const AppDomain = function(name) {
 
         let __config = '',
             __entryPoint = bootOptions.main || this.entryPoint(),
-            __bootModule = bootOptions.module || settings.bootModule,
-            __bootEngine = bootOptions.engine || settings.bootEngine;
+            __bootModule = bootOptions.module || config.bootModule,
+            __bootEngine = bootOptions.engine || config.bootEngine;
 
         // config might be empty as well
         if (typeof bootOptions.config === 'string') {
             __config = bootOptions.config;
         } else {
-            __config = this.config() || which(settings.config);
+            __config = this.config() || which(config.config);
         }
 
         // don't boot if bootEngine and fabric module is not configured

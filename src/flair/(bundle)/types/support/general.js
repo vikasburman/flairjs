@@ -114,16 +114,6 @@ const loadModule = (module, globalObjName, isDelete) => {
         }
     });
 };
-const isLocalhost = () => {
-    let hostName = '';
-    if (isServer) {
-        let os = require('os');
-        hostName = os.hostname();
-    } else {
-        hostName = self.location.host;
-    }
-    return hostName.indexOf('local') !== -1;
-};
 const lens = (obj, path) => path.split(".").reduce((o, key) => o && o[key] ? o[key] : null, obj);
 const globalSetting = (path, defaultValue) => {
     let _globalSettings = options.env.isAppMode() ? _AppDomain.config().global : {};
@@ -139,12 +129,10 @@ const getApiUrl = (url) => {
     if (url.indexOf('/**/') !== -1) {
         let apiRoot = '',
             apiVersion = globalSetting('api.version', '');
-        if (isLocalhost()) {
+        if (options.env.isLocalhost) {
             apiRoot = globalSetting('api.roots.local', '');
         } else if (flair.env.isTesting) {
             apiRoot = globalSetting('api.roots.test', '');
-        } else if (flair.env.isDebug) {
-            apiRoot = globalSetting('api.roots.dev', '');
         } else if (flair.env.isProd) {
             apiRoot = globalSetting('api.roots.prod', '');
         } else { // default to dev setting finally

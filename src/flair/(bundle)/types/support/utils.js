@@ -21,7 +21,6 @@ _utils.deepMerge = deepMerge;
 _utils.getLoadedScript = getLoadedScript;
 _utils.b64EncodeUnicode = b64EncodeUnicode;
 _utils.b64DecodeUnicode = b64DecodeUnicode;
-_utils.isLocalhost = isLocalhost;
 _utils.lens = lens;
 _utils.globalSetting = globalSetting;
 

@@ -3,7 +3,7 @@
     "title": "Flair.js",
     "description": "True Object Oriented JavaScript",
     "copyright": "(c) 2017-2019 Vikas Burman",
-    "version": "0.9.65",
+    "version": "0.9.78",
     "author": "Vikas Burman <vikasburman@gmail.com>",
     "keywords": [
         "javascript",
@@ -31,9 +31,8 @@
         "build-quick": "gulp build --quick --options ./config/build.json",
         "test": "gulp test --TEST --options ./config/test.json",
         "test-client": "gulp test --TEST --client --options ./config/test.json",
-        "package": "gulp package --options ./config/pack.json && npm pack ./publish/package/npm",
-        "start": "http-server ./ -p8088 &",
-        "stop": "pkill -f http-server"
+        "serve": "http-server ./ -p8088 && pkill -f http-server",
+        "package": "gulp package --options ./config/pack.json && npm pack ./publish/package/npm"
     },
     "devDependencies": {
         "clean-css": "^4.2.1",

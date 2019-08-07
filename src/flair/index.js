@@ -109,11 +109,12 @@
         isClient: !isServer,
         isWorker : isWorker,
         isMain: !isWorker,
+        isLocalhost: ((isServer ? require('os').hostname() : self.location.host).indexOf('local') !== -1),
         cores: ((isServer ? (require('os').cpus().length) : window.navigator.hardwareConcurrency) || 4),
         isCordova: (!isServer && !!window.cordova),
         isNodeWebkit: (isServer && process.versions['node-webkit']),
         isProd: (sym.indexOf('DEBUG') === -1 && sym.indexOf('PROD') !== -1),
-        isDebug: (sym.indexOf('DEBUG') !== -1),
+        isDebug: (sym.indexOf('PROD') === -1),
         isAppMode: () => { return isAppStarted; }
     });
 
@@ -207,6 +208,8 @@
     flair.info = Object.freeze({
         name: '<<name>>',
         title: '<<title>>',
+        desc: '<<desc>>',
+        asm: '<<asm>>',
         file: currentFile,
         version: '<<version>>',
         copyright: '<<copyright>>',

@@ -8,14 +8,14 @@
             "type": "chrome",
             "request": "launch",
             "name": "Client Mode",
-            "url": "http://localhost:8088/debug/client.html",
+            "url": "http://localhost:8088/debug/www/",
             "webRoot": "${workspaceFolder}"
         },
         {
             "type": "node",
             "request": "launch",
             "name": "Server Mode",
-            "program": "${workspaceFolder}/debug/server.js",
+            "program": "${workspaceFolder}/debug/server/main.js",
             "cwd": "${workspaceFolder}"
         }
     ]
