@@ -4,28 +4,6 @@
     <title>FlairJS Debug</title>
     <link rel="shortcut icon" href="./favicon.png">
     <link rel="stylesheet" type="text/css" href="./styles.css">
-    <script src="../../dist/flair.js"></script>
-    <script>
-      const data = {  
-         name: flair.info.name,
-         title: flair.info.title,
-         version: flair.info.version,
-         description: flair.info.desc,
-         copyright: flair.info.copyright,
-         license: flair.info.license,
-         lupdate: new Date(flair.info.lupdate).toDateString(),
-         asm: flair.info.asm,
-         file: flair.info.file,
-         env: flair.env.type + ': ' + (flair.env.isTesting ? 'testing/' : '') + (flair.env.isProd ? 'prod' : 'debug'),
-         mode: flair.env.isAppMode() ? 'framework' : 'library',
-         fileLink: '../../dist/flair.js',
-         licenseLink: 'https://raw.githubusercontent.com/vikasburman/flairjs/master/LICENSE',
-         web: 'https://flairjs.com',
-         git: 'https://github.com/vikasburman/flairjs',
-         npm: 'https://www.npmjs.com/package/flairjs',
-         cdn: 'https://cdn.jsdelivr.net/npm/flairjs'
-      };
-    </script>
   </head>
   <body>
       <div class="center">
@@ -33,22 +11,22 @@
           <div class="additional">
             <div class="user-card">
               <div class="level center none">
-                {{ title }}
+                {{ flair_title }}
               </div>
               <div class="points center small">
-                v{{ version }}
+                v{{ flair_version }}
               </div>
               <img class="center" width="50" height="50" src="./favicon.png"/>
             </div>
             <div class="more-info">
-              <h1>{{ name }}</h1>
+              <h1>{{ flair_name }}</h1>
               <div class="coords">
                 <span>License</span>
                 <span>Released</span>
               </div>
               <div class="coords"><small>
-                <span><a target="_blank" href="{{ licenseLink }}">{{ license }}</a></span>
-                <span>{{ lupdate }}</span></small>
+                <span><a target="_blank" href="{{ flair_licenseLink }}">{{ flair_license }}</a></span>
+                <span>{{ flair_lupdate }}</span></small>
               </div>
               <p></p>
               <div class="coords">
@@ -56,8 +34,8 @@
                   <span>File</span>
               </div>
               <div class="coords"><small>
-                  <span>{{ asm }}</span>
-                  <span><a target="_blank" href="{{ fileLink }}">{{ file }}</a></span></small>
+                  <span>{{ flair_asm }}</span>
+                  <span><a target="_blank" href="{{ flair_fileLink }}">{{ flair_file }}</a></span></small>
               </div>
               <p></p>
               <div class="coords">
@@ -65,38 +43,59 @@
                   <span>Mode</span>
               </div>
               <div class="coords"><small>
-                  <span>{{ env }}</span>
-                  <span>{{ mode }}</span></small>
+                  <span>{{ flair_env }}</span>
+                  <span>{{ flair_mode }}</span></small>
               </div>
 
               <div class="stats">
                 <div>
-                  <div class="title none"><a target="_blank" href="{{ web }}">Website</a></div>
+                  <div class="title none"><a target="_blank" href="{{ flair_web }}">Website</a></div>
                 </div>
                 <div>
-                  <div class="title none"><a target="_blank" href="{{ git }}">GitHub</a></div>
+                  <div class="title none"><a target="_blank" href="{{ flair_git }}">GitHub</a></div>
                 </div>
                 <div>
-                    <div class="title none"><a target="_blank" href="{{ npm }}">NPM</a></div>
+                    <div class="title none"><a target="_blank" href="{{ flair_npm }}">NPM</a></div>
                 </div>
                 <div>
-                    <div class="title none"><a target="_blank" href="{{ cdn }}">CDN</a></div>
+                    <div class="title none"><a target="_blank" href="{{ flair_cdn }}">CDN</a></div>
                 </div>
               </div>
             </div>
           </div>
           <div class="general">
-            <h1>{{ name }}</h1>
-            <p class="center-text">{{ description }}</p>
+            <h1>{{ flair_name }}</h1>
+            <p class="center-text">{{ flair_desc }}</p>
             <span class="more">more info</span>
           </div>
         </div>
       </div>
       
+
+      <script src="../../dist/flair.js"></script>
       <script>
+        const flairInfo = flair.AppDomain.getAdo('./flair.js');
+        const data = {  
+          flair_name: flairInfo.package,
+          flair_title: flairInfo.title,
+          flair_version: flairInfo.version,
+          flair_desc: flairInfo.desc,
+          flair_license: flairInfo.license,
+          flair_lupdate: new Date(flairInfo.lupdate).toDateString(),
+          flair_asm: flairInfo.name,
+          flair_file: flairInfo.file,
+          flair_env: flair.env.type + ': ' + (flair.env.isTesting ? 'testing/' : '') + (flair.env.isProd ? 'prod' : 'debug'),
+          flair_mode: flair.env.isAppMode() ? 'framework' : 'library',
+          flair_fileLink: '../../dist/flair.js',
+          flair_licenseLink: 'https://raw.githubusercontent.com/vikasburman/flairjs/master/LICENSE',
+          flair_web: 'https://flairjs.com',
+          flair_git: 'https://github.com/vikasburman/flairjs',
+          flair_npm: 'https://www.npmjs.com/package/flairjs',
+          flair_cdn: 'https://cdn.jsdelivr.net/npm/flairjs'
+        };
         document.body.innerHTML = document.body.innerHTML.replace(/\{\{\s?(\w+)\s?\}\}/g, (match, variable) => {
           return data[variable] || ''
-        });
-      </script>
+        });        
+      </script>      
   </body>
 </html>
