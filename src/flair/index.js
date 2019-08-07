@@ -228,7 +228,7 @@
     let asm = _getAssembly('[flair]');
     settings = asm.settings();
     config = asm.config();
-    
+
     // return
     return Object.freeze(flair);
 });    

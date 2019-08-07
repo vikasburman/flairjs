@@ -114,6 +114,19 @@ const loadModule = (module, globalObjName, isDelete) => {
         }
     });
 };
+const isLocalhost = () => {
+    if (isServer) {
+        let os = require('os');
+        return os.hostname().indexOf('local') !== -1;
+    } else {
+        return self.location.host === "localhost";
+    }
+};
+const lens = (obj, path) => path.split(".").reduce((o, key) => o && o[key] ? o[key] : null, obj);
+const globalSetting = (path, defaultValue) => {
+    let _globalSettings = options.env.isAppMode() ? AppDomain.config().global : {};
+    return lens(_globalSettings, path) || defaultValue;
+};
 const getApiUrl = (url) => {
     // any url can have following placeholders:
     // '/**/.../*/...'
@@ -123,12 +136,14 @@ const getApiUrl = (url) => {
     // '/**/api/*/now' --> https://us-east1-flairjs-firebase-app.cloudfunctions.net/api/v1/now
     if (url.indexOf('/**/') !== -1) {
         let apiRoot = '';
-        if (flair.env.isTesting) {
-            apiRoot = settings.api.roots.test || '';
+        if (isLocalhost()) {
+            apiRoot = globalSetting('api.roots.local', '');
+        } else if (flair.env.isTesting) {
+            apiRoot = globalSetting('api.roots.test', '');
         } else if (flair.env.isDebug) {
-            apiRoot = settings.api.roots.dev || '';
+            apiRoot = globalSetting('api.roots.dev', '');
         } else if (flair.env.isProd) {
-            apiRoot = settings.api.roots.prod || '';
+            apiRoot = globalSetting('api.roots.prod', '');
         }
         if (apiRoot) { url = url.replace('/**/', apiRoot); }
         if (url.indexOf('/*/') !== -1 && settings.api.version) { url = url.replace('/*/', settings.api.version); }

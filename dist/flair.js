@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.9.57
- *  Wed, 07 Aug 2019 00:42:49 GMT
+ *  Version: 0.9.58
+ *  Wed, 07 Aug 2019 02:20:24 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -380,6 +380,19 @@
             }
         });
     };
+    const isLocalhost = () => {
+        if (isServer) {
+            let os = require('os');
+            return os.hostname().indexOf('local') !== -1;
+        } else {
+            return self.location.host === "localhost";
+        }
+    };
+    const lens = (obj, path) => path.split(".").reduce((o, key) => o && o[key] ? o[key] : null, obj);
+    const globalSetting = (path, defaultValue) => {
+        let _globalSettings = options.env.isAppMode() ? AppDomain.config().global : {};
+        return lens(_globalSettings, path) || defaultValue;
+    };
     const getApiUrl = (url) => {
         // any url can have following placeholders:
         // '/**/.../*/...'
@@ -389,12 +402,14 @@
         // '/**/api/*/now' --> https://us-east1-flairjs-firebase-app.cloudfunctions.net/api/v1/now
         if (url.indexOf('/**/') !== -1) {
             let apiRoot = '';
-            if (flair.env.isTesting) {
-                apiRoot = settings.api.roots.test || '';
+            if (isLocalhost()) {
+                apiRoot = globalSetting('api.roots.local', '');
+            } else if (flair.env.isTesting) {
+                apiRoot = globalSetting('api.roots.test', '');
             } else if (flair.env.isDebug) {
-                apiRoot = settings.api.roots.dev || '';
+                apiRoot = globalSetting('api.roots.dev', '');
             } else if (flair.env.isProd) {
-                apiRoot = settings.api.roots.prod || '';
+                apiRoot = globalSetting('api.roots.prod', '');
             }
             if (apiRoot) { url = url.replace('/**/', apiRoot); }
             if (url.indexOf('/*/') !== -1 && settings.api.version) { url = url.replace('/*/', settings.api.version); }
@@ -7263,6 +7278,9 @@
     _utils.getLoadedScript = getLoadedScript;
     _utils.b64EncodeUnicode = b64EncodeUnicode;
     _utils.b64DecodeUnicode = b64DecodeUnicode;
+    _utils.isLocalhost = isLocalhost;
+    _utils.lens = lens;
+    _utils.globalSetting = globalSetting;
     
     // attach to flair
     a2f('utils', _utils);
@@ -7279,10 +7297,10 @@
         name: 'flairjs',
         title: 'Flair.js',
         file: currentFile,
-        version: '0.9.57',
+        version: '0.9.58',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Wed, 07 Aug 2019 00:42:49 GMT')
+        lupdate: new Date('Wed, 07 Aug 2019 02:20:24 GMT')
     });  
 
     // bundled assembly load process 
@@ -7303,7 +7321,7 @@
         const { TaskInfo } = flair.Tasks;
         const { env } = flair.options;
         const { guid, forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve,
-                deepMerge, getLoadedScript, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
+                deepMerge, getLoadedScript, b64EncodeUnicode, b64DecodeUnicode, isLocalhost, lens, globalSetting } = flair.utils;
         
         // inbuilt modifiers and attributes compile-time-safe support
         const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,
@@ -7320,7 +7338,7 @@
         AppDomain.loadPathOf('flair', __currentPath);
         
         // settings of this assembly
-        let settings = JSON.parse('{"bootModule":"flairjs-fabric","bootEngine":"flair.app.BootEngine","config":"./appConfig.json | ./webConfig.json","api":{"roots":{"dev":"","test":"","prod":""},"version":""}}');
+        let settings = JSON.parse('{"bootModule":"flairjs-fabric","bootEngine":"flair.app.BootEngine","config":"./appConfig.json | ./webConfig.json"}');
         let settingsReader = flair.Port('settingsReader');
         if (typeof settingsReader === 'function') {
             let externalSettings = settingsReader('flair');
@@ -7679,7 +7697,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.9.57","lupdate":"Wed, 07 Aug 2019 00:42:49 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.9.58","lupdate":"Wed, 07 Aug 2019 02:20:24 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
@@ -7698,7 +7716,7 @@
     let asm = _getAssembly('[flair]');
     settings = asm.settings();
     config = asm.config();
-    
+
     // return
     return Object.freeze(flair);
 });

@@ -9,7 +9,7 @@ const { Class, Struct, Enum, Interface, Mixin, Aspects, AppDomain, $$, attr, bri
 const { TaskInfo } = flair.Tasks;
 const { env } = flair.options;
 const { guid, forEachAsync, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve,
-        deepMerge, getLoadedScript, b64EncodeUnicode, b64DecodeUnicode } = flair.utils;
+        deepMerge, getLoadedScript, b64EncodeUnicode, b64DecodeUnicode, isLocalhost, lens, globalSetting } = flair.utils;
 
 // inbuilt modifiers and attributes compile-time-safe support
 const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,

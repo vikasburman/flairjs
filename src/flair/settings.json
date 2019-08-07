@@ -1,13 +1,5 @@
 {
     "bootModule": "flairjs-fabric",
     "bootEngine": "flair.app.BootEngine",
-    "config": "./appConfig.json | ./webConfig.json",
-    "api": {
-        "roots": {
-            "dev": "",
-            "test": "",
-            "prod": ""
-        },
-        "version": ""
-    }
+    "config": "./appConfig.json | ./webConfig.json"
 }
