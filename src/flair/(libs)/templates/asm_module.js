@@ -15,7 +15,7 @@
     'use strict';
 
     if (typeof define === 'function' && define.amd) { // AMD support
-        define(factory);
+        define(() => { return factory; });
     } else if (typeof exports === 'object') { // CommonJS and Node.js module support
         if (typeof module !== 'undefined' && module.exports) {
             exports = module.exports = factory; // Node.js specific module.exports

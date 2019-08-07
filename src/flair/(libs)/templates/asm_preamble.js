@@ -7,7 +7,7 @@
     'use strict';
 
     if (typeof define === 'function' && define.amd) { // AMD support
-        define(loader);
+        define(() => { return loader; });
     } else if (typeof exports === 'object') { // CommonJS and Node.js module support
         if (typeof module !== 'undefined' && module.exports) {
             exports = module.exports = loader; // Node.js specific module.exports
