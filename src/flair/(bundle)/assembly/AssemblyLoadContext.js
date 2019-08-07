@@ -448,7 +448,10 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         for(let route of routes) {
             if (typeof route.name !== 'string' || route.name === '' ||
                 typeof route.index !== 'number' ||
-                typeof route.mount !== 'string' || route.mount === '' ||
+                (typeof route.mount === 'string' && route.mount === '') ||
+                (Array.isArray(route.mount) && route.mount.length === 0) ||
+                (Array.isArray(route.mount) && typeof route.mount[0] !== 'string') ||
+                (typeof route.mount !== 'string' && !Array.isArray(route.mount)) ||
                 typeof route.path !== 'string' || route.path === '' ||
                 typeof route.handler !== 'string' || route.handler === '') {
                 throw _Exception.InvalidArgument('route: ' + route.name, this.registerRoutes);
