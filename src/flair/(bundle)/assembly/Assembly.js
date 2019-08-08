@@ -76,7 +76,7 @@ const Assembly = function (ado, alc, asmClosureVars) {
         // file: will be in local context of assembly, e.g., <asmFolder>/(assets)/myCSS.css will be referred everywhere as './myCSS.css'
         // passing ./myCSS.css to this method will return './<asmFolder>/myCSS.css'
         let astFile = file.replace('./', this.assetsPath());
-        if (ado.assets.indexOf(file) === -1) {  throw _Exception.NotFound(astFile, this.getAssetFilePath); }
+        if (ado.assets.indexOf(astFile) === -1) {  throw _Exception.NotFound(astFile, this.getAssetFilePath); }
         return astFile;        
     };
     this.getLocaleFilePath = (locale, file) => {

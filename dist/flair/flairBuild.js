@@ -628,7 +628,7 @@
                         let astFile = {
                             ext: path.extname(asset).toLowerCase().substr(1),
                             src: './' + asset,
-                            dest: './' + path.join(astDest, asset.replace(astSrc.replace('./', ''), ''))
+                            dest: path.join(astDest, asset.replace(astSrc.replace('./', ''), ''))
                         };
                         assetsInfo.push(astFile);
                     }
@@ -646,7 +646,7 @@
 
                 // define asset to process
                 let astFile = options.current.ado.assets.splice(0, 1)[0]; // pick from top
-                justNames.push(astFile.dest.replace(options.current.dest, '.'));
+                justNames.push(astFile.dest.replace(options.current.dest, (options.current.build ? './' + options.current.build : '.')));
         
                 // process only if full build OR asset is changed
                 if (!options.fullBuild && fsx.existsSync(astFile.dest)) {
@@ -1213,12 +1213,14 @@
 
             // define source to process
             let source = options.sources.splice(0, 1)[0]; // pick from top
+            let currentBuild = source;
             if (source.startsWith('_')) { processSources(done); return; } // ignore if starts with '_'
             if (options.customBuild) { source = path.join(options.profiles.current.root, source); }
     
             // source group (start)
             logger(0, 'group', `${source.replace(options.src, '.')} (start)`, true);  
             options.current = {};
+            options.current.build = (options.customBuild ? currentBuild : '');
             options.current.src = options.customBuild ? ('./' + path.join(options.src, source)) : source;
             options.current.dest = options.current.src.replace(options.src, options.dest);
             if (options.customBuild) {

@@ -69,6 +69,15 @@ const escapeRegExp = (string) => {
 const replaceAll = (string, find, replace) => {
     return string.replace(new RegExp(escapeRegExp(find), 'g'), replace);
 };
+const stuff = (str, args) => {
+    if (typeof str === 'string' && Array.isArray(args) && args.length > 0) {
+        let idx = 0;
+        for(let arg of args) {
+            str = replaceAll(str, `%${++idx}`, arg);
+        }
+    }
+    return str;
+};
 const shallowCopy = (target, source, overwrite, except) => {
     if (!except) { except = []; }
     for(let item in source) {
