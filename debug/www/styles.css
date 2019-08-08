@@ -94,19 +94,12 @@ html, body {
   margin-bottom: 0;
 }
 
-.card.green .additional .more-info h1 {
-  color: #224C36;
-}
-
 .card .additional .coords {
   margin: 0 1rem;
   color: #fff;
   font-size: 1rem;
 }
 
-.card.green .additional .coords {
-  color: #325C46;
-}
 
 .card .additional .coords span + span {
   float: right;
@@ -121,10 +114,6 @@ html, body {
   right: 1rem;
   top: auto;
   color: #fff;
-}
-
-.card.green .additional .stats {
-  color: #325C46;
 }
 
 .card .additional .stats > div {
