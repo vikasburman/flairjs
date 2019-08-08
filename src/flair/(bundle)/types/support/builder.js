@@ -1243,6 +1243,8 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                     // 
                     // .. somewhere else
                     // await this.someFunc(someFuncAborter, somePara1, somePara2) <-- typical call
+                    //      although function will receive only somePara1, somePara2 and someFuncAborter 
+                    //      will be plucked in between
                     // 
                     // .. somewhere else
                     // someFuncAborter.abort();
