@@ -672,17 +672,23 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                     if (isWrite) { // write case
                         if (typeof exposed_obj[memberName] !== 'undefined') {
                             operate_obj = exposed_obj; break;
+                        } else if (typeof obj[memberName] !== 'undefined') {
+                            // this is a case where it was a protected member and not being exposed from this level, so not in exposed_obj
+                            operate_obj = obj;                            
                         } else { // some undefined member or a private member at a parent level
                             throw _Exception.NotDefined(memberName, builder);
                         }
                     } else { // read case
                         // special case for events (is a function locally, and do have .add and .remove on exposed)
-                        if (typeof obj[memberName] === 'function' && typeof exposed_obj[memberName].add === 'function' && typeof exposed_obj[memberName].remove === 'function') { 
+                        if (typeof obj[memberName] === 'function' && typeof exposed_obj[memberName] !== 'undefined' && typeof exposed_obj[memberName].add === 'function' && typeof exposed_obj[memberName].remove === 'function') { 
                             // this is a protected function (event raiser), hence pick from obj and not from exposed_obj (where it is just an object)
                             operate_obj = obj;
                         } else if (typeof exposed_obj[memberName] !== 'undefined') {
                             operate_obj = exposed_obj;
-                        } else {
+                        } else if (typeof obj[memberName] !== 'undefined') {
+                            // this is a case where it was a protected member and not being exposed from this level, so not in exposed_obj
+                            operate_obj = obj;
+                        } else { 
                             throw _Exception.NotDefined(memberName, builder);
                         }
                     }

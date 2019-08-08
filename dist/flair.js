@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.55.8
- *  Thu, 08 Aug 2019 18:14:51 GMT
+ *  Version: 0.55.10
+ *  Thu, 08 Aug 2019 19:45:25 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -4042,17 +4042,23 @@
                         if (isWrite) { // write case
                             if (typeof exposed_obj[memberName] !== 'undefined') {
                                 operate_obj = exposed_obj; break;
+                            } else if (typeof obj[memberName] !== 'undefined') {
+                                // this is a case where it was a protected member and not being exposed from this level, so not in exposed_obj
+                                operate_obj = obj;                            
                             } else { // some undefined member or a private member at a parent level
                                 throw _Exception.NotDefined(memberName, builder);
                             }
                         } else { // read case
                             // special case for events (is a function locally, and do have .add and .remove on exposed)
-                            if (typeof obj[memberName] === 'function' && typeof exposed_obj[memberName].add === 'function' && typeof exposed_obj[memberName].remove === 'function') { 
+                            if (typeof obj[memberName] === 'function' && typeof exposed_obj[memberName] !== 'undefined' && typeof exposed_obj[memberName].add === 'function' && typeof exposed_obj[memberName].remove === 'function') { 
                                 // this is a protected function (event raiser), hence pick from obj and not from exposed_obj (where it is just an object)
                                 operate_obj = obj;
                             } else if (typeof exposed_obj[memberName] !== 'undefined') {
                                 operate_obj = exposed_obj;
-                            } else {
+                            } else if (typeof obj[memberName] !== 'undefined') {
+                                // this is a case where it was a protected member and not being exposed from this level, so not in exposed_obj
+                                operate_obj = obj;
+                            } else { 
                                 throw _Exception.NotDefined(memberName, builder);
                             }
                         }
@@ -7347,10 +7353,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.55.8',
+        version: '0.55.10',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Thu, 08 Aug 2019 18:14:51 GMT')
+        lupdate: new Date('Thu, 08 Aug 2019 19:45:25 GMT')
     });  
 
     // bundled assembly load process 
@@ -7747,7 +7753,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.8","lupdate":"Thu, 08 Aug 2019 18:14:51 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.10","lupdate":"Thu, 08 Aug 2019 19:45:25 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
