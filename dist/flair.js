@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.55.2
- *  Thu, 08 Aug 2019 03:57:39 GMT
+ *  Version: 0.55.4
+ *  Thu, 08 Aug 2019 16:07:00 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -4559,6 +4559,7 @@
                 _fetchResponse = '',
                 _fetchUrl = '',
                 _api = null,
+                _api_abort_controller = null,
                 _injections = [];
     
             // override, if required
@@ -4596,6 +4597,30 @@
                         // add method, rest should come by the call itself
                         reqData.method = _fetchMethod;
                         
+                        // configure abort controller signal
+                        // it works like this:
+                        // user can pass an instance of AbortController as first
+                        // param to any function call which has fetch attribute
+                        // this controller down there and set in _api_abort_controller variable
+                        // and removed from params, so it never reaches the actual method and
+                        // remains transparent to this method code
+                        // once set in _api_abort_controller, it is picked here
+                        // when actual api call is made and after setting the signal, this local
+                        // value of _api_abort_controller is reset, so any next call made without
+                        // AbortController goes without this, which is expected too
+                        // this means:
+                        // let someFuncAborter = new AbortController();
+                        // 
+                        // .. somewhere else
+                        // await this.someFunc(someFuncAborter, somePara1, somePara2) <-- typical call
+                        // 
+                        // .. somewhere else
+                        // someFuncAborter.abort();
+                        if (_api_abort_controller) {
+                            reqData.signal = _api_abort_controller.signal;
+                            _api_abort_controller = null; // reset local variable
+                        }
+    
                         // make api call
                         return apiCall(_fetchUrl, _fetchResponse, reqData); // this returns a promise
                     };
@@ -4606,6 +4631,16 @@
                 _member = async function(...args) {
                     return new Promise(function(resolve, reject) {
                         if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
+    
+                        // fetch case, AbortController handling
+                        // see notes above for details
+                        if (fetch_attr && fetch_attr.args.length > 0 && args.length > 0) {
+                            if (args[0] instanceof AbortController) { // if first parameter is an AbortController
+                                _api_abort_controller = args[0]; // set in _api_abort_controller
+                                args.splice(0, 1); // remove first one
+                            }
+                        }
+    
                         let fnArgs = [];
                         if (base) { fnArgs.push(base); }                                // base is always first, if overriding
                         if (_api) { fnArgs.push(_api); }                                // api is always next to base, if fetch is used
@@ -7310,10 +7345,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.55.2',
+        version: '0.55.4',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Thu, 08 Aug 2019 03:57:39 GMT')
+        lupdate: new Date('Thu, 08 Aug 2019 16:07:00 GMT')
     });  
 
     // bundled assembly load process 
@@ -7710,7 +7745,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.2","lupdate":"Thu, 08 Aug 2019 03:57:39 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.4","lupdate":"Thu, 08 Aug 2019 16:07:00 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
