@@ -159,6 +159,7 @@ const getEndpointUrl = (endpointPolicy, url) => {
             }
             if (keyValue) {
                 url = replaceAll(url, `*${key}*`, keyValue);
+                keyValue = ''; // for next
             }
         }
     }
