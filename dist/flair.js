@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.55.26
- *  Fri, 09 Aug 2019 18:08:12 GMT
+ *  Version: 0.55.27
+ *  Fri, 09 Aug 2019 18:49:33 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -4655,48 +4655,48 @@
                 }
     
                 _member = async function(...args) {
-                    return new Promise(function(resolve, reject) {
-                        if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
+                    if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
     
-                        // fetch case, AbortController handling
-                        // see notes above for details
-                        if (fetch_attr && fetch_attr.args.length > 0 && args.length > 0) {
-                            if (args[0] instanceof AbortController) { // if first parameter is an AbortController
-                                _api_abort_controller = args[0]; // set in _api_abort_controller
-                                args.splice(0, 1); // remove first one
-                            }
+                    // fetch case, AbortController handling
+                    // see notes above for details
+                    if (fetch_attr && fetch_attr.args.length > 0 && args.length > 0) {
+                        if (args[0] instanceof AbortController) { // if first parameter is an AbortController
+                            _api_abort_controller = args[0]; // set in _api_abort_controller
+                            args.splice(0, 1); // remove first one
                         }
+                    }
     
-                        let fnArgs = [];
-                        if (base) { fnArgs.push(base); }                                // base is always first, if overriding
-                        if (_api) { fnArgs.push(_api); }                                // api is always next to base, if fetch is used
-                        if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base or as first, if injected
-                        if (args_attr && args_attr.args.length > 0) {
-                            let argsObj = _Args(...args_attr.args)(...args); 
-                            if (argsObj.error) { reject(argsObj.error, memberDef); }
-                            fnArgs.push(argsObj);                                       // push a single args processor's result object
-                        } else {
-                            fnArgs = fnArgs.concat(args);                               // add args as is
-                        }
-                        // get correct overload memberDef
-                        if (overload_attr) {
-                            memberDef = getOverloadFunc(memberName, ...fnArgs); // this may return null also, in that case it will throw below
-                        }
-                        try {
-                            let memberDefResult = memberDef.apply(bindingHost, fnArgs);
-                            if (memberDefResult && typeof memberDefResult.then === 'function') { // send result when it comes
-                                memberDefResult.then(resolve).catch((err) => { reject(err, memberDef); });
-                            } else {
-                                resolve(memberDefResult); // send result as is
-                            }
-                        } catch (err) {
-                            reject(err, memberDef);
-                        }
-                    }.bind(bindingHost));
+                    // resolve args
+                    let fnArgs = [];
+                    if (base) { fnArgs.push(base); }                                // base is always first, if overriding
+                    if (_api) { fnArgs.push(_api); }                                // api is always next to base, if fetch is used
+                    if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base or as first, if injected
+                    if (args_attr && args_attr.args.length > 0) {
+                        let argsObj = _Args(...args_attr.args)(...args); 
+                        if (argsObj.error) { throw argsObj.error; }
+                        fnArgs.push(argsObj);                                       // push a single args processor's result object
+                    } else {
+                        fnArgs = fnArgs.concat(args);                               // add args as is
+                    }
+    
+                    // get correct overload memberDef
+                    if (overload_attr) {
+                        memberDef = getOverloadFunc(memberName, ...fnArgs);         // this may return null also, in that case it will throw below
+                    }
+    
+                    // run
+                    let memberDefResult = memberDef.apply(bindingHost, fnArgs);     // this may or may not return promise (not in our control)
+                    if (memberDefResult && typeof memberDefResult.then === 'function') { // send result when it comes
+                        return await memberDefResult;
+                    } else {
+                        return memberDefResult;
+                    }
                 }.bind(bindingHost);
             } else {
                 _member = function(...args) {
                     if (_isDeprecate) { console.log(_deprecate_message); }          // eslint-disable-line no-console
+                    
+                    // resolve args
                     let fnArgs = [];
                     if (base) { fnArgs.push(base); }                                // base is always first, if overriding
                     if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base or as first, if injected
@@ -4706,10 +4706,13 @@
                     } else {
                         fnArgs = fnArgs.concat(args);                               // add args as is
                     }
+    
                     // get correct overload memberDef
                     if (overload_attr) {
                         memberDef = getOverloadFunc(memberName, ...fnArgs); // this may return null also, in that case it will throw below
                     }                   
+    
+                    // run
                     return memberDef.apply(bindingHost, fnArgs);
                 }.bind(bindingHost);                  
             }
@@ -7439,10 +7442,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.55.26',
+        version: '0.55.27',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Fri, 09 Aug 2019 18:08:12 GMT')
+        lupdate: new Date('Fri, 09 Aug 2019 18:49:33 GMT')
     });  
 
     // bundled assembly load process 
@@ -7839,7 +7842,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.26","lupdate":"Fri, 09 Aug 2019 18:08:12 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.27","lupdate":"Fri, 09 Aug 2019 18:49:33 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
