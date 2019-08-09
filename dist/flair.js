@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.55.14
- *  Fri, 09 Aug 2019 02:28:03 GMT
+ *  Version: 0.55.16
+ *  Fri, 09 Aug 2019 02:54:09 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -436,21 +436,28 @@
                     fetchCaller = _Port('clientFetch');
                 }
                 fetchCaller(getApiUrl(url), resDataType, reqData).then((...fetchedData) => {
-                    cacheHandler.set(callerId, cachePolicy, fetchedData).finally(() => {
+                    if (cachePolicy) {
+                        cacheHandler.set(callerId, cachePolicy, fetchedData).finally(() => {
+                            resolve(...fetchedData);
+                        });
+                    } else {
                         resolve(...fetchedData);
-                    });
+                    }
                 }).catch(reject);
             };
-    
-            cacheHandler.get(callerId, cachePolicy).then((fetchedData) => {
-                if (fetchedData) {
-                    resolve(...fetchedData);
-                } else {
+            if (cachePolicy) {
+                cacheHandler.get(callerId, cachePolicy).then((fetchedData) => {
+                    if (fetchedData) {
+                        resolve(...fetchedData);
+                    } else {
+                        fetchNow();
+                    }
+                }).catch((err) => { // eslint-disable-line no-unused-vars
                     fetchNow();
-                }
-            }).catch((err) => { // eslint-disable-line no-unused-vars
+                });
+            } else {
                 fetchNow();
-            });
+            }
         });
     };
     const sieve = (obj, props, isFreeze, add) => {
@@ -7445,10 +7452,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.55.14',
+        version: '0.55.16',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Fri, 09 Aug 2019 02:28:03 GMT')
+        lupdate: new Date('Fri, 09 Aug 2019 02:54:09 GMT')
     });  
 
     // bundled assembly load process 
@@ -7845,7 +7852,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.14","lupdate":"Fri, 09 Aug 2019 02:28:03 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.16","lupdate":"Fri, 09 Aug 2019 02:54:09 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 

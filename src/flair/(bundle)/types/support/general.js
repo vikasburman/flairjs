@@ -169,21 +169,28 @@ const apiCall = (callerId, url, resDataType, cachePolicyName, reqData) => {
                 fetchCaller = _Port('clientFetch');
             }
             fetchCaller(getApiUrl(url), resDataType, reqData).then((...fetchedData) => {
-                cacheHandler.set(callerId, cachePolicy, fetchedData).finally(() => {
+                if (cachePolicy) {
+                    cacheHandler.set(callerId, cachePolicy, fetchedData).finally(() => {
+                        resolve(...fetchedData);
+                    });
+                } else {
                     resolve(...fetchedData);
-                });
+                }
             }).catch(reject);
         };
-
-        cacheHandler.get(callerId, cachePolicy).then((fetchedData) => {
-            if (fetchedData) {
-                resolve(...fetchedData);
-            } else {
+        if (cachePolicy) {
+            cacheHandler.get(callerId, cachePolicy).then((fetchedData) => {
+                if (fetchedData) {
+                    resolve(...fetchedData);
+                } else {
+                    fetchNow();
+                }
+            }).catch((err) => { // eslint-disable-line no-unused-vars
                 fetchNow();
-            }
-        }).catch((err) => { // eslint-disable-line no-unused-vars
+            });
+        } else {
             fetchNow();
-        });
+        }
     });
 };
 const sieve = (obj, props, isFreeze, add) => {
