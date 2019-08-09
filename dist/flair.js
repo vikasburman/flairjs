@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.55.12
- *  Fri, 09 Aug 2019 02:06:11 GMT
+ *  Version: 0.55.13
+ *  Fri, 09 Aug 2019 02:17:14 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -424,9 +424,10 @@
         }
         return url;
     };
-    const apiCall = (callerId, url, resDataType, cachePolicy, reqData) => { 
+    const apiCall = (callerId, url, resDataType, cachePolicyName, reqData) => { 
         return new Promise((resolve, reject) => {
-            let cacheHandler = _Port('cacheHandler');
+            let cacheHandler = _Port('cacheHandler'),
+                cachePolicy = globalSetting(`api.cache.policies.${cachePolicyName}`, null);
             let fetchNow = () => {
                 let fetchCaller = null;
                 if (isServer) {
@@ -4617,7 +4618,7 @@
                     _fetchMethod = fetch_attr.args[0]; // get, post, put, delete, etc.
                     _fetchResponse = fetch_attr.args[1]; // json, text, blob, buffer, form
                     _fetchUrl = fetch_attr.args[2]; // url to reach
-                    _fetchCachePolicy = fetch_attr.args[3] || ''; // cache policyName (this must exists at global.cache.policies.<policyName>)
+                    _fetchCachePolicy = fetch_attr.args[3] || ''; // cache policyName (this must exists at global.api.cache.policies.<policyName>)
                     _api = (reqData = {}) => {
                         // add method, rest should come by the call itself
                         reqData.method = _fetchMethod;
@@ -7443,10 +7444,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.55.12',
+        version: '0.55.13',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Fri, 09 Aug 2019 02:06:11 GMT')
+        lupdate: new Date('Fri, 09 Aug 2019 02:17:14 GMT')
     });  
 
     // bundled assembly load process 
@@ -7843,7 +7844,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.12","lupdate":"Fri, 09 Aug 2019 02:06:11 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.13","lupdate":"Fri, 09 Aug 2019 02:17:14 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 

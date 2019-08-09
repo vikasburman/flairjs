@@ -157,9 +157,10 @@ const getApiUrl = (url) => {
     }
     return url;
 };
-const apiCall = (callerId, url, resDataType, cachePolicy, reqData) => { 
+const apiCall = (callerId, url, resDataType, cachePolicyName, reqData) => { 
     return new Promise((resolve, reject) => {
-        let cacheHandler = _Port('cacheHandler');
+        let cacheHandler = _Port('cacheHandler'),
+            cachePolicy = globalSetting(`api.cache.policies.${cachePolicyName}`, null);
         let fetchNow = () => {
             let fetchCaller = null;
             if (isServer) {
