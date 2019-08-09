@@ -288,6 +288,7 @@ const __cacheHandler = (env) => { // eslint-disable-line no-unused-vars
                         } else { // cache is stale, delete it
                             cacheStorage.removeItem(itemKey);
                             cacheStorage.removeItem(savedAtItemKey);
+                            reject();
                         }
                     } catch (err) { // eslint-disable-line no-unused-vars
                         reject();
