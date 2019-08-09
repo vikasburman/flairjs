@@ -125,10 +125,10 @@ const loadModule = (module, globalObjName, isDelete) => {
 };
 const lens = (obj, path) => path.split(".").reduce((o, key) => o && o[key] ? o[key] : null, obj);
 const globalSetting = (path, defaultValue) => {
-    let _globalSettings = options.env.isAppMode() ? _AppDomain.config().global : {};
+    let _globalSettings = options.env.isAppMode() ? _AppDomain.config().flair : {};
     return lens(_globalSettings, path) || defaultValue;
 };
-const getEndpointUrl = (endpointPolicy, url) => {
+const getEndpointUrl = (connection, url) => {
     // any url can have following placeholders:
     //  *R*: endpoint root
     //      R must have: local, dev, test and prod scenario roots
@@ -140,24 +140,24 @@ const getEndpointUrl = (endpointPolicy, url) => {
     //          *G*: endpoint geo region
     //          *L*: endpoint locale
     //          *V*: endpoint version
-    //  alphabet can be upper or lowercase, but whatever they are, they must match in policy and wherever they are used
+    //  alphabet can be upper or lowercase, but whatever they are, they must match in connection and wherever they are used
     // e.g. 
     // '/*R*/api/*V*/now' --> https://us-east1-flairjs-firebase-app.cloudfunctions.net/api/v1/now
-    if (endpointPolicy) {
+    if (connection) {
         let replaceIt = (key) => {
             let keyValue = '';
             if (key.toUpperCase() === 'R' && url.indexOf(`*${key}*`) !== -1) {
                 if (options.env.isLocalhost) {
-                    keyValue = endpointPolicy[key].local;
+                    keyValue = connection[key].local;
                 } else if (options.env.isTesting) {
-                    keyValue = endpointPolicy[key].test;
+                    keyValue = connection[key].test;
                 } else if (options.env.isProd) {
-                    keyValue = endpointPolicy[key].prod;
+                    keyValue = connection[key].prod;
                 } else { // default to dev setting finally
-                    keyValue = endpointPolicy[key].dev;
+                    keyValue = connection[key].dev;
                 }
             } else if (url.indexOf(`*${key}*`) !== -1) {
-                keyValue = endpointPolicy[key]; // pick whatever value is there
+                keyValue = connection[key]; // pick whatever value is there
             }
             if (keyValue) {
                 url = replaceAll(url, `*${key}*`, keyValue);
@@ -165,52 +165,24 @@ const getEndpointUrl = (endpointPolicy, url) => {
             }
         };
         replaceIt('R'); // R is first
-        for(let key in endpointPolicy) {
+        for(let key in connection) {
             if (key.toUpperCase() !== 'R') { replaceIt(key); } // skip R, as it is done
         }
     }
     return url; 
 };
-const apiCall = (callerId, url, resDataType, endpointPolicyName, cachePolicyName, reqData) => { 
-    return new Promise((resolve, reject) => {
-        let cacheHandler = _Port('cacheHandler'),
-            endpointPolicy = globalSetting(`api.endpoint.policies.${endpointPolicyName}`, null),
-            cacheEnabled =globalSetting('api.cache.enabled', false),
-            cachePolicy = globalSetting(`api.cache.policies.${cachePolicyName}`, null),
-            urlToCall = getEndpointUrl(endpointPolicy, url);
-        
-        let fetchNow = () => {
-            let fetchCaller = null;
-            if (isServer) {
-                fetchCaller = _Port('serverFetch');
-            } else { // client
-                fetchCaller = _Port('clientFetch');
-            }
-            fetchCaller(urlToCall, resDataType, reqData).then((...fetchedData) => {
-                if (cacheEnabled && cachePolicy) {
-                    cacheHandler.set(callerId, cachePolicy, fetchedData).finally(() => {
-                        resolve(...fetchedData);
-                    });
-                } else {
-                    resolve(...fetchedData);
-                }
-            }).catch(reject);
-        };
+const apiCall = async (url, resDataType, connectionName, reqData) => { 
+    let fetchCaller = null,
+        connection = globalSetting(`api.connections.${connectionName}`, null),
+        urlToCall = getEndpointUrl(connection, url);
+    
+    if (isServer) {
+        fetchCaller = _Port('serverFetch');
+    } else { // client
+        fetchCaller = _Port('clientFetch');
+    }
 
-        if (cacheEnabled && cachePolicy) {
-            cacheHandler.get(callerId, cachePolicy).then((fetchedData) => {
-                if (fetchedData) {
-                    resolve(...fetchedData);
-                } else {
-                    fetchNow();
-                }
-            }).catch((err) => { // eslint-disable-line no-unused-vars
-                fetchNow();
-            });
-        } else {
-            fetchNow();
-        }
-    });
+    return await fetchCaller(urlToCall, resDataType, reqData);
 };
 const sieve = (obj, props, isFreeze, add) => {
     let _props = props ? splitAndTrim(props) : Object.keys(obj); // if props are not give, pick all
@@ -256,19 +228,6 @@ const uncacheModule = (module) => {
     } else { 
         _Port('clientModule').undef(module);
     }
-};
-const forEachAsync = (items, asyncFn) => {
-    return new Promise((resolve, reject) => {
-        const processItems = (items) => {
-            if (!items || items.length === 0) { resolve(); return; }
-            Promise((_resolve, _reject) => {
-                asyncFn(_resolve, _reject, items.shift());
-            }).then(() => { processItems(items); }).catch(reject); // process one from top
-        };
-
-        // start
-        processItems(items.slice());
-    });
 };
 const deepMerge = (objects, isMergeArray = true) => { // credit: https://stackoverflow.com/a/48218209
     const isObject = obj => obj && typeof obj === 'object';

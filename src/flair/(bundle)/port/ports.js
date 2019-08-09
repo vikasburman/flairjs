@@ -270,20 +270,16 @@ const __cacheHandler = (env) => { // eslint-disable-line no-unused-vars
         cachedItemSavedAtNameSuffix = '__savedAt_';
 
     let funcs = {
-        get: (callerId, cachePolicy) => {
-            // cachePolicy can contains following + anything else that cacheHandler needs
-            // {
-            //      duration: milliseconds till which this data is ok to keep in cache
-            // }    
+        get: (cacheId, cacheConfig) => {
             return new Promise((resolve, reject) => {
-                if (callerId && cachePolicy && cachePolicy.duration) {
+                if (cacheId && cacheConfig && cacheConfig.duration) {
                     try {
                         // any of it may throw - which will be ignored
-                        let itemKey = `${cacheItemNamePrefix}${callerId}`,
+                        let itemKey = `${cacheItemNamePrefix}${cacheId}`,
                             savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`,
                             fetchedData = JSON.parse(cacheStorage.getItem(itemKey)).value,
                             dataSavedAt = parseInt(cacheStorage.getItem(savedAtItemKey));
-                        if ((Date.now() - dataSavedAt) <= cachePolicy.duration) { // cache is still hot
+                        if ((Date.now() - dataSavedAt) <= cacheConfig.duration) { // cache is still hot
                             resolve(fetchedData);
                         } else { // cache is stale, delete it
                             cacheStorage.removeItem(itemKey);
@@ -296,12 +292,12 @@ const __cacheHandler = (env) => { // eslint-disable-line no-unused-vars
                 } else { reject(); }
             });
         },
-        set: (callerId, cachePolicy, fetchedData) => {
+        set: (cacheId, cacheConfig, fetchedData) => {
             return new Promise((resolve, reject) => {
-                if (callerId && cachePolicy && cachePolicy.duration && fetchedData) {
+                if (cacheId && cacheConfig && fetchedData) {
                     try {
                         // any of it may throw - which will be ignored
-                        let itemKey = `${cacheItemNamePrefix}${callerId}`,
+                        let itemKey = `${cacheItemNamePrefix}${cacheId}`,
                             savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`,
                             jsonFetchedData = JSON.stringify({value: fetchedData}),
                             dataSavedAt = Date.now().toString();
@@ -314,11 +310,11 @@ const __cacheHandler = (env) => { // eslint-disable-line no-unused-vars
                 } else { reject(); }
             });
         },
-        remove: (callerId, cachePolicy) => { // eslint-disable-line no-unused-vars
+        remove: (cacheId, cacheConfig) => { // eslint-disable-line no-unused-vars
             return new Promise((resolve, reject) => {
                 try {
                     // any of it may throw - which will be ignored
-                    let itemKey = `${cacheItemNamePrefix}${callerId}`,
+                    let itemKey = `${cacheItemNamePrefix}${cacheId}`,
                         savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`;
                     cacheStorage.removeItem(itemKey);
                     cacheStorage.removeItem(savedAtItemKey);

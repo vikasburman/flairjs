@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.55.21
- *  Fri, 09 Aug 2019 13:44:25 GMT
+ *  Version: 0.55.23
+ *  Fri, 09 Aug 2019 17:38:30 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -392,10 +392,10 @@
     };
     const lens = (obj, path) => path.split(".").reduce((o, key) => o && o[key] ? o[key] : null, obj);
     const globalSetting = (path, defaultValue) => {
-        let _globalSettings = options.env.isAppMode() ? _AppDomain.config().global : {};
+        let _globalSettings = options.env.isAppMode() ? _AppDomain.config().flair : {};
         return lens(_globalSettings, path) || defaultValue;
     };
-    const getEndpointUrl = (endpointPolicy, url) => {
+    const getEndpointUrl = (connection, url) => {
         // any url can have following placeholders:
         //  *R*: endpoint root
         //      R must have: local, dev, test and prod scenario roots
@@ -407,24 +407,24 @@
         //          *G*: endpoint geo region
         //          *L*: endpoint locale
         //          *V*: endpoint version
-        //  alphabet can be upper or lowercase, but whatever they are, they must match in policy and wherever they are used
+        //  alphabet can be upper or lowercase, but whatever they are, they must match in connection and wherever they are used
         // e.g. 
         // '/*R*/api/*V*/now' --> https://us-east1-flairjs-firebase-app.cloudfunctions.net/api/v1/now
-        if (endpointPolicy) {
+        if (connection) {
             let replaceIt = (key) => {
                 let keyValue = '';
                 if (key.toUpperCase() === 'R' && url.indexOf(`*${key}*`) !== -1) {
                     if (options.env.isLocalhost) {
-                        keyValue = endpointPolicy[key].local;
+                        keyValue = connection[key].local;
                     } else if (options.env.isTesting) {
-                        keyValue = endpointPolicy[key].test;
+                        keyValue = connection[key].test;
                     } else if (options.env.isProd) {
-                        keyValue = endpointPolicy[key].prod;
+                        keyValue = connection[key].prod;
                     } else { // default to dev setting finally
-                        keyValue = endpointPolicy[key].dev;
+                        keyValue = connection[key].dev;
                     }
                 } else if (url.indexOf(`*${key}*`) !== -1) {
-                    keyValue = endpointPolicy[key]; // pick whatever value is there
+                    keyValue = connection[key]; // pick whatever value is there
                 }
                 if (keyValue) {
                     url = replaceAll(url, `*${key}*`, keyValue);
@@ -432,52 +432,24 @@
                 }
             };
             replaceIt('R'); // R is first
-            for(let key in endpointPolicy) {
+            for(let key in connection) {
                 if (key.toUpperCase() !== 'R') { replaceIt(key); } // skip R, as it is done
             }
         }
         return url; 
     };
-    const apiCall = (callerId, url, resDataType, endpointPolicyName, cachePolicyName, reqData) => { 
-        return new Promise((resolve, reject) => {
-            let cacheHandler = _Port('cacheHandler'),
-                endpointPolicy = globalSetting(`api.endpoint.policies.${endpointPolicyName}`, null),
-                cacheEnabled =globalSetting('api.cache.enabled', false),
-                cachePolicy = globalSetting(`api.cache.policies.${cachePolicyName}`, null),
-                urlToCall = getEndpointUrl(endpointPolicy, url);
-            
-            let fetchNow = () => {
-                let fetchCaller = null;
-                if (isServer) {
-                    fetchCaller = _Port('serverFetch');
-                } else { // client
-                    fetchCaller = _Port('clientFetch');
-                }
-                fetchCaller(urlToCall, resDataType, reqData).then((...fetchedData) => {
-                    if (cacheEnabled && cachePolicy) {
-                        cacheHandler.set(callerId, cachePolicy, fetchedData).finally(() => {
-                            resolve(...fetchedData);
-                        });
-                    } else {
-                        resolve(...fetchedData);
-                    }
-                }).catch(reject);
-            };
+    const apiCall = async (url, resDataType, connectionName, reqData) => { 
+        let fetchCaller = null,
+            connection = globalSetting(`api.connections.${connectionName}`, null),
+            urlToCall = getEndpointUrl(connection, url);
+        
+        if (isServer) {
+            fetchCaller = _Port('serverFetch');
+        } else { // client
+            fetchCaller = _Port('clientFetch');
+        }
     
-            if (cacheEnabled && cachePolicy) {
-                cacheHandler.get(callerId, cachePolicy).then((fetchedData) => {
-                    if (fetchedData) {
-                        resolve(...fetchedData);
-                    } else {
-                        fetchNow();
-                    }
-                }).catch((err) => { // eslint-disable-line no-unused-vars
-                    fetchNow();
-                });
-            } else {
-                fetchNow();
-            }
-        });
+        return await fetchCaller(urlToCall, resDataType, reqData);
     };
     const sieve = (obj, props, isFreeze, add) => {
         let _props = props ? splitAndTrim(props) : Object.keys(obj); // if props are not give, pick all
@@ -523,19 +495,6 @@
         } else { 
             _Port('clientModule').undef(module);
         }
-    };
-    const forEachAsync = (items, asyncFn) => {
-        return new Promise((resolve, reject) => {
-            const processItems = (items) => {
-                if (!items || items.length === 0) { resolve(); return; }
-                Promise((_resolve, _reject) => {
-                    asyncFn(_resolve, _reject, items.shift());
-                }).then(() => { processItems(items); }).catch(reject); // process one from top
-            };
-    
-            // start
-            processItems(items.slice());
-        });
     };
     const deepMerge = (objects, isMergeArray = true) => { // credit: https://stackoverflow.com/a/48218209
         const isObject = obj => obj && typeof obj === 'object';
@@ -4608,8 +4567,7 @@
                 _fetchMethod = '',
                 _fetchResponse = '',
                 _fetchUrl = '',
-                _fetchEndpointPolicy = '',
-                _fetchCachePolicy = '',
+                _fetchConnectionName = '',
                 _api = null,
                 _api_abort_controller = null,
                 _injections = [];
@@ -4645,9 +4603,8 @@
                     _fetchMethod = fetch_attr.args[0]; // get, post, put, delete, etc.
                     _fetchResponse = fetch_attr.args[1]; // json, text, blob, buffer, form
                     _fetchUrl = fetch_attr.args[2]; // url to reach
-                    _fetchEndpointPolicy = fetch_attr.args[3] || '', // endpoint policyName (this must exists at global.api.endpoint.policies.<policyName>)
-                    _fetchCachePolicy = fetch_attr.args[4] || ''; // cache policyName (this must exists at global.api.cache.policies.<policyName>)
-                    _api = (reqData = {}) => {
+                    _fetchConnectionName = fetch_attr.args[3] || ''; // connection name (this must exists at global.api.connections.<connectionName>)
+                    _api = async (reqData = {}) => {
                         // add method, rest should come by the call itself
                         reqData.method = _fetchMethod;
                         
@@ -4678,7 +4635,7 @@
                         }
     
                         // make api call
-                        return apiCall(`${def.name}___${memberName}`, _fetchUrl, _fetchResponse, _fetchEndpointPolicy, _fetchCachePolicy, reqData); // this returns a promise
+                        return await apiCall(_fetchUrl, _fetchResponse, _fetchConnectionName, reqData); // this returns a promise
                     };
                 } else {
                     _api = null;
@@ -6873,20 +6830,16 @@
             cachedItemSavedAtNameSuffix = '__savedAt_';
     
         let funcs = {
-            get: (callerId, cachePolicy) => {
-                // cachePolicy can contains following + anything else that cacheHandler needs
-                // {
-                //      duration: milliseconds till which this data is ok to keep in cache
-                // }    
+            get: (cacheId, cacheConfig) => {
                 return new Promise((resolve, reject) => {
-                    if (callerId && cachePolicy && cachePolicy.duration) {
+                    if (cacheId && cacheConfig && cacheConfig.duration) {
                         try {
                             // any of it may throw - which will be ignored
-                            let itemKey = `${cacheItemNamePrefix}${callerId}`,
+                            let itemKey = `${cacheItemNamePrefix}${cacheId}`,
                                 savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`,
                                 fetchedData = JSON.parse(cacheStorage.getItem(itemKey)).value,
                                 dataSavedAt = parseInt(cacheStorage.getItem(savedAtItemKey));
-                            if ((Date.now() - dataSavedAt) <= cachePolicy.duration) { // cache is still hot
+                            if ((Date.now() - dataSavedAt) <= cacheConfig.duration) { // cache is still hot
                                 resolve(fetchedData);
                             } else { // cache is stale, delete it
                                 cacheStorage.removeItem(itemKey);
@@ -6899,12 +6852,12 @@
                     } else { reject(); }
                 });
             },
-            set: (callerId, cachePolicy, fetchedData) => {
+            set: (cacheId, cacheConfig, fetchedData) => {
                 return new Promise((resolve, reject) => {
-                    if (callerId && cachePolicy && cachePolicy.duration && fetchedData) {
+                    if (cacheId && cacheConfig && fetchedData) {
                         try {
                             // any of it may throw - which will be ignored
-                            let itemKey = `${cacheItemNamePrefix}${callerId}`,
+                            let itemKey = `${cacheItemNamePrefix}${cacheId}`,
                                 savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`,
                                 jsonFetchedData = JSON.stringify({value: fetchedData}),
                                 dataSavedAt = Date.now().toString();
@@ -6917,11 +6870,11 @@
                     } else { reject(); }
                 });
             },
-            remove: (callerId, cachePolicy) => { // eslint-disable-line no-unused-vars
+            remove: (cacheId, cacheConfig) => { // eslint-disable-line no-unused-vars
                 return new Promise((resolve, reject) => {
                     try {
                         // any of it may throw - which will be ignored
-                        let itemKey = `${cacheItemNamePrefix}${callerId}`,
+                        let itemKey = `${cacheItemNamePrefix}${cacheId}`,
                             savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`;
                         cacheStorage.removeItem(itemKey);
                         cacheStorage.removeItem(savedAtItemKey);
@@ -7439,7 +7392,6 @@
      */ 
     const _utils = () => { };
     _utils.guid = guid;
-    _utils.forEachAsync = forEachAsync;
     _utils.stuff = stuff;
     _utils.replaceAll = replaceAll;
     _utils.splitAndTrim = splitAndTrim;
@@ -7473,10 +7425,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.55.21',
+        version: '0.55.23',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Fri, 09 Aug 2019 13:44:25 GMT')
+        lupdate: new Date('Fri, 09 Aug 2019 17:38:30 GMT')
     });  
 
     // bundled assembly load process 
@@ -7496,7 +7448,7 @@
                 getTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;
         const { TaskInfo } = flair.Tasks;
         const { env } = flair.options;
-        const { guid, forEachAsync, stuff, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve,
+        const { guid, stuff, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve,
                 deepMerge, getLoadedScript, b64EncodeUnicode, b64DecodeUnicode, lens, globalSetting } = flair.utils;
         
         // inbuilt modifiers and attributes compile-time-safe support
@@ -7873,7 +7825,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.21","lupdate":"Fri, 09 Aug 2019 13:44:25 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.23","lupdate":"Fri, 09 Aug 2019 17:38:30 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
