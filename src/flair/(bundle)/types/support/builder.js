@@ -1194,6 +1194,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             _fetchMethod = '',
             _fetchResponse = '',
             _fetchUrl = '',
+            _fetchEndpointPolicy = '',
             _fetchCachePolicy = '',
             _api = null,
             _api_abort_controller = null,
@@ -1230,7 +1231,8 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                 _fetchMethod = fetch_attr.args[0]; // get, post, put, delete, etc.
                 _fetchResponse = fetch_attr.args[1]; // json, text, blob, buffer, form
                 _fetchUrl = fetch_attr.args[2]; // url to reach
-                _fetchCachePolicy = fetch_attr.args[3] || ''; // cache policyName (this must exists at global.api.cache.policies.<policyName>)
+                _fetchEndpointPolicy = fetch_attr.args[3] || '', // endpoint policyName (this must exists at global.api.endpoint.policies.<policyName>)
+                _fetchCachePolicy = fetch_attr.args[4] || ''; // cache policyName (this must exists at global.api.cache.policies.<policyName>)
                 _api = (reqData = {}) => {
                     // add method, rest should come by the call itself
                     reqData.method = _fetchMethod;
@@ -1262,7 +1264,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                     }
 
                     // make api call
-                    return apiCall(`${def.name}___${memberName}`, _fetchUrl, _fetchResponse, _fetchCachePolicy, reqData); // this returns a promise
+                    return apiCall(`${def.name}___${memberName}`, _fetchUrl, _fetchResponse, _fetchEndpointPolicy, _fetchCachePolicy, reqData); // this returns a promise
                 };
             } else {
                 _api = null;

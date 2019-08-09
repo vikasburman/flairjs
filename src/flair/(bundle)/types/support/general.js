@@ -128,39 +128,50 @@ const globalSetting = (path, defaultValue) => {
     let _globalSettings = options.env.isAppMode() ? _AppDomain.config().global : {};
     return lens(_globalSettings, path) || defaultValue;
 };
-const getApiUrl = (url) => {
+const getEndpointUrl = (endpointPolicy, url) => {
     // any url can have following placeholders:
-    // '/**/.../*/...'
-    // /**/ represent the root of the url
-    // /*/ represent the version part of the url
+    //  *R*: endpoint root
+    //      R must have: local, dev, test and prod scenario roots
+    //  *?*: anything else
+    //      ? must be an alphabet
+    //      some known are:  
+    //          *G*: endpoint geo region
+    //          *L*: endpoint locale
+    //          *V*: endpoint version
+    //  alphabet can be upper or lowercase, but whatever they are, they must match in policy and wherever they are used
     // e.g. 
-    // '/**/api/*/now' --> https://us-east1-flairjs-firebase-app.cloudfunctions.net/api/v1/now
-    if (url.indexOf('/**/') !== -1) {
-        let apiRoot = '',
-            apiVersion = globalSetting('api.version', '');
-        if (options.env.isLocalhost) {
-            apiRoot = globalSetting('api.roots.local', '');
-        } else if (flair.env.isTesting) {
-            apiRoot = globalSetting('api.roots.test', '');
-        } else if (flair.env.isProd) {
-            apiRoot = globalSetting('api.roots.prod', '');
-        } else { // default to dev setting finally
-            apiRoot = globalSetting('api.roots.dev', '');
-        }
-        if (!apiRoot.endsWith('/')) { apiRoot += '/'; }
-        if (apiRoot) { url = url.replace('/**/', apiRoot); }
-        if (url.indexOf('/*/') !== -1 && apiVersion) { 
-            if (!apiVersion.startsWith('/')) { apiVersion = '/' + apiVersion; }
-            if (!apiVersion.endsWith('/')) { apiVersion += '/'; }
-            url = url.replace('/*/', apiVersion); 
+    // '/*R*/api/*V*/now' --> https://us-east1-flairjs-firebase-app.cloudfunctions.net/api/v1/now
+    if (endpointPolicy) {
+        let keyValue = '';
+        for(let key in endpointPolicy) {
+            if (key.toUpperCase() === 'R' && url.indexOf(`*${key}*`) !== -1) {
+                if (options.env.isLocalhost) {
+                    keyValue = endpointPolicy[key].local;
+                } else if (options.env.isTesting) {
+                    keyValue = endpointPolicy[key].test;
+                } else if (options.env.isProd) {
+                    keyValue = endpointPolicy[key].prod;
+                } else { // default to dev setting finally
+                    keyValue = endpointPolicy[key].dev;
+                }
+            } else if (url.indexOf(`*${key}*`) !== -1) {
+                keyValue = endpointPolicy[key]; // pick whatever value is there
+            }
+            if (keyValue) {
+                url = replaceAll(url, `*${key}*`, keyValue);
+            }
         }
     }
-    return url;
+    return url; 
 };
-const apiCall = (callerId, url, resDataType, cachePolicyName, reqData) => { 
+const apiCall = (callerId, url, resDataType, endpointPolicyName, cachePolicyName, reqData) => { 
     return new Promise((resolve, reject) => {
         let cacheHandler = _Port('cacheHandler'),
-            cachePolicy = globalSetting(`api.cache.policies.${cachePolicyName}`, null);
+            endpointPolicy = globalSetting(`api.endpoint.policies.${endpointPolicyName}`, null),
+            cacheEnabled =globalSetting('api.cache.enabled', false),
+            cachePolicy = globalSetting(`api.cache.policies.${cachePolicyName}`, null),
+            urlToCall = getEndpointUrl(endpointPolicy, url);
+        
         let fetchNow = () => {
             let fetchCaller = null;
             if (isServer) {
@@ -168,8 +179,8 @@ const apiCall = (callerId, url, resDataType, cachePolicyName, reqData) => {
             } else { // client
                 fetchCaller = _Port('clientFetch');
             }
-            fetchCaller(getApiUrl(url), resDataType, reqData).then((...fetchedData) => {
-                if (cachePolicy) {
+            fetchCaller(urlToCall, resDataType, reqData).then((...fetchedData) => {
+                if (cacheEnabled && cachePolicy) {
                     cacheHandler.set(callerId, cachePolicy, fetchedData).finally(() => {
                         resolve(...fetchedData);
                     });
@@ -178,7 +189,8 @@ const apiCall = (callerId, url, resDataType, cachePolicyName, reqData) => {
                 }
             }).catch(reject);
         };
-        if (cachePolicy) {
+
+        if (cacheEnabled && cachePolicy) {
             cacheHandler.get(callerId, cachePolicy).then((fetchedData) => {
                 if (fetchedData) {
                     resolve(...fetchedData);
