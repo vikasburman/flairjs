@@ -213,7 +213,7 @@ const __clientFile = (env) => { // eslint-disable-line no-unused-vars
 _Port.define('clientFile', __clientFile);
 
 // settingsReader factory
-const __settingsReader = (env) => {
+const __settingsReader = (env) => { // eslint-disable-line no-unused-vars
     return (asmName) => {
         /** 
          * NOTE: appConfig.json (on server) and webConfig.json (on client)
@@ -260,6 +260,77 @@ const __settingsReader = (env) => {
     };
 };
 _Port.define('settingsReader', __settingsReader);
+
+// policy based cache handler factory
+const __cacheHandler = (env) => { // eslint-disable-line no-unused-vars
+    // this inbuilt caching works over localstorage 
+    // any external caching can be applied by providing a custom cache handler
+    let cacheStorage = _Port('localStorage'),
+        cacheItemNamePrefix = '__cache_',
+        cachedItemSavedAtNameSuffix = '__savedAt_';
+
+    let funcs = {
+        get: (callerId, cachePolicy) => {
+            // cachePolicy can contains following + anything else that cacheHandler needs
+            // {
+            //      duration: milliseconds till which this data is ok to keep in cache
+            // }    
+            return new Promise((resolve, reject) => {
+                if (callerId && cachePolicy && cachePolicy.duration) {
+                    try {
+                        // any of it may throw - which will be ignored
+                        let itemKey = `${cacheItemNamePrefix}${callerId}`,
+                            savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`,
+                            fetchedData = JSON.parse(cacheStorage.getItem(itemKey)).value,
+                            dataSavedAt = parseInt(cacheStorage.getItem(savedAtItemKey));
+                        if ((Date.now() - dataSavedAt) <= cachePolicy.duration) { // cache is still hot
+                            resolve(fetchedData);
+                        } else { // cache is stale, delete it
+                            cacheStorage.removeItem(itemKey);
+                            cacheStorage.removeItem(savedAtItemKey);
+                        }
+                    } catch (err) { // eslint-disable-line no-unused-vars
+                        reject();
+                    }
+                } else { reject(); }
+            });
+        },
+        set: (callerId, cachePolicy, fetchedData) => {
+            return new Promise((resolve, reject) => {
+                if (callerId && cachePolicy && cachePolicy.duration && fetchedData) {
+                    try {
+                        // any of it may throw - which will be ignored
+                        let itemKey = `${cacheItemNamePrefix}${callerId}`,
+                            savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`,
+                            jsonFetchedData = JSON.stringify({value: fetchedData}),
+                            dataSavedAt = Date.now().toString();
+                        cacheStorage.setItem(itemKey, jsonFetchedData);
+                        cacheStorage.setItem(savedAtItemKey, dataSavedAt);
+                        resolve();
+                    } catch (err) { // eslint-disable-line no-unused-vars
+                        reject();
+                    }                    
+                } else { reject(); }
+            });
+        },
+        remove: (callerId, cachePolicy) => { // eslint-disable-line no-unused-vars
+            return new Promise((resolve, reject) => {
+                try {
+                    // any of it may throw - which will be ignored
+                    let itemKey = `${cacheItemNamePrefix}${callerId}`,
+                        savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`;
+                    cacheStorage.removeItem(itemKey);
+                    cacheStorage.removeItem(savedAtItemKey);
+                    resolve();
+                } catch (err) { // eslint-disable-line no-unused-vars
+                    reject();
+                }                    
+            });
+        }
+    };
+    return funcs;
+};
+_Port.define('cacheHandler', ['get', 'set', 'remove'], __cacheHandler);
 
 // fetch core logic
 const fetcher = (fetchFunc, url, resDataType, reqData) => {

@@ -157,15 +157,32 @@ const getApiUrl = (url) => {
     }
     return url;
 };
-const apiCall = (url, resDataType, reqData) => { 
+const apiCall = (callerId, url, resDataType, cachePolicy, reqData) => { 
     return new Promise((resolve, reject) => {
-        let fetchCaller = null;
-        if (isServer) {
-            fetchCaller = _Port('serverFetch');
-        } else { // client
-            fetchCaller = _Port('clientFetch');
-        }
-        fetchCaller(getApiUrl(url), resDataType, reqData).then(resolve).catch(reject);
+        let fetchNow = () => {
+            let fetchCaller = null;
+            if (isServer) {
+                fetchCaller = _Port('serverFetch');
+            } else { // client
+                fetchCaller = _Port('clientFetch');
+            }
+            fetchCaller(getApiUrl(url), resDataType, reqData).then((...fetchedData) => {
+                cacheHandler.set(callerId, cachePolicy, fetchedData).finally(() => {
+                    resolve(...fetchedData);
+                });
+            }).catch(reject);
+        };
+
+        let cacheHandler = _Port('cacheHandler');
+        cacheHandler.get(callerId, cachePolicy).then((fetchedData) => {
+            if (fetchedData) {
+                resolve(...fetchedData);
+            } else {
+                fetchNow();
+            }
+        }).catch((err) => { // eslint-disable-line no-unused-vars
+            fetchNow();
+        });
     });
 };
 const sieve = (obj, props, isFreeze, add) => {
