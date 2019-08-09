@@ -159,6 +159,7 @@ const getApiUrl = (url) => {
 };
 const apiCall = (callerId, url, resDataType, cachePolicy, reqData) => { 
     return new Promise((resolve, reject) => {
+        let cacheHandler = _Port('cacheHandler');
         let fetchNow = () => {
             let fetchCaller = null;
             if (isServer) {
@@ -173,7 +174,6 @@ const apiCall = (callerId, url, resDataType, cachePolicy, reqData) => {
             }).catch(reject);
         };
 
-        let cacheHandler = _Port('cacheHandler');
         cacheHandler.get(callerId, cachePolicy).then((fetchedData) => {
             if (fetchedData) {
                 resolve(...fetchedData);

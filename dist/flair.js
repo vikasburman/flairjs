@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.55.10
- *  Thu, 08 Aug 2019 19:45:25 GMT
+ *  Version: 0.55.12
+ *  Fri, 09 Aug 2019 02:06:11 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -424,15 +424,32 @@
         }
         return url;
     };
-    const apiCall = (url, resDataType, reqData) => { 
+    const apiCall = (callerId, url, resDataType, cachePolicy, reqData) => { 
         return new Promise((resolve, reject) => {
-            let fetchCaller = null;
-            if (isServer) {
-                fetchCaller = _Port('serverFetch');
-            } else { // client
-                fetchCaller = _Port('clientFetch');
-            }
-            fetchCaller(getApiUrl(url), resDataType, reqData).then(resolve).catch(reject);
+            let cacheHandler = _Port('cacheHandler');
+            let fetchNow = () => {
+                let fetchCaller = null;
+                if (isServer) {
+                    fetchCaller = _Port('serverFetch');
+                } else { // client
+                    fetchCaller = _Port('clientFetch');
+                }
+                fetchCaller(getApiUrl(url), resDataType, reqData).then((...fetchedData) => {
+                    cacheHandler.set(callerId, cachePolicy, fetchedData).finally(() => {
+                        resolve(...fetchedData);
+                    });
+                }).catch(reject);
+            };
+    
+            cacheHandler.get(callerId, cachePolicy).then((fetchedData) => {
+                if (fetchedData) {
+                    resolve(...fetchedData);
+                } else {
+                    fetchNow();
+                }
+            }).catch((err) => { // eslint-disable-line no-unused-vars
+                fetchNow();
+            });
         });
     };
     const sieve = (obj, props, isFreeze, add) => {
@@ -4564,6 +4581,7 @@
                 _fetchMethod = '',
                 _fetchResponse = '',
                 _fetchUrl = '',
+                _fetchCachePolicy = '',
                 _api = null,
                 _api_abort_controller = null,
                 _injections = [];
@@ -4599,6 +4617,7 @@
                     _fetchMethod = fetch_attr.args[0]; // get, post, put, delete, etc.
                     _fetchResponse = fetch_attr.args[1]; // json, text, blob, buffer, form
                     _fetchUrl = fetch_attr.args[2]; // url to reach
+                    _fetchCachePolicy = fetch_attr.args[3] || ''; // cache policyName (this must exists at global.cache.policies.<policyName>)
                     _api = (reqData = {}) => {
                         // add method, rest should come by the call itself
                         reqData.method = _fetchMethod;
@@ -4630,7 +4649,7 @@
                         }
     
                         // make api call
-                        return apiCall(_fetchUrl, _fetchResponse, reqData); // this returns a promise
+                        return apiCall(`${def.name}___${memberName}`, _fetchUrl, _fetchResponse, _fetchCachePolicy, reqData); // this returns a promise
                     };
                 } else {
                     _api = null;
@@ -6768,7 +6787,7 @@
     _Port.define('clientFile', __clientFile);
     
     // settingsReader factory
-    const __settingsReader = (env) => {
+    const __settingsReader = (env) => { // eslint-disable-line no-unused-vars
         return (asmName) => {
             /** 
              * NOTE: appConfig.json (on server) and webConfig.json (on client)
@@ -6815,6 +6834,77 @@
         };
     };
     _Port.define('settingsReader', __settingsReader);
+    
+    // policy based cache handler factory
+    const __cacheHandler = (env) => { // eslint-disable-line no-unused-vars
+        // this inbuilt caching works over localstorage 
+        // any external caching can be applied by providing a custom cache handler
+        let cacheStorage = _Port('localStorage'),
+            cacheItemNamePrefix = '__cache_',
+            cachedItemSavedAtNameSuffix = '__savedAt_';
+    
+        let funcs = {
+            get: (callerId, cachePolicy) => {
+                // cachePolicy can contains following + anything else that cacheHandler needs
+                // {
+                //      duration: milliseconds till which this data is ok to keep in cache
+                // }    
+                return new Promise((resolve, reject) => {
+                    if (callerId && cachePolicy && cachePolicy.duration) {
+                        try {
+                            // any of it may throw - which will be ignored
+                            let itemKey = `${cacheItemNamePrefix}${callerId}`,
+                                savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`,
+                                fetchedData = JSON.parse(cacheStorage.getItem(itemKey)).value,
+                                dataSavedAt = parseInt(cacheStorage.getItem(savedAtItemKey));
+                            if ((Date.now() - dataSavedAt) <= cachePolicy.duration) { // cache is still hot
+                                resolve(fetchedData);
+                            } else { // cache is stale, delete it
+                                cacheStorage.removeItem(itemKey);
+                                cacheStorage.removeItem(savedAtItemKey);
+                            }
+                        } catch (err) { // eslint-disable-line no-unused-vars
+                            reject();
+                        }
+                    } else { reject(); }
+                });
+            },
+            set: (callerId, cachePolicy, fetchedData) => {
+                return new Promise((resolve, reject) => {
+                    if (callerId && cachePolicy && cachePolicy.duration && fetchedData) {
+                        try {
+                            // any of it may throw - which will be ignored
+                            let itemKey = `${cacheItemNamePrefix}${callerId}`,
+                                savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`,
+                                jsonFetchedData = JSON.stringify({value: fetchedData}),
+                                dataSavedAt = Date.now().toString();
+                            cacheStorage.setItem(itemKey, jsonFetchedData);
+                            cacheStorage.setItem(savedAtItemKey, dataSavedAt);
+                            resolve();
+                        } catch (err) { // eslint-disable-line no-unused-vars
+                            reject();
+                        }                    
+                    } else { reject(); }
+                });
+            },
+            remove: (callerId, cachePolicy) => { // eslint-disable-line no-unused-vars
+                return new Promise((resolve, reject) => {
+                    try {
+                        // any of it may throw - which will be ignored
+                        let itemKey = `${cacheItemNamePrefix}${callerId}`,
+                            savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`;
+                        cacheStorage.removeItem(itemKey);
+                        cacheStorage.removeItem(savedAtItemKey);
+                        resolve();
+                    } catch (err) { // eslint-disable-line no-unused-vars
+                        reject();
+                    }                    
+                });
+            }
+        };
+        return funcs;
+    };
+    _Port.define('cacheHandler', ['get', 'set', 'remove'], __cacheHandler);
     
     // fetch core logic
     const fetcher = (fetchFunc, url, resDataType, reqData) => {
@@ -7353,10 +7443,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.55.10',
+        version: '0.55.12',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Thu, 08 Aug 2019 19:45:25 GMT')
+        lupdate: new Date('Fri, 09 Aug 2019 02:06:11 GMT')
     });  
 
     // bundled assembly load process 
@@ -7753,7 +7843,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.10","lupdate":"Thu, 08 Aug 2019 19:45:25 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.12","lupdate":"Fri, 09 Aug 2019 02:06:11 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
