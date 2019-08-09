@@ -88,40 +88,31 @@ const shallowCopy = (target, source, overwrite, except) => {
     }
     return target;
 };
-const loadFile = (file) => { // text based file loading operation - not a general purpose fetch of any url (it assumes it is a phycical file)
-    return new Promise((resolve, reject) => {
-        let loader = null;
-        if (isServer) {
-            loader = _Port('serverFile');
-        } else { // client
-            loader = _Port('clientFile');
-        }
-        loader(file).then(resolve).catch(reject);
-    });
+const loadFile = async (file) => { // text based file loading operation - not a general purpose fetch of any url (it assumes it is a phycical file)
+    let loader = null;
+    if (isServer) {
+        loader = _Port('serverFile');
+    } else { // client
+        loader = _Port('clientFile');
+    }
+    return await loader(file);
 };
-const loadModule = (module, globalObjName, isDelete) => {
-    return new Promise((resolve, reject) => {
-        if (isServer) {
-            _Port('serverModule').require(module).then(resolve).catch(reject);
-        } else { // client
-            _Port('clientModule').require(module).then((obj) => {
-                if (!obj && typeof globalObjName === 'string') {
-                    if (isWorker) {
-                        obj = WorkerGlobalScope[globalObjName] || null;
-                        if (isDelete) { delete WorkerGlobalScope[globalObjName]; }
-                    } else {
-                        obj = window[globalObjName] || null;
-                        if (isDelete) { delete window[globalObjName]; }
-                    }
-                }
-                if (obj) {
-                    resolve(obj);
-                } else {
-                    resolve();
-                }
-            }).catch(reject);
+const loadModule = async (module, globalObjName, isDelete) => {
+    if (isServer) {
+        return await _Port('serverModule').require(module);
+    } else { // client
+        let obj = await _Port('clientModule').require(module);
+        if (!obj && typeof globalObjName === 'string') {
+            if (isWorker) {
+                obj = WorkerGlobalScope[globalObjName] || null;
+                if (isDelete) { delete WorkerGlobalScope[globalObjName]; }
+            } else {
+                obj = window[globalObjName] || null;
+                if (isDelete) { delete window[globalObjName]; }
+            }
         }
-    });
+        if (obj) { return obj; }
+    }
 };
 const lens = (obj, path) => path.split(".").reduce((o, key) => o && o[key] ? o[key] : null, obj);
 const globalSetting = (path, defaultValue) => {
@@ -228,19 +219,6 @@ const uncacheModule = (module) => {
     } else { 
         _Port('clientModule').undef(module);
     }
-};
-const forEachAsync = async (items, asyncFn) => {
-    return new Promise((resolve, reject) => {
-        const processItems = (items) => {
-            if (!items || items.length === 0) { resolve(); return; }
-            Promise((_resolve, _reject) => {
-                asyncFn(_resolve, _reject, items.shift());
-            }).then(() => { processItems(items); }).catch(reject); // process one from top
-        };
-
-        // start
-        processItems(items.slice());
-    });
 };
 const deepMerge = (objects, isMergeArray = true) => { // credit: https://stackoverflow.com/a/48218209
     const isObject = obj => obj && typeof obj === 'object';

@@ -107,36 +107,28 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.getType); }
         return alcTypes[qualifiedName] || null;
     };
-    this.ensureType = (qualifiedName) => {
-        return new Promise((resolve, reject) => {
-            if (this.isUnloaded()) { reject(_Exception.InvalidOperation(`Context is already unloaded. (${this.name})`)); return; }
-            if (typeof qualifiedName !== 'string') { reject(_Exception.InvalidArgument('qualifiedName')); return; }
-    
-            let Type = this.getType(qualifiedName);
-            if (!Type) {
-                let asmFile = domain.resolve(qualifiedName);
-                if (asmFile) { 
-                    this.loadAssembly(asmFile).then(() => {
-                        Type = this.getType(qualifiedName);
-                        if (!Type) {
-                            reject(_Exception.OperationFailed(`Assembly could not be loaded. (${asmFile})`));
-                        } else {
-                            resolve(Type);
-                        }
-                    }).catch(reject);
-                } else {
-                    reject(_Exception.NotFound(qualifiedName));
-                }
+    this.ensureType = async (qualifiedName) => {
+        if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`); }
+        if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName'); }
+
+        let Type = this.getType(qualifiedName);
+        if (!Type) {
+            let asmFile = domain.resolve(qualifiedName);
+            if (asmFile) { 
+                await this.loadAssembly(asmFile);
+                Type = this.getType(qualifiedName);
+                if (!Type) { throw _Exception.OperationFailed(`Assembly could not be loaded. (${asmFile})`); }
             } else {
-                resolve(Type);
+                throw _Exception.NotFound(qualifiedName);
             }
-        });
+        }
+        return Type;
     };
     this.allTypes = () => { 
         if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.allTypes); }
         return Object.keys(alcTypes); 
     };
-    this.execute = (info, progressListener) => {
+    this.execute = async (info, progressListener) => {
         // NOTE: The logic goes as:
         // 1. instance of given type is created with given constructor arguments
         // 2. if the type implements IProgressReporter and progressListener is passed,
@@ -149,83 +141,70 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         //    if just the instance is to be removed and no func is to be called, set funcName to '' and keepAlive to false
         //    and it will not call function but just remove stored instance
 
-        return new Promise((_resolve, _reject) => {
-            if (this.isUnloaded()) { _reject(_Exception.InvalidOperation(`Context is already unloaded. (${this.name})`)); return; }
+        if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`); }
 
-            // execution info
-            info.type = info.type || '';
-            info.typeArgs = info.typeArgs || [];
-            info.func = info.func || '';
-            info.args = info.args || [];
-            info.ctx = info.ctx || {};
-            info.keepAlive = (typeof info.keepAlive !== 'undefined' ? info.keepAlive : false);
+        // execution info
+        info.type = info.type || '';
+        info.typeArgs = info.typeArgs || [];
+        info.func = info.func || '';
+        info.args = info.args || [];
+        info.ctx = info.ctx || {};
+        info.keepAlive = (typeof info.keepAlive !== 'undefined' ? info.keepAlive : false);
             
-            const getInstance = () => {
-                return new Promise((resolve, reject) => {
-                    let instance = null;
-                    this.ensureType(info.type).then((Type) => {
-                        try {
-                            instance = new Type(...info.typeArgs);
+        const getInstance = async () => {
+            let Type = await this.ensureType(info.type);
+            let instance = new Type(...info.typeArgs);
 
-                            // listen to progress report, if need be
-                            if (typeof progressListener === 'function' && _is(instance, 'IProgressReporter')) {
-                                instance.progress.add(progressListener);
-                            }
+            // listen to progress report, if need be
+            if (typeof progressListener === 'function' && _is(instance, 'IProgressReporter')) {
+                instance.progress.add(progressListener);
+            }
 
-                            resolve(instance);
-                        } catch (err) {
-                            reject(err);
-                        }
-                    }).catch(reject);
-                });
-            };
-            const runInstanceFunc = (instance) => {
-                return new Promise((resolve, reject) => {
-                    let result = null;
-                    result = instance[info.func](...info.args);
-                    if (result && typeof result.then === 'function') {
-                        result.then(resolve).catch(reject);
-                    } else {
-                        resolve(result);
-                    }                
-                });
-            };
-
-            // process
-            let instance = null;
-            if (info.keepAlive) {
-                if (instances[info.type]) {
-                    instance = instances[info.type];
-                    runInstanceFunc(instance).then(_resolve).catch(_reject);
-                } else {
-                    getInstance().then((obj) => {
-                        instance = obj;
-                        instances[info.type] = instance;
-                        runInstanceFunc(instance).then(_resolve).catch(_reject);
-                    }).catch(_reject);
-                }
+            return instance;
+        };
+        const runInstanceFunc = async (instance) => {
+            let result = instance[info.func](...info.args);
+            if (result && typeof result.then === 'function') {
+                return await result;
             } else {
-                if (instances[info.type]) {
-                    instance = instances[info.type];
-                    if (info.func) {
-                        runInstanceFunc(instance).then(_resolve).catch(_reject).finally(() => {
-                            _dispose(instance);
-                            delete instances[info.type];
-                        });
-                    } else { // special request of just removing the instance - by keeping func name as empty
+                return result;
+            }                
+        };
+
+        // process
+        let instance = null;
+        if (info.keepAlive) {
+            if (instances[info.type]) {
+                instance = instances[info.type];
+                return await runInstanceFunc(instance);
+            } else {
+                instance = await getInstance();
+                instances[info.type] = instance;
+                return await runInstanceFunc(instance);
+            }
+        } else {
+            if (instances[info.type]) {
+                instance = instances[info.type];
+                if (info.func) {
+                    try {
+                        return await runInstanceFunc(instance);
+                    } finally {
                         _dispose(instance);
                         delete instances[info.type];
-                        _resolve();
                     }
-                } else {
-                    getInstance().then((obj) => {
-                        runInstanceFunc(obj).then(_resolve).catch(_reject).finally(() => {
-                            _dispose(obj);
-                        });
-                    }).catch(_reject);                
+                } else { // special request of just removing the instance - by keeping func name as empty
+                    _dispose(instance);
+                    delete instances[info.type];
+                }
+            } else {
+                let obj = await getInstance();
+                try {
+                    return await runInstanceFunc(obj);
+                } finally {
+                    _dispose(obj);
                 }
             }
-        });
+        }
     };
 
     // namespace
@@ -284,54 +263,38 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
             return file2.replace('.js', '/');
         }
     };
-    this.loadAssembly = (file) => {
-        return new Promise((resolve, reject) => {
-            if (this.isUnloaded()) { reject(_Exception.InvalidOperation(`Context is already unloaded. (${this.name})`)); return; }
+    this.loadAssembly = async (file) => {
+        if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`); }
 
-            if (!asmFiles[file] && this.currentAssemblyBeingLoaded() !== file) { // load only when it is not already loaded (or not already being loaded) in this load context
-                // set this context as current context, so all types being loaded in this assembly will get attached to this context;
-                currentContexts.push(this);
+        if (!asmFiles[file] && this.currentAssemblyBeingLoaded() !== file) { // load only when it is not already loaded (or not already being loaded) in this load context
+            // set this context as current context, so all types being loaded in this assembly will get attached to this context;
+            currentContexts.push(this);
 
-                // get resolved file name of this assembly
-                let asmADO = this.domain.getAdo(file),
-                    file2 = this.getAssemblyFile(file);
+            // get resolved file name of this assembly
+            let asmADO = this.domain.getAdo(file),
+                file2 = this.getAssemblyFile(file);
 
-                // uncache module, so it's types get to register again with this new context
-                uncacheModule(file2);
+            // uncache module, so it's types get to register again with this new context
+            uncacheModule(file2);
 
-                // load module
-                loadModule(file2, asmADO.name, true).then((asmFactory) => {
-                    // run asm factory to load assembly
-                    asmFactory(flair, file2).then((asmClosureVars) => {
-                        // current context where this was loaded
-                        let loadedInContext = this.current();
+            // load module
+            try {
+                // get asm factory from module
+                let asmFactory = await loadModule(file2, asmADO.name, true);
+               
+                // run asm factory to load assembly
+                let asmClosureVars = await asmFactory(flair, file2);
 
-                        // remove this from current context list
-                        currentContexts.pop();
+                // current context where this was loaded
+                let loadedInContext = this.current();
 
-                        // assembly loaded
-                        assemblyLoaded(file, asmADO, loadedInContext, asmClosureVars);
-
-                        // resolve
-                        resolve();
-                    }).catch((err) => {
-                        // remove this from current context list
-                        currentContexts.pop();
-
-                        // reject
-                        reject(err);
-                    });
-                }).catch((err) => {
-                    // remove this from current context list
-                    currentContexts.pop();
-
-                    // reject
-                    reject(err);
-                });
-            } else {
-                resolve();
-            }
-        });        
+                // assembly loaded
+                assemblyLoaded(file, asmADO, loadedInContext, asmClosureVars);
+            } finally {
+                // remove this from current context list
+                currentContexts.pop();
+            } // let throw error as is
+        }
     };  
     this.loadBundledAssembly = (file, loadedFile, asmFactory) => {
         if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`); }

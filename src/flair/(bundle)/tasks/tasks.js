@@ -49,37 +49,25 @@ const resetADPool = () => { // called by shared channel, whenever some AD goes i
     processNext();
 
 };
-const getFreeAD = () => {
-    return new Promise((resolve, reject) => {
-        // get a free AD from pool
-        // a free AD is whose default context does not have any open messages and instances count is zero
-        let allADs = ADPool.slice(0);
-        let processNext = () => {
-            if (allADs.length !== 0) { // find a free sitting ad
-                let ad = allADs.shift();
-                if (!ad.context.isBusy()) { 
-                    ad.context.hasActiveInstances().then((count) => {
-                        if (count === 0) {
-                            resolve(ad);
-                        } else {
-                            processNext();
-                        }
-                    }).catch(reject);
-                } else {
-                    processNext();
-                }
-            } else {
-                if (ADPool.length < max_pool_size) { // create new ad
-                    _AppDomain.createDomain(guid()).then((ad) => { // with a random name
-                        resolve(ad);
-                    }).catch(reject);
-                } else { 
-                    reject(_Exception.OperationFailed('AppDomain pool limit reached.'));
+const getFreeAD = async () => {
+    // get a free AD from pool
+    // a free AD is whose default context does not have any open messages and instances count is zero
+    let ad = null;
+    if (!ADPool.length === 0) {
+        for (let thisAD of ADPool) {
+            if (!thisAD.context.isBusy()) { 
+                if (await thisAD.context.hasActiveInstances() === 0) {
+                    ad = thisAD;
+                    break;
                 }
             }
-        };
-        processNext();
-    });
+        }
+    }
+    if (!ad) { // none free could be found
+        if (ADPool.length >= max_pool_size) { throw _Exception.OperationFailed('AppDomain pool limit reached.'); }
+        ad = await _AppDomain.createDomain(guid()); // with a random name
+    }
+    return ad;
 };
 
 const _Tasks = { 
@@ -91,50 +79,48 @@ const _Tasks = {
         });
     },
 
-    getHandle: (task, progressListener) => {
-        return new Promise((resolve, reject) => {
-            getFreeAD().then((ad) => {
-                let taskHandle = {
-                    run: (...args) => {
-                        return new Promise((_resolve, _reject) => {
-                            ad.context.execute({
-                                type: task.type,
-                                typeArgs: task.typeArgs,
-                                func: 'run',
-                                args: args,
-                                keepAlive: true
-                            }, progressListener).then(_resolve).catch(_reject); 
-                        });
-                    },
-                    close: () => {
-                        return new Promise((_resolve, _reject) => {
-                            ad.context.execute({
-                                type: task.type,
-                                typeArgs: task.typeArgs,
-                                func: '',   // keeping it empty together with keepAlive = false, removes the internal instance
-                                args: [],
-                                keepAlive: false
-                            }, progressListener).then(_resolve).catch(_reject).finally(resetADPool); 
-                        });
-                    }
-                };
-                resolve(taskHandle);
-            }).catch(reject);
-        });
-    },
-
-    invoke: (task, progressListener) => {
-        return new Promise((resolve, reject) => {
-            getFreeAD().then((ad) => {
-                ad.context.execute({
+    getHandle: async (task, progressListener) => {
+        let ad = await getFreeAD();
+        let taskHandle = {
+            run: async (...args) => {
+                return await ad.context.execute({
                     type: task.type,
                     typeArgs: task.typeArgs,
                     func: 'run',
-                    args: [],
-                    keepAlive: false
-                }, progressListener).then(resolve).catch(reject).finally(resetADPool)
-            }).catch(reject);
-        });
+                    args: args,
+                    keepAlive: true
+                }, progressListener);
+            },
+            close: async () => {
+                try {
+                    return ad.context.execute({
+                        type: task.type,
+                        typeArgs: task.typeArgs,
+                        func: '',   // keeping it empty together with keepAlive = false, removes the internal instance
+                        args: [],
+                        keepAlive: false
+                    }, progressListener);
+                } finally {
+                    resetADPool();
+                }
+            }
+        };
+        return taskHandle;
+    },
+
+    invoke: async (task, progressListener) => {
+        let ad = await getFreeAD();
+        try {
+            return await ad.context.execute({
+                type: task.type,
+                typeArgs: task.typeArgs,
+                func: 'run',
+                args: [],
+                keepAlive: false
+            }, progressListener);
+        } finally {
+            resetADPool();
+        }
     },
 
     parallel: Object.freeze({
@@ -166,24 +152,12 @@ const _Tasks = {
     }),
 
     sequence: Object.freeze({
-        invoke: (...tasks) => {
-            return new Promise((resolve, reject) => {
-                let allTasks = tasks.slice(0),
-                    results = [];
-                let processNext = () => {
-                    if (allTasks.length === 0) { resolve(...results); return; }
-                    let task = allTasks.shift();
-                    _Tasks.invoke(task).then((result) => {
-                        results.push(result);
-                        processNext();
-                    }).catch(reject);
-                };
-                if (allTasks.length > 0) { 
-                    processNext(); 
-                } else {
-                    resolve(...results);
-                }
-            });
+        invoke: async (...tasks) => {
+            let results = [];
+            for (let task of tasks) {
+                results.push(await _Tasks.invoke(task));
+            }
+            return results;
         }
     })
 };

@@ -72,21 +72,18 @@ const AppDomain = function(name) {
             unloadDefaultContext = null;
         }
     };
-    this.createDomain = (name) => {
-        return new Promise((resolve, reject) => {
-            if(typeof name !== 'string' || (name && name === 'default') || domains[name]) { reject(_Exception.InvalidArguments('name')); return; }
-            if (isServer) {
-                try {
-                    let worker_threads = require('worker_threads'); // eslint-disable-line no-unused-vars
-                } catch (err) { // eslint-disable-line no-unused-vars
-                    reject(_Exception.NotAvailable('worker_threads')); 
-                    return;
-                }
+    this.createDomain = async (name) => {
+        if(typeof name !== 'string' || (name && name === 'default') || domains[name]) { throw _Exception.InvalidArguments('name'); }
+        if (isServer) {
+            try {
+                let worker_threads = require('worker_threads'); // eslint-disable-line no-unused-vars
+            } catch (err) { // eslint-disable-line no-unused-vars
+                throw _Exception.NotAvailable('worker_threads'); 
             }
-            let proxy = Object.freeze(new AppDomainProxy(name, domains, allADOs));
-            domains[name] = proxy;
-            resolve(proxy);
-        });
+        }
+        let proxy = Object.freeze(new AppDomainProxy(name, domains, allADOs));
+        domains[name] = proxy;
+        return proxy;
     };
     this.domains = (name) => { return domains[name] || null; }
    
@@ -101,13 +98,11 @@ const AppDomain = function(name) {
     };
     this.context = setNewDefaultContext();
     this.contexts = (name) => { return contexts[name] || null; }
-    this.createContext = (name) => {
-        return new Promise((resolve, reject) => {
-            if(typeof name !== 'string' || (name && name === 'default') || contexts[name]) { reject(_Exception.InvalidArguments('name')); return; }
-            let alc = Object.freeze(new AssemblyLoadContext(name, this, defaultLoadContext, currentContexts, contexts));
-            contexts[name] = alc;
-            resolve(alc);
-        });
+    this.createContext = async (name) => {
+        if(typeof name !== 'string' || (name && name === 'default') || contexts[name]) { throw _Exception.InvalidArguments('name'); }
+        let alc = Object.freeze(new AssemblyLoadContext(name, this, defaultLoadContext, currentContexts, contexts));
+        contexts[name] = alc;
+        return alc;
     };
 
     // ados
@@ -296,16 +291,8 @@ const AppDomain = function(name) {
     };
 
     // scripts
-    this.loadScripts = (...scripts) => {
-        return new Promise((resolve, reject) => {
-            try {
-                _bring(scripts, () => {
-                    resolve(); // resolve without passing anything
-                });
-            } catch (err) {
-                reject(err);
-            }
-        });
+    this.loadScripts = async (...scripts) => {
+        return await _bring(scripts);
     };
 
     // error router

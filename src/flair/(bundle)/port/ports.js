@@ -51,17 +51,15 @@ _Port.define('localStorage', ['key', 'getItem', 'setItem', 'removeItem', 'clear'
 // serverModule factory
 const __serverModule = (env) => { // eslint-disable-line no-unused-vars
     let funcs = {
-        require: (module) => {
-            return new Promise((resolve, reject) => {
-                if (typeof module !== 'string') { reject(_Exception.InvalidArgument('module')); return; }
+        require: async (module) => {
+            if (typeof module !== 'string') { throw _Exception.InvalidArgument('module'); }
 
-                // both worker and normal scenarios, same loading technique
-                try {
-                    resolve(require(module));
-                } catch (err) {
-                    reject(new _Exception(err));
-                }
-            });
+            // both worker and normal scenarios, same loading technique
+            try {
+                return require(module);
+            } catch (err) {
+                throw new _Exception(err);
+            }
         },
         undef: (module) => {
             if (typeof module !== 'string') { throw _Exception.InvalidArgument('module', funcs.undef); }
@@ -79,48 +77,45 @@ _Port.define('serverModule', ['require', 'undef'], __serverModule);
 // clientModule factory
 const __clientModule = (env) => {
     let funcs = {
-        require: (module) => {
-            return new Promise((resolve, reject) => {
-                if (typeof module !== 'string') { reject(_Exception.InvalidArgument('module')); return; }
+        require: async (module) => {
+            if (typeof module !== 'string') { throw _Exception.InvalidArgument('module'); }
 
-                let ext = module.substr(module.lastIndexOf('.') + 1).toLowerCase();
-                try {
-                    if (typeof require !== 'undefined') { // if requirejs is available
-                        try {
-                            require([module], resolve, reject);
-                        } catch (err) {
-                            reject(new _Exception(err));
-                        }
-                    } else { // load it as file on browser or in web worker
-                        if (env.isWorker) {
-                            try {
-                                importScripts(module); // sync call
-                                resolve(); // TODO: Check how we can pass the loaded 'exported' object of module to this resolve.
-                            } catch (err) {
-                                reject(new _Exception(err));
-                            }
-                        } else { // browser
-                            let js = window.document.createElement('script');
-                            if (ext === 'mjs') {
-                                js.type = 'module';
-                            } else {
-                                js.type = 'text/javascript';
-                            }
-                            js.name = module;
-                            js.src = module;
-                            js.onload = () => { 
-                                resolve(); // TODO: Check how we can pass the loaded 'exported' object of module to this resolve.
-                            };
-                            js.onerror = (err) => {
-                                reject(new _Exception(err));
-                            };
-                            window.document.head.appendChild(js);
-                        }
+            let doLoadViaRequire = () => {
+                return new Promise((resolve, reject) => { 
+                    require([module], resolve, reject); 
+                });
+            };
+            let doLoadViaDOM = () => {
+                return new Promise((resolve, reject) => { 
+                    let ext = module.substr(module.lastIndexOf('.') + 1).toLowerCase();
+                    let js = window.document.createElement('script');
+                    if (ext === 'mjs') {
+                        js.type = 'module';
+                    } else {
+                        js.type = 'text/javascript';
                     }
-                } catch(err) {
-                    reject(new _Exception(err));
+                    js.name = module;
+                    js.src = module;
+                    js.onload = () => { 
+                        resolve(); // TODO: Check how we can pass the loaded 'exported' object of module to this resolve.
+                    };
+                    js.onerror = (err) => {
+                        reject(new _Exception(err));
+                    };
+                    window.document.head.appendChild(js);                    
+                });
+            };
+
+            if (typeof require !== 'undefined') { // if requirejs is available
+                return await doLoadViaRequire();
+            } else { // load it as file on browser or in web worker
+                if (env.isWorker) {
+                    importScripts(module); // sync call
+                    return // TODO: Check how we can pass the loaded 'exported' object of module to this resolve.
+                } else { // browser
+                    return await doLoadViaDOM();
                 }
-            });
+            }
         },
         undef: (module) => {
             if (typeof module !== 'string') { throw _Exception.InvalidArgument('module', funcs.undef); }
@@ -184,30 +179,19 @@ _Port.define('serverFile', __serverFile);
 
 // clientFile factory
 const __clientFile = (env) => { // eslint-disable-line no-unused-vars
-    return (file) => {
-        return new Promise((resolve, reject) => {
-            if (typeof file !== 'string') { reject(_Exception.InvalidArgument('file')); return; }
+    return async (file) => {
+        if (typeof file !== 'string') { throw _Exception.InvalidArgument('file'); }
 
-            let ext = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
-            fetch(file).then((response) => {
-                if (!response.ok) {
-                    reject(_Exception.OperationFailed(file, response.status));
-                } else {
-                    let contentType = response.headers['content-type'];
-                    if (ext === 'json' || /^application\/json/.test(contentType)) { // special case of JSON
-                        response.json().then(resolve).catch((err) => {
-                            reject(new _Exception(err));
-                        });
-                    } else { // everything else is a text
-                        response.text().then(resolve).catch((err) => {
-                            reject(new _Exception(err));
-                        });
-                    }
-                }
-            }).catch((err) => {
-                reject(new _Exception(err));
-            });
-        });
+        let ext = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
+        let response = await fetch(file);
+        if (!response.ok) { throw _Exception.OperationFailed(file, response.status); }
+            
+        let contentType = response.headers['content-type'];
+        if (ext === 'json' || /^application\/json/.test(contentType)) { // special case of JSON
+            return response.json();
+        } else { // everything else is a text
+            return response.text();
+        }
     };
 };
 _Port.define('clientFile', __clientFile);
@@ -270,59 +254,42 @@ const __cacheHandler = (env) => { // eslint-disable-line no-unused-vars
         cachedItemSavedAtNameSuffix = '__savedAt_';
 
     let funcs = {
-        get: (cacheId, cacheConfig) => {
-            return new Promise((resolve, reject) => {
-                if (cacheId && cacheConfig && cacheConfig.duration) {
-                    try {
-                        // any of it may throw - which will be ignored
-                        let itemKey = `${cacheItemNamePrefix}${cacheId}`,
-                            savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`,
-                            fetchedData = JSON.parse(cacheStorage.getItem(itemKey)).value,
-                            dataSavedAt = parseInt(cacheStorage.getItem(savedAtItemKey));
-                        if ((Date.now() - dataSavedAt) <= cacheConfig.duration) { // cache is still hot
-                            resolve(fetchedData);
-                        } else { // cache is stale, delete it
-                            cacheStorage.removeItem(itemKey);
-                            cacheStorage.removeItem(savedAtItemKey);
-                            reject();
-                        }
-                    } catch (err) { // eslint-disable-line no-unused-vars
-                        reject();
-                    }
-                } else { reject(); }
-            });
+        get: async (cacheId, cacheConfig) => {
+            if (typeof cacheId !== 'string') { throw _Exception.InvalidArgument('cacheId'); }
+            if (!cacheConfig || !cacheConfig.duration) { throw _Exception.InvalidArgument('cacheConfig'); }
+
+            let itemKey = `${cacheItemNamePrefix}${cacheId}`,
+                savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`,
+                fetchedData = JSON.parse(cacheStorage.getItem(itemKey)).value,
+                dataSavedAt = parseInt(cacheStorage.getItem(savedAtItemKey));
+            if ((Date.now() - dataSavedAt) <= cacheConfig.duration) { // cache is still hot
+                return fetchedData;
+            } else { // cache is stale, delete it
+                cacheStorage.removeItem(itemKey);
+                cacheStorage.removeItem(savedAtItemKey);
+                throw _Exception.NotFound(cacheId);
+            }
         },
-        set: (cacheId, cacheConfig, fetchedData) => {
-            return new Promise((resolve, reject) => {
-                if (cacheId && cacheConfig && fetchedData) {
-                    try {
-                        // any of it may throw - which will be ignored
-                        let itemKey = `${cacheItemNamePrefix}${cacheId}`,
-                            savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`,
-                            jsonFetchedData = JSON.stringify({value: fetchedData}),
-                            dataSavedAt = Date.now().toString();
-                        cacheStorage.setItem(itemKey, jsonFetchedData);
-                        cacheStorage.setItem(savedAtItemKey, dataSavedAt);
-                        resolve();
-                    } catch (err) { // eslint-disable-line no-unused-vars
-                        reject();
-                    }                    
-                } else { reject(); }
-            });
+        set: async (cacheId, cacheConfig, fetchedData) => {
+            if (typeof cacheId !== 'string') { throw _Exception.InvalidArgument('cacheId'); }
+            if (!cacheConfig) { throw _Exception.InvalidArgument('cacheConfig'); }
+            if (typeof fetchedData === 'undefined') { throw _Exception.InvalidArgument('fetchedData'); }
+
+            let itemKey = `${cacheItemNamePrefix}${cacheId}`,
+                savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`,
+                jsonFetchedData = JSON.stringify({value: fetchedData}),
+                dataSavedAt = Date.now().toString();
+            cacheStorage.setItem(itemKey, jsonFetchedData);
+            cacheStorage.setItem(savedAtItemKey, dataSavedAt);
         },
-        remove: (cacheId, cacheConfig) => { // eslint-disable-line no-unused-vars
-            return new Promise((resolve, reject) => {
-                try {
-                    // any of it may throw - which will be ignored
-                    let itemKey = `${cacheItemNamePrefix}${cacheId}`,
-                        savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`;
-                    cacheStorage.removeItem(itemKey);
-                    cacheStorage.removeItem(savedAtItemKey);
-                    resolve();
-                } catch (err) { // eslint-disable-line no-unused-vars
-                    reject();
-                }                    
-            });
+        remove: async (cacheId, cacheConfig) => { 
+            if (typeof cacheId !== 'string') { throw _Exception.InvalidArgument('cacheId'); }
+            if (!cacheConfig) { throw _Exception.InvalidArgument('cacheConfig'); }
+        
+            let itemKey = `${cacheItemNamePrefix}${cacheId}`,
+                savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`;
+            cacheStorage.removeItem(itemKey);
+            cacheStorage.removeItem(savedAtItemKey);
         }
     };
     return funcs;
@@ -330,32 +297,23 @@ const __cacheHandler = (env) => { // eslint-disable-line no-unused-vars
 _Port.define('cacheHandler', ['get', 'set', 'remove'], __cacheHandler);
 
 // fetch core logic
-const fetcher = (fetchFunc, url, resDataType, reqData) => {
-    return new Promise((resolve, reject) => {
-        if (typeof url !== 'string') { reject(_Exception.InvalidArgument('url')); return; }
-        if (typeof resDataType !== 'string' || ['text', 'json', 'buffer', 'form', 'blob'].indexOf(resDataType) === -1) { reject(_Exception.InvalidArgument('resDataType')); return; }
-        if (!reqData) { reject(_Exception.InvalidArgument('reqData')); return; }
+const fetcher = async (fetchFunc, url, resDataType, reqData) => {
+    if (typeof url !== 'string') { throw _Exception.InvalidArgument('url'); }
+    if (typeof resDataType !== 'string' || ['text', 'json', 'buffer', 'form', 'blob'].indexOf(resDataType) === -1) { throw _Exception.InvalidArgument('resDataType'); }
+    if (!reqData) { throw _Exception.InvalidArgument('reqData'); }
 
-        fetchFunc(url, reqData).then((response) => {
-            if (!response.ok) {
-                reject(_Exception.OperationFailed(url, response.status));
-            } else {
-                let resMethod = '';
-                switch(resDataType) {
-                    case 'text': resMethod = 'text'; break;
-                    case 'json': resMethod = 'json'; break;
-                    case 'buffer': resMethod = 'arrayBuffer'; break;
-                    case 'form': resMethod = 'formData'; break;
-                    case 'blob': resMethod = 'blob'; break;
-                }
-                response[resMethod]().then(resolve).catch((err) => {
-                    reject(new _Exception(err));
-                });
-            }
-        }).catch((err) => {
-            reject(new _Exception(err));
-        });
-    });
+    let response = await fetchFunc(url, reqData);
+    if (!response.ok) { throw _Exception.OperationFailed(url, response.status); }
+
+    let resMethod = '';
+    switch(resDataType) {
+        case 'text': resMethod = 'text'; break;
+        case 'json': resMethod = 'json'; break;
+        case 'buffer': resMethod = 'arrayBuffer'; break;
+        case 'form': resMethod = 'formData'; break;
+        case 'blob': resMethod = 'blob'; break;
+    }
+    return await response[resMethod]();
 };
 // serverFetch factory
 const __serverFetch = (env) => { // eslint-disable-line no-unused-vars

@@ -39,24 +39,21 @@ const AppDomainProxy = function(name, domains, allADOs) {
     // assembly load context
     this.context = Object.freeze(new AssemblyLoadContextProxy('default', this, channel));
     this.contexts = (name) => { return contextProxies[name] || null; }    
-    this.createContext = (name) => {
-        return new Promise((resolve, reject) => {
-            if(typeof name !== 'string' || (name && name === 'default') || contextProxies[name]) { reject(_Exception.InvalidArguments('name')); return; }
-            channel.remoteCall('ad', '', false, 'createContext', [name]).then((state) => {
-                if (state) { // state is true, if context was created
-                    let alcp = Object.freeze(new AssemblyLoadContextProxy(name, this, channel));
-                    contextProxies[name] = alcp;
-                    resolve(alcp);
-                } else {
-                    reject(_Exception.OperationFailed('Context could not be created.'));
-                }
-            }).catch(reject);
-        });
+    this.createContext = async (name) => {
+        if(typeof name !== 'string' || (name && name === 'default') || contextProxies[name]) { throw _Exception.InvalidArguments('name'); }
+        let state = await channel.remoteCall('ad', '', false, 'createContext', [name]);
+        if (state) { // state is true, if context was created
+            let alcp = Object.freeze(new AssemblyLoadContextProxy(name, this, channel));
+            contextProxies[name] = alcp;
+            return alcp;
+        } else {
+            throw _Exception.OperationFailed('Context could not be created.', name);
+        }
     };
 
     // scripts
-    this.loadScripts = (...scripts) => {
+    this.loadScripts = async (...scripts) => {
         if (this.isUnloaded()) { throw _Exception.InvalidOperation(`AppDomain is already unloaded. (${this.name})`, this.loadScripts); }
-        return channel.remoteCall('ad', '', false, 'loadScripts', scripts);
+        return await channel.remoteCall('ad', '', false, 'loadScripts', scripts);
     };
 };

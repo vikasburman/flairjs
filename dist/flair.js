@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.55.27
- *  Fri, 09 Aug 2019 18:49:33 GMT
+ *  Version: 0.55.29
+ *  Fri, 09 Aug 2019 20:57:24 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -355,40 +355,31 @@
         }
         return target;
     };
-    const loadFile = (file) => { // text based file loading operation - not a general purpose fetch of any url (it assumes it is a phycical file)
-        return new Promise((resolve, reject) => {
-            let loader = null;
-            if (isServer) {
-                loader = _Port('serverFile');
-            } else { // client
-                loader = _Port('clientFile');
-            }
-            loader(file).then(resolve).catch(reject);
-        });
+    const loadFile = async (file) => { // text based file loading operation - not a general purpose fetch of any url (it assumes it is a phycical file)
+        let loader = null;
+        if (isServer) {
+            loader = _Port('serverFile');
+        } else { // client
+            loader = _Port('clientFile');
+        }
+        return await loader(file);
     };
-    const loadModule = (module, globalObjName, isDelete) => {
-        return new Promise((resolve, reject) => {
-            if (isServer) {
-                _Port('serverModule').require(module).then(resolve).catch(reject);
-            } else { // client
-                _Port('clientModule').require(module).then((obj) => {
-                    if (!obj && typeof globalObjName === 'string') {
-                        if (isWorker) {
-                            obj = WorkerGlobalScope[globalObjName] || null;
-                            if (isDelete) { delete WorkerGlobalScope[globalObjName]; }
-                        } else {
-                            obj = window[globalObjName] || null;
-                            if (isDelete) { delete window[globalObjName]; }
-                        }
-                    }
-                    if (obj) {
-                        resolve(obj);
-                    } else {
-                        resolve();
-                    }
-                }).catch(reject);
+    const loadModule = async (module, globalObjName, isDelete) => {
+        if (isServer) {
+            return await _Port('serverModule').require(module);
+        } else { // client
+            let obj = await _Port('clientModule').require(module);
+            if (!obj && typeof globalObjName === 'string') {
+                if (isWorker) {
+                    obj = WorkerGlobalScope[globalObjName] || null;
+                    if (isDelete) { delete WorkerGlobalScope[globalObjName]; }
+                } else {
+                    obj = window[globalObjName] || null;
+                    if (isDelete) { delete window[globalObjName]; }
+                }
             }
-        });
+            if (obj) { return obj; }
+        }
     };
     const lens = (obj, path) => path.split(".").reduce((o, key) => o && o[key] ? o[key] : null, obj);
     const globalSetting = (path, defaultValue) => {
@@ -495,19 +486,6 @@
         } else { 
             _Port('clientModule').undef(module);
         }
-    };
-    const forEachAsync = async (items, asyncFn) => {
-        return new Promise((resolve, reject) => {
-            const processItems = (items) => {
-                if (!items || items.length === 0) { resolve(); return; }
-                Promise((_resolve, _reject) => {
-                    asyncFn(_resolve, _reject, items.shift());
-                }).then(() => { processItems(items); }).catch(reject); // process one from top
-            };
-    
-            // start
-            processItems(items.slice());
-        });
     };
     const deepMerge = (objects, isMergeArray = true) => { // credit: https://stackoverflow.com/a/48218209
         const isObject = obj => obj && typeof obj === 'object';
@@ -1095,36 +1073,28 @@
             if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.getType); }
             return alcTypes[qualifiedName] || null;
         };
-        this.ensureType = (qualifiedName) => {
-            return new Promise((resolve, reject) => {
-                if (this.isUnloaded()) { reject(_Exception.InvalidOperation(`Context is already unloaded. (${this.name})`)); return; }
-                if (typeof qualifiedName !== 'string') { reject(_Exception.InvalidArgument('qualifiedName')); return; }
-        
-                let Type = this.getType(qualifiedName);
-                if (!Type) {
-                    let asmFile = domain.resolve(qualifiedName);
-                    if (asmFile) { 
-                        this.loadAssembly(asmFile).then(() => {
-                            Type = this.getType(qualifiedName);
-                            if (!Type) {
-                                reject(_Exception.OperationFailed(`Assembly could not be loaded. (${asmFile})`));
-                            } else {
-                                resolve(Type);
-                            }
-                        }).catch(reject);
-                    } else {
-                        reject(_Exception.NotFound(qualifiedName));
-                    }
+        this.ensureType = async (qualifiedName) => {
+            if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`); }
+            if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName'); }
+    
+            let Type = this.getType(qualifiedName);
+            if (!Type) {
+                let asmFile = domain.resolve(qualifiedName);
+                if (asmFile) { 
+                    await this.loadAssembly(asmFile);
+                    Type = this.getType(qualifiedName);
+                    if (!Type) { throw _Exception.OperationFailed(`Assembly could not be loaded. (${asmFile})`); }
                 } else {
-                    resolve(Type);
+                    throw _Exception.NotFound(qualifiedName);
                 }
-            });
+            }
+            return Type;
         };
         this.allTypes = () => { 
             if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.allTypes); }
             return Object.keys(alcTypes); 
         };
-        this.execute = (info, progressListener) => {
+        this.execute = async (info, progressListener) => {
             // NOTE: The logic goes as:
             // 1. instance of given type is created with given constructor arguments
             // 2. if the type implements IProgressReporter and progressListener is passed,
@@ -1137,83 +1107,70 @@
             //    if just the instance is to be removed and no func is to be called, set funcName to '' and keepAlive to false
             //    and it will not call function but just remove stored instance
     
-            return new Promise((_resolve, _reject) => {
-                if (this.isUnloaded()) { _reject(_Exception.InvalidOperation(`Context is already unloaded. (${this.name})`)); return; }
+            if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`); }
     
-                // execution info
-                info.type = info.type || '';
-                info.typeArgs = info.typeArgs || [];
-                info.func = info.func || '';
-                info.args = info.args || [];
-                info.ctx = info.ctx || {};
-                info.keepAlive = (typeof info.keepAlive !== 'undefined' ? info.keepAlive : false);
+            // execution info
+            info.type = info.type || '';
+            info.typeArgs = info.typeArgs || [];
+            info.func = info.func || '';
+            info.args = info.args || [];
+            info.ctx = info.ctx || {};
+            info.keepAlive = (typeof info.keepAlive !== 'undefined' ? info.keepAlive : false);
                 
-                const getInstance = () => {
-                    return new Promise((resolve, reject) => {
-                        let instance = null;
-                        this.ensureType(info.type).then((Type) => {
-                            try {
-                                instance = new Type(...info.typeArgs);
+            const getInstance = async () => {
+                let Type = await this.ensureType(info.type);
+                let instance = new Type(...info.typeArgs);
     
-                                // listen to progress report, if need be
-                                if (typeof progressListener === 'function' && _is(instance, 'IProgressReporter')) {
-                                    instance.progress.add(progressListener);
-                                }
+                // listen to progress report, if need be
+                if (typeof progressListener === 'function' && _is(instance, 'IProgressReporter')) {
+                    instance.progress.add(progressListener);
+                }
     
-                                resolve(instance);
-                            } catch (err) {
-                                reject(err);
-                            }
-                        }).catch(reject);
-                    });
-                };
-                const runInstanceFunc = (instance) => {
-                    return new Promise((resolve, reject) => {
-                        let result = null;
-                        result = instance[info.func](...info.args);
-                        if (result && typeof result.then === 'function') {
-                            result.then(resolve).catch(reject);
-                        } else {
-                            resolve(result);
-                        }                
-                    });
-                };
-    
-                // process
-                let instance = null;
-                if (info.keepAlive) {
-                    if (instances[info.type]) {
-                        instance = instances[info.type];
-                        runInstanceFunc(instance).then(_resolve).catch(_reject);
-                    } else {
-                        getInstance().then((obj) => {
-                            instance = obj;
-                            instances[info.type] = instance;
-                            runInstanceFunc(instance).then(_resolve).catch(_reject);
-                        }).catch(_reject);
-                    }
+                return instance;
+            };
+            const runInstanceFunc = async (instance) => {
+                let result = instance[info.func](...info.args);
+                if (result && typeof result.then === 'function') {
+                    return await result;
                 } else {
-                    if (instances[info.type]) {
-                        instance = instances[info.type];
-                        if (info.func) {
-                            runInstanceFunc(instance).then(_resolve).catch(_reject).finally(() => {
-                                _dispose(instance);
-                                delete instances[info.type];
-                            });
-                        } else { // special request of just removing the instance - by keeping func name as empty
+                    return result;
+                }                
+            };
+    
+            // process
+            let instance = null;
+            if (info.keepAlive) {
+                if (instances[info.type]) {
+                    instance = instances[info.type];
+                    return await runInstanceFunc(instance);
+                } else {
+                    instance = await getInstance();
+                    instances[info.type] = instance;
+                    return await runInstanceFunc(instance);
+                }
+            } else {
+                if (instances[info.type]) {
+                    instance = instances[info.type];
+                    if (info.func) {
+                        try {
+                            return await runInstanceFunc(instance);
+                        } finally {
                             _dispose(instance);
                             delete instances[info.type];
-                            _resolve();
                         }
-                    } else {
-                        getInstance().then((obj) => {
-                            runInstanceFunc(obj).then(_resolve).catch(_reject).finally(() => {
-                                _dispose(obj);
-                            });
-                        }).catch(_reject);                
+                    } else { // special request of just removing the instance - by keeping func name as empty
+                        _dispose(instance);
+                        delete instances[info.type];
+                    }
+                } else {
+                    let obj = await getInstance();
+                    try {
+                        return await runInstanceFunc(obj);
+                    } finally {
+                        _dispose(obj);
                     }
                 }
-            });
+            }
         };
     
         // namespace
@@ -1272,54 +1229,38 @@
                 return file2.replace('.js', '/');
             }
         };
-        this.loadAssembly = (file) => {
-            return new Promise((resolve, reject) => {
-                if (this.isUnloaded()) { reject(_Exception.InvalidOperation(`Context is already unloaded. (${this.name})`)); return; }
+        this.loadAssembly = async (file) => {
+            if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`); }
     
-                if (!asmFiles[file] && this.currentAssemblyBeingLoaded() !== file) { // load only when it is not already loaded (or not already being loaded) in this load context
-                    // set this context as current context, so all types being loaded in this assembly will get attached to this context;
-                    currentContexts.push(this);
+            if (!asmFiles[file] && this.currentAssemblyBeingLoaded() !== file) { // load only when it is not already loaded (or not already being loaded) in this load context
+                // set this context as current context, so all types being loaded in this assembly will get attached to this context;
+                currentContexts.push(this);
     
-                    // get resolved file name of this assembly
-                    let asmADO = this.domain.getAdo(file),
-                        file2 = this.getAssemblyFile(file);
+                // get resolved file name of this assembly
+                let asmADO = this.domain.getAdo(file),
+                    file2 = this.getAssemblyFile(file);
     
-                    // uncache module, so it's types get to register again with this new context
-                    uncacheModule(file2);
+                // uncache module, so it's types get to register again with this new context
+                uncacheModule(file2);
     
-                    // load module
-                    loadModule(file2, asmADO.name, true).then((asmFactory) => {
-                        // run asm factory to load assembly
-                        asmFactory(flair, file2).then((asmClosureVars) => {
-                            // current context where this was loaded
-                            let loadedInContext = this.current();
+                // load module
+                try {
+                    // get asm factory from module
+                    let asmFactory = await loadModule(file2, asmADO.name, true);
+                   
+                    // run asm factory to load assembly
+                    let asmClosureVars = await asmFactory(flair, file2);
     
-                            // remove this from current context list
-                            currentContexts.pop();
+                    // current context where this was loaded
+                    let loadedInContext = this.current();
     
-                            // assembly loaded
-                            assemblyLoaded(file, asmADO, loadedInContext, asmClosureVars);
-    
-                            // resolve
-                            resolve();
-                        }).catch((err) => {
-                            // remove this from current context list
-                            currentContexts.pop();
-    
-                            // reject
-                            reject(err);
-                        });
-                    }).catch((err) => {
-                        // remove this from current context list
-                        currentContexts.pop();
-    
-                        // reject
-                        reject(err);
-                    });
-                } else {
-                    resolve();
-                }
-            });        
+                    // assembly loaded
+                    assemblyLoaded(file, asmADO, loadedInContext, asmClosureVars);
+                } finally {
+                    // remove this from current context list
+                    currentContexts.pop();
+                } // let throw error as is
+            }
         };  
         this.loadBundledAssembly = (file, loadedFile, asmFactory) => {
             if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`); }
@@ -1889,25 +1830,22 @@
         // assembly load context
         this.context = Object.freeze(new AssemblyLoadContextProxy('default', this, channel));
         this.contexts = (name) => { return contextProxies[name] || null; }    
-        this.createContext = (name) => {
-            return new Promise((resolve, reject) => {
-                if(typeof name !== 'string' || (name && name === 'default') || contextProxies[name]) { reject(_Exception.InvalidArguments('name')); return; }
-                channel.remoteCall('ad', '', false, 'createContext', [name]).then((state) => {
-                    if (state) { // state is true, if context was created
-                        let alcp = Object.freeze(new AssemblyLoadContextProxy(name, this, channel));
-                        contextProxies[name] = alcp;
-                        resolve(alcp);
-                    } else {
-                        reject(_Exception.OperationFailed('Context could not be created.'));
-                    }
-                }).catch(reject);
-            });
+        this.createContext = async (name) => {
+            if(typeof name !== 'string' || (name && name === 'default') || contextProxies[name]) { throw _Exception.InvalidArguments('name'); }
+            let state = await channel.remoteCall('ad', '', false, 'createContext', [name]);
+            if (state) { // state is true, if context was created
+                let alcp = Object.freeze(new AssemblyLoadContextProxy(name, this, channel));
+                contextProxies[name] = alcp;
+                return alcp;
+            } else {
+                throw _Exception.OperationFailed('Context could not be created.', name);
+            }
         };
     
         // scripts
-        this.loadScripts = (...scripts) => {
+        this.loadScripts = async (...scripts) => {
             if (this.isUnloaded()) { throw _Exception.InvalidOperation(`AppDomain is already unloaded. (${this.name})`, this.loadScripts); }
-            return channel.remoteCall('ad', '', false, 'loadScripts', scripts);
+            return await channel.remoteCall('ad', '', false, 'loadScripts', scripts);
         };
     };
       
@@ -2034,21 +1972,18 @@
                 unloadDefaultContext = null;
             }
         };
-        this.createDomain = (name) => {
-            return new Promise((resolve, reject) => {
-                if(typeof name !== 'string' || (name && name === 'default') || domains[name]) { reject(_Exception.InvalidArguments('name')); return; }
-                if (isServer) {
-                    try {
-                        let worker_threads = require('worker_threads'); // eslint-disable-line no-unused-vars
-                    } catch (err) { // eslint-disable-line no-unused-vars
-                        reject(_Exception.NotAvailable('worker_threads')); 
-                        return;
-                    }
+        this.createDomain = async (name) => {
+            if(typeof name !== 'string' || (name && name === 'default') || domains[name]) { throw _Exception.InvalidArguments('name'); }
+            if (isServer) {
+                try {
+                    let worker_threads = require('worker_threads'); // eslint-disable-line no-unused-vars
+                } catch (err) { // eslint-disable-line no-unused-vars
+                    throw _Exception.NotAvailable('worker_threads'); 
                 }
-                let proxy = Object.freeze(new AppDomainProxy(name, domains, allADOs));
-                domains[name] = proxy;
-                resolve(proxy);
-            });
+            }
+            let proxy = Object.freeze(new AppDomainProxy(name, domains, allADOs));
+            domains[name] = proxy;
+            return proxy;
         };
         this.domains = (name) => { return domains[name] || null; }
        
@@ -2063,13 +1998,11 @@
         };
         this.context = setNewDefaultContext();
         this.contexts = (name) => { return contexts[name] || null; }
-        this.createContext = (name) => {
-            return new Promise((resolve, reject) => {
-                if(typeof name !== 'string' || (name && name === 'default') || contexts[name]) { reject(_Exception.InvalidArguments('name')); return; }
-                let alc = Object.freeze(new AssemblyLoadContext(name, this, defaultLoadContext, currentContexts, contexts));
-                contexts[name] = alc;
-                resolve(alc);
-            });
+        this.createContext = async (name) => {
+            if(typeof name !== 'string' || (name && name === 'default') || contexts[name]) { throw _Exception.InvalidArguments('name'); }
+            let alc = Object.freeze(new AssemblyLoadContext(name, this, defaultLoadContext, currentContexts, contexts));
+            contexts[name] = alc;
+            return alc;
         };
     
         // ados
@@ -2258,16 +2191,8 @@
         };
     
         // scripts
-        this.loadScripts = (...scripts) => {
-            return new Promise((resolve, reject) => {
-                try {
-                    _bring(scripts, () => {
-                        resolve(); // resolve without passing anything
-                    });
-                } catch (err) {
-                    reject(err);
-                }
-            });
+        this.loadScripts = async (...scripts) => {
+            return await _bring(scripts);
         };
     
         // error router
@@ -6424,37 +6349,25 @@
         processNext();
     
     };
-    const getFreeAD = () => {
-        return new Promise((resolve, reject) => {
-            // get a free AD from pool
-            // a free AD is whose default context does not have any open messages and instances count is zero
-            let allADs = ADPool.slice(0);
-            let processNext = () => {
-                if (allADs.length !== 0) { // find a free sitting ad
-                    let ad = allADs.shift();
-                    if (!ad.context.isBusy()) { 
-                        ad.context.hasActiveInstances().then((count) => {
-                            if (count === 0) {
-                                resolve(ad);
-                            } else {
-                                processNext();
-                            }
-                        }).catch(reject);
-                    } else {
-                        processNext();
-                    }
-                } else {
-                    if (ADPool.length < max_pool_size) { // create new ad
-                        _AppDomain.createDomain(guid()).then((ad) => { // with a random name
-                            resolve(ad);
-                        }).catch(reject);
-                    } else { 
-                        reject(_Exception.OperationFailed('AppDomain pool limit reached.'));
+    const getFreeAD = async () => {
+        // get a free AD from pool
+        // a free AD is whose default context does not have any open messages and instances count is zero
+        let ad = null;
+        if (!ADPool.length === 0) {
+            for (let thisAD of ADPool) {
+                if (!thisAD.context.isBusy()) { 
+                    if (await thisAD.context.hasActiveInstances() === 0) {
+                        ad = thisAD;
+                        break;
                     }
                 }
-            };
-            processNext();
-        });
+            }
+        }
+        if (!ad) { // none free could be found
+            if (ADPool.length >= max_pool_size) { throw _Exception.OperationFailed('AppDomain pool limit reached.'); }
+            ad = await _AppDomain.createDomain(guid()); // with a random name
+        }
+        return ad;
     };
     
     const _Tasks = { 
@@ -6466,50 +6379,48 @@
             });
         },
     
-        getHandle: (task, progressListener) => {
-            return new Promise((resolve, reject) => {
-                getFreeAD().then((ad) => {
-                    let taskHandle = {
-                        run: (...args) => {
-                            return new Promise((_resolve, _reject) => {
-                                ad.context.execute({
-                                    type: task.type,
-                                    typeArgs: task.typeArgs,
-                                    func: 'run',
-                                    args: args,
-                                    keepAlive: true
-                                }, progressListener).then(_resolve).catch(_reject); 
-                            });
-                        },
-                        close: () => {
-                            return new Promise((_resolve, _reject) => {
-                                ad.context.execute({
-                                    type: task.type,
-                                    typeArgs: task.typeArgs,
-                                    func: '',   // keeping it empty together with keepAlive = false, removes the internal instance
-                                    args: [],
-                                    keepAlive: false
-                                }, progressListener).then(_resolve).catch(_reject).finally(resetADPool); 
-                            });
-                        }
-                    };
-                    resolve(taskHandle);
-                }).catch(reject);
-            });
-        },
-    
-        invoke: (task, progressListener) => {
-            return new Promise((resolve, reject) => {
-                getFreeAD().then((ad) => {
-                    ad.context.execute({
+        getHandle: async (task, progressListener) => {
+            let ad = await getFreeAD();
+            let taskHandle = {
+                run: async (...args) => {
+                    return await ad.context.execute({
                         type: task.type,
                         typeArgs: task.typeArgs,
                         func: 'run',
-                        args: [],
-                        keepAlive: false
-                    }, progressListener).then(resolve).catch(reject).finally(resetADPool)
-                }).catch(reject);
-            });
+                        args: args,
+                        keepAlive: true
+                    }, progressListener);
+                },
+                close: async () => {
+                    try {
+                        return ad.context.execute({
+                            type: task.type,
+                            typeArgs: task.typeArgs,
+                            func: '',   // keeping it empty together with keepAlive = false, removes the internal instance
+                            args: [],
+                            keepAlive: false
+                        }, progressListener);
+                    } finally {
+                        resetADPool();
+                    }
+                }
+            };
+            return taskHandle;
+        },
+    
+        invoke: async (task, progressListener) => {
+            let ad = await getFreeAD();
+            try {
+                return await ad.context.execute({
+                    type: task.type,
+                    typeArgs: task.typeArgs,
+                    func: 'run',
+                    args: [],
+                    keepAlive: false
+                }, progressListener);
+            } finally {
+                resetADPool();
+            }
         },
     
         parallel: Object.freeze({
@@ -6541,24 +6452,12 @@
         }),
     
         sequence: Object.freeze({
-            invoke: (...tasks) => {
-                return new Promise((resolve, reject) => {
-                    let allTasks = tasks.slice(0),
-                        results = [];
-                    let processNext = () => {
-                        if (allTasks.length === 0) { resolve(...results); return; }
-                        let task = allTasks.shift();
-                        _Tasks.invoke(task).then((result) => {
-                            results.push(result);
-                            processNext();
-                        }).catch(reject);
-                    };
-                    if (allTasks.length > 0) { 
-                        processNext(); 
-                    } else {
-                        resolve(...results);
-                    }
-                });
+            invoke: async (...tasks) => {
+                let results = [];
+                for (let task of tasks) {
+                    results.push(await _Tasks.invoke(task));
+                }
+                return results;
             }
         })
     };
@@ -6627,17 +6526,15 @@
     // serverModule factory
     const __serverModule = (env) => { // eslint-disable-line no-unused-vars
         let funcs = {
-            require: (module) => {
-                return new Promise((resolve, reject) => {
-                    if (typeof module !== 'string') { reject(_Exception.InvalidArgument('module')); return; }
+            require: async (module) => {
+                if (typeof module !== 'string') { throw _Exception.InvalidArgument('module'); }
     
-                    // both worker and normal scenarios, same loading technique
-                    try {
-                        resolve(require(module));
-                    } catch (err) {
-                        reject(new _Exception(err));
-                    }
-                });
+                // both worker and normal scenarios, same loading technique
+                try {
+                    return require(module);
+                } catch (err) {
+                    throw new _Exception(err);
+                }
             },
             undef: (module) => {
                 if (typeof module !== 'string') { throw _Exception.InvalidArgument('module', funcs.undef); }
@@ -6655,48 +6552,45 @@
     // clientModule factory
     const __clientModule = (env) => {
         let funcs = {
-            require: (module) => {
-                return new Promise((resolve, reject) => {
-                    if (typeof module !== 'string') { reject(_Exception.InvalidArgument('module')); return; }
+            require: async (module) => {
+                if (typeof module !== 'string') { throw _Exception.InvalidArgument('module'); }
     
-                    let ext = module.substr(module.lastIndexOf('.') + 1).toLowerCase();
-                    try {
-                        if (typeof require !== 'undefined') { // if requirejs is available
-                            try {
-                                require([module], resolve, reject);
-                            } catch (err) {
-                                reject(new _Exception(err));
-                            }
-                        } else { // load it as file on browser or in web worker
-                            if (env.isWorker) {
-                                try {
-                                    importScripts(module); // sync call
-                                    resolve(); // TODO: Check how we can pass the loaded 'exported' object of module to this resolve.
-                                } catch (err) {
-                                    reject(new _Exception(err));
-                                }
-                            } else { // browser
-                                let js = window.document.createElement('script');
-                                if (ext === 'mjs') {
-                                    js.type = 'module';
-                                } else {
-                                    js.type = 'text/javascript';
-                                }
-                                js.name = module;
-                                js.src = module;
-                                js.onload = () => { 
-                                    resolve(); // TODO: Check how we can pass the loaded 'exported' object of module to this resolve.
-                                };
-                                js.onerror = (err) => {
-                                    reject(new _Exception(err));
-                                };
-                                window.document.head.appendChild(js);
-                            }
+                let doLoadViaRequire = () => {
+                    return new Promise((resolve, reject) => { 
+                        require([module], resolve, reject); 
+                    });
+                };
+                let doLoadViaDOM = () => {
+                    return new Promise((resolve, reject) => { 
+                        let ext = module.substr(module.lastIndexOf('.') + 1).toLowerCase();
+                        let js = window.document.createElement('script');
+                        if (ext === 'mjs') {
+                            js.type = 'module';
+                        } else {
+                            js.type = 'text/javascript';
                         }
-                    } catch(err) {
-                        reject(new _Exception(err));
+                        js.name = module;
+                        js.src = module;
+                        js.onload = () => { 
+                            resolve(); // TODO: Check how we can pass the loaded 'exported' object of module to this resolve.
+                        };
+                        js.onerror = (err) => {
+                            reject(new _Exception(err));
+                        };
+                        window.document.head.appendChild(js);                    
+                    });
+                };
+    
+                if (typeof require !== 'undefined') { // if requirejs is available
+                    return await doLoadViaRequire();
+                } else { // load it as file on browser or in web worker
+                    if (env.isWorker) {
+                        importScripts(module); // sync call
+                        return // TODO: Check how we can pass the loaded 'exported' object of module to this resolve.
+                    } else { // browser
+                        return await doLoadViaDOM();
                     }
-                });
+                }
             },
             undef: (module) => {
                 if (typeof module !== 'string') { throw _Exception.InvalidArgument('module', funcs.undef); }
@@ -6760,30 +6654,19 @@
     
     // clientFile factory
     const __clientFile = (env) => { // eslint-disable-line no-unused-vars
-        return (file) => {
-            return new Promise((resolve, reject) => {
-                if (typeof file !== 'string') { reject(_Exception.InvalidArgument('file')); return; }
+        return async (file) => {
+            if (typeof file !== 'string') { throw _Exception.InvalidArgument('file'); }
     
-                let ext = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
-                fetch(file).then((response) => {
-                    if (!response.ok) {
-                        reject(_Exception.OperationFailed(file, response.status));
-                    } else {
-                        let contentType = response.headers['content-type'];
-                        if (ext === 'json' || /^application\/json/.test(contentType)) { // special case of JSON
-                            response.json().then(resolve).catch((err) => {
-                                reject(new _Exception(err));
-                            });
-                        } else { // everything else is a text
-                            response.text().then(resolve).catch((err) => {
-                                reject(new _Exception(err));
-                            });
-                        }
-                    }
-                }).catch((err) => {
-                    reject(new _Exception(err));
-                });
-            });
+            let ext = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
+            let response = await fetch(file);
+            if (!response.ok) { throw _Exception.OperationFailed(file, response.status); }
+                
+            let contentType = response.headers['content-type'];
+            if (ext === 'json' || /^application\/json/.test(contentType)) { // special case of JSON
+                return response.json();
+            } else { // everything else is a text
+                return response.text();
+            }
         };
     };
     _Port.define('clientFile', __clientFile);
@@ -6846,59 +6729,42 @@
             cachedItemSavedAtNameSuffix = '__savedAt_';
     
         let funcs = {
-            get: (cacheId, cacheConfig) => {
-                return new Promise((resolve, reject) => {
-                    if (cacheId && cacheConfig && cacheConfig.duration) {
-                        try {
-                            // any of it may throw - which will be ignored
-                            let itemKey = `${cacheItemNamePrefix}${cacheId}`,
-                                savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`,
-                                fetchedData = JSON.parse(cacheStorage.getItem(itemKey)).value,
-                                dataSavedAt = parseInt(cacheStorage.getItem(savedAtItemKey));
-                            if ((Date.now() - dataSavedAt) <= cacheConfig.duration) { // cache is still hot
-                                resolve(fetchedData);
-                            } else { // cache is stale, delete it
-                                cacheStorage.removeItem(itemKey);
-                                cacheStorage.removeItem(savedAtItemKey);
-                                reject();
-                            }
-                        } catch (err) { // eslint-disable-line no-unused-vars
-                            reject();
-                        }
-                    } else { reject(); }
-                });
+            get: async (cacheId, cacheConfig) => {
+                if (typeof cacheId !== 'string') { throw _Exception.InvalidArgument('cacheId'); }
+                if (!cacheConfig || !cacheConfig.duration) { throw _Exception.InvalidArgument('cacheConfig'); }
+    
+                let itemKey = `${cacheItemNamePrefix}${cacheId}`,
+                    savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`,
+                    fetchedData = JSON.parse(cacheStorage.getItem(itemKey)).value,
+                    dataSavedAt = parseInt(cacheStorage.getItem(savedAtItemKey));
+                if ((Date.now() - dataSavedAt) <= cacheConfig.duration) { // cache is still hot
+                    return fetchedData;
+                } else { // cache is stale, delete it
+                    cacheStorage.removeItem(itemKey);
+                    cacheStorage.removeItem(savedAtItemKey);
+                    throw _Exception.NotFound(cacheId);
+                }
             },
-            set: (cacheId, cacheConfig, fetchedData) => {
-                return new Promise((resolve, reject) => {
-                    if (cacheId && cacheConfig && fetchedData) {
-                        try {
-                            // any of it may throw - which will be ignored
-                            let itemKey = `${cacheItemNamePrefix}${cacheId}`,
-                                savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`,
-                                jsonFetchedData = JSON.stringify({value: fetchedData}),
-                                dataSavedAt = Date.now().toString();
-                            cacheStorage.setItem(itemKey, jsonFetchedData);
-                            cacheStorage.setItem(savedAtItemKey, dataSavedAt);
-                            resolve();
-                        } catch (err) { // eslint-disable-line no-unused-vars
-                            reject();
-                        }                    
-                    } else { reject(); }
-                });
+            set: async (cacheId, cacheConfig, fetchedData) => {
+                if (typeof cacheId !== 'string') { throw _Exception.InvalidArgument('cacheId'); }
+                if (!cacheConfig) { throw _Exception.InvalidArgument('cacheConfig'); }
+                if (typeof fetchedData === 'undefined') { throw _Exception.InvalidArgument('fetchedData'); }
+    
+                let itemKey = `${cacheItemNamePrefix}${cacheId}`,
+                    savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`,
+                    jsonFetchedData = JSON.stringify({value: fetchedData}),
+                    dataSavedAt = Date.now().toString();
+                cacheStorage.setItem(itemKey, jsonFetchedData);
+                cacheStorage.setItem(savedAtItemKey, dataSavedAt);
             },
-            remove: (cacheId, cacheConfig) => { // eslint-disable-line no-unused-vars
-                return new Promise((resolve, reject) => {
-                    try {
-                        // any of it may throw - which will be ignored
-                        let itemKey = `${cacheItemNamePrefix}${cacheId}`,
-                            savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`;
-                        cacheStorage.removeItem(itemKey);
-                        cacheStorage.removeItem(savedAtItemKey);
-                        resolve();
-                    } catch (err) { // eslint-disable-line no-unused-vars
-                        reject();
-                    }                    
-                });
+            remove: async (cacheId, cacheConfig) => { 
+                if (typeof cacheId !== 'string') { throw _Exception.InvalidArgument('cacheId'); }
+                if (!cacheConfig) { throw _Exception.InvalidArgument('cacheConfig'); }
+            
+                let itemKey = `${cacheItemNamePrefix}${cacheId}`,
+                    savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`;
+                cacheStorage.removeItem(itemKey);
+                cacheStorage.removeItem(savedAtItemKey);
             }
         };
         return funcs;
@@ -6906,32 +6772,23 @@
     _Port.define('cacheHandler', ['get', 'set', 'remove'], __cacheHandler);
     
     // fetch core logic
-    const fetcher = (fetchFunc, url, resDataType, reqData) => {
-        return new Promise((resolve, reject) => {
-            if (typeof url !== 'string') { reject(_Exception.InvalidArgument('url')); return; }
-            if (typeof resDataType !== 'string' || ['text', 'json', 'buffer', 'form', 'blob'].indexOf(resDataType) === -1) { reject(_Exception.InvalidArgument('resDataType')); return; }
-            if (!reqData) { reject(_Exception.InvalidArgument('reqData')); return; }
+    const fetcher = async (fetchFunc, url, resDataType, reqData) => {
+        if (typeof url !== 'string') { throw _Exception.InvalidArgument('url'); }
+        if (typeof resDataType !== 'string' || ['text', 'json', 'buffer', 'form', 'blob'].indexOf(resDataType) === -1) { throw _Exception.InvalidArgument('resDataType'); }
+        if (!reqData) { throw _Exception.InvalidArgument('reqData'); }
     
-            fetchFunc(url, reqData).then((response) => {
-                if (!response.ok) {
-                    reject(_Exception.OperationFailed(url, response.status));
-                } else {
-                    let resMethod = '';
-                    switch(resDataType) {
-                        case 'text': resMethod = 'text'; break;
-                        case 'json': resMethod = 'json'; break;
-                        case 'buffer': resMethod = 'arrayBuffer'; break;
-                        case 'form': resMethod = 'formData'; break;
-                        case 'blob': resMethod = 'blob'; break;
-                    }
-                    response[resMethod]().then(resolve).catch((err) => {
-                        reject(new _Exception(err));
-                    });
-                }
-            }).catch((err) => {
-                reject(new _Exception(err));
-            });
-        });
+        let response = await fetchFunc(url, reqData);
+        if (!response.ok) { throw _Exception.OperationFailed(url, response.status); }
+    
+        let resMethod = '';
+        switch(resDataType) {
+            case 'text': resMethod = 'text'; break;
+            case 'json': resMethod = 'json'; break;
+            case 'buffer': resMethod = 'arrayBuffer'; break;
+            case 'form': resMethod = 'formData'; break;
+            case 'blob': resMethod = 'blob'; break;
+        }
+        return await response[resMethod]();
     };
     // serverFetch factory
     const __serverFetch = (env) => { // eslint-disable-line no-unused-vars
@@ -7408,7 +7265,6 @@
      */ 
     const _utils = () => { };
     _utils.guid = guid;
-    _utils.forEachAsync = forEachAsync;
     _utils.stuff = stuff;
     _utils.replaceAll = replaceAll;
     _utils.splitAndTrim = splitAndTrim;
@@ -7442,10 +7298,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.55.27',
+        version: '0.55.29',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Fri, 09 Aug 2019 18:49:33 GMT')
+        lupdate: new Date('Fri, 09 Aug 2019 20:57:24 GMT')
     });  
 
     // bundled assembly load process 
@@ -7465,7 +7321,7 @@
                 getTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;
         const { TaskInfo } = flair.Tasks;
         const { env } = flair.options;
-        const { guid, forEachAsync, stuff, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve,
+        const { guid, stuff, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve,
                 deepMerge, getLoadedScript, b64EncodeUnicode, b64DecodeUnicode, lens, globalSetting } = flair.utils;
         
         // inbuilt modifiers and attributes compile-time-safe support
@@ -7842,7 +7698,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.27","lupdate":"Fri, 09 Aug 2019 18:49:33 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.29","lupdate":"Fri, 09 Aug 2019 20:57:24 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
