@@ -8,6 +8,7 @@
  */ 
 const _utils = () => { };
 _utils.guid = guid;
+_utils.forEachAsync = forEachAsync;
 _utils.stuff = stuff;
 _utils.replaceAll = replaceAll;
 _utils.splitAndTrim = splitAndTrim;

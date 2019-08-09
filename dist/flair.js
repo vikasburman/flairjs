@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.55.23
- *  Fri, 09 Aug 2019 17:38:30 GMT
+ *  Version: 0.55.25
+ *  Fri, 09 Aug 2019 17:52:06 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -495,6 +495,19 @@
         } else { 
             _Port('clientModule').undef(module);
         }
+    };
+    const forEachAsync = async (items, asyncFn) => {
+        return new Promise((resolve, reject) => {
+            const processItems = (items) => {
+                if (!items || items.length === 0) { resolve(); return; }
+                Promise((_resolve, _reject) => {
+                    asyncFn(_resolve, _reject, items.shift());
+                }).then(() => { processItems(items); }).catch(reject); // process one from top
+            };
+    
+            // start
+            processItems(items.slice());
+        });
     };
     const deepMerge = (objects, isMergeArray = true) => { // credit: https://stackoverflow.com/a/48218209
         const isObject = obj => obj && typeof obj === 'object';
@@ -7392,6 +7405,7 @@
      */ 
     const _utils = () => { };
     _utils.guid = guid;
+    _utils.forEachAsync = forEachAsync;
     _utils.stuff = stuff;
     _utils.replaceAll = replaceAll;
     _utils.splitAndTrim = splitAndTrim;
@@ -7425,10 +7439,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.55.23',
+        version: '0.55.25',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Fri, 09 Aug 2019 17:38:30 GMT')
+        lupdate: new Date('Fri, 09 Aug 2019 17:52:06 GMT')
     });  
 
     // bundled assembly load process 
@@ -7448,7 +7462,7 @@
                 getTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;
         const { TaskInfo } = flair.Tasks;
         const { env } = flair.options;
-        const { guid, stuff, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve,
+        const { guid, forEachAsync, stuff, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve,
                 deepMerge, getLoadedScript, b64EncodeUnicode, b64DecodeUnicode, lens, globalSetting } = flair.utils;
         
         // inbuilt modifiers and attributes compile-time-safe support
@@ -7825,7 +7839,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.23","lupdate":"Fri, 09 Aug 2019 17:38:30 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.25","lupdate":"Fri, 09 Aug 2019 17:52:06 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 

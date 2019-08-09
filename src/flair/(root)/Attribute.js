@@ -6,8 +6,8 @@ $$('abstract');
 $$('ns', '(auto)');
 Class('(auto)', function() {
     $$('virtual');
-    this.construct = (args) => {
-        this.args = args;
+    this.construct = (...args) => {
+        this.args = Object.freeze(args);
     };
 
    /** 

@@ -229,6 +229,19 @@ const uncacheModule = (module) => {
         _Port('clientModule').undef(module);
     }
 };
+const forEachAsync = async (items, asyncFn) => {
+    return new Promise((resolve, reject) => {
+        const processItems = (items) => {
+            if (!items || items.length === 0) { resolve(); return; }
+            Promise((_resolve, _reject) => {
+                asyncFn(_resolve, _reject, items.shift());
+            }).then(() => { processItems(items); }).catch(reject); // process one from top
+        };
+
+        // start
+        processItems(items.slice());
+    });
+};
 const deepMerge = (objects, isMergeArray = true) => { // credit: https://stackoverflow.com/a/48218209
     const isObject = obj => obj && typeof obj === 'object';
     
