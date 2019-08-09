@@ -132,9 +132,11 @@ const getEndpointUrl = (endpointPolicy, url) => {
     // any url can have following placeholders:
     //  *R*: endpoint root
     //      R must have: local, dev, test and prod scenario roots
+    //      R is replaced as first, so it can also have further placeholders in it
     //  *?*: anything else
     //      ? must be an alphabet
     //      some known are:  
+    //          *P*: project id
     //          *G*: endpoint geo region
     //          *L*: endpoint locale
     //          *V*: endpoint version
@@ -142,8 +144,8 @@ const getEndpointUrl = (endpointPolicy, url) => {
     // e.g. 
     // '/*R*/api/*V*/now' --> https://us-east1-flairjs-firebase-app.cloudfunctions.net/api/v1/now
     if (endpointPolicy) {
-        let keyValue = '';
-        for(let key in endpointPolicy) {
+        let replaceIt = (key) => {
+            let keyValue = '';
             if (key.toUpperCase() === 'R' && url.indexOf(`*${key}*`) !== -1) {
                 if (options.env.isLocalhost) {
                     keyValue = endpointPolicy[key].local;
@@ -161,6 +163,10 @@ const getEndpointUrl = (endpointPolicy, url) => {
                 url = replaceAll(url, `*${key}*`, keyValue);
                 keyValue = ''; // for next
             }
+        };
+        replaceIt('R'); // R is first
+        for(let key in endpointPolicy) {
+            if (key.toUpperCase() !== 'R') { replaceIt(key); } // skip R, as it is done
         }
     }
     return url; 

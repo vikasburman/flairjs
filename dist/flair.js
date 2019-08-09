@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.55.20
- *  Fri, 09 Aug 2019 13:27:15 GMT
+ *  Version: 0.55.21
+ *  Fri, 09 Aug 2019 13:44:25 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -399,9 +399,11 @@
         // any url can have following placeholders:
         //  *R*: endpoint root
         //      R must have: local, dev, test and prod scenario roots
+        //      R is replaced as first, so it can also have further placeholders in it
         //  *?*: anything else
         //      ? must be an alphabet
         //      some known are:  
+        //          *P*: project id
         //          *G*: endpoint geo region
         //          *L*: endpoint locale
         //          *V*: endpoint version
@@ -409,8 +411,8 @@
         // e.g. 
         // '/*R*/api/*V*/now' --> https://us-east1-flairjs-firebase-app.cloudfunctions.net/api/v1/now
         if (endpointPolicy) {
-            let keyValue = '';
-            for(let key in endpointPolicy) {
+            let replaceIt = (key) => {
+                let keyValue = '';
                 if (key.toUpperCase() === 'R' && url.indexOf(`*${key}*`) !== -1) {
                     if (options.env.isLocalhost) {
                         keyValue = endpointPolicy[key].local;
@@ -426,7 +428,12 @@
                 }
                 if (keyValue) {
                     url = replaceAll(url, `*${key}*`, keyValue);
+                    keyValue = ''; // for next
                 }
+            };
+            replaceIt('R'); // R is first
+            for(let key in endpointPolicy) {
+                if (key.toUpperCase() !== 'R') { replaceIt(key); } // skip R, as it is done
             }
         }
         return url; 
@@ -7466,10 +7473,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.55.20',
+        version: '0.55.21',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Fri, 09 Aug 2019 13:27:15 GMT')
+        lupdate: new Date('Fri, 09 Aug 2019 13:44:25 GMT')
     });  
 
     // bundled assembly load process 
@@ -7866,7 +7873,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.20","lupdate":"Fri, 09 Aug 2019 13:27:15 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.21","lupdate":"Fri, 09 Aug 2019 13:44:25 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
