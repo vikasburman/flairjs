@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.55.31
- *  Wed, 14 Aug 2019 16:55:06 GMT
+ *  Version: 0.55.32
+ *  Sat, 17 Aug 2019 00:08:37 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -3252,12 +3252,11 @@
             enumerate: new _attrConfig('(class || struct) && prop || func || event'),
             dispose: new _attrConfig('class && prop'),
             post: new _attrConfig('(class || struct) && event'),
-            fetch: new _attrConfig('(class || struct) && (func && async) && !(timer || on || @fetch)'),
             on: new _attrConfig('class && func && !(event || $async || $args || $overload || $inject || $static)'),
             timer: new _attrConfig('class && func && !(event || $async || $args || $inject || @timer || $static)'),
             type: new _attrConfig('(class || struct) && prop'),
             args: new _attrConfig('(class || struct) && (func || construct) && !$on && !$overload'),
-            inject: new _attrConfig('class && (prop || func || construct) && !(static || session || state)'),
+            inject: new _attrConfig('class && (prop || func || construct) && !(static || session || state || fetch)'),
             resource: new _attrConfig('class && prop && !(session || state || inject || asset)'),
             asset: new _attrConfig('class && prop && !(session || state || inject || resource)'),
             singleton: new _attrConfig('(class && !(prop || func || event) && !($abstract || $static))'),
@@ -4595,7 +4594,7 @@
                     let fnArgs = [];
                     if (base) { fnArgs.push(base); }                                // base is always first, if overriding
                     if (_api) { fnArgs.push(_api); }                                // api is always next to base, if fetch is used
-                    if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base or as first, if injected
+                    if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base (and api) or as first, if injected
                     if (args_attr && args_attr.args.length > 0) {
                         let argsObj = _Args(...args_attr.args)(...args); 
                         if (argsObj.error) { throw argsObj.error; }
@@ -7298,10 +7297,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.55.31',
+        version: '0.55.32',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Wed, 14 Aug 2019 16:55:06 GMT')
+        lupdate: new Date('Sat, 17 Aug 2019 00:08:37 GMT')
     });  
 
     // bundled assembly load process 
@@ -7687,6 +7686,66 @@
             this.onRun = nim;
         });
         
+    })();    
+    (() => { // type: ./src/flair/(root)/cache.js
+        const { Attribute } = ns();
+        
+        /**
+         * @name cache
+         * @description Caching custom attribute
+         * $$('cache', { 'duration': 10000 }) OR $$('cache', 10000)
+         */
+        $$('ns', '(root)');
+        Class('cache', Attribute, function() {
+            $$('override');
+            this.construct = (base, cacheConfig) => {
+                base(cacheConfig);
+        
+                // config
+                this.cacheConfig = (typeof cacheConfig === 'number' ? { duration: cacheConfig } : cacheConfig)
+                this.enabled = (this.cacheConfig && this.cacheConfig.duration);
+                this.cacheHandler = Port('cacheHandler');
+        
+                // constraints
+                this.constraints = '(class || struct) && (func && async) && !(timer || on || @fetch || @cache)';
+            };
+        
+            $$('readonly');
+            this.cacheConfig = null;
+        
+            $$('private');
+            this.cacheHandler = null;
+        
+            $$('private');
+            this.enabled = false;
+        
+            $$('override');
+            this.decorateFunction = (base, typeName, memberName, member) => { // eslint-disable-line no-unused-vars
+                let _this = this,
+                    cacheId = `${typeName}___${memberName}`;
+        
+                let callMember = async (...args) => {
+                    let resultData = await member(...args);
+                    if (_this.enabled) { // save for later
+                        await _this.cacheHandler.set(cacheId, _this.cacheConfig, resultData);
+                    }
+                    return resultData;
+                };
+        
+                // decorated function
+                return async function(...args) {
+                    if (_this.enabled) {
+                        try {
+                            return await _this.cacheHandler.get(cacheId, _this.cacheConfig);
+                        } catch (err) { // eslint-disable-line no-unused-vars
+                            // ignore and move forward by calling callMember below
+                        }
+                    }
+                    return await callMember(...args);
+                };
+            };
+        });
+        
     })();
         // assembly types (end)
         
@@ -7698,7 +7757,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.31","lupdate":"Wed, 14 Aug 2019 16:55:06 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.32","lupdate":"Sat, 17 Aug 2019 00:08:37 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
