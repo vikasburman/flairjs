@@ -1284,7 +1284,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                 let fnArgs = [];
                 if (base) { fnArgs.push(base); }                                // base is always first, if overriding
                 if (_api) { fnArgs.push(_api); }                                // api is always next to base, if fetch is used
-                if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base or as first, if injected
+                if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base (and api) or as first, if injected
                 if (args_attr && args_attr.args.length > 0) {
                     let argsObj = _Args(...args_attr.args)(...args); 
                     if (argsObj.error) { throw argsObj.error; }
