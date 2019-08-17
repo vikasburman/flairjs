@@ -139,6 +139,7 @@ const _attrMeta = _attr[meta] = Object.freeze({
         enumerate: new _attrConfig('(class || struct) && prop || func || event'),
         dispose: new _attrConfig('class && prop'),
         post: new _attrConfig('(class || struct) && event'),
+        fetch: new _attrConfig('(class || struct) && (func && async) && !(timer || on || @fetch)'),
         on: new _attrConfig('class && func && !(event || $async || $args || $overload || $inject || $static)'),
         timer: new _attrConfig('class && func && !(event || $async || $args || $inject || @timer || $static)'),
         type: new _attrConfig('(class || struct) && prop'),
