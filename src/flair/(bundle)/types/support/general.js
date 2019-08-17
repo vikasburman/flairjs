@@ -133,6 +133,18 @@ const getEndpointUrl = (connection, url) => {
     //          *V*: endpoint version
     // alphabet can be upper or lowercase, but whatever they are, they must match in connection and wherever they are used
     // e.g. 
+    // "example1": {
+    //     "R": {
+    //         "local": "http://localhost:5001/*P*/*G*",
+    //         "dev": "https://*G*-*P*.cloudfunctions.net",
+    //         "test": "",
+    //         "prod": ""
+    //     },
+    //     "V": "",
+    //     "L": "",
+    //     "P": "flairjs-firebase-app",
+    //     "G": "us-east1"
+    // }
     // '/*R*/api/*V*/now' --> https://us-east1-flairjs-firebase-app.cloudfunctions.net/api/v1/now
     // value for each of these *?* can be either string OR an object same as for *R*
     if (connection) {
@@ -176,7 +188,7 @@ const getEndpointUrl = (connection, url) => {
 };
 const apiCall = async (url, resDataType, connectionName, reqData) => { 
     let fetchCaller = null,
-        connection = globalSetting(`api.connections.${connectionName}`, null),
+        connection = (globalSetting(`api.connections.${connectionName}`, null) || globalSetting(`api.connections.default`, null)),
         urlToCall = getEndpointUrl(connection, url);
     
     if (isServer) {

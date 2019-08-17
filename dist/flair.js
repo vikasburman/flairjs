@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.55.34
- *  Sat, 17 Aug 2019 14:50:12 GMT
+ *  Version: 0.55.35
+ *  Sat, 17 Aug 2019 15:30:05 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -400,6 +400,18 @@
         //          *V*: endpoint version
         // alphabet can be upper or lowercase, but whatever they are, they must match in connection and wherever they are used
         // e.g. 
+        // "example1": {
+        //     "R": {
+        //         "local": "http://localhost:5001/*P*/*G*",
+        //         "dev": "https://*G*-*P*.cloudfunctions.net",
+        //         "test": "",
+        //         "prod": ""
+        //     },
+        //     "V": "",
+        //     "L": "",
+        //     "P": "flairjs-firebase-app",
+        //     "G": "us-east1"
+        // }
         // '/*R*/api/*V*/now' --> https://us-east1-flairjs-firebase-app.cloudfunctions.net/api/v1/now
         // value for each of these *?* can be either string OR an object same as for *R*
         if (connection) {
@@ -443,7 +455,7 @@
     };
     const apiCall = async (url, resDataType, connectionName, reqData) => { 
         let fetchCaller = null,
-            connection = globalSetting(`api.connections.${connectionName}`, null),
+            connection = (globalSetting(`api.connections.${connectionName}`, null) || globalSetting(`api.connections.default`, null)),
             urlToCall = getEndpointUrl(connection, url);
         
         if (isServer) {
@@ -7310,10 +7322,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.55.34',
+        version: '0.55.35',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sat, 17 Aug 2019 14:50:12 GMT')
+        lupdate: new Date('Sat, 17 Aug 2019 15:30:05 GMT')
     });  
 
     // bundled assembly load process 
@@ -7770,7 +7782,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.34","lupdate":"Sat, 17 Aug 2019 14:50:12 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.35","lupdate":"Sat, 17 Aug 2019 15:30:05 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
