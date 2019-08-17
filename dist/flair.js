@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.55.33
- *  Sat, 17 Aug 2019 02:29:17 GMT
+ *  Version: 0.55.34
+ *  Sat, 17 Aug 2019 14:50:12 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -398,9 +398,10 @@
         //          *G*: endpoint geo region
         //          *L*: endpoint locale
         //          *V*: endpoint version
-        //  alphabet can be upper or lowercase, but whatever they are, they must match in connection and wherever they are used
+        // alphabet can be upper or lowercase, but whatever they are, they must match in connection and wherever they are used
         // e.g. 
         // '/*R*/api/*V*/now' --> https://us-east1-flairjs-firebase-app.cloudfunctions.net/api/v1/now
+        // value for each of these *?* can be either string OR an object same as for *R*
         if (connection) {
             let replaceIt = (key) => {
                 let keyValue = '';
@@ -416,6 +417,17 @@
                     }
                 } else if (url.indexOf(`*${key}*`) !== -1) {
                     keyValue = connection[key]; // pick whatever value is there
+                    if (typeof keyValue !== 'string') { // if this is an object having contextual values
+                        if (options.env.isLocalhost) {
+                            keyValue = connection[key].local;
+                        } else if (options.env.isTesting) {
+                            keyValue = connection[key].test;
+                        } else if (options.env.isProd) {
+                            keyValue = connection[key].prod;
+                        } else { // default to dev setting finally
+                            keyValue = connection[key].dev;
+                        }                    
+                    }
                 }
                 if (keyValue) {
                     url = replaceAll(url, `*${key}*`, keyValue);
@@ -7298,10 +7310,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.55.33',
+        version: '0.55.34',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sat, 17 Aug 2019 02:29:17 GMT')
+        lupdate: new Date('Sat, 17 Aug 2019 14:50:12 GMT')
     });  
 
     // bundled assembly load process 
@@ -7758,7 +7770,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.33","lupdate":"Sat, 17 Aug 2019 02:29:17 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.34","lupdate":"Sat, 17 Aug 2019 14:50:12 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 

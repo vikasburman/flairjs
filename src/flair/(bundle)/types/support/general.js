@@ -131,9 +131,10 @@ const getEndpointUrl = (connection, url) => {
     //          *G*: endpoint geo region
     //          *L*: endpoint locale
     //          *V*: endpoint version
-    //  alphabet can be upper or lowercase, but whatever they are, they must match in connection and wherever they are used
+    // alphabet can be upper or lowercase, but whatever they are, they must match in connection and wherever they are used
     // e.g. 
     // '/*R*/api/*V*/now' --> https://us-east1-flairjs-firebase-app.cloudfunctions.net/api/v1/now
+    // value for each of these *?* can be either string OR an object same as for *R*
     if (connection) {
         let replaceIt = (key) => {
             let keyValue = '';
@@ -149,6 +150,17 @@ const getEndpointUrl = (connection, url) => {
                 }
             } else if (url.indexOf(`*${key}*`) !== -1) {
                 keyValue = connection[key]; // pick whatever value is there
+                if (typeof keyValue !== 'string') { // if this is an object having contextual values
+                    if (options.env.isLocalhost) {
+                        keyValue = connection[key].local;
+                    } else if (options.env.isTesting) {
+                        keyValue = connection[key].test;
+                    } else if (options.env.isProd) {
+                        keyValue = connection[key].prod;
+                    } else { // default to dev setting finally
+                        keyValue = connection[key].dev;
+                    }                    
+                }
             }
             if (keyValue) {
                 url = replaceAll(url, `*${key}*`, keyValue);
