@@ -21,24 +21,35 @@ exports.exec = function(settings, options, cb) { // eslint-disable no-unused-var
     // copy all files or folders as is in dest
     let src = '',
         dest = '';
+
+    let copyThis = (_fileOrFolder, _src, _dest) => {
+        options.logger(1, '', './' + path.join(options.src, _fileOrFolder));
+        if (fsx.lstatSync(_src).isDirectory()) {
+            fsx.ensureDirSync(_dest);
+            copyDir.sync(_src, _dest, {
+                utimes: true,
+                mode: true,
+                cover: true
+              });
+        } else {
+            fsx.ensureDirSync(path.dirname(_dest));
+            fsx.copyFileSync(_src, _dest);
+        }        
+
+    };
     for(let fileOrFolder of options.profiles.current.copy) {
         src = path.resolve(path.join(options.src, path.join(options.profiles.current.root, fileOrFolder)));
         dest = path.resolve(path.join(options.profiles.current.dest, fileOrFolder))
-        if (options.clean || options.fullBuild || !fsx.existsSync(dest)) {         
-            options.logger(1, '', './' + path.join(options.src, fileOrFolder));
-            if (fsx.lstatSync(src).isDirectory()) {
-                fsx.ensureDirSync(dest);
-                copyDir.sync(src, dest, {
-                    utimes: true,
-                    mode: true,
-                    cover: true
-                  });
+        if (options.clean || options.fullBuild) { // cleaned or full build    
+            copyThis(fileOrFolder, src, dest);
+        } else if (!fsx.existsSync(dest)) { // file does not exists
+            copyThis(fileOrFolder, src, dest);
+        } else { // file exists
+            if (fsx.statSync(src).mtime > fsx.statSync(dest).mtime) { // file updated
+                copyThis(fileOrFolder, src, dest);
             } else {
-                fsx.ensureDirSync(path.dirname(dest));
-                fsx.copyFileSync(src, dest);
-            }        
-        } else {
-            options.logger(1, '', './' + path.join(options.src, fileOrFolder) + ' [exists, copy skipped]');
+                options.logger(1, '', './' + path.join(options.src, fileOrFolder) + ' [exists, copy skipped]');
+            }
         }
     }
 
