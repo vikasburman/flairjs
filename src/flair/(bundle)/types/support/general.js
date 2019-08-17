@@ -179,16 +179,22 @@ const getEndpointUrl = (connection, url) => {
                 keyValue = ''; // for next
             }
         };
-        replaceIt('R'); // R is first
-        for(let key in connection) {
-            if (key.toUpperCase() !== 'R') { replaceIt(key); } // skip R, as it is done
+        if (typeof connection === 'string') { // generally 'auto'
+            if (!connection.endsWith('/')) { connection += '/'; }
+            if (url.startsWith('/')) { url = url.substr(1); }
+            url = connection + url;
+        } else {
+            replaceIt('R'); // R is first
+            for(let key in connection) {
+                if (key.toUpperCase() !== 'R') { replaceIt(key); } // skip R, as it is done
+            }
         }
     }
-    return url; 
+    return url;
 };
 const apiCall = async (url, resDataType, connectionName, reqData) => { 
     let fetchCaller = null,
-        connection = (globalSetting(`api.connections.${connectionName}`, null) || globalSetting(`api.connections.default`, null)),
+        connection = (globalSetting(`api.connections.${connectionName}`, null) || globalSetting(`api.connections.auto`, null)),
         urlToCall = getEndpointUrl(connection, url);
     
     if (isServer) {
