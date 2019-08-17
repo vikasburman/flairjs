@@ -2,6 +2,14 @@ const path = require('path');
 const fsx = require('fs-extra');
 const copyDir = require('copy-dir');
 
+const wildcardMatch = (find, source) => { // for future use when we support basic wildcard in copy definitions
+    find = find.replace(/[\-\[\]\/\{\}\(\)\+\.\\\^\$\|]/g, "\\$&");
+    find = find.replace(/\*/g, ".*");
+    find = find.replace(/\?/g, ".");
+    var regEx = new RegExp(find, "i");
+    return regEx.test(source);
+};
+
 /**
  * @name copy_files
  * @description copy files for current profile, if configured
