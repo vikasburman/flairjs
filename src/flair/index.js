@@ -33,13 +33,14 @@
     let isServer = new Function("try {return this===global;}catch(e){return false;}")(),
         isWorker = false,
         sym = [],
+        symKey = 'FLAIR_SYMBOLS',
+        symString = '',
         meta = Symbol('[meta]'),
         modulesRootFolder = 'modules',
         disposers = [],
         options = {},
         flairTypes = ['class', 'enum', 'interface', 'mixin', 'struct'],
         flairInstances = ['instance', 'sinstance'],
-        argsString = '',
         settings = {},
         config = {},
         isAppStarted = false;
@@ -84,22 +85,37 @@
     };
 
     // read symbols from environment
+    // symbols can be pass in variety of formats: 
+    //  server: command line args (process.argv), environment variables (process.env.FLAIR_SYMBOLS)
+    //  worker-server: get whatever symbols collection server main thread had - passed as workerData.symbols
+    //  client: global variable (window.FLAIR_SYMBOLS)
+    //  worker-client: get whatever symbols collection client main thread had - set in WorkerGlobalScope
     if (isServer) {
-        let argv = process.argv;
         if (isWorker) {
+            // from workerData.symbols
             let workerData = require('worker_threads').workerData;
-            argv = workerData ? workerData.argv : [];
-        }
-        let idx = argv.findIndex((item) => { return (item.startsWith('--flairSymbols') ? true : false); });
-        if (idx !== -1) { argsString = argv[idx].substr(2).split('=')[1]; }
-    } else {
-        if (isWorker) {
-            argsString = WorkerGlobalScope.flairSymbols || '';
+            symString = workerData.symbols || '';
         } else {
-            argsString = window.flairSymbols || '';
+            // from process.argv
+            let idx = process.argv.findIndex((item) => { return (item.startsWith(`--${symKey}`) ? true : false); });
+            if (idx !== -1) { symString = process.argv[idx].substr(2).split('=')[1]; }
+
+            // from process.env
+            if (process.env[symKey]) { // add to list
+                if (symString) { symString += ','; }
+                symString += process.env[symKey];
+            }
+        }
+    } else { // client
+        if (isWorker) {
+            symString = WorkerGlobalScope[symKey] || '';
+        } else {
+            // from window
+            symString += window[symKey] || '';
         }
     }
-    if (argsString) { sym = argsString.split(',').map(item => item.trim()); }
+    if (symString) { sym = symString.split(',').map(item => item.trim()); }
+    //
 
     options.symbols = Object.freeze(sym);
     options.env = Object.freeze({

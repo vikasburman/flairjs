@@ -11,8 +11,12 @@ const SharedChannel = function(allADOs, onError) {
     // NOTE: This function's script is loaded independently by worker thread constructor as text/code.
     const remoteMessageHandler = function() {
         let isServer = ('<<{{isServer}}>>' === 'true' ? true : false), // eslint-disable-line no-constant-condition
+            symKey = 'FLAIR_SYMBOLS',
             port = null;
         // let ados = JSON.parse('<<{{ados}}>>');
+
+        // set symbols
+        WorkerGlobalScope[symKey] = '<<{{symbols}}>>';
 
         // build communication pipeline between main thread and worker thread
         const onMessageFromMain = (e) => { // message received from main thread
@@ -104,6 +108,7 @@ const SharedChannel = function(allADOs, onError) {
     let remoteMessageHandlerScript = remoteMessageHandler.toString().replace('<<{{entryPoint}}>>', AppDomain.entryPoint());
     remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{requirejs}}>>', getLoadedScript('require.js', 'require.min.js')); // dev/min file
     remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{isServer}}>>', isServer.toString());
+    remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{symbols}}>>', options.symbols.toString());
     // remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{ados}}>>', JSON.stringify(allADOs));
     remoteMessageHandlerScript = `(${remoteMessageHandlerScript})();`
     // NOTE: script/end
@@ -168,7 +173,8 @@ const SharedChannel = function(allADOs, onError) {
         wk = new Worker(remoteMessageHandlerScript, {
             eval: true,
             workerData: {
-                argv: process.argv
+                argv: process.argv,
+                symbols: options.symbols.toString()
             }
         });
 

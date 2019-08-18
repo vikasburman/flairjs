@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.55.43
- *  Sun, 18 Aug 2019 19:26:37 GMT
+ *  Version: 0.55.47
+ *  Sun, 18 Aug 2019 22:05:16 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -33,13 +33,14 @@
     let isServer = new Function("try {return this===global;}catch(e){return false;}")(),
         isWorker = false,
         sym = [],
+        symKey = 'FLAIR_SYMBOLS',
+        symString = '',
         meta = Symbol('[meta]'),
         modulesRootFolder = 'modules',
         disposers = [],
         options = {},
         flairTypes = ['class', 'enum', 'interface', 'mixin', 'struct'],
         flairInstances = ['instance', 'sinstance'],
-        argsString = '',
         settings = {},
         config = {},
         isAppStarted = false;
@@ -84,22 +85,37 @@
     };
 
     // read symbols from environment
+    // symbols can be pass in variety of formats: 
+    //  server: command line args (process.argv), environment variables (process.env.FLAIR_SYMBOLS)
+    //  worker-server: get whatever symbols collection server main thread had - passed as workerData.symbols
+    //  client: global variable (window.FLAIR_SYMBOLS)
+    //  worker-client: get whatever symbols collection client main thread had - set in WorkerGlobalScope
     if (isServer) {
-        let argv = process.argv;
         if (isWorker) {
+            // from workerData.symbols
             let workerData = require('worker_threads').workerData;
-            argv = workerData ? workerData.argv : [];
-        }
-        let idx = argv.findIndex((item) => { return (item.startsWith('--flairSymbols') ? true : false); });
-        if (idx !== -1) { argsString = argv[idx].substr(2).split('=')[1]; }
-    } else {
-        if (isWorker) {
-            argsString = WorkerGlobalScope.flairSymbols || '';
+            symString = workerData.symbols || '';
         } else {
-            argsString = window.flairSymbols || '';
+            // from process.argv
+            let idx = process.argv.findIndex((item) => { return (item.startsWith(`--${symKey}`) ? true : false); });
+            if (idx !== -1) { symString = process.argv[idx].substr(2).split('=')[1]; }
+
+            // from process.env
+            if (process.env[symKey]) { // add to list
+                if (symString) { symString += ','; }
+                symString += process.env[symKey];
+            }
+        }
+    } else { // client
+        if (isWorker) {
+            symString = WorkerGlobalScope[symKey] || '';
+        } else {
+            // from window
+            symString += window[symKey] || '';
         }
     }
-    if (argsString) { sym = argsString.split(',').map(item => item.trim()); }
+    if (symString) { sym = symString.split(',').map(item => item.trim()); }
+    //
 
     options.symbols = Object.freeze(sym);
     options.env = Object.freeze({
@@ -1672,8 +1688,12 @@
         // NOTE: This function's script is loaded independently by worker thread constructor as text/code.
         const remoteMessageHandler = function() {
             let isServer = ('<<{{isServer}}>>' === 'true' ? true : false), // eslint-disable-line no-constant-condition
+                symKey = 'FLAIR_SYMBOLS',
                 port = null;
             // let ados = JSON.parse('<<{{ados}}>>');
+    
+            // set symbols
+            WorkerGlobalScope[symKey] = '<<{{symbols}}>>';
     
             // build communication pipeline between main thread and worker thread
             const onMessageFromMain = (e) => { // message received from main thread
@@ -1765,6 +1785,7 @@
         let remoteMessageHandlerScript = remoteMessageHandler.toString().replace('<<{{entryPoint}}>>', AppDomain.entryPoint());
         remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{requirejs}}>>', getLoadedScript('require.js', 'require.min.js')); // dev/min file
         remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{isServer}}>>', isServer.toString());
+        remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{symbols}}>>', options.symbols.toString());
         // remoteMessageHandlerScript = remoteMessageHandlerScript.replace('<<{{ados}}>>', JSON.stringify(allADOs));
         remoteMessageHandlerScript = `(${remoteMessageHandlerScript})();`
         // NOTE: script/end
@@ -1829,7 +1850,8 @@
             wk = new Worker(remoteMessageHandlerScript, {
                 eval: true,
                 workerData: {
-                    argv: process.argv
+                    argv: process.argv,
+                    symbols: options.symbols.toString()
                 }
             });
     
@@ -7387,10 +7409,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.55.43',
+        version: '0.55.47',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 18 Aug 2019 19:26:37 GMT')
+        lupdate: new Date('Sun, 18 Aug 2019 22:05:16 GMT')
     });  
 
     // bundled assembly load process 
@@ -7847,7 +7869,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.43","lupdate":"Sun, 18 Aug 2019 19:26:37 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.47","lupdate":"Sun, 18 Aug 2019 22:05:16 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
