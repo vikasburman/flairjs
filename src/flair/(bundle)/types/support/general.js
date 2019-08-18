@@ -137,18 +137,19 @@ const globalSetting = (path, defaultValue, asIs) => {
     // in case a relevant value does not exists, it gives defaultValue
     
     let _globalSettings = options.env.isAppMode() ? _AppDomain.config().global : {},
-        _lensedValue = lens(_globalSettings, path);
+        _lensedValue = lens(_globalSettings, path),
+        keyValue = '';
 
     // pick env specific value, if need be
     if (typeof _lensedValue === 'object' && !asIs) {
         if (options.env.isLocal) {
-            keyValue = connection[key].local;
+            keyValue = _lensedValue.local;
         } else if (options.env.isStage) {
-            keyValue = connection[key].stage;
+            keyValue = _lensedValue.stage;
         } else if (options.env.isProd) {
-            keyValue = connection[key].prod;
+            keyValue = _lensedValue.prod;
         } else if (options.env.isDev) {
-            keyValue = connection[key].dev;
+            keyValue = _lensedValue.dev;
         }
     } else {
         keyValue = _lensedValue;

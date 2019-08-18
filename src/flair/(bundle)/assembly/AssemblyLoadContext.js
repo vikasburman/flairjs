@@ -232,10 +232,11 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         return currentAssemblyBeingLoaded;
     }
     const assemblyLoaded = (file, ado, alc, asmClosureVars) => {
-        if (typeof file === 'string' && !asmFiles[file] && ado && alc && asmClosureVars) {
+        let fileKey = domain.getAsmFileKey(file);
+        if (!asmFiles[fileKey] && ado && alc && asmClosureVars) {
             // add to list
-            asmFiles[file] = Object.freeze(new Assembly(ado, alc, asmClosureVars));
-            asmNames[asmClosureVars.name] = asmFiles[file];
+            asmFiles[fileKey] = Object.freeze(new Assembly(ado, alc, asmClosureVars));
+            asmNames[asmClosureVars.name] = asmFiles[fileKey];
         }
     };
     this.getAssemblyFile = (file) => {
@@ -266,7 +267,8 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
     this.loadAssembly = async (file) => {
         if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`); }
 
-        if (!asmFiles[file] && this.currentAssemblyBeingLoaded() !== file) { // load only when it is not already loaded (or not already being loaded) in this load context
+        let fileKey = domain.getAsmFileKey(file);
+        if (!asmFiles[fileKey] && this.currentAssemblyBeingLoaded() !== file) { // load only when it is not already loaded (or not already being loaded) in this load context
             // set this context as current context, so all types being loaded in this assembly will get attached to this context;
             currentContexts.push(this);
 
@@ -332,7 +334,8 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
     this.getAssembly = (file) => {
         if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.getAssembly); }
         if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.getAssembly); }
-        return asmFiles[file] || null;
+        let fileKey = domain.getAsmFileKey(file);
+        return asmFiles[fileKey] || null;
     };
     this.getAssemblyByName = (name) => {
         if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.getAssemblyByName); }

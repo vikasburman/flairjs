@@ -106,6 +106,15 @@ const AppDomain = function(name) {
     };
 
     // ados
+    this.getAsmFileKey = (file) => {
+        // file key is always xyz.js - be it for .min.js version or for .js version
+        if (file.indexOf('{.min}') !== -1) { 
+            file = file.replace('{.min}', ''); 
+        } else if (file.indexOf('.min.js') !== -1) {
+            file = file.replace('.min.js', '.js'); 
+        }
+        return file;
+    };
     this.registerAdo = (ado) => {
         if (typeof ado === 'string') { ado = JSON.parse(ado); }
 
@@ -121,8 +130,9 @@ const AppDomain = function(name) {
 
         // register (no overwrite ever)
         ado.file = which(ado.file, true); // min/dev contextual pick
-        if (!asmFiles[ado.file]) {
-            asmFiles[ado.file] = Object.freeze(ado);
+        let fileKey = this.getAsmFileKey(ado.file);
+        if (!asmFiles[fileKey]) {
+            asmFiles[fileKey] = Object.freeze(ado);
 
             // flatten types
             ado.types.forEach(qualifiedName => {
@@ -153,7 +163,8 @@ const AppDomain = function(name) {
     };
     this.getAdo = (file) => {
         if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.getAdo); }
-        return asmFiles[file] || null;
+        let fileKey = this.getAsmFileKey(file);
+        return asmFiles[fileKey] || null;
     };
     this.allAdos = () => { return Object.keys(asmFiles); }
 

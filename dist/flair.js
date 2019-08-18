@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.55.38
- *  Sat, 17 Aug 2019 17:52:30 GMT
+ *  Version: 0.55.43
+ *  Sun, 18 Aug 2019 19:26:37 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -104,19 +104,23 @@
     options.symbols = Object.freeze(sym);
     options.env = Object.freeze({
         type: (isServer ? 'server' : 'client'),
-        isTesting: (sym.indexOf('TEST') !== -1),
         isServer: isServer,
         isClient: !isServer,
         isWorker : isWorker,
         isMain: !isWorker,
-        isLocalhost: ((isServer ? require('os').hostname() : self.location.host).indexOf('local') !== -1),
         cores: ((isServer ? (require('os').cpus().length) : window.navigator.hardwareConcurrency) || 4),
         isCordova: (!isServer && !!window.cordova),
         isNodeWebkit: (isServer && process.versions['node-webkit']),
-        isProd: (sym.indexOf('DEBUG') === -1 && sym.indexOf('PROD') !== -1),
-        isDebug: (sym.indexOf('PROD') === -1),
+        isProd: (sym.indexOf('PROD') !== -1 && (sym.indexOf('DEV') === -1 && sym.indexOf('STAGE') === -1)),
+        isStage: (sym.indexOf('STAGE') !== -1 && (sym.indexOf('DEV') === -1 && sym.indexOf('PROD') === -1)),        
+        isDev: (sym.indexOf('DEV') !== -1 && (sym.indexOf('STAGE') === -1 && sym.indexOf('PROD') === -1)),        
+        isLocal: ((isServer ? require('os').hostname() : self.location.host).indexOf('local') !== -1),
+        isDebug: (sym.indexOf('DEBUG') !== -1),
+        isTest: (sym.indexOf('TEST') !== -1),
         isAppMode: () => { return isAppStarted; }
     });
+    // Prod | Stage | Dev are three mutually exclusive environments
+    // Local, Debug and Test can be true in any of these environments
 
     // flair
     flair.members = [];
@@ -273,12 +277,12 @@
     };
     const which = (def, isFile) => {
         if (isFile) { // debug/prod specific decision
-            // pick minified or dev version
+            // pick minified or dev version (Dev version is picked only when isDebug is true)
             if (def.indexOf('{.min}') !== -1) {
-                if (options.env.isProd) {
-                    return def.replace('{.min}', '.min'); // a{.min}.js => a.min.js
-                } else {
+                if (options.env.isDebug) {
                     return def.replace('{.min}', ''); // a{.min}.js => a.js
+                } else {
+                    return def.replace('{.min}', '.min'); // a{.min}.js => a.min.js
                 }
             }
         } else { // server/client specific decision
@@ -382,9 +386,47 @@
         }
     };
     const lens = (obj, path) => path.split(".").reduce((o, key) => o && o[key] ? o[key] : null, obj);
-    const globalSetting = (path, defaultValue) => {
-        let _globalSettings = options.env.isAppMode() ? _AppDomain.config().flair : {};
-        return lens(_globalSettings, path) || defaultValue;
+    const globalSetting = (path, defaultValue, asIs) => {
+        // any global setting (i.e., outside of a specific assembly setting) can be defined at:
+        // "global" root node in appConfig/webConfig file
+        //
+        // Each setting can be at any depth inside "global" and its generally a good idea to namespace intelligently to
+        // avoid picking someone else' setting
+        //
+        // specialty of global settings, apart from being outside of a specific assembly setting is that the values can
+        // be simple values or a special structure having various values for various environments as:
+        // 
+        // global.flair.api.connections.connection1.R = "something"
+        // OR
+        // global.flair.api.connections.connection1.R = {
+        //    "local": "something1",
+        //    "dev": "something2",
+        //    "stage": "something3",
+        //    "prod": "something4",
+        // } 
+        // Based on the environment in which this code is running, it will pick relevant value
+        // in case a relevant value does not exists, it gives defaultValue
+        
+        let _globalSettings = options.env.isAppMode() ? _AppDomain.config().global : {},
+            _lensedValue = lens(_globalSettings, path),
+            keyValue = '';
+    
+        // pick env specific value, if need be
+        if (typeof _lensedValue === 'object' && !asIs) {
+            if (options.env.isLocal) {
+                keyValue = _lensedValue.local;
+            } else if (options.env.isStage) {
+                keyValue = _lensedValue.stage;
+            } else if (options.env.isProd) {
+                keyValue = _lensedValue.prod;
+            } else if (options.env.isDev) {
+                keyValue = _lensedValue.dev;
+            }
+        } else {
+            keyValue = _lensedValue;
+        }
+    
+        return keyValue || defaultValue;
     };
     const getEndpointUrl = (connection, url) => {
         // any url can have following placeholders:
@@ -404,7 +446,7 @@
         //     "R": {
         //         "local": "http://localhost:5001/*P*/*G*",
         //         "dev": "https://*G*-*P*.cloudfunctions.net",
-        //         "test": "",
+        //         "stage": "",
         //         "prod": ""
         //     },
         //     "V": "",
@@ -418,27 +460,27 @@
             let replaceIt = (key) => {
                 let keyValue = '';
                 if (key.toUpperCase() === 'R' && url.indexOf(`*${key}*`) !== -1) {
-                    if (options.env.isLocalhost) {
+                    if (options.env.isLocal) {
                         keyValue = connection[key].local;
-                    } else if (options.env.isTesting) {
-                        keyValue = connection[key].test;
+                    } else if (options.env.isStage) {
+                        keyValue = connection[key].stage;                    
                     } else if (options.env.isProd) {
                         keyValue = connection[key].prod;
-                    } else { // default to dev setting finally
+                    } else if (options.env.isDev) {
                         keyValue = connection[key].dev;
                     }
                 } else if (url.indexOf(`*${key}*`) !== -1) {
                     keyValue = connection[key]; // pick whatever value is there
                     if (typeof keyValue !== 'string') { // if this is an object having contextual values
-                        if (options.env.isLocalhost) {
+                        if (options.env.isLocal) {
                             keyValue = connection[key].local;
-                        } else if (options.env.isTesting) {
-                            keyValue = connection[key].test;
+                        } else if (options.env.isStage) {
+                            keyValue = connection[key].stage;
                         } else if (options.env.isProd) {
                             keyValue = connection[key].prod;
-                        } else { // default to dev setting finally
+                        } else if (options.env.isDev) {
                             keyValue = connection[key].dev;
-                        }                    
+                        }                  
                     }
                 }
                 if (keyValue) {
@@ -461,7 +503,7 @@
     };
     const apiCall = async (url, resDataType, connectionName, reqData) => { 
         let fetchCaller = null,
-            connection = (globalSetting(`api.connections.${connectionName}`, null) || globalSetting(`api.connections.auto`, null)),
+            connection = (globalSetting(`flair.api.connections.${connectionName}`, null, true) || globalSetting(`flair.api.connections.auto`, null, true)),
             urlToCall = getEndpointUrl(connection, url);
         
         if (isServer) {
@@ -1228,10 +1270,11 @@
             return currentAssemblyBeingLoaded;
         }
         const assemblyLoaded = (file, ado, alc, asmClosureVars) => {
-            if (typeof file === 'string' && !asmFiles[file] && ado && alc && asmClosureVars) {
+            let fileKey = domain.getAsmFileKey(file);
+            if (!asmFiles[fileKey] && ado && alc && asmClosureVars) {
                 // add to list
-                asmFiles[file] = Object.freeze(new Assembly(ado, alc, asmClosureVars));
-                asmNames[asmClosureVars.name] = asmFiles[file];
+                asmFiles[fileKey] = Object.freeze(new Assembly(ado, alc, asmClosureVars));
+                asmNames[asmClosureVars.name] = asmFiles[fileKey];
             }
         };
         this.getAssemblyFile = (file) => {
@@ -1262,7 +1305,8 @@
         this.loadAssembly = async (file) => {
             if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`); }
     
-            if (!asmFiles[file] && this.currentAssemblyBeingLoaded() !== file) { // load only when it is not already loaded (or not already being loaded) in this load context
+            let fileKey = domain.getAsmFileKey(file);
+            if (!asmFiles[fileKey] && this.currentAssemblyBeingLoaded() !== file) { // load only when it is not already loaded (or not already being loaded) in this load context
                 // set this context as current context, so all types being loaded in this assembly will get attached to this context;
                 currentContexts.push(this);
     
@@ -1328,7 +1372,8 @@
         this.getAssembly = (file) => {
             if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.getAssembly); }
             if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.getAssembly); }
-            return asmFiles[file] || null;
+            let fileKey = domain.getAsmFileKey(file);
+            return asmFiles[fileKey] || null;
         };
         this.getAssemblyByName = (name) => {
             if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`, this.getAssemblyByName); }
@@ -2036,6 +2081,15 @@
         };
     
         // ados
+        this.getAsmFileKey = (file) => {
+            // file key is always xyz.js - be it for .min.js version or for .js version
+            if (file.indexOf('{.min}') !== -1) { 
+                file = file.replace('{.min}', ''); 
+            } else if (file.indexOf('.min.js') !== -1) {
+                file = file.replace('.min.js', '.js'); 
+            }
+            return file;
+        };
         this.registerAdo = (ado) => {
             if (typeof ado === 'string') { ado = JSON.parse(ado); }
     
@@ -2051,8 +2105,9 @@
     
             // register (no overwrite ever)
             ado.file = which(ado.file, true); // min/dev contextual pick
-            if (!asmFiles[ado.file]) {
-                asmFiles[ado.file] = Object.freeze(ado);
+            let fileKey = this.getAsmFileKey(ado.file);
+            if (!asmFiles[fileKey]) {
+                asmFiles[fileKey] = Object.freeze(ado);
     
                 // flatten types
                 ado.types.forEach(qualifiedName => {
@@ -2083,7 +2138,8 @@
         };
         this.getAdo = (file) => {
             if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.getAdo); }
-            return asmFiles[file] || null;
+            let fileKey = this.getAsmFileKey(file);
+            return asmFiles[fileKey] || null;
         };
         this.allAdos = () => { return Object.keys(asmFiles); }
     
@@ -4197,12 +4253,15 @@
                 let conditions = splitAndTrim(the_attr.args[0] || []);
                 for (let condition of conditions) {
                     condition = condition.toLowerCase();
-                    if (!(condition === 'test' && options.env.isTesting)) { result = false; break; }
+                    if (!(condition === 'test' && options.env.isTest)) { result = false; break; }
+                    if (!(condition === 'stage' && options.env.isStage)) { result = false; break; }
                     if (!(condition === 'server' && options.env.isServer)) { result = false; break; }
                     if (!(condition === 'client' && options.env.isClient)) { result = false; break; }
                     if (!(condition === 'worker' && options.env.isWorker)) { result = false; break; }
                     if (!(condition === 'main' && options.env.isMain)) { result = false; break; }
+                    if (!(condition === 'local' && options.env.isLocal)) { result = false; break; }
                     if (!(condition === 'debug' && options.env.isDebug)) { result = false; break; }
+                    if (!(condition === 'dev' && options.env.isDev)) { result = false; break; }
                     if (!(condition === 'prod' && options.env.isProd)) { result = false; break; }
                     if (!(condition === 'cordova' && options.env.isCordova)) { result = false; break; }
                     if (!(condition === 'nodewebkit' && options.env.isNodeWebkit)) { result = false; break; }
@@ -7328,10 +7387,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.55.38',
+        version: '0.55.43',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sat, 17 Aug 2019 17:52:30 GMT')
+        lupdate: new Date('Sun, 18 Aug 2019 19:26:37 GMT')
     });  
 
     // bundled assembly load process 
@@ -7788,7 +7847,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.38","lupdate":"Sat, 17 Aug 2019 17:52:30 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.43","lupdate":"Sun, 18 Aug 2019 19:26:37 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
