@@ -15,9 +15,7 @@ const fsx = require('fs-extra');
  * @returns void
  */
 exports.exec = function(settings, options, cb) { // eslint-disable no-unused-vars
-    if (!options.profiles.current.env || 
-            !options.profiles.current.env.vars || 
-            options.profiles.current.env.vars.length === 0) { cb(); return; }
+    if (!options.profiles.current.env || !options.profiles.current.env.vars) { cb(); return; }
 
     options.logger(0, 'write_env', '', true);  
 
@@ -27,12 +25,12 @@ exports.exec = function(settings, options, cb) { // eslint-disable no-unused-var
         _vars = options.profiles.current.env.vars,
         content = '';
     let dest = path.resolve(path.join(options.profiles.current.dest, fileName));
-    if (type.toLowercase() === 'server') {
-        for(let _var of _vars) {
+    if (type.toLowerCase() === 'server') {
+        for(let _var in _vars) {
             content += `process.env['${_var}'] = "${_vars[_var]}";\n`;
         }
     } else { // client
-        for(let _var of _vars) {
+        for(let _var in _vars) {
             content += `window['${_var}'] = "${_vars[_var]}";\n`;
         }
     }
