@@ -6,12 +6,12 @@ const guid = () => {
 };
 const which = (def, isFile) => {
     if (isFile) { // debug/prod specific decision
-        // pick minified or dev version
+        // pick minified or dev version (Dev version is picked only when isDebug is true)
         if (def.indexOf('{.min}') !== -1) {
-            if (options.env.isProd) {
-                return def.replace('{.min}', '.min'); // a{.min}.js => a.min.js
-            } else {
+            if (options.env.isDebug) {
                 return def.replace('{.min}', ''); // a{.min}.js => a.js
+            } else {
+                return def.replace('{.min}', '.min'); // a{.min}.js => a.min.js
             }
         }
     } else { // server/client specific decision
@@ -115,9 +115,46 @@ const loadModule = async (module, globalObjName, isDelete) => {
     }
 };
 const lens = (obj, path) => path.split(".").reduce((o, key) => o && o[key] ? o[key] : null, obj);
-const globalSetting = (path, defaultValue) => {
-    let _globalSettings = options.env.isAppMode() ? _AppDomain.config().flair : {};
-    return lens(_globalSettings, path) || defaultValue;
+const globalSetting = (path, defaultValue, asIs) => {
+    // any global setting (i.e., outside of a specific assembly setting) can be defined at:
+    // "global" root node in appConfig/webConfig file
+    //
+    // Each setting can be at any depth inside "global" and its generally a good idea to namespace intelligently to
+    // avoid picking someone else' setting
+    //
+    // specialty of global settings, apart from being outside of a specific assembly setting is that the values can
+    // be simple values or a special structure having various values for various environments as:
+    // 
+    // global.flair.api.connections.connection1.R = "something"
+    // OR
+    // global.flair.api.connections.connection1.R = {
+    //    "local": "something1",
+    //    "dev": "something2",
+    //    "stage": "something3",
+    //    "prod": "something4",
+    // } 
+    // Based on the environment in which this code is running, it will pick relevant value
+    // in case a relevant value does not exists, it gives defaultValue
+    
+    let _globalSettings = options.env.isAppMode() ? _AppDomain.config().global : {},
+        _lensedValue = lens(_globalSettings, path);
+
+    // pick env specific value, if need be
+    if (typeof _lensedValue === 'object' && !asIs) {
+        if (options.env.isLocal) {
+            keyValue = connection[key].local;
+        } else if (options.env.isStage) {
+            keyValue = connection[key].stage;
+        } else if (options.env.isProd) {
+            keyValue = connection[key].prod;
+        } else if (options.env.isDev) {
+            keyValue = connection[key].dev;
+        }
+    } else {
+        keyValue = _lensedValue;
+    }
+
+    return keyValue || defaultValue;
 };
 const getEndpointUrl = (connection, url) => {
     // any url can have following placeholders:
@@ -137,7 +174,7 @@ const getEndpointUrl = (connection, url) => {
     //     "R": {
     //         "local": "http://localhost:5001/*P*/*G*",
     //         "dev": "https://*G*-*P*.cloudfunctions.net",
-    //         "test": "",
+    //         "stage": "",
     //         "prod": ""
     //     },
     //     "V": "",
@@ -151,27 +188,27 @@ const getEndpointUrl = (connection, url) => {
         let replaceIt = (key) => {
             let keyValue = '';
             if (key.toUpperCase() === 'R' && url.indexOf(`*${key}*`) !== -1) {
-                if (options.env.isLocalhost) {
+                if (options.env.isLocal) {
                     keyValue = connection[key].local;
-                } else if (options.env.isTesting) {
-                    keyValue = connection[key].test;
+                } else if (options.env.isStage) {
+                    keyValue = connection[key].stage;                    
                 } else if (options.env.isProd) {
                     keyValue = connection[key].prod;
-                } else { // default to dev setting finally
+                } else if (options.env.isDev) {
                     keyValue = connection[key].dev;
                 }
             } else if (url.indexOf(`*${key}*`) !== -1) {
                 keyValue = connection[key]; // pick whatever value is there
                 if (typeof keyValue !== 'string') { // if this is an object having contextual values
-                    if (options.env.isLocalhost) {
+                    if (options.env.isLocal) {
                         keyValue = connection[key].local;
-                    } else if (options.env.isTesting) {
-                        keyValue = connection[key].test;
+                    } else if (options.env.isStage) {
+                        keyValue = connection[key].stage;
                     } else if (options.env.isProd) {
                         keyValue = connection[key].prod;
-                    } else { // default to dev setting finally
+                    } else if (options.env.isDev) {
                         keyValue = connection[key].dev;
-                    }                    
+                    }                  
                 }
             }
             if (keyValue) {
@@ -194,7 +231,7 @@ const getEndpointUrl = (connection, url) => {
 };
 const apiCall = async (url, resDataType, connectionName, reqData) => { 
     let fetchCaller = null,
-        connection = (globalSetting(`api.connections.${connectionName}`, null) || globalSetting(`api.connections.auto`, null)),
+        connection = (globalSetting(`flair.api.connections.${connectionName}`, null, true) || globalSetting(`flair.api.connections.auto`, null, true)),
         urlToCall = getEndpointUrl(connection, url);
     
     if (isServer) {

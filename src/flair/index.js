@@ -104,19 +104,23 @@
     options.symbols = Object.freeze(sym);
     options.env = Object.freeze({
         type: (isServer ? 'server' : 'client'),
-        isTesting: (sym.indexOf('TEST') !== -1),
         isServer: isServer,
         isClient: !isServer,
         isWorker : isWorker,
         isMain: !isWorker,
-        isLocalhost: ((isServer ? require('os').hostname() : self.location.host).indexOf('local') !== -1),
         cores: ((isServer ? (require('os').cpus().length) : window.navigator.hardwareConcurrency) || 4),
         isCordova: (!isServer && !!window.cordova),
         isNodeWebkit: (isServer && process.versions['node-webkit']),
-        isProd: (sym.indexOf('DEBUG') === -1 && sym.indexOf('PROD') !== -1),
-        isDebug: (sym.indexOf('PROD') === -1),
+        isProd: ((sym.indexOf('PROD') !== -1 && (sym.indexOf('DEV') === -1 && sym.indexOf('STAGE') === -1)),
+        isStage: ((sym.indexOf('STAGE') !== -1 && (sym.indexOf('DEV') === -1 && sym.indexOf('PROD') === -1)),        
+        isDev: ((sym.indexOf('DEV') !== -1 && (sym.indexOf('STAGE') === -1 && sym.indexOf('PROD') === -1)),        
+        isLocal: ((isServer ? require('os').hostname() : self.location.host).indexOf('local') !== -1),
+        isDebug: (sym.indexOf('DEBUG') !== -1),
+        isTest: (sym.indexOf('TEST') !== -1),
         isAppMode: () => { return isAppStarted; }
     });
+    // Prod | Stage | Dev are three mutually exclusive environments
+    // Local, Debug and Test can be true in any of these environments
 
     // flair
     flair.members = [];

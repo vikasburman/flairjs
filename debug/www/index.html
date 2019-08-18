@@ -84,7 +84,7 @@
           lupdate: new Date(info.lupdate).toDateString(),
           asm: info.name,
           file: info.file,
-          env: flair.env.type + ': ' + (flair.env.isTesting ? 'testing/' : '') + (flair.env.isProd ? 'prod' : 'debug'),
+          env: flair.env.type,
           mode: flair.env.isAppMode() ? 'framework' : 'library',
           fileLink: '../../dist/flair.js',
           licenseLink: 'https://raw.githubusercontent.com/vikasburman/flairjs/master/LICENSE',

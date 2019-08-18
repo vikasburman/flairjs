@@ -856,12 +856,15 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             let conditions = splitAndTrim(the_attr.args[0] || []);
             for (let condition of conditions) {
                 condition = condition.toLowerCase();
-                if (!(condition === 'test' && options.env.isTesting)) { result = false; break; }
+                if (!(condition === 'test' && options.env.isTest)) { result = false; break; }
+                if (!(condition === 'stage' && options.env.isStage)) { result = false; break; }
                 if (!(condition === 'server' && options.env.isServer)) { result = false; break; }
                 if (!(condition === 'client' && options.env.isClient)) { result = false; break; }
                 if (!(condition === 'worker' && options.env.isWorker)) { result = false; break; }
                 if (!(condition === 'main' && options.env.isMain)) { result = false; break; }
+                if (!(condition === 'local' && options.env.isLocal)) { result = false; break; }
                 if (!(condition === 'debug' && options.env.isDebug)) { result = false; break; }
+                if (!(condition === 'dev' && options.env.isDev)) { result = false; break; }
                 if (!(condition === 'prod' && options.env.isProd)) { result = false; break; }
                 if (!(condition === 'cordova' && options.env.isCordova)) { result = false; break; }
                 if (!(condition === 'nodewebkit' && options.env.isNodeWebkit)) { result = false; break; }
