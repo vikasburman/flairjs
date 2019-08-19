@@ -5,6 +5,7 @@ const argv = require('minimist')(process.argv.slice(2));
 const doTask = (done) => {
     // get options file
     let options = argv.options || '',
+        custom = argv.custom || '',
         forcedFullBuild = argv.full,
         forcedQuickBuild = argv.quick,
         optionsJSON = null;
@@ -17,6 +18,10 @@ const doTask = (done) => {
     optionsJSON = fsx.readJSONSync(options, 'utf8');
     if (forcedFullBuild) { optionsJSON.fullBuild = true; }
     if (forcedQuickBuild && !forcedFullBuild) { optionsJSON.quickBuild = true; }
+    if (custom) { // custom config defined from outside, overwrite
+        optionsJSON.customBuild = true;
+        optionsJSON.customBuildConfig = custom;
+    }
     let engine = optionsJSON.engine || '../flairBuild.js';
     if (!engine) {
         console.log('Build engine is not configured. Define correct path of flairBuild.js at "engine" option in build options file.'); // eslint-disable-line no-console
