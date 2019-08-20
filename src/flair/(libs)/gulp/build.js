@@ -5,26 +5,26 @@ const argv = require('minimist')(process.argv.slice(2));
 const doTask = (done) => {
     // get options file
     let options = argv.options || '',
-        custom = argv.custom || '',
+        flag = argv.flag || '',
         forcedFullBuild = argv.full,
         forcedQuickBuild = argv.quick,
         optionsJSON = null;
     if (!options) {
         console.log('Build options definition is not configured. Use --options <options-file> to configure build script in package.json'); // eslint-disable-line no-console
-        return;
+        done(); return;
     }
 
     // load options
     optionsJSON = fsx.readJSONSync(options, 'utf8');
     if (forcedFullBuild) { optionsJSON.fullBuild = true; }
     if (forcedQuickBuild && !forcedFullBuild) { optionsJSON.quickBuild = true; }
-    if (custom) { // custom config defined from outside, overwrite
-        optionsJSON.customBuild = true;
-        optionsJSON.customBuildConfig = custom;
+    if (flag) { // active flag defined
+        optionsJSON.activeFlag = flag;
     }
     let engine = optionsJSON.engine || '../flairBuild.js';
     if (!engine) {
         console.log('Build engine is not configured. Define correct path of flairBuild.js at "engine" option in build options file.'); // eslint-disable-line no-console
+        done(); return;
     }
 
     // load and run engine

@@ -1405,6 +1405,7 @@
      *  flairBuild(options, cb)
      * @params
      *  options: object - build configuration object having following options:
+     *              activeFlag: flag that needs to be marked as active in when flags are written (see write_flajs.js for more info) - this is generally passed from command line as arg
      *              src: source folder root path
      *              dest: destination folder root path - where to copy built assemblies
      *              customBuild: if custom control is needed for picking source and other files

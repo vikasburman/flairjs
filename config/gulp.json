@@ -1,5 +1,6 @@
 {
     "build": "./src/flair/(libs)/gulp/build.js",
+    "flag": "./src/flair/(libs)/gulp/flag.js",
     "test": "./src/flair/(libs)/gulp/test.js",
     "package": "./src/flair/(libs)/gulp/package.js"
 }
