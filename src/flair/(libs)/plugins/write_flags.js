@@ -17,7 +17,7 @@ const fsx = require('fs-extra');
 exports.exec = function(settings, options, cb) { // eslint-disable no-unused-vars
     if (!options.profiles.current.flags) { cb(); return; }
 
-    options.logger(0, 'write_flags', '', true);  
+    options.logger(0, 'flags', '', true);  
 
     // write flags file
     let fileName = 'flags.json',

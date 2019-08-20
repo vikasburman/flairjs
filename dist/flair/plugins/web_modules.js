@@ -16,7 +16,7 @@ const copyDir = require('copy-dir');
 exports.exec = function(settings, options, cb) { // eslint-disable no-unused-vars
     if (!options.profiles.current.modules || options.profiles.current.modules.length === 0) { cb(); return; }
 
-    options.logger(0, 'modules', '', true);    
+    options.logger(0, 'web-modules', '', true);    
 
     // copy all defined modules from node_modules to destination's "modules" folder at root
     let src = '',

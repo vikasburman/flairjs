@@ -24,7 +24,7 @@ const wildcardMatch = (find, source) => { // for future use when we support basi
 exports.exec = function(settings, options, cb) { // eslint-disable no-unused-vars
     if (!options.profiles.current.copy || options.profiles.current.copy.length === 0) { cb(); return; }
 
-    options.logger(0, 'copy_files', '', true);  
+    options.logger(0, 'copy', '', true);  
 
     // copy all files or folders as is in dest
     let src = '',
