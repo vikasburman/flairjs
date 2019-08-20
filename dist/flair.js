@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.55.59
- *  Tue, 20 Aug 2019 01:39:03 GMT
+ *  Version: 0.55.60
+ *  Tue, 20 Aug 2019 01:52:50 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -7409,10 +7409,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.55.59',
+        version: '0.55.60',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Tue, 20 Aug 2019 01:39:03 GMT')
+        lupdate: new Date('Tue, 20 Aug 2019 01:52:50 GMT')
     });  
 
     // bundled assembly load process 
@@ -7869,7 +7869,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.59","lupdate":"Tue, 20 Aug 2019 01:39:03 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.60","lupdate":"Tue, 20 Aug 2019 01:52:50 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
