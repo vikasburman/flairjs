@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.55.60
- *  Tue, 20 Aug 2019 01:52:50 GMT
+ *  Version: 0.55.61
+ *  Thu, 22 Aug 2019 00:31:23 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -127,15 +127,18 @@
         cores: ((isServer ? (require('os').cpus().length) : window.navigator.hardwareConcurrency) || 4),
         isCordova: (!isServer && !!window.cordova),
         isNodeWebkit: (isServer && process.versions['node-webkit']),
-        isProd: (sym.indexOf('PROD') !== -1 && (sym.indexOf('DEV') === -1 && sym.indexOf('STAGE') === -1)),
-        isStage: (sym.indexOf('STAGE') !== -1 && (sym.indexOf('DEV') === -1 && sym.indexOf('PROD') === -1)),        
-        isDev: (sym.indexOf('DEV') !== -1 && (sym.indexOf('STAGE') === -1 && sym.indexOf('PROD') === -1)),        
+        isProd: ((sym.indexOf('PROD') !== -1 || sym.indexOf('STAGE') !== -1) && sym.indexOf('DEV') === -1),
+        isStage: (sym.indexOf('STAGE') !== -1 && sym.indexOf('DEV') === -1),        
+        isDev: (sym.indexOf('DEV') !== -1),        
         isLocal: ((isServer ? require('os').hostname() : self.location.host).indexOf('local') !== -1),
         isDebug: (sym.indexOf('DEBUG') !== -1),
         isTest: (sym.indexOf('TEST') !== -1),
         isAppMode: () => { return isAppStarted; }
     });
-    // Prod | Stage | Dev are three mutually exclusive environments
+    // Prod / Stage vs Dev are mutually exclusive environments
+    // Prod is set to true when either PROD or STAGE or both are present and DEV is not present
+    // Stage is true only when STAGE is present and DEV is not present
+    // Dev is true only when DEV is present even if PROD / STAGE is also present
     // Local, Debug and Test can be true in any of these environments
 
     // flair
@@ -4275,18 +4278,23 @@
                 let conditions = splitAndTrim(the_attr.args[0] || []);
                 for (let condition of conditions) {
                     condition = condition.toLowerCase();
-                    if (!(condition === 'test' && options.env.isTest)) { result = false; break; }
-                    if (!(condition === 'stage' && options.env.isStage)) { result = false; break; }
                     if (!(condition === 'server' && options.env.isServer)) { result = false; break; }
                     if (!(condition === 'client' && options.env.isClient)) { result = false; break; }
+    
                     if (!(condition === 'worker' && options.env.isWorker)) { result = false; break; }
                     if (!(condition === 'main' && options.env.isMain)) { result = false; break; }
+    
                     if (!(condition === 'local' && options.env.isLocal)) { result = false; break; }
-                    if (!(condition === 'debug' && options.env.isDebug)) { result = false; break; }
-                    if (!(condition === 'dev' && options.env.isDev)) { result = false; break; }
+                    if (!(condition === 'stage' && options.env.isStage)) { result = false; break; }
                     if (!(condition === 'prod' && options.env.isProd)) { result = false; break; }
+                    if (!(condition === 'dev' && options.env.isDev)) { result = false; break; }
+    
+                    if (!(condition === 'debug' && options.env.isDebug)) { result = false; break; }
+                    if (!(condition === 'test' && options.env.isTest)) { result = false; break; }
+    
                     if (!(condition === 'cordova' && options.env.isCordova)) { result = false; break; }
                     if (!(condition === 'nodewebkit' && options.env.isNodeWebkit)) { result = false; break; }
+    
                     if (!(options.symbols.indexOf(condition) !== -1)) { result = false; break; }
                 }
                 if (!result) { return result; } // don't go to define, yet leave meta as is, so at a later stage we know that this was conditional and yet not available, means condition failed
@@ -7409,10 +7417,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.55.60',
+        version: '0.55.61',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Tue, 20 Aug 2019 01:52:50 GMT')
+        lupdate: new Date('Thu, 22 Aug 2019 00:31:23 GMT')
     });  
 
     // bundled assembly load process 
@@ -7869,7 +7877,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.60","lupdate":"Tue, 20 Aug 2019 01:52:50 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.61","lupdate":"Thu, 22 Aug 2019 00:31:23 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 

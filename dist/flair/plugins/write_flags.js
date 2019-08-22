@@ -32,7 +32,7 @@ exports.exec = function(settings, options, cb) { // eslint-disable no-unused-var
     content = JSON.stringify(flagsCopy);
     fsx.writeFileSync(dest, content, 'utf8');
 
-    options.logger(1, '', './' + fileName + ` [${Object.keys(options.profiles.current.flags).length} flags]`);
+    options.logger(1, '', './' + fileName + ` [${Object.keys(options.profiles.current.flags).length} flags, flagged: ${active}]`);
 
     // done
     cb();

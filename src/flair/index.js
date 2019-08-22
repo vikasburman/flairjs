@@ -127,15 +127,18 @@
         cores: ((isServer ? (require('os').cpus().length) : window.navigator.hardwareConcurrency) || 4),
         isCordova: (!isServer && !!window.cordova),
         isNodeWebkit: (isServer && process.versions['node-webkit']),
-        isProd: (sym.indexOf('PROD') !== -1 && (sym.indexOf('DEV') === -1 && sym.indexOf('STAGE') === -1)),
-        isStage: (sym.indexOf('STAGE') !== -1 && (sym.indexOf('DEV') === -1 && sym.indexOf('PROD') === -1)),        
-        isDev: (sym.indexOf('DEV') !== -1 && (sym.indexOf('STAGE') === -1 && sym.indexOf('PROD') === -1)),        
+        isProd: ((sym.indexOf('PROD') !== -1 || sym.indexOf('STAGE') !== -1) && sym.indexOf('DEV') === -1),
+        isStage: (sym.indexOf('STAGE') !== -1 && sym.indexOf('DEV') === -1),        
+        isDev: (sym.indexOf('DEV') !== -1),        
         isLocal: ((isServer ? require('os').hostname() : self.location.host).indexOf('local') !== -1),
         isDebug: (sym.indexOf('DEBUG') !== -1),
         isTest: (sym.indexOf('TEST') !== -1),
         isAppMode: () => { return isAppStarted; }
     });
-    // Prod | Stage | Dev are three mutually exclusive environments
+    // Prod / Stage vs Dev are mutually exclusive environments
+    // Prod is set to true when either PROD or STAGE or both are present and DEV is not present
+    // Stage is true only when STAGE is present and DEV is not present
+    // Dev is true only when DEV is present even if PROD / STAGE is also present
     // Local, Debug and Test can be true in any of these environments
 
     // flair
