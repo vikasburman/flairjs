@@ -3,7 +3,7 @@
     "title": "Flair.js",
     "description": "True Object Oriented JavaScript",
     "copyright": "(c) 2017-2019 Vikas Burman",
-    "version": "0.55.63",
+    "version": "0.55.68",
     "author": "Vikas Burman <vikasburman@gmail.com>",
     "keywords": [
         "javascript",
@@ -29,13 +29,13 @@
         "build": "flair build --options ./config/build/options.json",
         "build-full": "flair build --options ./config/build/options.json --full",
         "build-quick": "flair build --options ./config/build/options.json --quick",
-        "package": "flair pack --options ./config/package/options.json",
+        "package": "flair pack --options ./config/package/options.json && npm pack ./publish/package/npm",
         "test": "flair test --options ./config/test/options.json",
         "test-client": "flair test --options ./config/test/options.json --client",
         "serve": "http-server ./ -p8088 && pkill -f http-server"
     },
     "devDependencies": {
-        "flairjs-cli": "^0.55.80",
+        "flairjs-cli": "^0.55.85",
         "http-server": "^0.11.1"
     }
 }
