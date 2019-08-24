@@ -1,5 +1,0 @@
-{
-    "build": "./src/flair/(libs)/gulp/build.js",
-    "test": "./src/flair/(libs)/gulp/test.js",
-    "package": "./src/flair/(libs)/gulp/package.js"
-}

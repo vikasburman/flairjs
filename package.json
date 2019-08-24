@@ -3,7 +3,7 @@
     "title": "Flair.js",
     "description": "True Object Oriented JavaScript",
     "copyright": "(c) 2017-2019 Vikas Burman",
-    "version": "0.55.62",
+    "version": "0.55.63",
     "author": "Vikas Burman <vikasburman@gmail.com>",
     "keywords": [
         "javascript",
@@ -26,31 +26,16 @@
     },
     "main": "./flair.js",
     "scripts": {
-        "build": "gulp build --options ./config/build.json",
-        "build-full": "gulp build --full --options ./config/build.json",
-        "build-quick": "gulp build --quick --options ./config/build.json",
-        "test": "gulp test --TEST --options ./config/test.json",
-        "test-client": "gulp test --TEST --client --options ./config/test.json",
-        "serve": "http-server ./ -p8088 && pkill -f http-server",
-        "package": "gulp package --options ./config/pack.json && npm pack ./publish/package/npm"
+        "build": "flair build --options ./config/build/options.json",
+        "build-full": "flair build --options ./config/build/options.json --full",
+        "build-quick": "flair build --options ./config/build/options.json --quick",
+        "package": "flair pack --options ./config/package/options.json",
+        "test": "flair test --options ./config/test/options.json",
+        "test-client": "flair test --options ./config/test/options.json --client",
+        "serve": "http-server ./ -p8088 && pkill -f http-server"
     },
     "devDependencies": {
-        "clean-css": "^4.2.1",
-        "copy-dir": "^1.1.0",
-        "del": "^5.0.0",
-        "eslint": "^6.0.1",
-        "fast-glob": "^3.0.4",
-        "fs-extra": "^8.1.0",
-        "gulp": "^4.0.2",
-        "html-minifier": "^4.0.0",
-        "htmllint": "^0.8.0",
-        "http-server": "^0.11.1",
-        "jasmine": "^3.4.0",
-        "minimist": "^1.2.0",
-        "open": "^6.4.0",
-        "recursive-readdir-sync": "^1.0.6",
-        "stylelint": "^10.1.0",
-        "uglify-es": "^3.3.9"
-    },
-    "dependencies": {}
+        "flairjs-cli": "^0.55.80",
+        "http-server": "^0.11.1"
+    }
 }
