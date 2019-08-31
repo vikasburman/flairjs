@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.55.86
- *  Sat, 31 Aug 2019 16:17:20 GMT
+ *  Version: 0.55.87
+ *  Sat, 31 Aug 2019 17:24:13 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -1272,7 +1272,7 @@
             let source = null;
                 
             if (name) {
-                if (name === '*') { // all assemblies having this namespace
+                if (scan === '*') { // all assemblies having this namespace
                     // ensure all assemblies having this namespace are loaded
                     let allRegisteredADOs = domain.allAdos();
                     for(let ado of allRegisteredADOs) {
@@ -1280,7 +1280,7 @@
                             await this.loadAssembly(ado.file); // ensure this assembly is loaded
                         }
                     }
-                } else { // specific assembly file only
+                } else if (scan !== '') { // specific assembly file only
                     await this.loadAssembly(name); // ensure this assembly is loaded
                 }
     
@@ -7459,10 +7459,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.55.86',
+        version: '0.55.87',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sat, 31 Aug 2019 16:17:20 GMT')
+        lupdate: new Date('Sat, 31 Aug 2019 17:24:13 GMT')
     });  
 
     // bundled assembly load process 
@@ -7919,7 +7919,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.86","lupdate":"Sat, 31 Aug 2019 16:17:20 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.87","lupdate":"Sat, 31 Aug 2019 17:24:13 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 

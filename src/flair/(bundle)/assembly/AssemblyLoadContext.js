@@ -214,7 +214,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         let source = null;
             
         if (name) {
-            if (name === '*') { // all assemblies having this namespace
+            if (scan === '*') { // all assemblies having this namespace
                 // ensure all assemblies having this namespace are loaded
                 let allRegisteredADOs = domain.allAdos();
                 for(let ado of allRegisteredADOs) {
@@ -222,7 +222,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
                         await this.loadAssembly(ado.file); // ensure this assembly is loaded
                     }
                 }
-            } else { // specific assembly file only
+            } else if (scan !== '') { // specific assembly file only
                 await this.loadAssembly(name); // ensure this assembly is loaded
             }
 
