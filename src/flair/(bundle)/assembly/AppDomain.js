@@ -132,6 +132,9 @@ const AppDomain = function(name) {
         ado.file = which(ado.file, true); // min/dev contextual pick
         let fileKey = this.getAsmFileKey(ado.file);
         if (!asmFiles[fileKey]) {
+            // store placeholder, so while loading, same assembly is not attempted to load again
+            asmFiles[fileKey] = ado;
+
             // generate namespaces (from types and resources)
             let nsName = '';
             ado.namespaces = [];            
@@ -172,7 +175,7 @@ const AppDomain = function(name) {
             this.context.registerRoutes(ado.routes, ado.file);
 
             // store raw, for later use and reference
-            asmFiles[fileKey] = Object.freeze(ado);
+            asmFiles[fileKey] = Object.freeze(ado); // replace with freezed version, to prevent change
             allADOs.push(ado);
         }  
     };
