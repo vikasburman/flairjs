@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.55.78
- *  Sat, 31 Aug 2019 05:45:18 GMT
+ *  Version: 0.55.80
+ *  Sat, 31 Aug 2019 06:47:42 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -1069,6 +1069,8 @@
             asmNames = {},
             namespaces = {},
             isUnloaded = false,
+            asmLoadedForNamespace = [],
+            isOptimizeNamespaceLookup = false,
             currentAssemblyBeingLoaded = '';
     
         // context
@@ -1268,16 +1270,21 @@
         // namespace
         this.namespace = async (name) => { 
             if (name && name === '(root)') { name = ''; }
-            let source = null,
-                asm = null;
+            let source = null;
+                
             if (name) {
-                // ensure all assemblies having this namespace are loaded  
-                for(let item in asmFiles) {
-                    asm = asmFiles[item];
-                    if (asm.namespaces().indexOf(name) !== -1) { // found
-                        await this.loadAssembly(asm.file); // ensure this assembly is loaded
+                if (asmLoadedForNamespace.indexOf(name) === -1 || isOptimizeNamespaceLookup === false) { // if asm load process for this namespace is not done yet once
+                    asmLoadedForNamespace.push(name);
+    
+                    // ensure all assemblies having this namespace are loaded
+                    let allRegisteredADOs = domain.allAdos();
+                    for(let ado in allRegisteredADOs) {
+                        if (ado.namespaces().indexOf(name) !== -1) { // found
+                            await this.loadAssembly(ado.file); // ensure this assembly is loaded
+                        }
                     }
                 }
+    
                 // pick namespace now
                 source = namespaces[name] || null;
             } else { // root
@@ -1291,6 +1298,9 @@
         };
         this.namespace.root = () => {
             return namespaces;
+        };
+        this.namespace.optimizer = (isOn) => {
+            isOptimizeNamespaceLookup = isOn;
         };
     
         // assembly
@@ -1544,7 +1554,6 @@
      * @description Assembly object.
      */ 
     const Assembly = function (ado, alc, asmClosureVars) {
-        let namespaces = null;
         this.context = alc;
         this.domain = alc.domain;
     
@@ -1567,20 +1576,7 @@
        
         // types
         this.types = () => { return ado.types.slice(); }
-        this.namespaces = () => {
-            if (!namespaces) {
-                namespaces = [];
-                for(let qt of ado.types) {
-                    // each qualified type is a namespaceName.typeName
-                    // therefore - remove type name part
-                    let nsName = qt.substr(0, qt.lastIndexOf('.'));
-                    if (namespaces.indexOf(nsName) === -1) {
-                        namespaces.push(nsName);
-                    }
-                }
-            }
-            return namespaces;
-        };
+        this.namespaces = () => { return ado.namespaces.slice(); }
         this.getType = (qualifiedName) => {
             if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.getType); }
             if (ado.types.indexOf(qualifiedName) === -1) { throw _Exception.NotFound(qualifiedName, this.getType); }
@@ -2162,7 +2158,9 @@
             ado.file = which(ado.file, true); // min/dev contextual pick
             let fileKey = this.getAsmFileKey(ado.file);
             if (!asmFiles[fileKey]) {
-                asmFiles[fileKey] = Object.freeze(ado);
+                // generate namespaces (from types and resources)
+                let nsName = '';
+                ado.namespaces = [];            
     
                 // flatten types
                 ado.types.forEach(qualifiedName => {
@@ -2171,6 +2169,12 @@
                         throw _Exception.Duplicate(qualifiedName, this.registerAdo);
                     } else {
                         asmTypes[qualifiedName] = ado.file; // means this type can be loaded from this assembly 
+    
+                        // add namespace
+                        nsName = qualifiedName.substr(0, qualifiedName.lastIndexOf('.'));
+                        if (ado.namespaces.indexOf(nsName) === -1) {
+                            ado.namespaces.push(nsName);
+                        }
                     }
                 });
     
@@ -2181,6 +2185,12 @@
                         throw _Exception.Duplicate(qualifiedName, this.registerAdo);
                     } else {
                         asmTypes[qualifiedName] = ado.file; // means this resource can be loaded from this assembly
+    
+                        // add namespace
+                        nsName = qualifiedName.substr(0, qualifiedName.lastIndexOf('.'));
+                        if (ado.namespaces.indexOf(nsName) === -1) {
+                            ado.namespaces.push(nsName);
+                        }
                     }
                 });
                     
@@ -2188,6 +2198,7 @@
                 this.context.registerRoutes(ado.routes, ado.file);
     
                 // store raw, for later use and reference
+                asmFiles[fileKey] = Object.freeze(ado);
                 allADOs.push(ado);
             }  
         };
@@ -2196,7 +2207,7 @@
             let fileKey = this.getAsmFileKey(file);
             return asmFiles[fileKey] || null;
         };
-        this.allAdos = () => { return Object.keys(asmFiles); }
+        this.allAdos = () => { return allADOs.slice(); }
     
         // types
         this.resolve = (qualifiedName) => {
@@ -7435,10 +7446,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.55.78',
+        version: '0.55.80',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sat, 31 Aug 2019 05:45:18 GMT')
+        lupdate: new Date('Sat, 31 Aug 2019 06:47:42 GMT')
     });  
 
     // bundled assembly load process 
@@ -7895,7 +7906,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.78","lupdate":"Sat, 31 Aug 2019 05:45:18 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.80","lupdate":"Sat, 31 Aug 2019 06:47:42 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 

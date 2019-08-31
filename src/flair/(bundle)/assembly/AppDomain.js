@@ -132,7 +132,9 @@ const AppDomain = function(name) {
         ado.file = which(ado.file, true); // min/dev contextual pick
         let fileKey = this.getAsmFileKey(ado.file);
         if (!asmFiles[fileKey]) {
-            asmFiles[fileKey] = Object.freeze(ado);
+            // generate namespaces (from types and resources)
+            let nsName = '';
+            ado.namespaces = [];            
 
             // flatten types
             ado.types.forEach(qualifiedName => {
@@ -141,6 +143,12 @@ const AppDomain = function(name) {
                     throw _Exception.Duplicate(qualifiedName, this.registerAdo);
                 } else {
                     asmTypes[qualifiedName] = ado.file; // means this type can be loaded from this assembly 
+
+                    // add namespace
+                    nsName = qualifiedName.substr(0, qualifiedName.lastIndexOf('.'));
+                    if (ado.namespaces.indexOf(nsName) === -1) {
+                        ado.namespaces.push(nsName);
+                    }
                 }
             });
 
@@ -151,6 +159,12 @@ const AppDomain = function(name) {
                     throw _Exception.Duplicate(qualifiedName, this.registerAdo);
                 } else {
                     asmTypes[qualifiedName] = ado.file; // means this resource can be loaded from this assembly
+
+                    // add namespace
+                    nsName = qualifiedName.substr(0, qualifiedName.lastIndexOf('.'));
+                    if (ado.namespaces.indexOf(nsName) === -1) {
+                        ado.namespaces.push(nsName);
+                    }
                 }
             });
                 
@@ -158,6 +172,7 @@ const AppDomain = function(name) {
             this.context.registerRoutes(ado.routes, ado.file);
 
             // store raw, for later use and reference
+            asmFiles[fileKey] = Object.freeze(ado);
             allADOs.push(ado);
         }  
     };
@@ -166,7 +181,7 @@ const AppDomain = function(name) {
         let fileKey = this.getAsmFileKey(file);
         return asmFiles[fileKey] || null;
     };
-    this.allAdos = () => { return Object.keys(asmFiles); }
+    this.allAdos = () => { return allADOs.slice(); }
 
     // types
     this.resolve = (qualifiedName) => {

@@ -11,6 +11,8 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         asmNames = {},
         namespaces = {},
         isUnloaded = false,
+        asmLoadedForNamespace = [],
+        isOptimizeNamespaceLookup = false,
         currentAssemblyBeingLoaded = '';
 
     // context
@@ -210,16 +212,21 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
     // namespace
     this.namespace = async (name) => { 
         if (name && name === '(root)') { name = ''; }
-        let source = null,
-            asm = null;
+        let source = null;
+            
         if (name) {
-            // ensure all assemblies having this namespace are loaded  
-            for(let item in asmFiles) {
-                asm = asmFiles[item];
-                if (asm.namespaces().indexOf(name) !== -1) { // found
-                    await this.loadAssembly(asm.file); // ensure this assembly is loaded
+            if (asmLoadedForNamespace.indexOf(name) === -1 || isOptimizeNamespaceLookup === false) { // if asm load process for this namespace is not done yet once
+                asmLoadedForNamespace.push(name);
+
+                // ensure all assemblies having this namespace are loaded
+                let allRegisteredADOs = domain.allAdos();
+                for(let ado in allRegisteredADOs) {
+                    if (ado.namespaces().indexOf(name) !== -1) { // found
+                        await this.loadAssembly(ado.file); // ensure this assembly is loaded
+                    }
                 }
             }
+
             // pick namespace now
             source = namespaces[name] || null;
         } else { // root
@@ -233,6 +240,9 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
     };
     this.namespace.root = () => {
         return namespaces;
+    };
+    this.namespace.optimizer = (isOn) => {
+        isOptimizeNamespaceLookup = isOn;
     };
 
     // assembly
