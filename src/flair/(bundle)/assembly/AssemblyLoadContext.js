@@ -221,7 +221,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
                 // ensure all assemblies having this namespace are loaded
                 let allRegisteredADOs = domain.allAdos();
                 for(let ado in allRegisteredADOs) {
-                    if (ado.namespaces().indexOf(name) !== -1) { // found
+                    if (ado.namespaces.indexOf(name) !== -1) { // found
                         await this.loadAssembly(ado.file); // ensure this assembly is loaded
                     }
                 }
