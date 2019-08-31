@@ -223,7 +223,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
                     }
                 }
             } else if (scan !== '') { // specific assembly file only
-                await this.loadAssembly(name); // ensure this assembly is loaded
+                await this.loadAssembly(scan); // ensure this assembly is loaded
             }
 
             // pick namespace now
