@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.55.85
- *  Sat, 31 Aug 2019 15:15:13 GMT
+ *  Version: 0.55.86
+ *  Sat, 31 Aug 2019 16:17:20 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -1069,8 +1069,6 @@
             asmNames = {},
             namespaces = {},
             isUnloaded = false,
-            asmLoadedForNamespace = [],
-            isOptimizeNamespaceLookup = false,
             currentAssembliesBeingLoaded = [];
     
         // context
@@ -1268,14 +1266,13 @@
         };
     
         // namespace
-        this.namespace = async (name) => { 
+        this.namespace = async (name, scan) => { 
             if (name && name === '(root)') { name = ''; }
+            if (!scan) { scan = ''; }
             let source = null;
                 
             if (name) {
-                if (asmLoadedForNamespace.indexOf(name) === -1 || isOptimizeNamespaceLookup === false) { // if asm load process for this namespace is not done yet once
-                    asmLoadedForNamespace.push(name);
-    
+                if (name === '*') { // all assemblies having this namespace
                     // ensure all assemblies having this namespace are loaded
                     let allRegisteredADOs = domain.allAdos();
                     for(let ado of allRegisteredADOs) {
@@ -1283,6 +1280,8 @@
                             await this.loadAssembly(ado.file); // ensure this assembly is loaded
                         }
                     }
+                } else { // specific assembly file only
+                    await this.loadAssembly(name); // ensure this assembly is loaded
                 }
     
                 // pick namespace now
@@ -1298,9 +1297,6 @@
         };
         this.namespace.root = () => {
             return namespaces;
-        };
-        this.namespace.optimizer = (isOn) => {
-            isOptimizeNamespaceLookup = isOn;
         };
     
         // assembly
@@ -2602,15 +2598,25 @@
      * @description Gets the registered namespace from default assembly load context of default appdomain
      * @example
      *  ns(name)
+     *  ns(name, scan)
      * @params
      *  name: string - name of the namespace
+     *  scan: string (optional) - can be:
+     *      absent/empty: no assemblies will be scanned, namespace will be picked whatever is loaded
+     *      *: all registered ADOs will be scanned for this namespace and any unloaded assemblies will be loaded, before returning the namespace
+     *         Note: This is time consuming and if there are cyclic conditions - it is unpredictable (TODO: Check and fix this scenario)
+     *      <assembly-file-name>: all registered ADOs will be scanned for this registered assembly and if this assembly is not loaded yet, it will be loaded before returning the namespace
+     *          Note: In general, cyclic conditions should be avoided as best practice - although this code will take care of this
+     *          <assembly-file-name> can be xyz.js | xyz.min.js | ./<path>/xyz.js | ./<path>/xyz.min.js 
+     *              no need to use .min. in file name here, it will pick whatever is applicable for the environment
+     *              but if this is added, it will be ignored
      * @returns object if no name is passed to represents root-namespace OR promise that resolves with namespace object for specified namespace name
      */ 
-    const _ns = (name) => { 
+    const _ns = (name, scan) => { 
         if (!name) {
-            return _AppDomain.context.namespace.root();
+            return _AppDomain.context.namespace.root(); // sync version
         } else {
-            return _AppDomain.context.namespace(name);
+            return _AppDomain.context.namespace(name, scan); // async version
         }
     };
     
@@ -7453,10 +7459,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.55.85',
+        version: '0.55.86',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sat, 31 Aug 2019 15:15:13 GMT')
+        lupdate: new Date('Sat, 31 Aug 2019 16:17:20 GMT')
     });  
 
     // bundled assembly load process 
@@ -7913,7 +7919,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.85","lupdate":"Sat, 31 Aug 2019 15:15:13 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.86","lupdate":"Sat, 31 Aug 2019 16:17:20 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
