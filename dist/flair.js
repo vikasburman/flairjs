@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.55.88
- *  Sat, 31 Aug 2019 17:30:26 GMT
+ *  Version: 0.55.89
+ *  Sat, 31 Aug 2019 18:21:00 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -133,7 +133,8 @@
         isLocal: ((isServer ? require('os').hostname() : self.location.host).indexOf('local') !== -1),
         isDebug: (sym.indexOf('DEBUG') !== -1),
         isTest: (sym.indexOf('TEST') !== -1),
-        isAppMode: () => { return isAppStarted; }
+        isAppMode: () => { return isAppStarted; },
+        x: {} // extra env properties are added here during runtime, generally via reading from a config file - once
     });
     // Prod / Stage vs Dev are mutually exclusive environments
     // Prod is set to true when either PROD or STAGE or both are present and DEV is not present
@@ -7459,10 +7460,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.55.88',
+        version: '0.55.89',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sat, 31 Aug 2019 17:30:26 GMT')
+        lupdate: new Date('Sat, 31 Aug 2019 18:21:00 GMT')
     });  
 
     // bundled assembly load process 
@@ -7919,7 +7920,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.88","lupdate":"Sat, 31 Aug 2019 17:30:26 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.89","lupdate":"Sat, 31 Aug 2019 18:21:00 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 

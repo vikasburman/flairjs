@@ -133,7 +133,8 @@
         isLocal: ((isServer ? require('os').hostname() : self.location.host).indexOf('local') !== -1),
         isDebug: (sym.indexOf('DEBUG') !== -1),
         isTest: (sym.indexOf('TEST') !== -1),
-        isAppMode: () => { return isAppStarted; }
+        isAppMode: () => { return isAppStarted; },
+        x: {} // extra env properties are added here during runtime, generally via reading from a config file - once
     });
     // Prod / Stage vs Dev are mutually exclusive environments
     // Prod is set to true when either PROD or STAGE or both are present and DEV is not present
