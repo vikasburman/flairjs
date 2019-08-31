@@ -210,11 +210,13 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
     // namespace
     this.namespace = async (name) => { 
         if (name && name === '(root)') { name = ''; }
-        let source = null;
+        let source = null,
+            asm = null;
         if (name) {
             // ensure all assemblies having this namespace are loaded  
-            for(let asm in asmFiles) {
-                if (asm.namespaces.indexOf(name) !== -1) { // found
+            for(let item in asmFiles) {
+                asm = asmFiles[item];
+                if (asm.namespaces().indexOf(name) !== -1) { // found
                     await this.loadAssembly(asm.file); // ensure this assembly is loaded
                 }
             }
@@ -302,6 +304,8 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
 
                 // assembly loaded
                 assemblyLoaded(file, asmADO, loadedInContext, asmClosureVars);
+            } catch (err) {
+                throw _Exception.OperationFailed(file, err);
             } finally {
                 // remove this from current context list
                 currentContexts.pop();
