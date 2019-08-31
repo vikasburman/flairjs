@@ -43,6 +43,7 @@
         flairInstances = ['instance', 'sinstance'],
         settings = {},
         config = {},
+        envX = null,
         isAppStarted = false;
     /* eslint-enable no-unused-vars */
 
@@ -134,7 +135,10 @@
         isDebug: (sym.indexOf('DEBUG') !== -1),
         isTest: (sym.indexOf('TEST') !== -1),
         isAppMode: () => { return isAppStarted; },
-        x: {} // extra env properties are added here during runtime, generally via reading from a config file - once
+        x: (once) => { 
+            if (!envX && once) { envX = once; } // set once - extra env properties are added here during runtime, generally via reading from a config file - once
+            return envX || {};
+        } 
     });
     // Prod / Stage vs Dev are mutually exclusive environments
     // Prod is set to true when either PROD or STAGE or both are present and DEV is not present
