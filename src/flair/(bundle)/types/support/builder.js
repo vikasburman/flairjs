@@ -634,12 +634,21 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         // return weaved or unchanged member
         return member;
     };
-    const getObjToOperateOn = (memberName, memberType, memberScope, isWrite) => {
-        let operate_obj = null;
+    const getObjToOperateOn = (memberName, isWrite) => {
+        let operate_obj = null,
+            memberType = def.members[memberName] || '',
+            memberScope = def.scope[memberName] || '';
+
+        const doubleCheck = (_memberType, _selectedObj) => {
+            if (isWrite && _memberType !== 'prop') { _selectedObj = null; } // writing to a non-prop type (means redefinition of member) is not allowed
+            return _selectedObj;
+        };
+
         if (memberName !== meta) {
-            switch(memberScope) {
+            switch(memberScope) { // all these non-default cases are when member is defined here
                 case 'private': // always read/write on local interface
-                    operate_obj = obj; break;
+                    operate_obj = doubleCheck(memberType, obj);
+                    break;
                 case 'protected': 
                     // obj.parentObjs[] array contains all parent objects' 'obj' object in reverse order
                     // e.g, if D derives from C, which derives from B, which derives from A, this array will contain [D, C, B, A]
@@ -647,25 +656,23 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                     // it will pick the C's overridden version, (which with the help of 'base' automatically will call B's and A's versions , if base() was called in tjese override)
                     // in case at no place it was overridden, it will call A's virtual itself
                     for(let ___obj of obj[parentObjs]) {
-                        if (typeof ___obj[memberName] !== 'undefined') {
-                            operate_obj = ___obj; break; 
-                        }
+                        if (typeof ___obj[memberName] !== 'undefined') { operate_obj = ___obj; break; }
                     }
-                    if (!operate_obj) { // will never be a case, yet handled
-                        operate_obj = obj;
-                    }
+                    if (!operate_obj) { operate_obj = obj; } // will never be a case, yet handled
+                    operate_obj = doubleCheck(memberType, operate_obj);
                     break;
                 case 'public':
                     if (isWrite) { // write case
-                        operate_obj = exposed_obj; break;
+                        operate_obj = doubleCheck(memberType, exposed_obj);
                     } else { // read case
                         if (memberType === 'event') { 
                             // events carry different interface for public and private/protected case
                             // therefore, if event is defined locally, read from here, else read from exposed interface
-                            operate_obj = (typeof obj[memberName] !== 'undefined' ? obj : exposed_obj); break;                             
+                            operate_obj = (typeof obj[memberName] !== 'undefined' ? obj : exposed_obj); 
                         } else { // all non-events, read from exposed interface
                             operate_obj = exposed_obj; 
                         }
+                        operate_obj = doubleCheck(memberType, operate_obj);
                     }
                     break;
                 default: // when member is not defined here then it must be protected or public at some parent level (and must be present in exposed_obj)
@@ -678,6 +685,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                         } else { // some undefined member or a private member at a parent level
                             throw _Exception.NotDefined(memberName, builder);
                         }
+                        operate_obj = doubleCheck(modifiers.members.type(memberName), operate_obj);
                     } else { // read case
                         // special case for events (is a function locally, and do have .add and .remove on exposed)
                         if (typeof obj[memberName] === 'function' && typeof exposed_obj[memberName] !== 'undefined' && typeof exposed_obj[memberName].add === 'function' && typeof exposed_obj[memberName].remove === 'function') { 
@@ -1640,7 +1648,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             } else if (name === 'dispose') {
                 name = _disposeName;
             }
-            let read_obj = getObjToOperateOn(name, def.members[name], def.scope[name]);
+            let read_obj = getObjToOperateOn(name);
             return read_obj[name];
         },
         set: (_obj, name, value) => {
@@ -1672,12 +1680,15 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                 // add or validate member
                 addMember(name, memberType, value);
             } else {
-                // a function or event is being redefined or noop is being redefined
-                if (typeof value === 'function') { throw _Exception.InvalidOperation(`Redefinition of members is not allowed. (${name})`, builder); }
-
                 // allow setting property values
-                let write_obj = getObjToOperateOn(name, def.members[name], def.scope[name], true); // true = write case
-                write_obj[name] = value;
+                let write_obj = getObjToOperateOn(name, true); // true = write case
+
+                // when writing is not allowed for given member (generally function or event) - a null is returned above
+                if (!write_obj) { 
+                    throw _Exception.InvalidOperation(`Redefinition of members is not allowed. (${name})`, builder); 
+                } else {
+                    write_obj[name] = value;
+                }
             }
             return true;
         }
