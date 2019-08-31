@@ -11,9 +11,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         asmNames = {},
         namespaces = {},
         isUnloaded = false,
-        asmLoadedForNamespace = [],
-        isOptimizeNamespaceLookup = false,
-        currentAssemblyBeingLoaded = '';
+        currentAssembliesBeingLoaded = [];
 
     // context
     this.name = name;
@@ -210,21 +208,22 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
     };
 
     // namespace
-    this.namespace = async (name) => { 
+    this.namespace = async (name, scan) => { 
         if (name && name === '(root)') { name = ''; }
+        if (!scan) { scan = ''; }
         let source = null;
             
         if (name) {
-            if (asmLoadedForNamespace.indexOf(name) === -1 || isOptimizeNamespaceLookup === false) { // if asm load process for this namespace is not done yet once
-                asmLoadedForNamespace.push(name);
-
+            if (name === '*') { // all assemblies having this namespace
                 // ensure all assemblies having this namespace are loaded
                 let allRegisteredADOs = domain.allAdos();
-                for(let ado in allRegisteredADOs) {
+                for(let ado of allRegisteredADOs) {
                     if (ado.namespaces.indexOf(name) !== -1) { // found
                         await this.loadAssembly(ado.file); // ensure this assembly is loaded
                     }
                 }
+            } else { // specific assembly file only
+                await this.loadAssembly(name); // ensure this assembly is loaded
             }
 
             // pick namespace now
@@ -241,18 +240,23 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
     this.namespace.root = () => {
         return namespaces;
     };
-    this.namespace.optimizer = (isOn) => {
-        isOptimizeNamespaceLookup = isOn;
-    };
 
     // assembly
-    this.currentAssemblyBeingLoaded = (value) => {
+    this.currentAssemblyBeingLoaded = (file) => {
         // NOTE: called at build time, so no checking is required
-        if (typeof value !== 'undefined') { 
-            currentAssemblyBeingLoaded = which(value, true); // min/dev contextual pick
+        if (file) { 
+            let fileKey = domain.getAsmFileKey(file);
+            currentAssembliesBeingLoaded.push(fileKey);
+        } else {
+            currentAssembliesBeingLoaded.pop();
         }
-        return currentAssemblyBeingLoaded;
-    }
+    };
+    this.isAssemblyLoadedOrLoading = (file) => {
+        if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`); }
+        
+        let fileKey = domain.getAsmFileKey(file);
+        return ((asmFiles[fileKey] || currentAssembliesBeingLoaded.indexOf(fileKey) !== -1) ? true : false);
+    };
     const assemblyLoaded = (file, ado, alc, asmClosureVars) => {
         let fileKey = domain.getAsmFileKey(file);
         if (!asmFiles[fileKey] && ado && alc && asmClosureVars) {
@@ -289,8 +293,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
     this.loadAssembly = async (file) => {
         if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`); }
 
-        let fileKey = domain.getAsmFileKey(file);
-        if (!asmFiles[fileKey] && this.currentAssemblyBeingLoaded() !== file) { // load only when it is not already loaded (or not already being loaded) in this load context
+        if (!this.isAssemblyLoadedOrLoading(file)) { 
             // set this context as current context, so all types being loaded in this assembly will get attached to this context;
             currentContexts.push(this);
 

@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.55.83
- *  Sat, 31 Aug 2019 14:21:20 GMT
+ *  Version: 0.55.85
+ *  Sat, 31 Aug 2019 15:15:13 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -1071,7 +1071,7 @@
             isUnloaded = false,
             asmLoadedForNamespace = [],
             isOptimizeNamespaceLookup = false,
-            currentAssemblyBeingLoaded = '';
+            currentAssembliesBeingLoaded = [];
     
         // context
         this.name = name;
@@ -1278,7 +1278,7 @@
     
                     // ensure all assemblies having this namespace are loaded
                     let allRegisteredADOs = domain.allAdos();
-                    for(let ado in allRegisteredADOs) {
+                    for(let ado of allRegisteredADOs) {
                         if (ado.namespaces.indexOf(name) !== -1) { // found
                             await this.loadAssembly(ado.file); // ensure this assembly is loaded
                         }
@@ -1304,13 +1304,21 @@
         };
     
         // assembly
-        this.currentAssemblyBeingLoaded = (value) => {
+        this.currentAssemblyBeingLoaded = (file) => {
             // NOTE: called at build time, so no checking is required
-            if (typeof value !== 'undefined') { 
-                currentAssemblyBeingLoaded = which(value, true); // min/dev contextual pick
+            if (file) { 
+                let fileKey = domain.getAsmFileKey(file);
+                currentAssembliesBeingLoaded.push(fileKey);
+            } else {
+                currentAssembliesBeingLoaded.pop();
             }
-            return currentAssemblyBeingLoaded;
-        }
+        };
+        this.isAssemblyLoadedOrLoading = (file) => {
+            if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`); }
+            
+            let fileKey = domain.getAsmFileKey(file);
+            return ((asmFiles[fileKey] || currentAssembliesBeingLoaded.indexOf(fileKey) !== -1) ? true : false);
+        };
         const assemblyLoaded = (file, ado, alc, asmClosureVars) => {
             let fileKey = domain.getAsmFileKey(file);
             if (!asmFiles[fileKey] && ado && alc && asmClosureVars) {
@@ -1347,8 +1355,7 @@
         this.loadAssembly = async (file) => {
             if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`); }
     
-            let fileKey = domain.getAsmFileKey(file);
-            if (!asmFiles[fileKey] && this.currentAssemblyBeingLoaded() !== file) { // load only when it is not already loaded (or not already being loaded) in this load context
+            if (!this.isAssemblyLoadedOrLoading(file)) { 
                 // set this context as current context, so all types being loaded in this assembly will get attached to this context;
                 currentContexts.push(this);
     
@@ -2158,9 +2165,6 @@
             ado.file = which(ado.file, true); // min/dev contextual pick
             let fileKey = this.getAsmFileKey(ado.file);
             if (!asmFiles[fileKey]) {
-                // store placeholder, so while loading, same assembly is not attempted to load again
-                asmFiles[fileKey] = ado;
-    
                 // generate namespaces (from types and resources)
                 let nsName = '';
                 ado.namespaces = [];            
@@ -2201,7 +2205,7 @@
                 this.context.registerRoutes(ado.routes, ado.file);
     
                 // store raw, for later use and reference
-                asmFiles[fileKey] = Object.freeze(ado); // replace with freezed version, to prevent change
+                asmFiles[fileKey] = Object.freeze(ado);
                 allADOs.push(ado);
             }  
         };
@@ -7449,10 +7453,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.55.83',
+        version: '0.55.85',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sat, 31 Aug 2019 14:21:20 GMT')
+        lupdate: new Date('Sat, 31 Aug 2019 15:15:13 GMT')
     });  
 
     // bundled assembly load process 
@@ -7909,7 +7913,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.83","lupdate":"Sat, 31 Aug 2019 14:21:20 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.85","lupdate":"Sat, 31 Aug 2019 15:15:13 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
