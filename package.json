@@ -3,7 +3,7 @@
     "title": "Flair.js",
     "description": "True Object Oriented JavaScript",
     "copyright": "(c) 2017-2019 Vikas Burman",
-    "version": "0.55.74",
+    "version": "0.55.76",
     "author": "Vikas Burman <vikasburman@gmail.com>",
     "keywords": [
         "javascript",
@@ -35,7 +35,7 @@
         "serve": "http-server ./ -p8088 && pkill -f http-server"
     },
     "devDependencies": {
-        "flairjs-cli": "^0.55.86",
+        "flairjs-cli": "^0.55.92",
         "http-server": "^0.11.1"
     }
 }

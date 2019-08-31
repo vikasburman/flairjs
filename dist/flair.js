@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.55.74
- *  Thu, 29 Aug 2019 23:03:42 GMT
+ *  Version: 0.55.76
+ *  Sat, 31 Aug 2019 04:28:55 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -1266,10 +1266,17 @@
         };
     
         // namespace
-        this.namespace = (name) => { 
+        this.namespace = async (name) => { 
             if (name && name === '(root)') { name = ''; }
             let source = null;
             if (name) {
+                // ensure all assemblies having this namespace are loaded  
+                for(let asm in asmFiles) {
+                    if (asm.namespaces.indexOf(name) !== -1) { // found
+                        await this.loadAssembly(asm.file); // ensure this assembly is loaded
+                    }
+                }
+                // pick namespace now
                 source = namespaces[name] || null;
             } else { // root
                 source = namespaces;
@@ -1279,6 +1286,9 @@
             } else {
                 return null;
             }
+        };
+        this.namespace.root = () => {
+            return namespaces;
         };
     
         // assembly
@@ -1355,7 +1365,7 @@
                     currentContexts.pop();
                 } // let throw error as is
             }
-        };  
+        };
         this.loadBundledAssembly = (file, loadedFile, asmFactory) => {
             if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`); }
     
@@ -1530,6 +1540,7 @@
      * @description Assembly object.
      */ 
     const Assembly = function (ado, alc, asmClosureVars) {
+        let namespaces = null;
         this.context = alc;
         this.domain = alc.domain;
     
@@ -1552,6 +1563,20 @@
        
         // types
         this.types = () => { return ado.types.slice(); }
+        this.namespaces = () => {
+            if (!namespaces) {
+                namespaces = [];
+                for(let qt of ado.types) {
+                    // each qualified type is a namespaceName.typeName
+                    // therefore - remove type name part
+                    let nsName = qt.substr(0, qt.lastIndexOf('.'));
+                    if (namespaces.indexOf(nsName) === -1) {
+                        namespaces.push(nsName);
+                    }
+                }
+            }
+            return namespaces;
+        };
         this.getType = (qualifiedName) => {
             if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.getType); }
             if (ado.types.indexOf(qualifiedName) === -1) { throw _Exception.NotFound(qualifiedName, this.getType); }
@@ -2555,25 +2580,13 @@
      * @description Gets the registered namespace from default assembly load context of default appdomain
      * @example
      *  ns(name)
-     *  ns(name, where)
      * @params
      *  name: string - name of the namespace
-     *  asInType: string - qualified name of any type which exists in this namespace
-     *          this will look for correct assembly to load before returning namespace object
-     * @returns object/promise - namespace object (if only namespace was passed) OR promise object (if asInType name was also passed)
+     * @returns object if no name is passed to represents root-namespace OR promise that resolves with namespace object for specified namespace name
      */ 
-    const _ns = (name, asInType) => { 
-        let args = _Args('name: undefined', 
-                         'name: string',
-                         'name: string, asInType: string')(name, asInType); args.throwOnError(_ns);
-        
-        if (typeof asInType === 'string') {
-            return new Promise((resolve, reject) => {
-                // include the type, this will load corresponding assembly, if not already loaded
-                _include(asInType).then(() => {
-                    resolve(_AppDomain.context.namespace(name)); // now resolve with the namespace object
-                }).catch(reject);
-            });
+    const _ns = (name) => { 
+        if (!name) {
+            return _AppDomain.context.namespace.root();
         } else {
             return _AppDomain.context.namespace(name);
         }
@@ -7418,10 +7431,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.55.74',
+        version: '0.55.76',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Thu, 29 Aug 2019 23:03:42 GMT')
+        lupdate: new Date('Sat, 31 Aug 2019 04:28:55 GMT')
     });  
 
     // bundled assembly load process 
@@ -7878,7 +7891,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('');
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.74","lupdate":"Thu, 29 Aug 2019 23:03:42 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.76","lupdate":"Sat, 31 Aug 2019 04:28:55 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 

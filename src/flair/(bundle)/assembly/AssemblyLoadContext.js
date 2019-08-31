@@ -1,5 +1,3 @@
-import { throws } from "assert";
-
 /**
  * @name AssemblyLoadContext
  * @description The isolation boundary of type loading across assemblies. 
