@@ -32,7 +32,9 @@
         "package": "flair pack --options ./config/package/options.json && npm pack ./publish/package/npm",
         "test": "flair test --options ./config/test/options.json",
         "test-client": "flair test --options ./config/test/options.json --client",
-        "serve": "http-server ./ -p8088 && pkill -f http-server"
+        "serve": "http-server ./ -p8088 && pkill -f http-server",
+        "refresh-quick": "yarn upgrade flairjs-cli",
+        "refresh": "yarn remove flairjs-cli && yarn add flairjs-cli --dev"
     },
     "devDependencies": {
         "flairjs-cli": "^0.55.92",
