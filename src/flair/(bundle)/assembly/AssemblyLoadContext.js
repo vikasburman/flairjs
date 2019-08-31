@@ -1,3 +1,5 @@
+import { throws } from "assert";
+
 /**
  * @name AssemblyLoadContext
  * @description The isolation boundary of type loading across assemblies. 
@@ -208,10 +210,17 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
     };
 
     // namespace
-    this.namespace = (name) => { 
+    this.namespace = async (name) => { 
         if (name && name === '(root)') { name = ''; }
         let source = null;
         if (name) {
+            // ensure all assemblies having this namespace are loaded  
+            for(let asm in asmFiles) {
+                if (asm.namespaces.indexOf(name) !== -1) { // found
+                    await this.loadAssembly(asm.file); // ensure this assembly is loaded
+                }
+            }
+            // pick namespace now
             source = namespaces[name] || null;
         } else { // root
             source = namespaces;
@@ -221,6 +230,9 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         } else {
             return null;
         }
+    };
+    this.namespace.root = () => {
+        return namespaces;
     };
 
     // assembly
@@ -297,7 +309,7 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
                 currentContexts.pop();
             } // let throw error as is
         }
-    };  
+    };
     this.loadBundledAssembly = (file, loadedFile, asmFactory) => {
         if (this.isUnloaded()) { throw _Exception.InvalidOperation(`Context is already unloaded. (${this.name})`); }
 

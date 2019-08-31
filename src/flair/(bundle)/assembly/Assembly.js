@@ -3,6 +3,7 @@
  * @description Assembly object.
  */ 
 const Assembly = function (ado, alc, asmClosureVars) {
+    let namespaces = null;
     this.context = alc;
     this.domain = alc.domain;
 
@@ -25,6 +26,20 @@ const Assembly = function (ado, alc, asmClosureVars) {
    
     // types
     this.types = () => { return ado.types.slice(); }
+    this.namespaces = () => {
+        if (!namespaces) {
+            namespaces = [];
+            for(let qt of ado.types) {
+                // each qualified type is a namespaceName.typeName
+                // therefore - remove type name part
+                let nsName = qt.substr(0, qt.lastIndexOf('.'));
+                if (namespaces.indexOf(nsName) === -1) {
+                    namespaces.push(nsName);
+                }
+            }
+        }
+        return namespaces;
+    };
     this.getType = (qualifiedName) => {
         if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.getType); }
         if (ado.types.indexOf(qualifiedName) === -1) { throw _Exception.NotFound(qualifiedName, this.getType); }
