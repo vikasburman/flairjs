@@ -136,7 +136,7 @@
         isTest: (sym.indexOf('TEST') !== -1),
         isAppMode: () => { return isAppStarted; },
         x: (once) => { 
-            if (!envX && once) { envX = once; } // set once - extra env properties are added here during runtime, generally via reading from a config file - once
+            if (!envX && once) { envX = Object.freeze(once); } // set once - extra env properties are added here during runtime, generally via reading from a config file - once
             return envX || {};
         } 
     });
