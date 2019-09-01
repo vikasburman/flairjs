@@ -71,6 +71,9 @@ const Assembly = function (ado, alc, asmClosureVars) {
     this.assetsPath = () => {
         return alc.getAssemblyAssetsPath(this.file);
     };
+    this.localesPath = (locale) => {
+        return this.assetsPath() + 'locales/' + (locale + '/') || '';
+    };
     this.getAssetFilePath = (file) => { 
         if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.getAssetFilePath); }
 
@@ -86,8 +89,8 @@ const Assembly = function (ado, alc, asmClosureVars) {
 
         // file: will be in local context of assembly, e.g., <asmFolder>/(locale)/strings.json will be referred everywhere as './strings.json'
         // passing ./strings.json to this method will return './<asmFolder>/locales/<given-locale>/strings.json'
-        let localeFile = file.replace('./', this.assetsPath() + 'locales/' + locale + '/');
-        return localeFile;        
+        let localeFile = file.replace('./', this.localesPath(locale));
+        return localeFile;
     };
 
     // config
