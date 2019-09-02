@@ -246,7 +246,7 @@ const AppDomain = function(name) {
         }
 
         // load boot module's preamble, if defined
-        let bootModulePreambleFile = __bootModule + '/preamble{.min.}js';
+        let bootModulePreambleFile = which(__bootModule + '/preamble{.min.}js', true); // minified or normal file
         let preambleLoader = await _include(bootModulePreambleFile); // this loads it as an async function which is called here
         if (!preambleLoader) { 
             console.log('Could not load boot module preamble, boot aborted.'); // eslint-disable-line no-console
