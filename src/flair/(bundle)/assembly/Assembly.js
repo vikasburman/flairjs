@@ -72,7 +72,9 @@ const Assembly = function (ado, alc, asmClosureVars) {
         return alc.getAssemblyAssetsPath(this.file);
     };
     this.localesPath = (locale) => {
-        return this.assetsPath() + 'locales/' + (locale + '/') || '';
+        let localesPath = this.assetsPath() + 'locales/';
+        if (locale) { localesPath += locale + '/' }
+        return localesPath;
     };
     this.getAssetFilePath = (file) => { 
         if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.getAssetFilePath); }

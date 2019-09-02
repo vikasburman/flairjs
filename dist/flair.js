@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.55.95
- *  Sun, 01 Sep 2019 23:56:32 GMT
+ *  Version: 0.56.1
+ *  Mon, 02 Sep 2019 05:51:41 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -1631,7 +1631,9 @@
             return alc.getAssemblyAssetsPath(this.file);
         };
         this.localesPath = (locale) => {
-            return this.assetsPath() + 'locales/' + (locale + '/') || '';
+            let localesPath = this.assetsPath() + 'locales/';
+            if (locale) { localesPath += locale + '/' }
+            return localesPath;
         };
         this.getAssetFilePath = (file) => { 
             if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.getAssetFilePath); }
@@ -4021,6 +4023,7 @@
     
         // define vars
         let exposed_obj = {},
+            isConstructing = false,
             parentObjs = 'parentObjs',
             objMeta = null,
             exposed_objMeta = null,
@@ -4046,6 +4049,23 @@
                 },
                 previous: () => {
                     return _previousDef;
+                },
+                constructing: (flag) => {
+                    if (typeof flag === 'boolean') { // set/unset
+                        // set here
+                        isConstructing = flag;
+    
+                        // set at all previous levels too
+                        // check from parent onwards, keep going up till hierarchy ends
+                        let prv = def.previous();
+                        while(true) { // eslint-disable-line no-constant-condition
+                            if (prv === null) { break; }
+                            prv.constructing(flag);
+                            prv = prv.previous();
+                        }                    
+                    } else { // check
+                        return isConstructing;
+                    }
                 }
             },
             proxy = null,
@@ -4476,7 +4496,7 @@
             bindingHost = obj,
             isStorageHost = (cfg.storage && (_isSession || _isState)),
             uniqueName = def.flatname + '_' + memberName,
-            _injections = null;  
+            _injections = null;
             
             // NOTE: no check for isOverriding, because properties are always fully defined,
             // when being overridden 
@@ -4501,7 +4521,7 @@
                 }.bind(bindingHost);
                 _member.set = function(value) {
                     if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
-                    if (_isReadOnly && !bindingHost[meta].constructing) { throw _Exception.InvalidOperation(`Property is readonly. (${def.name}::${memberName})`, builder); } // readonly props can be set only when object is being constructed 
+                    if (_isReadOnly && !(typeDef.staticConstructionCycle ? typeDef.constructing() : def.constructing())) { throw _Exception.InvalidOperation(`Property is readonly. (${def.name}::${memberName})`, builder); } // readonly props can be set only when object is being constructed 
                     if (type_attr && type_attr.args[0] && !_is(value, type_attr.args[0])) { throw _Exception.InvalidArgument('value', builder); } // type attribute is defined
                     return _setter.apply(bindingHost, [value]);
                 }.bind(bindingHost);
@@ -4539,7 +4559,7 @@
                 }.bind(bindingHost);
                 _member.set = function(value) {
                     if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
-                    if (_isReadOnly && !bindingHost[meta].constructing) { throw _Exception.InvalidOperation(`Property is readonly. (${def.name}::${memberName})`, builder); } // readonly props can be set only when object is being constructed 
+                    if (_isReadOnly && !(typeDef.staticConstructionCycle ? typeDef.constructing() : def.constructing())) { throw _Exception.InvalidOperation(`Property is readonly. (${def.name}::${memberName})`, builder); } // readonly props can be set only when object is being constructed 
                     if (type_attr && type_attr.args[0] && !_is(value, type_attr.args[0])) { throw _Exception.InvalidArgument('value', builder); } // type attribute is defined
                     if (isStorageHost) {
                         let _json = {value: value};
@@ -4851,7 +4871,7 @@
                 let isInTimerCode = false;
                 let intervalId = setInterval(() => {
                     // run only, when object construction is completed
-                    if (!bindingHost[meta].constructing && !isInTimerCode) {
+                    if (!(typeDef.staticConstructionCycle ? typeDef.constructing() : def.constructing()) && !isInTimerCode) {
                         isInTimerCode = true;
                         obj[memberName](); // call as if called from outside
                         isInTimerCode = false;
@@ -5193,7 +5213,16 @@
         // move constructor and dispose out of main object
         if (params.isTopLevelInstance) { // so that till now, a normal override behavior can be applied to these functions as well
             if (cfg.construct && typeof obj[_constructName] === 'function') {
-                objMeta.construct = obj[_constructName]; delete obj[_constructName];
+                // wrap construct to set constructing state
+                let _construct = obj[_constructName]; delete obj[_constructName];
+                objMeta.construct = (...args) => {
+                    def.constructing(true);
+                    try {
+                        _construct(...args);
+                    } finally {
+                        def.constructing(false);
+                    }
+                };
             }
             if (cfg.dispose && typeof obj[_disposeName] === 'function') {
                 // wrap dispose to clean all types of disposables
@@ -5232,7 +5261,16 @@
         // move static constructor out of main interface
         if (cfg.static && TypeMeta.isStatic() && typeDef.staticConstructionCycle) {
             if (Type.construct && typeof Type[_constructName] === 'function') {
-                TypeMeta.construct = Type[_constructName]; delete Type[_constructName];
+                // wrap construct to set constructing state
+                let _TypeConstruct = Type[_constructName]; delete Type[_constructName];
+                TypeMeta.construct = (...args) => {
+                    typeDef.constructing(true);
+                    try {
+                        _TypeConstruct(...args);
+                    } finally {
+                        typeDef.constructing(false);
+                    }
+                };            
             }
         }
     
@@ -5246,14 +5284,10 @@
     
         // call constructor
         if (cfg.construct && params.isTopLevelInstance && !typeDef.staticConstructionCycle && !isNewFromReflector && typeof exposed_objMeta.construct === 'function') {
-            exposed_objMeta.constructing = true;
             exposed_objMeta.construct(...params.args);
-            delete exposed_objMeta.constructing;
         }
         if (cfg.construct && typeDef.staticConstructionCycle && typeof TypeMeta.construct === 'function') {
-            TypeMeta.constructing = true;
             TypeMeta.construct();
-            delete TypeMeta.constructing;
         }
     
         // add/update meta on top level instance
@@ -5382,12 +5416,17 @@
     
         // base type definition
         let _Object = null,
-            _ObjectMeta = null;
+            _ObjectMeta = null,
+            isTypeConstructing = false;
         if (cfg.new) { // class, struct
             if (cfg.inheritance) { // class
-                if (cfg.params.inherits) {
-                    if (_isStatic(cfg.params.inherits) || _isSingleton(cfg.params.inherits) || _isSealed(cfg.params.inherits)) {
-                        throw _Exception.InvalidDefinition(`Cannot inherit from a sealed, static or singleton type. (${cfg.params.inherits[meta].name})`, builder); 
+                if (cfg.params.inherits) { // inheriting from a class
+                    if (_attr.has('static')) { // this itself is marked as static
+                        throw _Exception.InvalidDefinition(`Static class cannot inherit from a type. (${cfg.params.typeName})`, builder); 
+                    } else {
+                        if (_isStatic(cfg.params.inherits) || _isSingleton(cfg.params.inherits) || _isSealed(cfg.params.inherits)) {
+                            throw _Exception.InvalidDefinition(`Cannot inherit from a sealed, static or singleton type. (${cfg.params.inherits[meta].name})`, builder); 
+                        }
                     }
                 }
                 _Object = function(_flag, _static, ...args) {
@@ -5429,6 +5468,23 @@
             },
             previous: () => {
                 return _Object[meta].inherits ? _Object[meta].inherits[meta].def() : null;
+            },
+            constructing: (flag) => {
+                if (typeof flag === 'boolean') { // set/unset
+                    // set here
+                    isTypeConstructing = flag;
+    
+                    // set at all previous levels too
+                    // check from parent onwards, keep going up till hierarchy ends
+                    let prv = typeDef.previous();
+                    while(true) { // eslint-disable-line no-constant-condition
+                        if (prv === null) { break; }
+                        prv.constructing(flag);
+                        prv = prv.previous();
+                    }
+                } else { // check
+                    return isTypeConstructing;
+                }
             }
         };
         const modifiers = modifierOrAttrRefl(true, null, typeDef);
@@ -5537,7 +5593,7 @@
         // static construction cycle
         if (cfg.static) {
             let factoryCode = (cfg.params.factory ? cfg.params.factory.toString() : '');
-            if (_ObjectMeta.isStatic() || factoryCode.indexOf(`$$('static')`) !== -1 || factoryCode.indexOf(`$$("static")`) !== -1) {
+            if (_ObjectMeta.isStatic() || factoryCode.indexOf(`$$('static')`) !== -1 || factoryCode.indexOf(`$$("static")`) !== -1) { // if either class is static OR any static members are defined in a class
                 typeDef.staticConstructionCycle = true;
                 let tempObj = new _Object();
                 _dispose(tempObj); // so any auto-wiring of events etc is cleaned up along with anything else done in types
@@ -7478,10 +7534,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.55.95',
+        version: '0.56.1',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 01 Sep 2019 23:56:32 GMT')
+        lupdate: new Date('Mon, 02 Sep 2019 05:51:41 GMT')
     });  
 
     // bundled assembly load process 
@@ -7935,10 +7991,10 @@
         // assembly embedded resources (end)        
         
         // clear assembly being loaded
-        AppDomain.context.current().currentAssemblyBeingLoaded('');
+        AppDomain.context.current().currentAssemblyBeingLoaded();
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.55.95","lupdate":"Sun, 01 Sep 2019 23:56:32 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.56.1","lupdate":"Mon, 02 Sep 2019 05:51:41 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 

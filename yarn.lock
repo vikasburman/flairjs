@@ -1019,9 +1019,9 @@ ecstatic@^3.0.0:
     url-join "^2.0.5"
 
 electron-to-chromium@^1.3.247:
-  version "1.3.247"
-  resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.3.247.tgz#ff2332376150436599265b2dfd7a539f214f4ade"
-  integrity sha512-j/Rzx1FyVTwNifpG/DPQKEMz0mruRwoPpJ6Y1tTVmj6+/zAVzG8/YHZwBMLYCZgQH6seLOqaVxZ3RY3KMrT5IQ==
+  version "1.3.250"
+  resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.3.250.tgz#1f383c16aeb75e7bddbd6a0491237eca81b2cb1f"
+  integrity sha512-2OAU91iUw83QvzuWJPfT+FMj+O+DC1EyTx1QBFcc9WZzOQSfZEAWINpdLWElxkgfiqTvQRDOKg0DkMZd9QoNug==
 
 emoji-regex@^7.0.1:
   version "7.0.3"
@@ -1376,10 +1376,10 @@ find-up@^2.0.0:
   dependencies:
     locate-path "^2.0.0"
 
-flairjs-cli@^0.55.92:
-  version "0.55.92"
-  resolved "https://registry.yarnpkg.com/flairjs-cli/-/flairjs-cli-0.55.92.tgz#0e1011f2a6ad4f9c62d1441b0fd24e35c0e5eaaf"
-  integrity sha512-I7ZtyWZ92NpRHdX5zm1+6Mp3DNGwCt6qY75alH0pSpfRFG3LK8dgHRFnHuvzs65PQ+F4J9wppn5ptiHloAQsJA==
+flairjs-cli@^0.55.97:
+  version "0.55.97"
+  resolved "https://registry.yarnpkg.com/flairjs-cli/-/flairjs-cli-0.55.97.tgz#4cc224001a86bf853d20f0f5082e3f0cd720318f"
+  integrity sha512-jOOAxvLiw30AwnHMAf8jX/w3FpQU3LcuuD+x5zlY79cHvnQLYIwm9LcJmlRaewryu2ZMpilvytdh7a7GfVsCPw==
   dependencies:
     clean-css "^4.2.1"
     copy-dir "^1.1.0"
