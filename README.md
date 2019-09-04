@@ -27,9 +27,9 @@ Due to rich and long history of JavaScript, several compatibility issues do exis
 
 _Flair.js_ takes the problem head-on and brings majority of the awesomeness of C#/Java features in JavaScript, natively! 
 
-Basic object oriented concepts like, inheritance, encapsulation, polymorphism, events, together with advance features like aspect oriented and attribute based programming, custom attributes, serialization, dependency injection and reflection, etc. are all nicely baked in this JavaScript library. Furthermore, all of these are available via pure JavaScript syntax, without any build-time transpilation or compilation of your codebase. 
+Basic object oriented concepts like, inheritance, encapsulation, polymorphism, events, together with advance features like aspect oriented and attribute based programming, custom attributes, serialization, dependency injection and reflection, etc. are all nicely baked in this JavaScript library. 
 
-What you write, is what gets executed. No change!
+Furthermore, all of these are available via pure JavaScript syntax, without any build-time transpilation or compilation of your codebase. What you write, is what gets executed. No change!
                   
 The forward-looking and future-proof design of _Flair.js_, plays well with ongoing ECMAScript advancements. While executing your code, it uses available new JavaScript constructs behind the scenes, wherever possible and supported by the environment where the code is running.
 
