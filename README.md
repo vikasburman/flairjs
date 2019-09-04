@@ -25,7 +25,9 @@ JavaScript is everywhere, and its popularity has grown tremendously. There has b
 
 Due to rich and long history of JavaScript, several compatibility issues do exists. Expecting to have all awesome object-oriented concepts as they exists in any new languages like C#, Java, etc., is tough. Of course there is TypeScript, but that is another language. Even though it 'compiles' or 'transpiles' to native JavaScript, it is not 'the' JavaScript. 
 
-_Flair.js_ takes the problem head-on and brings majority of the awesomeness of C#/Java features in JavaScript, natively! Basic object oriented concepts like, inheritance, encapsulation, polymorphism, events, together with advance features like aspect oriented and attribute based programming, custom attributes, serialization, dependency injection and reflection, etc. are all nicely baked in this JavaScript library.
+_Flair.js_ takes the problem head-on and brings majority of the awesomeness of C#/Java features in JavaScript, natively! 
+
+Basic object oriented concepts like, inheritance, encapsulation, polymorphism, events, together with advance features like aspect oriented and attribute based programming, custom attributes, serialization, dependency injection and reflection, etc. are all nicely baked in this JavaScript library.
 
 All of these are available via pure JavaScript syntax, without any build-time transpilation or compilation 
 of your codebase. What you write, is what gets executed. 
