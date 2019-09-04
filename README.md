@@ -23,7 +23,7 @@ Introduction
 
 JavaScript is everywhere, and its popularity has grown tremendously. There has been several enhancements done in the language to make it more powerful. ES6/ES7 has added several object-oriented features to the language, but the bottleneck has always been the varied support of these features by web browsers, thus restricting their large-scale usage.
 
-Due to rich and long history of JavaScript, several compatibility issues do exists. Expecting to have all awesome object-oriented concepts as they exists in any new languages like C#, Java, etc., is tough. Of course there is TypeScript, but that is another language; Even though it 'compiles' or 'transpiles' to native JavaScript - it is not 'the' JavaScript. 
+Due to rich and long history of JavaScript, several compatibility issues do exists. Expecting to have all awesome object-oriented concepts as they exists in any new languages like C#, Java, etc., is tough. Of course there is TypeScript, but that is another language. Even though it 'compiles' or 'transpiles' to native JavaScript, it is not 'the' JavaScript. 
 
 _Flair.js_ takes the problem head-on and brings majority of the awesomeness of C#/Java features in JavaScript, natively! Basic object oriented concepts like, inheritance, encapsulation, polymorphism, events, together with advance features like aspect oriented and attribute based programming, custom attributes, serialization, dependency injection and reflection, etc. are all nicely baked in this JavaScript library.
 
