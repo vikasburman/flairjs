@@ -31,7 +31,7 @@ Basic object oriented concepts like, inheritance, encapsulation, polymorphism, e
 
 Furthermore, all of these are available via pure JavaScript syntax, without any build-time transpilation or compilation of your codebase. What you write, is what gets executed. No change!
                   
-The forward-looking and future-proof design of _Flair.js_, plays well with ongoing ECMAScript advancements. While executing your code, it uses available new JavaScript constructs behind the scenes, wherever possible and supported by the environment where the code is running.
+The forward-looking and future-proof design of _Flair.js_, plays well with ongoing ECMAScript advancements. While executing code, behind the scenes, new JavaScript constructs are used wherever possible.
 
 _Flair.js_ works in web browsers and in other JavaScript environments like [Node](https://nodejs.org) and [NW.js](https://nwjs.io/).
 
