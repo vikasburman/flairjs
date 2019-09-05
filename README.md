@@ -173,7 +173,7 @@ Explore The Power
 ---
 What you have seen above is the tip of the iceberg. Flair.js adds a lot of firepower to JavaScript that makes building complex JavaScript projects as easy as with C# or Java.
 
-To tap the real power of Flair.js, explore the [Guides](https://flairjs.com/#/guides) to understand concepts and behaviors, [API](https://flairjs.com/#/api) to know details of the programming interface for various constructs, and finally [Examples](https://flairjs.com/#/examples) to see working code, showcasing all key concepts in action. 
+To tap the real power of Flair.js, explore the [Guides](https://flairjs.com/#/guides) to understand concepts and behaviors, [API](https://flairjs.com/#/api) to know details of the programming interface for various constructs, and finally [Examples](https://flairjs.com/#/examples) to see working code, showcasing all the key concepts in action. 
 
 However, before you delve deep into any of these areas, begin with getting an [Overview](https://flairjs.com/#/overview) first.
 
