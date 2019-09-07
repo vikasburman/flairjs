@@ -1,0 +1,24 @@
+{
+    "build": {
+        "packaged": true
+    },
+    
+    "pack": {
+        "npm": true,
+        "npmConfig": {
+            "files": [
+                { "src": "./dist" },
+                { "src": "./package.json"},
+                { "src": "./LICENSE" },
+                { "src": "./README.md" }              
+            ]
+        }
+    },
+
+    "test": {
+        "jasmine": true,
+        "jasmineConfig": {
+            "stopOnSpecFailure": true
+        }
+    }
+}
