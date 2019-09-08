@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.59.37
- *  Sun, 08 Sep 2019 18:18:37 GMT
+ *  Version: 0.59.38
+ *  Sun, 08 Sep 2019 20:49:18 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -449,7 +449,7 @@
         // Based on the environment in which this code is running, it will pick relevant value
         // in case a relevant value does not exists, it gives defaultValue
         
-        let _globalSettings = options.env.isAppMode() ? _AppDomain.config().global : {},
+        let _globalSettings = _AppDomain.config() ? (_AppDomain.config().global || {}) : {},
             _lensedValue = lens(_globalSettings, path),
             keyValue = '';
     
@@ -7529,10 +7529,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.59.37',
+        version: '0.59.38',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 08 Sep 2019 18:18:37 GMT')
+        lupdate: new Date('Sun, 08 Sep 2019 20:49:18 GMT')
     });  
 
     // bundled assembly load process 
@@ -7989,7 +7989,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded();
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.37","lupdate":"Sun, 08 Sep 2019 18:18:37 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.38","lupdate":"Sun, 08 Sep 2019 20:49:18 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
