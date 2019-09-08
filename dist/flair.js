@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.59.34
- *  Sun, 08 Sep 2019 00:56:26 GMT
+ *  Version: 0.59.35
+ *  Sun, 08 Sep 2019 01:06:51 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -5382,8 +5382,8 @@
             ns = ns_attr ? ns_attr.args[0] : '';
         if (ns) {
             switch(ns) {
-                case '(auto)':  // this is a placeholder that gets replaced by assembly builder with dynamic namespace based on folder structure, so if is it left, it is wrong
-                    throw _Exception.InvalidDefinition(`Namespace '(auto)' should be used only when bundling the type in an assembly. (${ns})`, builder);
+                case '':  // this is a placeholder that gets replaced by assembly builder with dynamic namespace based on folder structure, so if is it left, it is wrong
+                    throw _Exception.InvalidDefinition(`Empty namespace should be used only when bundling the type in an assembly. (${ns})`, builder);
                 case '(root)':  // this is mark to instruct builder that register type at root namespace
                     break; // go on
                 default: // anything else
@@ -5649,17 +5649,14 @@
      *                 >> simple, e.g.,
      *                    MyClass
      *                 >> auto naming, e.g., 
-     *                    '(auto)'
-     *                    Use this only when putting only one class in a file and using flairBuild builder to build assembly
-     *                    And in that case, filename will be used as class name. So if file name is 'MyClass.js', name would be 'MyClass' (case sensitive)
+     *                    ''
+     *                    Use this only when putting only one type in a file and using flairBuild builder to build assembly
+     *                    And in that case, filename will be used as type name. So if file name is 'MyType.js', name would be 'MyType' (case sensitive)
      *                    To give namespace to a type, use $$('ns', 'com.product.feature');
-     *                    Apply this attribute on class definition itself. then class can be accessed as getType('com.product.feature.MyClass');
-     *                    To give automatic namespaces to types based on the folder structure under assembly folder, use
-     *                    $$('ns', '(auto)'); In this case if MyClass was put in a folder hierarchy as com/product/feature, it will
-     *                    be given namespace com.product.feature
-     *                    To put a type in root namespace, use $$('ns' '(root)') or just put it in '(root)' folder and
-     *                    use $$('ns', '(auto)');
-     *                    Then class can be accessed as getType('MyClass');
+     *                    Apply this attribute on type definition itself. then type can be accessed as getType('com.product.feature.MyType');
+     *                    To put a type in root namespace, use $$('ns' '(root)') or just put it in '(root)' folder and use auto-naming
+     *                    Then type can be accessed as getType('MyType');
+     *                    Note: When auto-naming is being used, namespace is also added automatically, and $$('ns') should not be applied
      *  inherits: type - A flair class type from which to inherit this class
      *  mixints: array - An array of mixin and/or interface types which needs to be applied to this class type
      *                        mixins will be applied in order they are defined here
@@ -5726,17 +5723,14 @@
      *                 >> simple, e.g.,
      *                    IInterfaceName
      *                 >> auto naming, e.g., 
-     *                    '(auto)'
-     *                    Use this only when putting only one interface in a file and using flairBuild builder to build assembly
-     *                    And in that case, filename will be used as interface name. So if file name is 'IInterfaceName.js', name would be 'IInterfaceName' (case sensitive)
+     *                    ''
+     *                    Use this only when putting only one type in a file and using flairBuild builder to build assembly
+     *                    And in that case, filename will be used as type name. So if file name is 'MyType.js', name would be 'MyType' (case sensitive)
      *                    To give namespace to a type, use $$('ns', 'com.product.feature');
-     *                    Apply this attribute on interface definition itself. then interface can be accessed as getType('com.product.feature.IInterfaceName');
-     *                    To give automatic namespaces to types based on the folder structure under assembly folder, use
-     *                    $$('ns', '(auto)'); In this case if IInterfaceName was put in a folder hierarchy as com/product/feature, it will
-     *                    be given namespace com.product.feature
-     *                    To put a type in root namespace, use $$('ns' '(root)') or just put it in '(root)' folder and
-     *                    use $$('ns', '(auto)');
-     *                    Then interface can be accessed as getType('IInterfaceName');
+     *                    Apply this attribute on type definition itself. then type can be accessed as getType('com.product.feature.MyType');
+     *                    To put a type in root namespace, use $$('ns' '(root)') or just put it in '(root)' folder and use auto-naming
+     *                    Then type can be accessed as getType('MyType');
+     *                    Note: When auto-naming is being used, namespace is also added automatically, and $$('ns') should not be applied
      *  factory: function - factory function to build interface definition
      * @returns type - constructed flair interface type
      */
@@ -5778,17 +5772,14 @@
      *                 >> simple, e.g.,
      *                    MyStruct
      *                 >> auto naming, e.g., 
-     *                    '(auto)'
-     *                    Use this only when putting only one struct in a file and using flairBuild builder to build assembly
-     *                    And in that case, filename will be used as struct name. So if file name is 'MyStruct.js', name would be 'MyStruct' (case sensitive)
+     *                    ''
+     *                    Use this only when putting only one type in a file and using flairBuild builder to build assembly
+     *                    And in that case, filename will be used as type name. So if file name is 'MyType.js', name would be 'MyType' (case sensitive)
      *                    To give namespace to a type, use $$('ns', 'com.product.feature');
-     *                    Apply this attribute on struct definition itself. then struct can be accessed as getType('com.product.feature.MyStruct');
-     *                    To give automatic namespaces to types based on the folder structure under assembly folder, use
-     *                    $$('ns', '(auto)'); In this case if MyStruct was put in a folder hierarchy as com/product/feature, it will
-     *                    be given namespace com.product.feature
-     *                    To put a type in root namespace, use $$('ns' '(root)') or just put it in '(root)' folder and
-     *                    use $$('ns', '(auto)');
-     *                    Then struct can be accessed as getType('MyStruct');
+     *                    Apply this attribute on type definition itself. then type can be accessed as getType('com.product.feature.MyType');
+     *                    To put a type in root namespace, use $$('ns' '(root)') or just put it in '(root)' folder and use auto-naming
+     *                    Then type can be accessed as getType('MyType');
+     *                    Note: When auto-naming is being used, namespace is also added automatically, and $$('ns') should not be applied
      *  factory: function - factory function to build struct definition
      * @returns type - constructed flair struct type
      */
@@ -5829,17 +5820,14 @@
      *                 >> simple, e.g.,
      *                    MyEnum
      *                 >> auto naming, e.g., 
-     *                    '(auto)'
-     *                    Use this only when putting only one enum in a file and using flairBuild builder to build assembly
-     *                    And in that case, filename will be used as enum name. So if file name is 'MyEnum.js', name would be 'MyEnum' (case sensitive)
+    *                    ''
+     *                    Use this only when putting only one type in a file and using flairBuild builder to build assembly
+     *                    And in that case, filename will be used as type name. So if file name is 'MyType.js', name would be 'MyType' (case sensitive)
      *                    To give namespace to a type, use $$('ns', 'com.product.feature');
-     *                    Apply this attribute on enum definition itself. then enum can be accessed as getType('com.product.feature.MyEnum');
-     *                    To give automatic namespaces to types based on the folder structure under assembly folder, use
-     *                    $$('ns', '(auto)'); In this case if MyEnum was put in a folder hierarchy as com/product/feature, it will
-     *                    be given namespace com.product.feature
-     *                    To put a type in root namespace, use $$('ns' '(root)') or just put it in '(root)' folder and
-     *                    use $$('ns', '(auto)');
-     *                    Then enum can be accessed as getType('MyEnum');
+     *                    Apply this attribute on type definition itself. then type can be accessed as getType('com.product.feature.MyType');
+     *                    To put a type in root namespace, use $$('ns' '(root)') or just put it in '(root)' folder and use auto-naming
+     *                    Then type can be accessed as getType('MyType');
+     *                    Note: When auto-naming is being used, namespace is also added automatically, and $$('ns') should not be applied
      *  factory: function - factory function to build enum definition
      * @returns type - constructed flair enum type
      */
@@ -5957,17 +5945,14 @@
      *                 >> simple, e.g.,
      *                    MyMixin
      *                 >> auto naming, e.g., 
-     *                    '(auto)'
-     *                    Use this only when putting only one mixin in a file and using flairBuild builder to build assembly
-     *                    And in that case, filename will be used as mixin name. So if file name is 'MyMixin.js', name would be 'MyMixin' (case sensitive)
+     *                    ''
+     *                    Use this only when putting only one type in a file and using flairBuild builder to build assembly
+     *                    And in that case, filename will be used as type name. So if file name is 'MyType.js', name would be 'MyType' (case sensitive)
      *                    To give namespace to a type, use $$('ns', 'com.product.feature');
-     *                    Apply this attribute on mixin definition itself. then mixin can be accessed as getType('com.product.feature.MyMixin');
-     *                    To give automatic namespaces to types based on the folder structure under assembly folder, use
-     *                    $$('ns', '(auto)'); In this case if MyMixin was put in a folder hierarchy as com/product/feature, it will
-     *                    be given namespace com.product.feature
-     *                    To put a type in root namespace, use $$('ns' '(root)') or just put it in '(root)' folder and
-     *                    use $$('ns', '(auto)');
-     *                    Then mixin can be accessed as getType('MyMixin');
+     *                    Apply this attribute on type definition itself. then type can be accessed as getType('com.product.feature.MyType');
+     *                    To put a type in root namespace, use $$('ns' '(root)') or just put it in '(root)' folder and use auto-naming
+     *                    Then type can be accessed as getType('MyType');
+     *                    Note: When auto-naming is being used, namespace is also added automatically, and $$('ns') should not be applied
      *  factory: function - factory function to build mixin definition
      * @returns type - constructed flair mixin type
      */
@@ -7534,10 +7519,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.59.34',
+        version: '0.59.35',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 08 Sep 2019 00:56:26 GMT')
+        lupdate: new Date('Sun, 08 Sep 2019 01:06:51 GMT')
     });  
 
     // bundled assembly load process 
@@ -7994,7 +7979,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded();
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.34","lupdate":"Sun, 08 Sep 2019 00:56:26 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.35","lupdate":"Sun, 08 Sep 2019 01:06:51 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
