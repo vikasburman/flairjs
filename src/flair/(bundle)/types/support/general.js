@@ -206,7 +206,13 @@ const getEndpointUrl = (connection, url) => {
                 }
             }
         };
-        
+
+        // auto add host, if not added for brevity
+        if (url.indexOf(':host') === -1) {
+            if (!url.startsWith('/')) { url = '/' + url; }
+            url = ':host' + url;
+        }
+
         if (typeof connection === 'string') { // means this is value of the :host
             replaceIt('host', connection);
         } else { // if object -  process all keys of connection
