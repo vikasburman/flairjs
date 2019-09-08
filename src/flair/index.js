@@ -44,6 +44,7 @@
         settings = {},
         config = {},
         envX = null,
+        envProps = {},
         isAppStarted = false;
     /* eslint-enable no-unused-vars */
 
@@ -138,7 +139,23 @@
         x: (once) => { 
             if (!envX && once) { envX = Object.freeze(once); } // set once - extra env properties are added here during runtime, generally via reading from a config file - once
             return envX || {};
-        } 
+        },
+        props: (ns, key, value) => {
+            if (typeof value === 'undefined') {
+                if (typeof key === 'undefined') {
+                    return envProps[ns] || {};
+                } else {
+                    return (envProps[ns] ? envProps[ns][key] : null);
+                }
+            } else {
+                envProps[ns] = envProps[ns] || {};
+                if (value === null) {
+                    delete envProps[ns][key];
+                } else {
+                    envProps[ns][key] = value;
+                }
+            }
+        }
     });
     // Prod / Stage vs Dev are mutually exclusive environments
     // Prod is set to true when either PROD or STAGE or both are present and DEV is not present

@@ -125,9 +125,9 @@ const globalSetting = (path, defaultValue, asIs) => {
     // specialty of global settings, apart from being outside of a specific assembly setting is that the values can
     // be simple values or a special structure having various values for various environments as:
     // 
-    // global.flair.api.connections.connection1.R = "something"
+    // global.flair.api.connections.connection1.host = "something"
     // OR
-    // global.flair.api.connections.connection1.R = {
+    // global.flair.api.connections.connection1.host = {
     //    "local": "something1",
     //    "dev": "something2",
     //    "stage": "something3",
@@ -158,74 +158,67 @@ const globalSetting = (path, defaultValue, asIs) => {
     return keyValue || defaultValue;
 };
 const getEndpointUrl = (connection, url) => {
-    // any url can have following placeholders:
-    //  *R*: endpoint root
-    //      R must have: local, dev, test and prod scenario roots
-    //      R is replaced as first, so it can also have further placeholders in it
-    //  *?*: anything else
-    //      ? must be an alphabet
-    //      some known are:  
-    //          *P*: project id
-    //          *G*: endpoint geo region
-    //          *L*: endpoint locale
-    //          *V*: endpoint version
-    // alphabet can be upper or lowercase, but whatever they are, they must match in connection and wherever they are used
+    // any url can have following keys:
+    //  ':host': endpoint host
+    //      :host can have: local, dev, test and prod scenario values
+    //      this is replaced as first, so it can also have further keys in it
+    //  :? anything else
+    //      ? must be a unique name
+    //          :version
+    //          :account
+    //          :locale
+    //          :project
+    //          :geo
+    // name can be upper or lowercase, but whatever they are, they must match in connection and wherever they are used
     // e.g. 
     // "example1": {
-    //     "R": {
-    //         "local": "http://localhost:5001/*P*/*G*",
-    //         "dev": "https://*G*-*P*.cloudfunctions.net",
+    //     "host": {
+    //         "local": "http://localhost:5001/:project/:geo",
+    //         "dev": "https://:geo-:project.cloudfunctions.net",
     //         "stage": "",
     //         "prod": ""
     //     },
-    //     "V": "",
-    //     "L": "",
-    //     "P": "flairjs-firebase-app",
-    //     "G": "us-east1"
+    //     "version": "",
+    //     "locale": "",
+    //     "project": "flairjs-firebase-app",
+    //     "geo": "us-east1"
     // }
-    // '/*R*/api/*V*/now' --> https://us-east1-flairjs-firebase-app.cloudfunctions.net/api/v1/now
-    // value for each of these *?* can be either string OR an object same as for *R*
+    // '/:host/api/:version/now' --> https://us-east1-flairjs-firebase-app.cloudfunctions.net/api/v1/now
+    // value for each of these :? can be either string OR an object same as for defined above for :host
+    // in case any :? is not found in settings, it will be looked for in env.props('api', '?') <-- api namespace for '?' key
     if (connection) {
-        let replaceIt = (key) => {
-            let keyValue = '';
-            if (key.toUpperCase() === 'R' && url.indexOf(`*${key}*`) !== -1) {
-                if (options.env.isLocal) {
-                    keyValue = connection[key].local;
-                } else if (options.env.isStage) {
-                    keyValue = connection[key].stage;                    
-                } else if (options.env.isProd) {
-                    keyValue = connection[key].prod;
-                } else if (options.env.isDev) {
-                    keyValue = connection[key].dev;
-                }
-            } else if (url.indexOf(`*${key}*`) !== -1) {
-                keyValue = connection[key]; // pick whatever value is there
-                if (typeof keyValue !== 'string') { // if this is an object having contextual values
+        let replaceIt = (key, value) => {
+            if (value) {
+                key = ':' + key;
+                if (typeof value !== 'string') {
                     if (options.env.isLocal) {
-                        keyValue = connection[key].local;
+                        value = value.local || null;
                     } else if (options.env.isStage) {
-                        keyValue = connection[key].stage;
+                        value = value.stage || null;
                     } else if (options.env.isProd) {
-                        keyValue = connection[key].prod;
+                        value = value.prod || null;
                     } else if (options.env.isDev) {
-                        keyValue = connection[key].dev;
-                    }                  
+                        value = value.dev || null;
+                    }
                 }
-            }
-            if (keyValue) {
-                url = replaceAll(url, `*${key}*`, keyValue);
-                keyValue = ''; // for next
+                if (value) {
+                    url = replaceAll(url, key, value);
+                }
             }
         };
-        if (typeof connection === 'string') { // generally 'auto'
-            if (!connection.endsWith('/')) { connection += '/'; }
-            if (url.startsWith('/')) { url = url.substr(1); }
-            url = connection + url;
-        } else {
-            replaceIt('R'); // R is first
+        
+        if (typeof connection === 'string') { // means this is value of the :host
+            replaceIt('host', connection);
+        } else { // if object -  process all keys of connection
             for(let key in connection) {
-                if (key.toUpperCase() !== 'R') { replaceIt(key); } // skip R, as it is done
+                replaceIt(key, connection[key]);
             }
+        }
+
+        // process all remaining keys from 'api' namespace in env props
+        let apiNS = options.env.props('api');
+        for(let key in apiNS) {
+            replaceIt(key, apiNS[key]);
         }
     }
     return url;
