@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.59.16
- *  Sat, 07 Sep 2019 19:37:37 GMT
+ *  Version: 0.59.34
+ *  Sun, 08 Sep 2019 00:56:26 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -7534,10 +7534,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.59.16',
+        version: '0.59.34',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sat, 07 Sep 2019 19:37:37 GMT')
+        lupdate: new Date('Sun, 08 Sep 2019 00:56:26 GMT')
     });  
 
     // bundled assembly load process 
@@ -7599,14 +7599,14 @@
         
         // assembly types (start)
             
-    (() => { // type: ./src/flair/(root)/Aspect.js
+    (() => { // type: ./src/flair/(root)/@1-Aspect.js
         /**
          * @name Aspect
          * @description Aspect base class.
          */
         $$('abstract');
         $$('ns', '(root)');
-        Class('Aspect', function() {
+		Class('Aspect' ,function() {
             /** 
              * @name before
              * @description Before advise
@@ -7661,14 +7661,14 @@
         });
         
     })();    
-    (() => { // type: ./src/flair/(root)/Attribute.js
+    (() => { // type: ./src/flair/(root)/@2-Attribute.js
         /**
          * @name Attribute
          * @description Attribute base class.
          */
         $$('abstract');
         $$('ns', '(root)');
-        Class('Attribute', function() {
+		Class('Attribute' ,function() {
             $$('virtual');
             this.construct = (...args) => {
                 this.args = Object.freeze(args);
@@ -7777,7 +7777,7 @@
          * @description IDisposable interface
          */
         $$('ns', '(root)');
-        Interface('IDisposable', function() {
+		Interface('IDisposable' ,function() {
             this.dispose = nim;
         });
         
@@ -7788,7 +7788,7 @@
          * @description IProgressReporter interface
          */
         $$('ns', '(root)');
-        Interface('IProgressReporter', function() {
+		Interface('IProgressReporter' ,function() {
             // progress report
             this.progress = nie;
         });
@@ -7802,7 +7802,7 @@
          * @description Task base class.
          */
         $$('ns', '(root)');
-        Class('Task', [IProgressReporter, IDisposable], function() {
+		Class('Task' ,[IProgressReporter, IDisposable], function() {
             let isSetupDone = false,
                 isRunning = false,
                 loadingContextName = AppDomain.context.current().name; // this will be processed at the time class is loaded
@@ -7933,7 +7933,7 @@
          * $$('cache', { 'duration': 10000 }) OR $$('cache', 10000)
          */
         $$('ns', '(root)');
-        Class('cache', Attribute, function() {
+		Class('cache' ,Attribute, function() {
             $$('override');
             this.construct = (base, cacheConfig) => {
                 base(cacheConfig);
@@ -7994,7 +7994,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded();
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.16","lupdate":"Sat, 07 Sep 2019 19:37:37 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.34","lupdate":"Sun, 08 Sep 2019 00:56:26 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 

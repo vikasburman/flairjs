@@ -5,8 +5,7 @@ const { Attribute } = ns();
  * @description Caching custom attribute
  * $$('cache', { 'duration': 10000 }) OR $$('cache', 10000)
  */
-$$('ns', '(auto)');
-Class('(auto)', Attribute, function() {
+Class('', Attribute, function() {
     $$('override');
     this.construct = (base, cacheConfig) => {
         base(cacheConfig);

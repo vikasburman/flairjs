@@ -3,8 +3,7 @@
  * @description Attribute base class.
  */
 $$('abstract');
-$$('ns', '(auto)');
-Class('(auto)', function() {
+Class('', function() {
     $$('virtual');
     this.construct = (...args) => {
         this.args = Object.freeze(args);
