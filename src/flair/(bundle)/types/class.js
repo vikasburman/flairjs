@@ -12,17 +12,14 @@
  *                 >> simple, e.g.,
  *                    MyClass
  *                 >> auto naming, e.g., 
- *                    '(auto)'
- *                    Use this only when putting only one class in a file and using flairBuild builder to build assembly
- *                    And in that case, filename will be used as class name. So if file name is 'MyClass.js', name would be 'MyClass' (case sensitive)
+ *                    ''
+ *                    Use this only when putting only one type in a file and using flairBuild builder to build assembly
+ *                    And in that case, filename will be used as type name. So if file name is 'MyType.js', name would be 'MyType' (case sensitive)
  *                    To give namespace to a type, use $$('ns', 'com.product.feature');
- *                    Apply this attribute on class definition itself. then class can be accessed as getType('com.product.feature.MyClass');
- *                    To give automatic namespaces to types based on the folder structure under assembly folder, use
- *                    $$('ns', '(auto)'); In this case if MyClass was put in a folder hierarchy as com/product/feature, it will
- *                    be given namespace com.product.feature
- *                    To put a type in root namespace, use $$('ns' '(root)') or just put it in '(root)' folder and
- *                    use $$('ns', '(auto)');
- *                    Then class can be accessed as getType('MyClass');
+ *                    Apply this attribute on type definition itself. then type can be accessed as getType('com.product.feature.MyType');
+ *                    To put a type in root namespace, use $$('ns' '(root)') or just put it in '(root)' folder and use auto-naming
+ *                    Then type can be accessed as getType('MyType');
+ *                    Note: When auto-naming is being used, namespace is also added automatically, and $$('ns') should not be applied
  *  inherits: type - A flair class type from which to inherit this class
  *  mixints: array - An array of mixin and/or interface types which needs to be applied to this class type
  *                        mixins will be applied in order they are defined here

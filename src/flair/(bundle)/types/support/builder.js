@@ -1908,8 +1908,8 @@ const builder = (cfg) => {
         ns = ns_attr ? ns_attr.args[0] : '';
     if (ns) {
         switch(ns) {
-            case '(auto)':  // this is a placeholder that gets replaced by assembly builder with dynamic namespace based on folder structure, so if is it left, it is wrong
-                throw _Exception.InvalidDefinition(`Namespace '(auto)' should be used only when bundling the type in an assembly. (${ns})`, builder);
+            case '':  // this is a placeholder that gets replaced by assembly builder with dynamic namespace based on folder structure, so if is it left, it is wrong
+                throw _Exception.InvalidDefinition(`Empty namespace should be used only when bundling the type in an assembly. (${ns})`, builder);
             case '(root)':  // this is mark to instruct builder that register type at root namespace
                 break; // go on
             default: // anything else

@@ -8,17 +8,14 @@
  *                 >> simple, e.g.,
  *                    MyStruct
  *                 >> auto naming, e.g., 
- *                    '(auto)'
- *                    Use this only when putting only one struct in a file and using flairBuild builder to build assembly
- *                    And in that case, filename will be used as struct name. So if file name is 'MyStruct.js', name would be 'MyStruct' (case sensitive)
+ *                    ''
+ *                    Use this only when putting only one type in a file and using flairBuild builder to build assembly
+ *                    And in that case, filename will be used as type name. So if file name is 'MyType.js', name would be 'MyType' (case sensitive)
  *                    To give namespace to a type, use $$('ns', 'com.product.feature');
- *                    Apply this attribute on struct definition itself. then struct can be accessed as getType('com.product.feature.MyStruct');
- *                    To give automatic namespaces to types based on the folder structure under assembly folder, use
- *                    $$('ns', '(auto)'); In this case if MyStruct was put in a folder hierarchy as com/product/feature, it will
- *                    be given namespace com.product.feature
- *                    To put a type in root namespace, use $$('ns' '(root)') or just put it in '(root)' folder and
- *                    use $$('ns', '(auto)');
- *                    Then struct can be accessed as getType('MyStruct');
+ *                    Apply this attribute on type definition itself. then type can be accessed as getType('com.product.feature.MyType');
+ *                    To put a type in root namespace, use $$('ns' '(root)') or just put it in '(root)' folder and use auto-naming
+ *                    Then type can be accessed as getType('MyType');
+ *                    Note: When auto-naming is being used, namespace is also added automatically, and $$('ns') should not be applied
  *  factory: function - factory function to build struct definition
  * @returns type - constructed flair struct type
  */

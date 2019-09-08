@@ -9,17 +9,14 @@
  *                 >> simple, e.g.,
  *                    IInterfaceName
  *                 >> auto naming, e.g., 
- *                    '(auto)'
- *                    Use this only when putting only one interface in a file and using flairBuild builder to build assembly
- *                    And in that case, filename will be used as interface name. So if file name is 'IInterfaceName.js', name would be 'IInterfaceName' (case sensitive)
+ *                    ''
+ *                    Use this only when putting only one type in a file and using flairBuild builder to build assembly
+ *                    And in that case, filename will be used as type name. So if file name is 'MyType.js', name would be 'MyType' (case sensitive)
  *                    To give namespace to a type, use $$('ns', 'com.product.feature');
- *                    Apply this attribute on interface definition itself. then interface can be accessed as getType('com.product.feature.IInterfaceName');
- *                    To give automatic namespaces to types based on the folder structure under assembly folder, use
- *                    $$('ns', '(auto)'); In this case if IInterfaceName was put in a folder hierarchy as com/product/feature, it will
- *                    be given namespace com.product.feature
- *                    To put a type in root namespace, use $$('ns' '(root)') or just put it in '(root)' folder and
- *                    use $$('ns', '(auto)');
- *                    Then interface can be accessed as getType('IInterfaceName');
+ *                    Apply this attribute on type definition itself. then type can be accessed as getType('com.product.feature.MyType');
+ *                    To put a type in root namespace, use $$('ns' '(root)') or just put it in '(root)' folder and use auto-naming
+ *                    Then type can be accessed as getType('MyType');
+ *                    Note: When auto-naming is being used, namespace is also added automatically, and $$('ns') should not be applied
  *  factory: function - factory function to build interface definition
  * @returns type - constructed flair interface type
  */
