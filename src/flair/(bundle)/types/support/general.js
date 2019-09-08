@@ -136,7 +136,7 @@ const globalSetting = (path, defaultValue, asIs) => {
     // Based on the environment in which this code is running, it will pick relevant value
     // in case a relevant value does not exists, it gives defaultValue
     
-    let _globalSettings = options.env.isAppMode() ? _AppDomain.config().global : {},
+    let _globalSettings = _AppDomain.config() ? (_AppDomain.config().global || {}) : {},
         _lensedValue = lens(_globalSettings, path),
         keyValue = '';
 
