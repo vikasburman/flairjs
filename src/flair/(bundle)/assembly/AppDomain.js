@@ -167,6 +167,22 @@ const AppDomain = function(name) {
                     }
                 }
             });
+
+            // flatten routes
+            ado.routes.forEach(qualifiedName => {
+                // qualified names across anywhere should be unique
+                if (asmTypes[qualifiedName]) {
+                    throw _Exception.Duplicate(qualifiedName, this.registerAdo);
+                } else {
+                    asmTypes[qualifiedName] = ado.file; // means this route is handled in this assembly
+
+                    // add namespace
+                    nsName = qualifiedName.substr(0, qualifiedName.lastIndexOf('.'));
+                    if (ado.namespaces.indexOf(nsName) === -1) {
+                        ado.namespaces.push(nsName);
+                    }
+                }
+            });            
                 
             // register routes
             this.context.registerRoutes(ado.routes, ado.file);
