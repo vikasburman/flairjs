@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.59.39
- *  Sun, 08 Sep 2019 22:00:39 GMT
+ *  Version: 0.59.40
+ *  Tue, 10 Sep 2019 00:49:40 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -1727,6 +1727,8 @@
         this.ns = ns;
         this.assembly = () => { return alc.getAssembly(asmFile) || null; };
         this.index = route.index;
+        this.type = route.type || -1;
+        this.connection = route.connection || '';
         this.mount = route.mount;
         this.verbs = route.verbs || (isServer ? ['get'] : ['view']); // default verb
         this.path = route.path;
@@ -2222,6 +2224,22 @@
                         }
                     }
                 });
+    
+                // flatten routes
+                ado.routes.forEach(qualifiedName => {
+                    // qualified names across anywhere should be unique
+                    if (asmTypes[qualifiedName]) {
+                        throw _Exception.Duplicate(qualifiedName, this.registerAdo);
+                    } else {
+                        asmTypes[qualifiedName] = ado.file; // means this route is handled in this assembly
+    
+                        // add namespace
+                        nsName = qualifiedName.substr(0, qualifiedName.lastIndexOf('.'));
+                        if (ado.namespaces.indexOf(nsName) === -1) {
+                            ado.namespaces.push(nsName);
+                        }
+                    }
+                });            
                     
                 // register routes
                 this.context.registerRoutes(ado.routes, ado.file);
@@ -7535,10 +7553,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.59.39',
+        version: '0.59.40',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 08 Sep 2019 22:00:39 GMT')
+        lupdate: new Date('Tue, 10 Sep 2019 00:49:40 GMT')
     });  
 
     // bundled assembly load process 
@@ -7995,7 +8013,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded();
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.39","lupdate":"Sun, 08 Sep 2019 22:00:39 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.40","lupdate":"Tue, 10 Sep 2019 00:49:40 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
