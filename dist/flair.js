@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.59.40
- *  Tue, 10 Sep 2019 00:49:40 GMT
+ *  Version: 0.59.41
+ *  Fri, 20 Sep 2019 22:15:26 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -7553,10 +7553,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.59.40',
+        version: '0.59.41',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Tue, 10 Sep 2019 00:49:40 GMT')
+        lupdate: new Date('Fri, 20 Sep 2019 22:15:26 GMT')
     });  
 
     // bundled assembly load process 
@@ -7566,7 +7566,7 @@
         // 1. Since this is a custom assembly index.js file, types built-in here does not support 
         //    await type calls, as this outer closure is not an async function
 
-        // assembly closure init (start)
+        // assembly closure: init (start)
         /* eslint-disable no-unused-vars */
         
         // flair types, variables and functions
@@ -7579,11 +7579,6 @@
         const { guid, stuff, replaceAll, splitAndTrim, findIndexByProp, findItemByProp, which, isArrowFunc, isASyncFunc, sieve,
                 deepMerge, getLoadedScript, b64EncodeUnicode, b64DecodeUnicode, lens, globalSetting } = flair.utils;
         
-        // inbuilt modifiers and attributes compile-time-safe support
-        const { $$static, $$abstract, $$virtual, $$override, $$sealed, $$private, $$privateSet, $$protected, $$protectedSet, $$readonly, $$async,
-                $$overload, $$enumerate, $$dispose, $$post, $$on, $$timer, $$type, $$args, $$inject, $$resource, $$asset, $$singleton, $$serialize,
-                $$deprecate, $$session, $$state, $$conditional, $$noserialize, $$ns } = $$;
-        
         // access to DOC
         const DOC = ((env.isServer || env.isWorker) ? null : window.document);
         
@@ -7595,7 +7590,7 @@
         
         // settings of this assembly
         let settings = JSON.parse('{}');
-        let settingsReader = flair.Port('settingsReader');
+        let settingsReader = Port('settingsReader');
         if (typeof settingsReader === 'function') {
             let externalSettings = settingsReader('flair');
             if (externalSettings) { settings = deepMerge([settings, externalSettings], false); }
@@ -7607,16 +7602,16 @@
         config = Object.freeze(config);
         
         /* eslint-enable no-unused-vars */
-        // assembly closure init (end)
+        // assembly closure: init (end)
         
-        // assembly global functions (start)
+        // assembly closure: global functions (start)
         // (not defined)
-        // assembly global functions (end)
+        // assembly closure: global functions (end)
         
         // set assembly being loaded
         AppDomain.context.current().currentAssemblyBeingLoaded('./flair{.min}.js');
         
-        // assembly types (start)
+        // assembly closure: types (start)
             
     (() => { // type: ./src/flair/(root)/@1-Aspect.js
         /**
@@ -7625,7 +7620,7 @@
          */
         $$('abstract');
         $$('ns', '(root)');
-		Class('Aspect' ,function() {
+		Class('Aspect', function() {
             /** 
              * @name before
              * @description Before advise
@@ -7687,7 +7682,7 @@
          */
         $$('abstract');
         $$('ns', '(root)');
-		Class('Attribute' ,function() {
+		Class('Attribute', function() {
             $$('virtual');
             this.construct = (...args) => {
                 this.args = Object.freeze(args);
@@ -7796,7 +7791,7 @@
          * @description IDisposable interface
          */
         $$('ns', '(root)');
-		Interface('IDisposable' ,function() {
+		Interface('IDisposable', function() {
             this.dispose = nim;
         });
         
@@ -7807,7 +7802,7 @@
          * @description IProgressReporter interface
          */
         $$('ns', '(root)');
-		Interface('IProgressReporter' ,function() {
+		Interface('IProgressReporter', function() {
             // progress report
             this.progress = nie;
         });
@@ -7821,7 +7816,7 @@
          * @description Task base class.
          */
         $$('ns', '(root)');
-		Class('Task' ,[IProgressReporter, IDisposable], function() {
+		Class('Task', [IProgressReporter, IDisposable], function() {
             let isSetupDone = false,
                 isRunning = false,
                 loadingContextName = AppDomain.context.current().name; // this will be processed at the time class is loaded
@@ -7952,7 +7947,7 @@
          * $$('cache', { 'duration': 10000 }) OR $$('cache', 10000)
          */
         $$('ns', '(root)');
-		Class('cache' ,Attribute, function() {
+		Class('cache', Attribute, function() {
             $$('override');
             this.construct = (base, cacheConfig) => {
                 base(cacheConfig);
@@ -8003,17 +7998,17 @@
         });
         
     })();
-        // assembly types (end)
+        // assembly closure: types (end)
         
-        // assembly embedded resources (start)
+        // assembly closure: embedded resources (start)
         // (not defined)
-        // assembly embedded resources (end)        
+        // assembly closure: embedded resources (end)        
         
         // clear assembly being loaded
         AppDomain.context.current().currentAssemblyBeingLoaded();
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.40","lupdate":"Tue, 10 Sep 2019 00:49:40 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.41","lupdate":"Fri, 20 Sep 2019 22:15:26 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
