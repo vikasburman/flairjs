@@ -7,10 +7,11 @@ const guid = () => {
 const which = (def) => {
     // full blown def can be:
     // mainThreadOnServer{.min}.xyz ~ workerThreadOnServer{.min}.xyz | mainThreadOnClient{.min}.xyz ~ workerThreadOnClient{.min}.xyz
-    let item = def;
+    let item = def,
+        items = null;
 
     if (item.indexOf('|') !== -1) { // server | client
-        let items = item.split('|');
+        items = item.split('|');
         if (options.env.isServer) { // left is server
             item = items[0].trim();
         } else { // right is client

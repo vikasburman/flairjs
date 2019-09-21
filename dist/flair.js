@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.59.43
- *  Sat, 21 Sep 2019 18:29:42 GMT
+ *  Version: 0.59.45
+ *  Sat, 21 Sep 2019 20:17:44 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -317,42 +317,43 @@
             return v.toString(16);
         });
     };
-    const which = (def, isFile) => {
-        if (isFile) { // debug/prod specific decision
-            // pick minified or dev version (Dev version is picked only when isDebug is true)
-            if (def.indexOf('{.min}') !== -1) {
-                if (options.env.isDebug) {
-                    return def.replace('{.min}', ''); // a{.min}.js => a.js
-                } else {
-                    return def.replace('{.min}', '.min'); // a{.min}.js => a.min.js
-                }
+    const which = (def) => {
+        // full blown def can be:
+        // mainThreadOnServer{.min}.xyz ~ workerThreadOnServer{.min}.xyz | mainThreadOnClient{.min}.xyz ~ workerThreadOnClient{.min}.xyz
+        let item = def,
+            items = null;
+    
+        if (item.indexOf('|') !== -1) { // server | client
+            items = item.split('|');
+            if (options.env.isServer) { // left is server
+                item = items[0].trim();
+            } else { // right is client
+                item = items[1].trim();
             }
-        } else { // server/client specific decision
-            if (def.indexOf('|') !== -1) { 
-                let items = def.split('|'),
-                    item = '';
-                if (options.env.isServer) {
-                    item = items[0].trim();
-                } else {
-                    item = items[1].trim();
-                }
-                if (item === 'x') { item = ''; } // special case to explicitly mark absence of a type
-    
-                // worker environment specific pick
-                if (item.indexOf('~') !== -1) {
-                    items = item.split('~');
-                    if (!options.env.isWorker) { // left is main thread
-                        item = items[0].trim();
-                    } else { // right is worker thread
-                        item = items[1].trim(); 
-                    }
-                    if (item === 'x') { item = ''; } // special case to explicitly mark absence of a type
-                }
-    
-                return item;
-            }            
+            if (item === 'x') { item = ''; } // special case to explicitly mark absence of a type
         }
-        return def; // as is
+    
+        // worker environment specific pick
+        if (item.indexOf('~') !== -1) { // main thread ~ worker thread
+            items = item.split('~');
+            if (!options.env.isWorker) { // left is main thread
+                item = items[0].trim();
+            } else { // right is worker thread
+                item = items[1].trim(); 
+            }
+            if (item === 'x') { item = ''; } // special case to explicitly mark absence of a type
+        }
+    
+        // debug/prod specific pick
+        if (item.indexOf('{.min}') !== -1) {  
+            if (options.env.isDebug) {
+                item = item.replace('{.min}', ''); // a{.min}.js => a.js
+            } else {
+                item = item.replace('{.min}', '.min'); // a{.min}.js => a.min.js
+            }
+        }  
+    
+        return item; // modified or as is
     };
     const isArrow = (fn) => {
         return (!(fn).hasOwnProperty('prototype') && fn.constructor.name === 'Function');
@@ -1679,15 +1680,15 @@
     
             // find
             if (isMinNeededIfAvailable) {
-                if (ado.assets.indexOf(_file) !== -1) { // with {.min} placeholder
+                if (ado.assets.indexOf(_file.substr(2)) !== -1) { // with {.min} placeholder after removing initial './'
                     astFile = _min; // name.min.ext
-                } else if (ado.assets.indexOf(_normal) !== -1) { // without any .min or placeholder
+                } else if (ado.assets.indexOf(_normal.substr(2)) !== -1) { // without any .min or placeholder after removing initial './'
                     astFile = _normal; // name.ext
                 } 
             } else {
-                if (ado.assets.indexOf(_normal) !== -1) { // without any .min or placeholder
+                if (ado.assets.indexOf(_normal.substr(2)) !== -1) { // without any .min or placeholder after removing initial './'
                     astFile = _normal; // name.ext
-                } else if (ado.assets.indexOf(_file) !== -1) { // with {.min} placeholder
+                } else if (ado.assets.indexOf(_file.substr(2)) !== -1) { // with {.min} placeholder after removing initial './'
                     astFile = _normal; // still name.ext, since if .min is present in array, normal would definitely be present anyways as file
                 } 
             }
@@ -1749,7 +1750,7 @@
     
         this.name = rdo.name;
         this.ns = ns;
-        this.assembly = () => { return alc.getAssembly(which(rdo.asmFile, true)) || null; };
+        this.assembly = () => { return alc.getAssembly(which(rdo.asmFile)) || null; };
         this.encodingType = rdo.encodingType;
         this.file = rdo.file;
         this.type = rdo.file.substr(rdo.file.lastIndexOf('.') + 1).toLowerCase();
@@ -2249,7 +2250,7 @@
             }
     
             // register (no overwrite ever)
-            ado.file = which(ado.file, true); // min/dev contextual pick
+            ado.file = which(ado.file);
             let fileKey = this.getAsmFileKey(ado.file);
             if (!asmFiles[fileKey]) {
                 // generate namespaces (from types and resources)
@@ -3093,7 +3094,7 @@
                     _resolved = null;
     
                 // pick contextual dep
-                _dep = which(_dep); // server/client pick
+                _dep = which(_dep);
     
                 // check if this is an alias registered on DI container
                 let option1 = (done) => {
@@ -3148,8 +3149,6 @@
                         _dep = _AppDomain.resolvePath(_dep);
                         if (ext) {
                             if (ext === 'js' || ext === 'mjs') {
-                                _dep = which(_dep, true); // min/dev contextual pick
-    
                                 // load as module, since this is a js file and we need is executed and not the content as such
                                 loadModule(_dep).then((content) => { 
                                     _resolved = content || true; done(); // it may or may not give a content
@@ -3195,7 +3194,6 @@
                         // on server require() finds modules automatically
                         // on client modules are supposed to be inside ./modules/ folder, therefore prefix it
                         if (!isServer) { _dep = `./${modulesRootFolder}/${_dep}`; }
-                        _dep = which(_dep, true); // min/dev contextual pick
                         loadModule(_dep).then((content) => { 
                             _resolved = content || true; done();
                         }).catch((err) => {
@@ -6170,9 +6168,6 @@
     
             if (typeof item === 'string') { 
                 item = which(item); // register only relevant item for server/client
-                if (item.endsWith('.js') || item.endsWith('.mjs')) { 
-                    item = which(item, true); // consider prod/dev scenario as well
-                }
             }
             // register (first time or push more with same alias)
             if (!container_registry[alias]) { container_registry[alias] = []; }
@@ -7617,14 +7612,14 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.59.43',
+        version: '0.59.45',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sat, 21 Sep 2019 18:29:42 GMT')
+        lupdate: new Date('Sat, 21 Sep 2019 20:17:44 GMT')
     });  
 
     // bundled assembly load process 
-    let file = which('./flair{.min}.js', true);
+    let file = which('./flair{.min}.js');
     _AppDomain.context.current().loadBundledAssembly(file, currentFile, (flair, __asmFile) => {
         // NOTES: 
         // 1. Since this is a custom assembly index.js file, types built-in here does not support 
@@ -8072,7 +8067,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded();
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.43","lupdate":"Sat, 21 Sep 2019 18:29:42 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.45","lupdate":"Sat, 21 Sep 2019 20:17:44 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 
