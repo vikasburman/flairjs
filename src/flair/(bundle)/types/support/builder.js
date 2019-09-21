@@ -1153,7 +1153,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             } else { // asset_attr
                 if (asset_attr.args[0]) { // asset file name with relative path within assets folder of assembly and must start with ./
                     let astFile = asset_attr.args[0];
-                    resOrAssetData = $Type.getAssembly().getAssetFilePath(astFile);
+                    resOrAssetData = $Type.getAssembly().getAsset(astFile);
                 }
             }
             if (resOrAssetData) {

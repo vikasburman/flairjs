@@ -188,7 +188,7 @@ const AppDomain = function(name) {
             // register routes
             this.context.registerRoutes(ado.routes, ado.file);
 
-            // store raw, for later use and reference
+            // store raw, for later use and reference (e.g., assets are in there only)
             asmFiles[fileKey] = Object.freeze(ado);
             allADOs.push(ado);
         }  
