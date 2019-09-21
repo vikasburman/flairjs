@@ -4,42 +4,42 @@ const guid = () => {
         return v.toString(16);
     });
 };
-const which = (def, isFile) => {
-    if (isFile) { // debug/prod specific decision
-        // pick minified or dev version (Dev version is picked only when isDebug is true)
-        if (def.indexOf('{.min}') !== -1) {
-            if (options.env.isDebug) {
-                return def.replace('{.min}', ''); // a{.min}.js => a.js
-            } else {
-                return def.replace('{.min}', '.min'); // a{.min}.js => a.min.js
-            }
+const which = (def) => {
+    // full blown def can be:
+    // mainThreadOnServer{.min}.xyz ~ workerThreadOnServer{.min}.xyz | mainThreadOnClient{.min}.xyz ~ workerThreadOnClient{.min}.xyz
+    let item = def;
+
+    if (item.indexOf('|') !== -1) { // server | client
+        let items = item.split('|');
+        if (options.env.isServer) { // left is server
+            item = items[0].trim();
+        } else { // right is client
+            item = items[1].trim();
         }
-    } else { // server/client specific decision
-        if (def.indexOf('|') !== -1) { 
-            let items = def.split('|'),
-                item = '';
-            if (options.env.isServer) {
-                item = items[0].trim();
-            } else {
-                item = items[1].trim();
-            }
-            if (item === 'x') { item = ''; } // special case to explicitly mark absence of a type
-
-            // worker environment specific pick
-            if (item.indexOf('~') !== -1) {
-                items = item.split('~');
-                if (!options.env.isWorker) { // left is main thread
-                    item = items[0].trim();
-                } else { // right is worker thread
-                    item = items[1].trim(); 
-                }
-                if (item === 'x') { item = ''; } // special case to explicitly mark absence of a type
-            }
-
-            return item;
-        }            
+        if (item === 'x') { item = ''; } // special case to explicitly mark absence of a type
     }
-    return def; // as is
+
+    // worker environment specific pick
+    if (item.indexOf('~') !== -1) { // main thread ~ worker thread
+        items = item.split('~');
+        if (!options.env.isWorker) { // left is main thread
+            item = items[0].trim();
+        } else { // right is worker thread
+            item = items[1].trim(); 
+        }
+        if (item === 'x') { item = ''; } // special case to explicitly mark absence of a type
+    }
+
+    // debug/prod specific pick
+    if (item.indexOf('{.min}') !== -1) {  
+        if (options.env.isDebug) {
+            item = item.replace('{.min}', ''); // a{.min}.js => a.js
+        } else {
+            item = item.replace('{.min}', '.min'); // a{.min}.js => a.min.js
+        }
+    }  
+
+    return item; // modified or as is
 };
 const isArrow = (fn) => {
     return (!(fn).hasOwnProperty('prototype') && fn.constructor.name === 'Function');

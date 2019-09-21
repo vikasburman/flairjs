@@ -40,9 +40,6 @@ const _Container = {
 
         if (typeof item === 'string') { 
             item = which(item); // register only relevant item for server/client
-            if (item.endsWith('.js') || item.endsWith('.mjs')) { 
-                item = which(item, true); // consider prod/dev scenario as well
-            }
         }
         // register (first time or push more with same alias)
         if (!container_registry[alias]) { container_registry[alias] = []; }

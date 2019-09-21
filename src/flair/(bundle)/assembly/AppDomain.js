@@ -129,7 +129,7 @@ const AppDomain = function(name) {
         }
 
         // register (no overwrite ever)
-        ado.file = which(ado.file, true); // min/dev contextual pick
+        ado.file = which(ado.file);
         let fileKey = this.getAsmFileKey(ado.file);
         if (!asmFiles[fileKey]) {
             // generate namespaces (from types and resources)

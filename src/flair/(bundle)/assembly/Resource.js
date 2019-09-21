@@ -7,7 +7,7 @@ const Resource = function(rdo, ns, alc) {
 
     this.name = rdo.name;
     this.ns = ns;
-    this.assembly = () => { return alc.getAssembly(which(rdo.asmFile, true)) || null; };
+    this.assembly = () => { return alc.getAssembly(which(rdo.asmFile)) || null; };
     this.encodingType = rdo.encodingType;
     this.file = rdo.file;
     this.type = rdo.file.substr(rdo.file.lastIndexOf('.') + 1).toLowerCase();

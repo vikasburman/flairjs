@@ -82,7 +82,7 @@ const _bring = (deps, fn) => {
                 _resolved = null;
 
             // pick contextual dep
-            _dep = which(_dep); // server/client pick
+            _dep = which(_dep);
 
             // check if this is an alias registered on DI container
             let option1 = (done) => {
@@ -137,8 +137,6 @@ const _bring = (deps, fn) => {
                     _dep = _AppDomain.resolvePath(_dep);
                     if (ext) {
                         if (ext === 'js' || ext === 'mjs') {
-                            _dep = which(_dep, true); // min/dev contextual pick
-
                             // load as module, since this is a js file and we need is executed and not the content as such
                             loadModule(_dep).then((content) => { 
                                 _resolved = content || true; done(); // it may or may not give a content
@@ -184,7 +182,6 @@ const _bring = (deps, fn) => {
                     // on server require() finds modules automatically
                     // on client modules are supposed to be inside ./modules/ folder, therefore prefix it
                     if (!isServer) { _dep = `./${modulesRootFolder}/${_dep}`; }
-                    _dep = which(_dep, true); // min/dev contextual pick
                     loadModule(_dep).then((content) => { 
                         _resolved = content || true; done();
                     }).catch((err) => {

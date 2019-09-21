@@ -104,15 +104,15 @@ const Assembly = function (ado, alc, asmClosureVars) {
 
         // find
         if (isMinNeededIfAvailable) {
-            if (ado.assets.indexOf(_file) !== -1) { // with {.min} placeholder
+            if (ado.assets.indexOf(_file.substr(2)) !== -1) { // with {.min} placeholder after removing initial './'
                 astFile = _min; // name.min.ext
-            } else if (ado.assets.indexOf(_normal) !== -1) { // without any .min or placeholder
+            } else if (ado.assets.indexOf(_normal.substr(2)) !== -1) { // without any .min or placeholder after removing initial './'
                 astFile = _normal; // name.ext
             } 
         } else {
-            if (ado.assets.indexOf(_normal) !== -1) { // without any .min or placeholder
+            if (ado.assets.indexOf(_normal.substr(2)) !== -1) { // without any .min or placeholder after removing initial './'
                 astFile = _normal; // name.ext
-            } else if (ado.assets.indexOf(_file) !== -1) { // with {.min} placeholder
+            } else if (ado.assets.indexOf(_file.substr(2)) !== -1) { // with {.min} placeholder after removing initial './'
                 astFile = _normal; // still name.ext, since if .min is present in array, normal would definitely be present anyways as file
             } 
         }

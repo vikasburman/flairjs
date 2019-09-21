@@ -263,7 +263,7 @@
     });  
 
     // bundled assembly load process 
-    let file = which('<<which_file>>', true);
+    let file = which('<<which_file>>');
     _AppDomain.context.current().loadBundledAssembly(file, currentFile, (flair, __asmFile) => {
         // NOTES: 
         // 1. Since this is a custom assembly index.js file, types built-in here does not support 
