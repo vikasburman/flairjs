@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.59.41
- *  Fri, 20 Sep 2019 22:15:26 GMT
+ *  Version: 0.59.42
+ *  Sat, 21 Sep 2019 13:40:17 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -1601,6 +1601,10 @@
         // types
         this.types = () => { return ado.types.slice(); }
         this.namespaces = () => { return ado.namespaces.slice(); }
+        this.hasType = (qualifiedName) => {
+            if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.hasType); }
+            return (ado.types.indexOf(qualifiedName) !== -1) ? true : false;
+        };
         this.getType = (qualifiedName) => {
             if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.getType); }
             if (ado.types.indexOf(qualifiedName) === -1) { throw _Exception.NotFound(qualifiedName, this.getType); }
@@ -1624,6 +1628,10 @@
     
         // resources
         this.resources = () => { return ado.resources.slice(); }
+        this.hasResource = (qualifiedName) => {
+            if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.hasResource); }
+            return (ado.resources.indexOf(qualifiedName) !== -1) ? true : false;
+        };
         this.getResource = (qualifiedName) => {
             if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.getResource); }
             if (ado.resources.indexOf(qualifiedName) === -1) { throw _Exception.NotFound(qualifiedName, this.getResource); }
@@ -1632,6 +1640,10 @@
     
         // routes
         this.routes = () => { return ado.routes.slice(); }
+        this.hasRoute = (qualifiedName) => {
+            if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.hasRoute); }
+            return (ado.routes.indexOf(qualifiedName) !== -1) ? true : false;
+        };    
         this.getRoute = (qualifiedName) => {
             if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.getRoute); }
             if (ado.routes.indexOf(qualifiedName) === -1) { throw _Exception.NotFound(qualifiedName, this.getRoute); }
@@ -1640,6 +1652,27 @@
     
         // assets
         this.assets = () => { return ado.assets.slice(); }
+        this.hasAsset = (file) => {
+            if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.hasAsset); }
+    
+            // file: will be in local context of assembly, e.g., <asmFolder>/(assets)/myCSS.css will be referred everywhere as './myCSS.css'
+            let astFile = file.replace('./', this.assetsPath());
+            return (ado.assets.indexOf(astFile) !== -1) ? true : false;
+        };   
+        this.getAsset = (file) => { // just an alias to getAssetFilePath
+            return this.getAssetFilePath(file); 
+        };  
+        this.hasLocale = (locale, file) => {
+            if (typeof locale !== 'string') { throw _Exception.InvalidArgument('locale', this.hasLocale); }
+            if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.hasLocale); }
+    
+            // file: will be in local context of assembly, e.g., <asmFolder>/(locale)/strings.json will be referred everywhere as './strings.json'
+            let localeFile = file.replace('./', this.localesPath(locale));
+            return (ado.assets.indexOf(localeFile) !== -1) ? true : false;
+        };
+        this.getLocale = (locale, file) => { // just an alias to getLocaleFilePath
+            return this.getLocaleFilePath(locale, file);
+        }; 
         this.path = () => {
             return this.alc.getAssemblyFile(this.file);
         };
@@ -2226,7 +2259,8 @@
                 });
     
                 // flatten routes
-                ado.routes.forEach(qualifiedName => {
+                ado.routes.forEach(routeObj => {
+                    let qualifiedName = routeObj.name;
                     // qualified names across anywhere should be unique
                     if (asmTypes[qualifiedName]) {
                         throw _Exception.Duplicate(qualifiedName, this.registerAdo);
@@ -7553,10 +7587,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.59.41',
+        version: '0.59.42',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Fri, 20 Sep 2019 22:15:26 GMT')
+        lupdate: new Date('Sat, 21 Sep 2019 13:40:17 GMT')
     });  
 
     // bundled assembly load process 
@@ -8008,7 +8042,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded();
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.41","lupdate":"Fri, 20 Sep 2019 22:15:26 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.42","lupdate":"Sat, 21 Sep 2019 13:40:17 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
         
         // assembly load complete
         if (typeof onLoadComplete === 'function') { 

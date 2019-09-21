@@ -169,7 +169,8 @@ const AppDomain = function(name) {
             });
 
             // flatten routes
-            ado.routes.forEach(qualifiedName => {
+            ado.routes.forEach(routeObj => {
+                let qualifiedName = routeObj.name;
                 // qualified names across anywhere should be unique
                 if (asmTypes[qualifiedName]) {
                     throw _Exception.Duplicate(qualifiedName, this.registerAdo);

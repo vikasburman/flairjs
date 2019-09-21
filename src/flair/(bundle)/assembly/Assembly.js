@@ -26,6 +26,10 @@ const Assembly = function (ado, alc, asmClosureVars) {
     // types
     this.types = () => { return ado.types.slice(); }
     this.namespaces = () => { return ado.namespaces.slice(); }
+    this.hasType = (qualifiedName) => {
+        if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.hasType); }
+        return (ado.types.indexOf(qualifiedName) !== -1) ? true : false;
+    };
     this.getType = (qualifiedName) => {
         if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.getType); }
         if (ado.types.indexOf(qualifiedName) === -1) { throw _Exception.NotFound(qualifiedName, this.getType); }
@@ -49,6 +53,10 @@ const Assembly = function (ado, alc, asmClosureVars) {
 
     // resources
     this.resources = () => { return ado.resources.slice(); }
+    this.hasResource = (qualifiedName) => {
+        if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.hasResource); }
+        return (ado.resources.indexOf(qualifiedName) !== -1) ? true : false;
+    };
     this.getResource = (qualifiedName) => {
         if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.getResource); }
         if (ado.resources.indexOf(qualifiedName) === -1) { throw _Exception.NotFound(qualifiedName, this.getResource); }
@@ -57,6 +65,10 @@ const Assembly = function (ado, alc, asmClosureVars) {
 
     // routes
     this.routes = () => { return ado.routes.slice(); }
+    this.hasRoute = (qualifiedName) => {
+        if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.hasRoute); }
+        return (ado.routes.indexOf(qualifiedName) !== -1) ? true : false;
+    };    
     this.getRoute = (qualifiedName) => {
         if (typeof qualifiedName !== 'string') { throw _Exception.InvalidArgument('qualifiedName', this.getRoute); }
         if (ado.routes.indexOf(qualifiedName) === -1) { throw _Exception.NotFound(qualifiedName, this.getRoute); }
@@ -65,6 +77,27 @@ const Assembly = function (ado, alc, asmClosureVars) {
 
     // assets
     this.assets = () => { return ado.assets.slice(); }
+    this.hasAsset = (file) => {
+        if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.hasAsset); }
+
+        // file: will be in local context of assembly, e.g., <asmFolder>/(assets)/myCSS.css will be referred everywhere as './myCSS.css'
+        let astFile = file.replace('./', this.assetsPath());
+        return (ado.assets.indexOf(astFile) !== -1) ? true : false;
+    };   
+    this.getAsset = (file) => { // just an alias to getAssetFilePath
+        return this.getAssetFilePath(file); 
+    };  
+    this.hasLocale = (locale, file) => {
+        if (typeof locale !== 'string') { throw _Exception.InvalidArgument('locale', this.hasLocale); }
+        if (typeof file !== 'string') { throw _Exception.InvalidArgument('file', this.hasLocale); }
+
+        // file: will be in local context of assembly, e.g., <asmFolder>/(locale)/strings.json will be referred everywhere as './strings.json'
+        let localeFile = file.replace('./', this.localesPath(locale));
+        return (ado.assets.indexOf(localeFile) !== -1) ? true : false;
+    };
+    this.getLocale = (locale, file) => { // just an alias to getLocaleFilePath
+        return this.getLocaleFilePath(locale, file);
+    }; 
     this.path = () => {
         return this.alc.getAssemblyFile(this.file);
     };
