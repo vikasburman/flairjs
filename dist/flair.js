@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.59.59
- *  Sun, 22 Sep 2019 13:38:46 GMT
+ *  Version: 0.59.61
+ *  Sun, 22 Sep 2019 14:30:48 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -2632,6 +2632,7 @@
     /**
      * @name getResource
      * @description Gets the registered resource from default assembly load context of default appdomain
+     * but for possible alias names, it also checks DI container, if resource is not found
      * @example
      *  getResource(qualifiedName)
      * @params
@@ -2642,6 +2643,14 @@
         let args = _Args('qualifiedName: string')(qualifiedName); args.throwOnError(_getResource);
         
         let res = _AppDomain.context.getResource(qualifiedName) || null;
+    
+        // since container registered items are not permitted to have '.' if qualifiedName does not contains '.'
+        // they can either be a container item or root namespace item, so check container also, if not found on root namespace
+        if (!res && qualifiedName.indexOf('.') === -1) {
+            res = _Container.get(qualifiedName, false); // get first only
+            if (!(res && res instanceof Resource && res.data)) { res = null; }
+        }
+    
         return (res ? res.data : null);
     };
     
@@ -2667,6 +2676,7 @@
     /**
      * @name getType
      * @description Gets the flair Type from default assembly load context of default appdomain
+     * but for possible alias names, it also checks DI container, if type is not found
      * @example
      *  getType(qualifiedName)
      * @params
@@ -2676,7 +2686,15 @@
     const _getType = (qualifiedName) => { 
         let args = _Args('qualifiedName: string')(qualifiedName); args.throwOnError(_getType);
         
-        return _AppDomain.context.getType(qualifiedName);
+        let theType = _AppDomain.context.getType(qualifiedName);
+    
+        // since container registered items are not permitted to have '.' if qualifiedName does not contains '.'
+        // they can either be a container item or root namespace item, so check container also, if not found on root namespace
+        if (!theType && qualifiedName.indexOf('.') === -1) {
+            theType = _Container.get(qualifiedName, false); // get first only
+        }
+        
+        return theType;
     };
     
     // attach to flair
@@ -7630,10 +7648,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.59.59',
+        version: '0.59.61',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 22 Sep 2019 13:38:46 GMT')
+        lupdate: new Date('Sun, 22 Sep 2019 14:30:48 GMT')
     });  
 
     // bundled assembly load process 
@@ -7682,7 +7700,19 @@
         // assembly closure: init (end)
         
         // assembly closure: global functions (start)
-        // (not defined)
+        // assembly globals
+        const onLoadComplete = (asm) => {
+            // register custom attributes
+            const registerCustomAttribute = (customAttrName, qualifiedTypeName) => { // eslint-disable-line no-unused-vars
+                let customAttrType = asm.getType(qualifiedTypeName);
+                if (customAttrType) { Container.register(customAttrName, customAttrType); }
+            };
+            
+            // TODO: Move all possible inbuilt attributes as custom attributes and
+            // register them here
+            // each of these can reside in flair.attr namespace
+            // Also, all which can be moved to flairjs-fabric - that is good
+        }; 
         // assembly closure: global functions (end)
         
         // set assembly being loaded
@@ -8025,7 +8055,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('', (typeof onLoadComplete === 'function' ? onLoadComplete : null)); // eslint-disable-line no-undef
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.59","lupdate":"Sun, 22 Sep 2019 13:38:46 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.61","lupdate":"Sun, 22 Sep 2019 14:30:48 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // return settings and config
         return Object.freeze({
