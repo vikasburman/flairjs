@@ -98,7 +98,7 @@ const Assembly = function (ado, alc, asmClosureVars) {
         }
         if (!options.env.isDebug && isMinNeededIfAvailable) { isMinNeededIfAvailable = false; } // bypassing which() call, directly checking if min is needed
         if (!_file.startsWith('./')) { _file = './' + _file; }
-        _file = _file.replace('./', this.assetsPath()); // at this time now _file definitely has {.min}
+        // at this time now _file definitely has {.min}
         _min = _file.replace('{.min}', '.min'); 
         _normal = _file.replace('{.min}', '');
 
@@ -115,6 +115,11 @@ const Assembly = function (ado, alc, asmClosureVars) {
             } else if (ado.assets.indexOf(_file.substr(2)) !== -1) { // with {.min} placeholder after removing initial './'
                 astFile = _normal; // still name.ext, since if .min is present in array, normal would definitely be present anyways as file
             } 
+        }
+
+        // add asset path of this assembly, if file found
+        if (astFile) {
+            astFile = astFile.replace('./', this.assetsPath()); 
         }
 
         return astFile;        
