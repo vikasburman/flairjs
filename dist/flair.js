@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.59.47
- *  Sun, 22 Sep 2019 00:09:27 GMT
+ *  Version: 0.59.59
+ *  Sun, 22 Sep 2019 13:38:46 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -1091,7 +1091,8 @@
             asmNames = {},
             namespaces = {},
             isUnloaded = false,
-            currentAssembliesBeingLoaded = [];
+            currentAssembliesBeingLoaded = [],
+            onLoadCompleteFunctions = {};
     
         // context
         this.name = name;
@@ -1322,13 +1323,16 @@
         };
     
         // assembly
-        this.currentAssemblyBeingLoaded = (file) => {
+        this.currentAssemblyBeingLoaded = (file, onLoadComplete) => {
             // NOTE: called at build time, so no checking is required
             if (file) { 
                 let fileKey = domain.getAsmFileKey(file);
                 currentAssembliesBeingLoaded.push(fileKey);
-            } else {
-                currentAssembliesBeingLoaded.pop();
+            } else { // when done
+                file = currentAssembliesBeingLoaded.pop();
+    
+                // set to run onLoadComplete (it may or may not have a function)
+                onLoadCompleteFunctions[file] = onLoadComplete;
             }
         };
         this.isAssemblyLoadedOrLoading = (file) => {
@@ -1340,9 +1344,18 @@
         const assemblyLoaded = (file, ado, alc, asmClosureVars) => {
             let fileKey = domain.getAsmFileKey(file);
             if (!asmFiles[fileKey] && ado && alc && asmClosureVars) {
+                
                 // add to list
                 asmFiles[fileKey] = Object.freeze(new Assembly(ado, alc, asmClosureVars));
                 asmNames[asmClosureVars.name] = asmFiles[fileKey];
+    
+                // run onLoadComplete now, if given
+                let onLoadComplete = onLoadCompleteFunctions[file];
+                delete onLoadCompleteFunctions[file];
+                
+                if (typeof onLoadComplete === 'function') {
+                    onLoadComplete(asmFiles[fileKey]); // this has to be a sync function
+                }
             }
         };
         this.getAssemblyFile = (file) => {
@@ -7617,10 +7630,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.59.47',
+        version: '0.59.59',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 22 Sep 2019 00:09:27 GMT')
+        lupdate: new Date('Sun, 22 Sep 2019 13:38:46 GMT')
     });  
 
     // bundled assembly load process 
@@ -8001,66 +8014,6 @@
             this.onRun = nim;
         });
         
-    })();    
-    (() => { // type: ./src/flair/(root)/cache.js
-        const { Attribute } = ns();
-        
-        /**
-         * @name cache
-         * @description Caching custom attribute
-         * $$('cache', { 'duration': 10000 }) OR $$('cache', 10000)
-         */
-        $$('ns', '(root)');
-		Class('cache', Attribute, function() {
-            $$('override');
-            this.construct = (base, cacheConfig) => {
-                base(cacheConfig);
-        
-                // config
-                this.cacheConfig = (typeof cacheConfig === 'number' ? { duration: cacheConfig } : cacheConfig)
-                this.enabled = (this.cacheConfig && this.cacheConfig.duration);
-                this.cacheHandler = Port('cacheHandler');
-        
-                // constraints
-                this.constraints = '(class || struct) && (func && async) && !(timer || on || @fetch || @cache)';
-            };
-        
-            $$('readonly');
-            this.cacheConfig = null;
-        
-            $$('private');
-            this.cacheHandler = null;
-        
-            $$('private');
-            this.enabled = false;
-        
-            $$('override');
-            this.decorateFunction = (base, typeName, memberName, member) => { // eslint-disable-line no-unused-vars
-                let _this = this,
-                    cacheId = `${typeName}___${memberName}`;
-        
-                let callMember = async (...args) => {
-                    let resultData = await member(...args);
-                    if (_this.enabled) { // save for later
-                        await _this.cacheHandler.set(cacheId, _this.cacheConfig, resultData);
-                    }
-                    return resultData;
-                };
-        
-                // decorated function
-                return async function(...args) {
-                    if (_this.enabled) {
-                        try {
-                            return await _this.cacheHandler.get(cacheId, _this.cacheConfig);
-                        } catch (err) { // eslint-disable-line no-unused-vars
-                            // ignore and move forward by calling callMember below
-                        }
-                    }
-                    return await callMember(...args);
-                };
-            };
-        });
-        
     })();
         // assembly closure: types (end)
         
@@ -8069,15 +8022,10 @@
         // assembly closure: embedded resources (end)        
         
         // clear assembly being loaded
-        AppDomain.context.current().currentAssemblyBeingLoaded();
+        AppDomain.context.current().currentAssemblyBeingLoaded('', (typeof onLoadComplete === 'function' ? onLoadComplete : null)); // eslint-disable-line no-undef
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.47","lupdate":"Sun, 22 Sep 2019 00:09:27 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task","cache"],"resources":[],"assets":[],"routes":[]}');
-        
-        // assembly load complete
-        if (typeof onLoadComplete === 'function') { 
-            onLoadComplete();   // eslint-disable-line no-undef
-        }
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.59","lupdate":"Sun, 22 Sep 2019 13:38:46 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // return settings and config
         return Object.freeze({

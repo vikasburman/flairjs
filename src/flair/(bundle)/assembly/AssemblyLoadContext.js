@@ -11,7 +11,8 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
         asmNames = {},
         namespaces = {},
         isUnloaded = false,
-        currentAssembliesBeingLoaded = [];
+        currentAssembliesBeingLoaded = [],
+        onLoadCompleteFunctions = {};
 
     // context
     this.name = name;
@@ -242,13 +243,16 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
     };
 
     // assembly
-    this.currentAssemblyBeingLoaded = (file) => {
+    this.currentAssemblyBeingLoaded = (file, onLoadComplete) => {
         // NOTE: called at build time, so no checking is required
         if (file) { 
             let fileKey = domain.getAsmFileKey(file);
             currentAssembliesBeingLoaded.push(fileKey);
-        } else {
-            currentAssembliesBeingLoaded.pop();
+        } else { // when done
+            file = currentAssembliesBeingLoaded.pop();
+
+            // set to run onLoadComplete (it may or may not have a function)
+            onLoadCompleteFunctions[file] = onLoadComplete;
         }
     };
     this.isAssemblyLoadedOrLoading = (file) => {
@@ -260,9 +264,18 @@ const AssemblyLoadContext = function(name, domain, defaultLoadContext, currentCo
     const assemblyLoaded = (file, ado, alc, asmClosureVars) => {
         let fileKey = domain.getAsmFileKey(file);
         if (!asmFiles[fileKey] && ado && alc && asmClosureVars) {
+            
             // add to list
             asmFiles[fileKey] = Object.freeze(new Assembly(ado, alc, asmClosureVars));
             asmNames[asmClosureVars.name] = asmFiles[fileKey];
+
+            // run onLoadComplete now, if given
+            let onLoadComplete = onLoadCompleteFunctions[file];
+            delete onLoadCompleteFunctions[file];
+            
+            if (typeof onLoadComplete === 'function') {
+                onLoadComplete(asmFiles[fileKey]); // this has to be a sync function
+            }
         }
     };
     this.getAssemblyFile = (file) => {
