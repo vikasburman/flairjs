@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.59.61
- *  Sun, 22 Sep 2019 14:30:48 GMT
+ *  Version: 0.59.62
+ *  Sun, 22 Sep 2019 23:42:57 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -296,17 +296,24 @@
     };
     
     // all inbuilt exceptions
-    _Exception.InvalidArgument = (name, stStart = _Exception.InvalidArgument) => { return new _Exception('InvalidArgument', `Argument type is invalid. (${name})`, stStart); }
     _Exception.OperationFailed = (name, error, stStart = _Exception.OperationFailed) => { return new _Exception('OperationFailed', `Operation failed with error. (${name})`, error, stStart); }
-    _Exception.Duplicate = (name, stStart = _Exception.Duplicate) => { return new _Exception('Duplicate', `Item already exists.(${name})`, stStart); }
+    _Exception.OperationConflict = (name, stStart = _Exception.OperationConflict) => { return new _Exception('OperationConflict', `Operation failed with conflict. (${name})`, stStart); }
+    _Exception.Unauthorized = (name, stStart = _Exception.Unauthorized) => { return new _Exception('Unauthorized', `Access is not authorized. (${name})`, stStart); }
+    _Exception.Circular = (name, stStart = _Exception.Circular) => { return new _Exception('Circular', `Circular calls found. (${name})`, stStart); }
+    _Exception.Continue = (name, stStart = _Exception.Continue) => { return new _Exception('Continue', `Continue requested. (${name})`, stStart); }
+    _Exception.Redirect = (name, stStart = _Exception.Continue) => { return new _Exception('Redirect', `Redirect requested. (${name})`, stStart); }
+    _Exception.Duplicate = (name, stStart = _Exception.Duplicate) => { return new _Exception('Duplicate', `Item already exists. (${name})`, stStart); }
     _Exception.NotFound = (name, stStart = _Exception.NotFound) => { return new _Exception('NotFound', `Item not found. (${name})`, stStart); }
+    _Exception.InvalidArgument = (name, stStart = _Exception.InvalidArgument) => { return new _Exception('InvalidArgument', `Argument type is invalid. (${name})`, stStart); }
     _Exception.InvalidDefinition = (name, stStart = _Exception.InvalidDefinition) => { return new _Exception('InvalidDefinition', `Item definition is invalid. (${name})`, stStart); }
     _Exception.InvalidOperation = (name, stStart = _Exception.InvalidOperation) => { return new _Exception('InvalidOperation', `Operation is invalid in current context. (${name})`, stStart); }
-    _Exception.Circular = (name, stStart = _Exception.Circular) => { return new _Exception('Circular', `Circular calls found. (${name})`, stStart); }
     _Exception.NotImplemented = (name, stStart = _Exception.NotImplemented) => { return new _Exception('NotImplemented', `Member is not implemented. (${name})`, stStart); }
     _Exception.NotDefined = (name, stStart = _Exception.NotDefined) => { return new _Exception('NotDefined', `Member is not defined or is not accessible. (${name})`, stStart); }
     _Exception.NotAvailable = (name, stStart = _Exception.NotAvailable) => { return new _Exception('NotAvailable', `Feature is not available. (${name})`, stStart); }
     _Exception.NotSupported = (name, stStart = _Exception.NotSupported) => { return new _Exception('NotSupported', `Operation is not supported. (${name})`, stStart); }
+    _Exception.NotAllowed = (name, stStart = _Exception.NotAllowed) => { return new _Exception('NotAllowed', `Operation is not allowed. (${name})`, stStart); }
+    _Exception.NoContent = (name, stStart = _Exception.NoContent) => { return new _Exception('NoContent', `No content to return. (${name})`, stStart); }
+    _Exception.NotModified = (name, stStart = _Exception.NotModified) => { return new _Exception('NotModified', `Content is not changed. (${name})`, stStart); }
     
     // attach to flair
     a2f('Exception', _Exception);
@@ -7648,10 +7655,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.59.61',
+        version: '0.59.62',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 22 Sep 2019 14:30:48 GMT')
+        lupdate: new Date('Sun, 22 Sep 2019 23:42:57 GMT')
     });  
 
     // bundled assembly load process 
@@ -8055,7 +8062,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('', (typeof onLoadComplete === 'function' ? onLoadComplete : null)); // eslint-disable-line no-undef
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.61","lupdate":"Sun, 22 Sep 2019 14:30:48 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.62","lupdate":"Sun, 22 Sep 2019 23:42:57 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // return settings and config
         return Object.freeze({
