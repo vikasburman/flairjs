@@ -1376,10 +1376,10 @@ find-up@^2.0.0:
   dependencies:
     locate-path "^2.0.0"
 
-flairjs-cli@^0.61.2:
-  version "0.61.2"
-  resolved "https://registry.yarnpkg.com/flairjs-cli/-/flairjs-cli-0.61.2.tgz#193d396e5073057f78bb31afcbaa78f9e9cbc7d0"
-  integrity sha512-/dR9+orYAT8sJJZ0wT8cSTN2bhhoKTxkZfnQM9Z/nkMHX9aoqkl9+GY92+h8lfi8TJwFYF0vUsqNyBkkoT1SfA==
+flairjs-cli@^0.62.0:
+  version "0.62.0"
+  resolved "https://registry.yarnpkg.com/flairjs-cli/-/flairjs-cli-0.62.0.tgz#fca644d23b2158804b3971493085546c820dfe1c"
+  integrity sha512-gEGtT5qwHQRkcJCn/XXX5nI4F+/ue6dD/Lto/jtYFWOtAFFER2qYbKRVWLoEbxFiKd/RAq/3gV5DmzLl7TF0xw==
   dependencies:
     clean-css "^4.2.1"
     copy-dir "^1.2.0"
@@ -1507,9 +1507,9 @@ glob-parent@^3.1.0:
     path-dirname "^1.0.0"
 
 glob-parent@^5.0.0:
-  version "5.0.0"
-  resolved "https://registry.yarnpkg.com/glob-parent/-/glob-parent-5.0.0.tgz#1dc99f0f39b006d3e92c2c284068382f0c20e954"
-  integrity sha512-Z2RwiujPRGluePM6j699ktJYxmPpJKCfpGA13jz2hmFZC7gKetzrWvg5KN3+OsIFmydGyZ1AVwERCq1w/ZZwRg==
+  version "5.1.0"
+  resolved "https://registry.yarnpkg.com/glob-parent/-/glob-parent-5.1.0.tgz#5f4c1d1e748d30cd73ad2944b3577a81b081e8c2"
+  integrity sha512-qjtRgnIVmOfnKUE3NJAQEdk+lKrxfw8t5ke7SXtfMTHcjsBfOfWXCQfdb30zfDoZQ2IRSIiidmjtbHZPZ++Ihw==
   dependencies:
     is-glob "^4.0.1"
 
