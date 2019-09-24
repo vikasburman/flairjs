@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.59.66
- *  Tue, 24 Sep 2019 05:54:30 GMT
+ *  Version: 0.59.67
+ *  Tue, 24 Sep 2019 22:08:11 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -448,132 +448,13 @@
         }
     };
     const lens = (obj, path) => path.split(".").reduce((o, key) => o && o[key] ? o[key] : null, obj);
-    const globalSetting = (path, defaultValue, asIs) => {
+    const globalSetting = (path, defaultValue, globalRoot = 'global') => {
         // any global setting (i.e., outside of a specific assembly setting) can be defined at:
-        // "global" root node in appConfig/webConfig file
-        //
-        // Each setting can be at any depth inside "global" and its generally a good idea to namespace intelligently to
+        // "global" root node (or anything else that is given) in appConfig/webConfig file
+        // Each setting can be at any depth inside "global" (or anything else given) and its generally a good idea to namespace intelligently to
         // avoid picking someone else' setting
-        //
-        // specialty of global settings, apart from being outside of a specific assembly setting is that the values can
-        // be simple values or a special structure having various values for various environments as:
-        // 
-        // global.flair.api.connections.connection1.host = "something"
-        // OR
-        // global.flair.api.connections.connection1.host = {
-        //    "local": "something1",
-        //    "dev": "something2",
-        //    "stage": "something3",
-        //    "prod": "something4",
-        // } 
-        // Based on the environment in which this code is running, it will pick relevant value
-        // in case a relevant value does not exists, it gives defaultValue
-        
-        let _globalSettings = _AppDomain.config() ? (_AppDomain.config().global || {}) : {},
-            _lensedValue = lens(_globalSettings, path),
-            keyValue = '';
-    
-        // pick env specific value, if need be
-        if (typeof _lensedValue === 'object' && !asIs) {
-            if (options.env.isLocal) {
-                keyValue = _lensedValue.local;
-            } else if (options.env.isStage) {
-                keyValue = _lensedValue.stage;
-            } else if (options.env.isProd) {
-                keyValue = _lensedValue.prod;
-            } else if (options.env.isDev) {
-                keyValue = _lensedValue.dev;
-            }
-        } else {
-            keyValue = _lensedValue;
-        }
-    
-        return keyValue || defaultValue;
-    };
-    const getEndpointUrl = (connection, url) => {
-        // any url can have following keys:
-        //  ':host': endpoint host
-        //      :host can have: local, dev, test and prod scenario values
-        //      this is replaced as first, so it can also have further keys in it
-        //  :? anything else
-        //      ? must be a unique name
-        //          :version
-        //          :account
-        //          :locale
-        //          :project
-        //          :geo
-        // name can be upper or lowercase, but whatever they are, they must match in connection and wherever they are used
-        // e.g. 
-        // "example1": {
-        //     "host": {
-        //         "local": "http://localhost:5001/:project/:geo",
-        //         "dev": "https://:geo-:project.cloudfunctions.net",
-        //         "stage": "",
-        //         "prod": ""
-        //     },
-        //     "version": "",
-        //     "locale": "",
-        //     "project": "flairjs-firebase-app",
-        //     "geo": "us-east1"
-        // }
-        // '/:host/api/:version/now' --> https://us-east1-flairjs-firebase-app.cloudfunctions.net/api/v1/now
-        // value for each of these :? can be either string OR an object same as for defined above for :host
-        // in case any :? is not found in settings, it will be looked for in env.props('api', '?') <-- api namespace for '?' key
-        if (connection) {
-            let replaceIt = (key, value) => {
-                if (value) {
-                    key = ':' + key;
-                    if (typeof value !== 'string') {
-                        if (options.env.isLocal) {
-                            value = value.local || null;
-                        } else if (options.env.isStage) {
-                            value = value.stage || null;
-                        } else if (options.env.isProd) {
-                            value = value.prod || null;
-                        } else if (options.env.isDev) {
-                            value = value.dev || null;
-                        }
-                    }
-                    if (value) {
-                        url = replaceAll(url, key, value);
-                    }
-                }
-            };
-    
-            // auto add host, if not added for brevity
-            if (url.indexOf(':host') === -1) {
-                if (!url.startsWith('/')) { url = '/' + url; }
-                url = ':host' + url;
-            }
-    
-            if (typeof connection === 'string') { // means this is value of the :host
-                replaceIt('host', connection);
-            } else { // if object -  process all keys of connection
-                for(let key in connection) {
-                    replaceIt(key, connection[key]);
-                }
-            }
-    
-            // process all remaining keys from 'api' namespace in env props
-            let apiNS = options.env.props('api');
-            for(let key in apiNS) {
-                replaceIt(key, apiNS[key]);
-            }
-        }
-        return url;
-    };
-    const apiCall = async (url, resDataType, connectionName, reqData) => { 
-        let fetchCaller = null,
-            connection = (globalSetting(`flair.api.connections.${connectionName}`, null, true) || globalSetting(`flair.api.connections.auto`, null, true)),
-            urlToCall = getEndpointUrl(connection, url);
-        
-        if (isServer) {
-            fetchCaller = _Port('serverFetch');
-        } else { // client
-            fetchCaller = _Port('clientFetch');
-        }
-    
-        return await fetchCaller(urlToCall, resDataType, reqData);
+        let _globalSettings = _AppDomain.config() ? (_AppDomain.config()[globalRoot] || {}) : {};
+        return lens(_globalSettings, path) || defaultValue;
     };
     const sieve = (obj, props, isFreeze, add) => {
         let _props = props ? splitAndTrim(props) : Object.keys(obj); // if props are not give, pick all
@@ -3566,12 +3447,11 @@
             enumerate: new _attrConfig('(class || struct) && prop || func || event'),
             dispose: new _attrConfig('class && prop'),
             post: new _attrConfig('(class || struct) && event'),
-            fetch: new _attrConfig('(class || struct) && (func && async) && !(timer || on || @fetch)'),
             on: new _attrConfig('class && func && !(event || $async || $args || $overload || $inject || $static)'),
             timer: new _attrConfig('class && func && !(event || $async || $args || $inject || @timer || $static)'),
             type: new _attrConfig('(class || struct) && prop'),
             args: new _attrConfig('(class || struct) && (func || construct) && !$on && !$overload'),
-            inject: new _attrConfig('class && (prop || func || construct) && !(static || session || state || fetch)'),
+            inject: new _attrConfig('class && (prop || func || construct) && !(static || session || state)'),
             resource: new _attrConfig('class && prop && !(session || state || inject || asset)'),
             asset: new _attrConfig('class && prop && !(session || state || inject || resource)'),
             singleton: new _attrConfig('(class && !(prop || func || event) && !($abstract || $static))'),
@@ -4845,17 +4725,10 @@
                 timer_attr = attrs.members.probe('timer', memberName).current(),          // always look for current timer
                 args_attr = attrs.members.probe('args', memberName).current(),
                 aspects_attr = attrs.members.probe('aspects', memberName).current(),
-                fetch_attr = attrs.members.probe('fetch', memberName).current(),
                 overload_attr = attrs.members.probe('overload', memberName).current(),
                 _isDeprecate = (_deprecate_attr !== null),
                 _deprecate_message = (_isDeprecate ? (_deprecate_attr.args[0] || `Function is marked as deprecate. (${def.name}::${memberName})`) : ''),
                 base = null,
-                _fetchMethod = '',
-                _fetchResponse = '',
-                _fetchUrl = '',
-                _fetchConnectionName = '',
-                _api = null,
-                _api_abort_controller = null,
                 _injections = [];
     
             // override, if required
@@ -4884,77 +4757,24 @@
             // define
             _isASync = _isASync || isASync(memberDef); // if memberDef is an async function, mark it as async automatically
             if (_isASync) {
-                // resolve fetch parameters once
-                if (fetch_attr && fetch_attr.args.length > 0) {
-                    _fetchMethod = fetch_attr.args[0]; // get, post, put, delete, etc.
-                    _fetchResponse = fetch_attr.args[1]; // json, text, blob, buffer, form
-                    _fetchUrl = fetch_attr.args[2]; // url to reach
-                    _fetchConnectionName = fetch_attr.args[3] || ''; // connection name (this must exists at global.api.connections.<connectionName>)
-                    _api = async (reqData = {}) => {
-                        // add method, rest should come by the call itself
-                        reqData.method = _fetchMethod;
-                        
-                        // configure abort controller signal
-                        // it works like this:
-                        // user can pass an instance of AbortController as first
-                        // param to any function call which has fetch attribute
-                        // this controller down there and set in _api_abort_controller variable
-                        // and removed from params, so it never reaches the actual method and
-                        // remains transparent to this method code
-                        // once set in _api_abort_controller, it is picked here
-                        // when actual api call is made and after setting the signal, this local
-                        // value of _api_abort_controller is reset, so any next call made without
-                        // AbortController goes without this, which is expected too
-                        // this means:
-                        // let someFuncAborter = new AbortController();
-                        // 
-                        // .. somewhere else
-                        // await this.someFunc(someFuncAborter, somePara1, somePara2) <-- typical call
-                        //      although function will receive only somePara1, somePara2 and someFuncAborter 
-                        //      will be plucked in between
-                        // 
-                        // .. somewhere else
-                        // someFuncAborter.abort();
-                        if (_api_abort_controller) {
-                            reqData.signal = _api_abort_controller.signal;
-                            _api_abort_controller = null; // reset local variable
-                        }
-    
-                        // make api call
-                        return await apiCall(_fetchUrl, _fetchResponse, _fetchConnectionName, reqData); // this returns a promise
-                    };
-                } else {
-                    _api = null;
-                }
-    
                 _member = async function(...args) {
                     if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
-    
-                    // fetch case, AbortController handling
-                    // see notes above for details
-                    if (fetch_attr && fetch_attr.args.length > 0 && args.length > 0) {
-                        if (args[0] instanceof AbortController) { // if first parameter is an AbortController
-                            _api_abort_controller = args[0]; // set in _api_abort_controller
-                            args.splice(0, 1); // remove first one
-                        }
-                    }
     
                     // resolve args
                     let fnArgs = [];
                     if (base) { fnArgs.push(base); }                                // base is always first, if overriding
-                    if (_api) { fnArgs.push(_api); }                                // api is always next to base, if fetch is used
-                    if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base (and api) or as first, if injected
+                    if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base or as first, if injected
                     if (args_attr && args_attr.args.length > 0) {
-                        let argsObj = _Args(...args_attr.args)(...args); 
-                        if (argsObj.error) { throw argsObj.error; }
+                        let argsObj = _Args(...args_attr.args)(...args); argsObj.throwOnError(builder);
                         fnArgs.push(argsObj);                                       // push a single args processor's result object
-                    } else {
-                        fnArgs = fnArgs.concat(args);                               // add args as is
                     }
+                    fnArgs = fnArgs.concat(args);                                   // finally add all original args as is
     
                     // get correct overload memberDef
                     if (overload_attr) {
-                        memberDef = getOverloadFunc(memberName, ...fnArgs);         // this may return null also, in that case it will throw below
+                        // note: this is finding overload on the basis of original args and not modified version fnArgs
+                        // because this may throw the matching off - e.g., if base is added and injections are added etc.
+                        memberDef = getOverloadFunc(memberName, ...args);         // this may return null also, in that case it will throw below
                     }
     
                     // run
@@ -4976,13 +4796,14 @@
                     if (args_attr && args_attr.args.length > 0) {
                         let argsObj = _Args(...args_attr.args)(...args); argsObj.throwOnError(builder);
                         fnArgs.push(argsObj);                                       // push a single args processor's result object
-                    } else {
-                        fnArgs = fnArgs.concat(args);                               // add args as is
-                    }
+                    } 
+                    fnArgs = fnArgs.concat(args);                                   // finally add all original args as is
     
                     // get correct overload memberDef
                     if (overload_attr) {
-                        memberDef = getOverloadFunc(memberName, ...fnArgs); // this may return null also, in that case it will throw below
+                        // note: this is finding overload on the basis of original args and not modified version fnArgs
+                        // because this may throw the matching off - e.g., if base is added and injections are added etc.
+                        memberDef = getOverloadFunc(memberName, ...args);           // this may return null also, in that case it will throw below
                     }                   
     
                     // run
@@ -7089,90 +6910,6 @@
     };
     _Port.define('settingsReader', __settingsReader);
     
-    // policy based cache handler factory
-    const __cacheHandler = (env) => { // eslint-disable-line no-unused-vars
-        // this inbuilt caching works over localstorage 
-        // any external caching can be applied by providing a custom cache handler
-        let cacheStorage = _Port('localStorage'),
-            cacheItemNamePrefix = '__cache_',
-            cachedItemSavedAtNameSuffix = '__savedAt_';
-    
-        let funcs = {
-            get: async (cacheId, cacheConfig) => {
-                if (typeof cacheId !== 'string') { throw _Exception.InvalidArgument('cacheId'); }
-                if (!cacheConfig || !cacheConfig.duration) { throw _Exception.InvalidArgument('cacheConfig'); }
-    
-                let itemKey = `${cacheItemNamePrefix}${cacheId}`,
-                    savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`,
-                    fetchedData = JSON.parse(cacheStorage.getItem(itemKey)).value,
-                    dataSavedAt = parseInt(cacheStorage.getItem(savedAtItemKey));
-                if ((Date.now() - dataSavedAt) <= cacheConfig.duration) { // cache is still hot
-                    return fetchedData;
-                } else { // cache is stale, delete it
-                    cacheStorage.removeItem(itemKey);
-                    cacheStorage.removeItem(savedAtItemKey);
-                    throw _Exception.NotFound(cacheId);
-                }
-            },
-            set: async (cacheId, cacheConfig, fetchedData) => {
-                if (typeof cacheId !== 'string') { throw _Exception.InvalidArgument('cacheId'); }
-                if (!cacheConfig) { throw _Exception.InvalidArgument('cacheConfig'); }
-                if (typeof fetchedData === 'undefined') { throw _Exception.InvalidArgument('fetchedData'); }
-    
-                let itemKey = `${cacheItemNamePrefix}${cacheId}`,
-                    savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`,
-                    jsonFetchedData = JSON.stringify({value: fetchedData}),
-                    dataSavedAt = Date.now().toString();
-                cacheStorage.setItem(itemKey, jsonFetchedData);
-                cacheStorage.setItem(savedAtItemKey, dataSavedAt);
-            },
-            remove: async (cacheId, cacheConfig) => { 
-                if (typeof cacheId !== 'string') { throw _Exception.InvalidArgument('cacheId'); }
-                if (!cacheConfig) { throw _Exception.InvalidArgument('cacheConfig'); }
-            
-                let itemKey = `${cacheItemNamePrefix}${cacheId}`,
-                    savedAtItemKey = `${itemKey}${cachedItemSavedAtNameSuffix}`;
-                cacheStorage.removeItem(itemKey);
-                cacheStorage.removeItem(savedAtItemKey);
-            }
-        };
-        return funcs;
-    };
-    _Port.define('cacheHandler', ['get', 'set', 'remove'], __cacheHandler);
-    
-    // fetch core logic
-    const fetcher = async (fetchFunc, url, resDataType, reqData) => {
-        if (typeof url !== 'string') { throw _Exception.InvalidArgument('url'); }
-        if (typeof resDataType !== 'string' || ['text', 'json', 'buffer', 'form', 'blob'].indexOf(resDataType) === -1) { throw _Exception.InvalidArgument('resDataType'); }
-        if (!reqData) { throw _Exception.InvalidArgument('reqData'); }
-    
-        let response = await fetchFunc(url, reqData);
-        if (!response.ok) { throw _Exception.OperationFailed(url, response.status); }
-    
-        let resMethod = '';
-        switch(resDataType) {
-            case 'text': resMethod = 'text'; break;
-            case 'json': resMethod = 'json'; break;
-            case 'buffer': resMethod = 'arrayBuffer'; break;
-            case 'form': resMethod = 'formData'; break;
-            case 'blob': resMethod = 'blob'; break;
-        }
-        return await response[resMethod]();
-    };
-    // serverFetch factory
-    const __serverFetch = (env) => { // eslint-disable-line no-unused-vars
-        return (url, resDataType, reqData) => {
-            return fetcher(require('node-fetch'), url, resDataType, reqData);
-        };
-    };
-    _Port.define('serverFetch', __serverFetch);
-    // clientFetch factory
-    const __clientFetch = (env) => { // eslint-disable-line no-unused-vars
-        return (url, resDataType, reqData) => {
-            return fetcher(fetch, url, resDataType, reqData);
-        };
-    };
-    _Port.define('clientFetch', __clientFetch);
      
     /**
      * @name Reflector
@@ -7667,10 +7404,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.59.66',
+        version: '0.59.67',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Tue, 24 Sep 2019 05:54:30 GMT')
+        lupdate: new Date('Tue, 24 Sep 2019 22:08:11 GMT')
     });  
 
     // bundled assembly load process 
@@ -8074,7 +7811,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('', (typeof onLoadComplete === 'function' ? onLoadComplete : null)); // eslint-disable-line no-undef
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.66","lupdate":"Tue, 24 Sep 2019 05:54:30 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.67","lupdate":"Tue, 24 Sep 2019 22:08:11 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // return settings and config
         return Object.freeze({
