@@ -38,7 +38,7 @@ const which = (def) => {
         items = item.split(':'),
         envProp = items[0].trim();
         item = items[1].trim();
-        if (!(env[envProp] || env.x()[envProp])) { // if envProp is NOT defined neither at root env nor at extended env, OR defined but is false / falsy
+        if (!(options.env[envProp] || options.env.x()[envProp])) { // if envProp is NOT defined neither at root env nor at extended env, OR defined but is false / falsy
             item = '';  // special case to dynamically mark absence of a type
         }
     }
