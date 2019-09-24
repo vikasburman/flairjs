@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.59.65
- *  Tue, 24 Sep 2019 05:48:33 GMT
+ *  Version: 0.59.66
+ *  Tue, 24 Sep 2019 05:54:30 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -326,7 +326,7 @@
     };
     const which = (def) => {
         // full blown def can be:
-        // envProp; mainThreadOnServer{.min}.xyz ~ envProp; workerThreadOnServer{.min}.xyz | envProp; mainThreadOnClient{.min}.xyz ~ envProp; workerThreadOnClient{.min}.xyz
+        // envProp::mainThreadOnServer{.min}.xyz ~ envProp::workerThreadOnServer{.min}.xyz | envProp::mainThreadOnClient{.min}.xyz ~ envProp::workerThreadOnClient{.min}.xyz
     
         let item = def,
             items = null,
@@ -354,8 +354,8 @@
         }
     
         // environment specific condition
-        if (item.indexOf(';') !== -1) { // isVue: ./flair.ui.vue{.min}.js
-            items = item.split(';'),
+        if (item.indexOf('::') !== -1) { // isVue::./flair.ui.vue{.min}.js
+            items = item.split('::'),
             envProp = items[0].trim();
             item = items[1].trim();
             if (!(options.env[envProp] || options.env.x()[envProp])) { // if envProp is NOT defined neither at root env nor at extended env, OR defined but is false / falsy
@@ -7667,10 +7667,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.59.65',
+        version: '0.59.66',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Tue, 24 Sep 2019 05:48:33 GMT')
+        lupdate: new Date('Tue, 24 Sep 2019 05:54:30 GMT')
     });  
 
     // bundled assembly load process 
@@ -8074,7 +8074,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('', (typeof onLoadComplete === 'function' ? onLoadComplete : null)); // eslint-disable-line no-undef
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.65","lupdate":"Tue, 24 Sep 2019 05:48:33 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.66","lupdate":"Tue, 24 Sep 2019 05:54:30 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // return settings and config
         return Object.freeze({

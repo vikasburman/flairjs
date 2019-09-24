@@ -6,7 +6,7 @@ const guid = () => {
 };
 const which = (def) => {
     // full blown def can be:
-    // envProp; mainThreadOnServer{.min}.xyz ~ envProp; workerThreadOnServer{.min}.xyz | envProp; mainThreadOnClient{.min}.xyz ~ envProp; workerThreadOnClient{.min}.xyz
+    // envProp::mainThreadOnServer{.min}.xyz ~ envProp::workerThreadOnServer{.min}.xyz | envProp::mainThreadOnClient{.min}.xyz ~ envProp::workerThreadOnClient{.min}.xyz
 
     let item = def,
         items = null,
@@ -34,8 +34,8 @@ const which = (def) => {
     }
 
     // environment specific condition
-    if (item.indexOf(';') !== -1) { // isVue: ./flair.ui.vue{.min}.js
-        items = item.split(';'),
+    if (item.indexOf('::') !== -1) { // isVue::./flair.ui.vue{.min}.js
+        items = item.split('::'),
         envProp = items[0].trim();
         item = items[1].trim();
         if (!(options.env[envProp] || options.env.x()[envProp])) { // if envProp is NOT defined neither at root env nor at extended env, OR defined but is false / falsy
