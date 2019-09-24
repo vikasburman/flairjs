@@ -136,6 +136,91 @@ const globalSetting = (path, defaultValue, globalRoot = 'global') => {
     let _globalSettings = _AppDomain.config() ? (_AppDomain.config()[globalRoot] || {}) : {};
     return lens(_globalSettings, path) || defaultValue;
 };
+const getEndpointUrl = (connection, url) => {
+    // any url can have following keys:
+    //  ':host': endpoint host
+    //      :host can have: local, dev, test and prod scenario values
+    //      this is replaced as first, so it can also have further keys in it
+    //  :? anything else
+    //      ? must be a unique name
+    //          :version
+    //          :account
+    //          :locale
+    //          :project
+    //          :geo
+    // name can be upper or lowercase, but whatever they are, they must match in connection and wherever they are used
+    // e.g. 
+    // "example1": {
+    //     "host": {
+    //         "local": "http://localhost:5001/:project/:geo",
+    //         "dev": "https://:geo-:project.cloudfunctions.net",
+    //         "stage": "",
+    //         "prod": ""
+    //     },
+    //     "version": "",
+    //     "locale": "",
+    //     "project": "flairjs-firebase-app",
+    //     "geo": "us-east1"
+    // }
+    // '/:host/api/:version/now' --> https://us-east1-flairjs-firebase-app.cloudfunctions.net/api/v1/now
+    // value for each of these :? can be either string OR an object same as for defined above for :host
+    // in case any :? is not found in settings, it will be looked for in env.props('api', '?') <-- api namespace for '?' key
+    if (connection) {
+        let replaceIt = (key, value) => {
+            if (value) {
+                key = ':' + key;
+                if (typeof value !== 'string') {
+                    if (options.env.isLocal) {
+                        value = value.local || null;
+                    } else if (options.env.isStage) {
+                        value = value.stage || null;
+                    } else if (options.env.isProd) {
+                        value = value.prod || null;
+                    } else if (options.env.isDev) {
+                        value = value.dev || null;
+                    }
+                }
+                if (value) {
+                    url = replaceAll(url, key, value);
+                }
+            }
+        };
+
+        // auto add host, if not added for brevity
+        if (url.indexOf(':host') === -1) {
+            if (!url.startsWith('/')) { url = '/' + url; }
+            url = ':host' + url;
+        }
+
+        if (typeof connection === 'string') { // means this is value of the :host
+            replaceIt('host', connection);
+        } else { // if object -  process all keys of connection
+            for(let key in connection) {
+                replaceIt(key, connection[key]);
+            }
+        }
+
+        // process all remaining keys from 'api' namespace in env props
+        let apiNS = options.env.props('api');
+        for(let key in apiNS) {
+            replaceIt(key, apiNS[key]);
+        }
+    }
+    return url;
+};
+const apiCall = async (url, resDataType, connectionName, reqData) => { 
+    let fetchCaller = null,
+        connection = (globalSetting(`flair.api.connections.${connectionName}`, null, true) || globalSetting(`flair.api.connections.auto`, null, true)),
+        urlToCall = getEndpointUrl(connection, url);
+    
+    if (isServer) {
+        fetchCaller = _Port('serverFetch');
+    } else { // client
+        fetchCaller = _Port('clientFetch');
+    }
+
+    return await fetchCaller(urlToCall, resDataType, reqData);
+};
 const sieve = (obj, props, isFreeze, add) => {
     let _props = props ? splitAndTrim(props) : Object.keys(obj); // if props are not give, pick all
     const extract = (_obj) => {

@@ -1220,10 +1220,17 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             timer_attr = attrs.members.probe('timer', memberName).current(),          // always look for current timer
             args_attr = attrs.members.probe('args', memberName).current(),
             aspects_attr = attrs.members.probe('aspects', memberName).current(),
+            fetch_attr = attrs.members.probe('fetch', memberName).current(),
             overload_attr = attrs.members.probe('overload', memberName).current(),
             _isDeprecate = (_deprecate_attr !== null),
             _deprecate_message = (_isDeprecate ? (_deprecate_attr.args[0] || `Function is marked as deprecate. (${def.name}::${memberName})`) : ''),
             base = null,
+            _fetchMethod = '',
+            _fetchResponse = '',
+            _fetchUrl = '',
+            _fetchConnectionName = '',
+            _api = null,
+            _api_abort_controller = null,
             _injections = [];
 
         // override, if required
@@ -1252,24 +1259,77 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         // define
         _isASync = _isASync || isASync(memberDef); // if memberDef is an async function, mark it as async automatically
         if (_isASync) {
+            // resolve fetch parameters once
+            if (fetch_attr && fetch_attr.args.length > 0) {
+                _fetchMethod = fetch_attr.args[0]; // get, post, put, delete, etc.
+                _fetchResponse = fetch_attr.args[1]; // json, text, blob, buffer, form
+                _fetchUrl = fetch_attr.args[2]; // url to reach
+                _fetchConnectionName = fetch_attr.args[3] || ''; // connection name (this must exists at global.api.connections.<connectionName>)
+                _api = async (reqData = {}) => {
+                    // add method, rest should come by the call itself
+                    reqData.method = _fetchMethod;
+                    
+                    // configure abort controller signal
+                    // it works like this:
+                    // user can pass an instance of AbortController as first
+                    // param to any function call which has fetch attribute
+                    // this controller down there and set in _api_abort_controller variable
+                    // and removed from params, so it never reaches the actual method and
+                    // remains transparent to this method code
+                    // once set in _api_abort_controller, it is picked here
+                    // when actual api call is made and after setting the signal, this local
+                    // value of _api_abort_controller is reset, so any next call made without
+                    // AbortController goes without this, which is expected too
+                    // this means:
+                    // let someFuncAborter = new AbortController();
+                    // 
+                    // .. somewhere else
+                    // await this.someFunc(someFuncAborter, somePara1, somePara2) <-- typical call
+                    //      although function will receive only somePara1, somePara2 and someFuncAborter 
+                    //      will be plucked in between
+                    // 
+                    // .. somewhere else
+                    // someFuncAborter.abort();
+                    if (_api_abort_controller) {
+                        reqData.signal = _api_abort_controller.signal;
+                        _api_abort_controller = null; // reset local variable
+                    }
+
+                    // make api call
+                    return await apiCall(_fetchUrl, _fetchResponse, _fetchConnectionName, reqData); // this returns a promise
+                };
+            } else {
+                _api = null;
+            }
+
             _member = async function(...args) {
                 if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
+
+                // fetch case, AbortController handling
+                // see notes above for details
+                if (fetch_attr && fetch_attr.args.length > 0 && args.length > 0) {
+                    if (args[0] instanceof AbortController) { // if first parameter is an AbortController
+                        _api_abort_controller = args[0]; // set in _api_abort_controller
+                        args.splice(0, 1); // remove first one
+                    }
+                }
 
                 // resolve args
                 let fnArgs = [];
                 if (base) { fnArgs.push(base); }                                // base is always first, if overriding
-                if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base or as first, if injected
+                if (_api) { fnArgs.push(_api); }                                // api is always next to base, if fetch is used
+                if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base (and api) or as first, if injected
                 if (args_attr && args_attr.args.length > 0) {
-                    let argsObj = _Args(...args_attr.args)(...args); argsObj.throwOnError(builder);
+                    let argsObj = _Args(...args_attr.args)(...args); 
+                    if (argsObj.error) { throw argsObj.error; }
                     fnArgs.push(argsObj);                                       // push a single args processor's result object
+                } else {
+                    fnArgs = fnArgs.concat(args);                               // add args as is
                 }
-                fnArgs = fnArgs.concat(args);                                   // finally add all original args as is
 
                 // get correct overload memberDef
                 if (overload_attr) {
-                    // note: this is finding overload on the basis of original args and not modified version fnArgs
-                    // because this may throw the matching off - e.g., if base is added and injections are added etc.
-                    memberDef = getOverloadFunc(memberName, ...args);         // this may return null also, in that case it will throw below
+                    memberDef = getOverloadFunc(memberName, ...fnArgs);         // this may return null also, in that case it will throw below
                 }
 
                 // run
@@ -1291,14 +1351,13 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                 if (args_attr && args_attr.args.length > 0) {
                     let argsObj = _Args(...args_attr.args)(...args); argsObj.throwOnError(builder);
                     fnArgs.push(argsObj);                                       // push a single args processor's result object
-                } 
-                fnArgs = fnArgs.concat(args);                                   // finally add all original args as is
+                } else {
+                    fnArgs = fnArgs.concat(args);                               // add args as is
+                }
 
                 // get correct overload memberDef
                 if (overload_attr) {
-                    // note: this is finding overload on the basis of original args and not modified version fnArgs
-                    // because this may throw the matching off - e.g., if base is added and injections are added etc.
-                    memberDef = getOverloadFunc(memberName, ...args);           // this may return null also, in that case it will throw below
+                    memberDef = getOverloadFunc(memberName, ...fnArgs); // this may return null also, in that case it will throw below
                 }                   
 
                 // run

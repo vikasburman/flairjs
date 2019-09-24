@@ -245,3 +245,36 @@ const __settingsReader = (env) => { // eslint-disable-line no-unused-vars
 };
 _Port.define('settingsReader', __settingsReader);
 
+// fetch core logic
+const fetcher = async (fetchFunc, url, resDataType, reqData) => {
+    if (typeof url !== 'string') { throw _Exception.InvalidArgument('url'); }
+    if (typeof resDataType !== 'string' || ['text', 'json', 'buffer', 'form', 'blob'].indexOf(resDataType) === -1) { throw _Exception.InvalidArgument('resDataType'); }
+    if (!reqData) { throw _Exception.InvalidArgument('reqData'); }
+
+    let response = await fetchFunc(url, reqData);
+    if (!response.ok) { throw _Exception.OperationFailed(url, response.status); }
+
+    let resMethod = '';
+    switch(resDataType) {
+        case 'text': resMethod = 'text'; break;
+        case 'json': resMethod = 'json'; break;
+        case 'buffer': resMethod = 'arrayBuffer'; break;
+        case 'form': resMethod = 'formData'; break;
+        case 'blob': resMethod = 'blob'; break;
+    }
+    return await response[resMethod]();
+};
+// serverFetch factory
+const __serverFetch = (env) => { // eslint-disable-line no-unused-vars
+    return (url, resDataType, reqData) => {
+        return fetcher(require('node-fetch'), url, resDataType, reqData);
+    };
+};
+_Port.define('serverFetch', __serverFetch);
+// clientFetch factory
+const __clientFetch = (env) => { // eslint-disable-line no-unused-vars
+    return (url, resDataType, reqData) => {
+        return fetcher(fetch, url, resDataType, reqData);
+    };
+};
+_Port.define('clientFetch', __clientFetch);
