@@ -6,9 +6,11 @@ const guid = () => {
 };
 const which = (def) => {
     // full blown def can be:
-    // mainThreadOnServer{.min}.xyz ~ workerThreadOnServer{.min}.xyz | mainThreadOnClient{.min}.xyz ~ workerThreadOnClient{.min}.xyz
+    // envProp: mainThreadOnServer{.min}.xyz ~ envProp: workerThreadOnServer{.min}.xyz | envProp: mainThreadOnClient{.min}.xyz ~ envProp: workerThreadOnClient{.min}.xyz
+
     let item = def,
-        items = null;
+        items = null,
+        envProp = null;
 
     if (item.indexOf('|') !== -1) { // server | client
         items = item.split('|');
@@ -31,6 +33,16 @@ const which = (def) => {
         if (item === 'x') { item = ''; } // special case to explicitly mark absence of a type
     }
 
+    // environment specific condition
+    if (item.indexOf(':') !== -1) { // isVue: ./flair.ui.vue{.min}.js
+        items = item.split(':'),
+        envProp = items[0].trim();
+        item = items[1].trim();
+        if (!(env[envProp] || env.x()[envProp])) { // if envProp is NOT defined neither at root env nor at extended env, OR defined but is false / falsy
+            item = '';  // special case to dynamically mark absence of a type
+        }
+    }
+
     // debug/prod specific pick
     if (item.indexOf('{.min}') !== -1) {  
         if (options.env.isDebug) {
@@ -38,9 +50,9 @@ const which = (def) => {
         } else {
             item = item.replace('{.min}', '.min'); // a{.min}.js => a.min.js
         }
-    }  
+    }
 
-    return item; // modified or as is
+    return item; // modified or as is or empty
 };
 const isArrow = (fn) => {
     return (!(fn).hasOwnProperty('prototype') && fn.constructor.name === 'Function');
