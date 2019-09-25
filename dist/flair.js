@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.59.71
- *  Wed, 25 Sep 2019 01:08:25 GMT
+ *  Version: 0.59.73
+ *  Wed, 25 Sep 2019 01:49:16 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -613,7 +613,7 @@
         // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
     
         // obj may be undefined or null or false, so don't check for validation of that here
-        if (type[meta]) { type = type[meta].name; } // since it can be a type as well
+        if (type[meta]) { type = type[meta].name || type[meta].Type.getName(); } // since it can be a type as well
         if (_typeOf(type) !== 'string') { throw _Exception.InvalidArgument('type', _is); }
         
         let isMatched = false;
@@ -901,30 +901,30 @@
      */ 
     const InjectedArg = function(value) {
         this.value = value;
-        this.filter = (args) => {
-            // return all plain args, leaving all injected args
-            let filteredArgs = [];
-            if (args) {
-                for(let a of args) {
-                    if (!(a instanceof InjectedArg)) { filteredArgs.push(a); }
-                }
-            }
-            return filteredArgs;
-        };
-        this.extract = (args) => {
-            // return all injected args, in reverse order
-            let injectedArgs = [];
-            if (args) {
-                for(let a of args) {
-                    if (a instanceof InjectedArg) { injectedArgs.push(a); }
-                }
-            }
-            return injectedArgs.reverse();
-        };    
     };
+    InjectedArg.filter = (args) => {
+        // return all plain args, leaving all injected args
+        let filteredArgs = [];
+        if (args) {
+            for(let a of args) {
+                if (!(a instanceof InjectedArg)) { filteredArgs.push(a); }
+            }
+        }
+        return filteredArgs;
+    };
+    InjectedArg.extract = (args) => {
+        // return all injected args, in reverse order
+        let injectedArgs = [];
+        if (args) {
+            for(let a of args) {
+                if (a instanceof InjectedArg) { injectedArgs.push(a); }
+            }
+        }
+        return injectedArgs.reverse();
+    };   
     
     // attach to flair
-    a2f('InjectedArg', InjectedArg);
+    a2f('InjectedArg', Object.freeze(InjectedArg));
     /**
      * @name Port
      * @description Customize configurable functionality of the core. This gives a way to configure a different component to
@@ -2893,7 +2893,7 @@
         // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
     
         // obj may be undefined or null or false, so don't check for validation of that here
-        if (type[meta]) { type = type[meta].name; } // since it can be a type as well
+        if (type[meta]) { type = type[meta].name || type[meta].Type.getName(); } // since it can be a type as well
         if (_typeOf(type) !== 'string') { throw _Exception.InvalidArgument('type', _as); }
     
         if (_is(obj, type)) { return obj; }
@@ -4809,12 +4809,16 @@
     
                     // 3: any known injections will come after injected args but before direct passed on args
                     if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base or as first, if injected
+    
+                    // 4: args validator - if applied, it will inject a args validator object just before directly added args
+                    // since args validator validates only directly passed args, it make sense it to inject after any special args
+                    // like base, injected args, or any injections
                     if (args_attr && args_attr.args.length > 0) {
                         let argsObj = _Args(...args_attr.args)(...args); argsObj.throwOnError(builder);
                         fnArgs.push(argsObj);                                       // push a single args processor's result object
                     }
     
-                    // 4: directly passed args
+                    // 5: directly passed args
                     let directArgs = InjectedArg.filter(args); // this removed any injected args and give rest all
                     if (directArgs) { fnArgs.push(...directArgs); }                 // finally add all original args as is
     
@@ -7452,10 +7456,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.59.71',
+        version: '0.59.73',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Wed, 25 Sep 2019 01:08:25 GMT')
+        lupdate: new Date('Wed, 25 Sep 2019 01:49:16 GMT')
     });  
 
     // bundled assembly load process 
@@ -7859,7 +7863,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('', (typeof onLoadComplete === 'function' ? onLoadComplete : null)); // eslint-disable-line no-undef
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.71","lupdate":"Wed, 25 Sep 2019 01:08:25 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.73","lupdate":"Wed, 25 Sep 2019 01:49:16 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // return settings and config
         return Object.freeze({

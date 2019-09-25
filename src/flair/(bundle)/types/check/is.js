@@ -23,7 +23,7 @@ const _is = (obj, type) => {
     // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
 
     // obj may be undefined or null or false, so don't check for validation of that here
-    if (type[meta]) { type = type[meta].name; } // since it can be a type as well
+    if (type[meta]) { type = type[meta].name || type[meta].Type.getName(); } // since it can be a type as well
     if (_typeOf(type) !== 'string') { throw _Exception.InvalidArgument('type', _is); }
     
     let isMatched = false;
