@@ -1270,12 +1270,16 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
 
                 // 3: any known injections will come after injected args but before direct passed on args
                 if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base or as first, if injected
+
+                // 4: args validator - if applied, it will inject a args validator object just before directly added args
+                // since args validator validates only directly passed args, it make sense it to inject after any special args
+                // like base, injected args, or any injections
                 if (args_attr && args_attr.args.length > 0) {
                     let argsObj = _Args(...args_attr.args)(...args); argsObj.throwOnError(builder);
                     fnArgs.push(argsObj);                                       // push a single args processor's result object
                 }
 
-                // 4: directly passed args
+                // 5: directly passed args
                 let directArgs = InjectedArg.filter(args); // this removed any injected args and give rest all
                 if (directArgs) { fnArgs.push(...directArgs); }                 // finally add all original args as is
 
