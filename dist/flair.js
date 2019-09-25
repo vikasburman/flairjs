@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.59.67
- *  Tue, 24 Sep 2019 22:08:11 GMT
+ *  Version: 0.59.71
+ *  Wed, 25 Sep 2019 01:08:25 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -891,6 +891,40 @@
     };
     
     
+    /**
+     * @name InjectedArg
+     * @description An argument that is injected by a custom attribute OR an advise
+     * @example
+     *  InjectedArg(value);
+     * @params
+     * @returns
+     */ 
+    const InjectedArg = function(value) {
+        this.value = value;
+        this.filter = (args) => {
+            // return all plain args, leaving all injected args
+            let filteredArgs = [];
+            if (args) {
+                for(let a of args) {
+                    if (!(a instanceof InjectedArg)) { filteredArgs.push(a); }
+                }
+            }
+            return filteredArgs;
+        };
+        this.extract = (args) => {
+            // return all injected args, in reverse order
+            let injectedArgs = [];
+            if (args) {
+                for(let a of args) {
+                    if (a instanceof InjectedArg) { injectedArgs.push(a); }
+                }
+            }
+            return injectedArgs.reverse();
+        };    
+    };
+    
+    // attach to flair
+    a2f('InjectedArg', InjectedArg);
     /**
      * @name Port
      * @description Customize configurable functionality of the core. This gives a way to configure a different component to
@@ -4761,20 +4795,34 @@
                     if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
     
                     // resolve args
+                    // 1: base() if applicable
                     let fnArgs = [];
                     if (base) { fnArgs.push(base); }                                // base is always first, if overriding
+    
+                    // 2: any custom attribute injected args such as api() by fetch
+                    // manage injected args: the whole logic is
+                    // any custom attribute OR advise can inject an attribute to pass on to main method
+                    // such arguments should be injected at the beginning of args array, so that all such args appear
+                    // in the order in which attributes or advise are applied
+                    let injectedArgs = InjectedArg.extract(args); // this gives the injected args in required order
+                    if (injectedArgs) { fnArgs.push(...injectedArgs); }
+    
+                    // 3: any known injections will come after injected args but before direct passed on args
                     if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base or as first, if injected
                     if (args_attr && args_attr.args.length > 0) {
                         let argsObj = _Args(...args_attr.args)(...args); argsObj.throwOnError(builder);
                         fnArgs.push(argsObj);                                       // push a single args processor's result object
                     }
-                    fnArgs = fnArgs.concat(args);                                   // finally add all original args as is
+    
+                    // 4: directly passed args
+                    let directArgs = InjectedArg.filter(args); // this removed any injected args and give rest all
+                    if (directArgs) { fnArgs.push(...directArgs); }                 // finally add all original args as is
     
                     // get correct overload memberDef
                     if (overload_attr) {
-                        // note: this is finding overload on the basis of original args and not modified version fnArgs
+                        // note: this is finding overload on the basis of directly passed args and not modified version fnArgs
                         // because this may throw the matching off - e.g., if base is added and injections are added etc.
-                        memberDef = getOverloadFunc(memberName, ...args);         // this may return null also, in that case it will throw below
+                        memberDef = getOverloadFunc(memberName, ...directArgs);         // this may return null also, in that case it will throw below
                     }
     
                     // run
@@ -7404,10 +7452,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.59.67',
+        version: '0.59.71',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Tue, 24 Sep 2019 22:08:11 GMT')
+        lupdate: new Date('Wed, 25 Sep 2019 01:08:25 GMT')
     });  
 
     // bundled assembly load process 
@@ -7421,7 +7469,7 @@
         /* eslint-disable no-unused-vars */
         
         // flair types, variables and functions
-        const { Class, Struct, Enum, Interface, Mixin, Aspects, AppDomain, $$, attr, bring, Container, include, Port, on, post, telemetry,
+        const { Class, Struct, Enum, Interface, Mixin, Aspects, AppDomain, $$, attr, InjectedArg, bring, Container, include, Port, on, post, telemetry,
                 Reflector, Serializer, Tasks, as, is, isDefined, isComplies, isDerivedFrom, isAbstract, isSealed, isStatic, isSingleton, isDeprecated,
                 isImplements, isInstanceOf, isMixed, getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf,
                 getTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;
@@ -7811,7 +7859,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('', (typeof onLoadComplete === 'function' ? onLoadComplete : null)); // eslint-disable-line no-undef
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.67","lupdate":"Tue, 24 Sep 2019 22:08:11 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.71","lupdate":"Wed, 25 Sep 2019 01:08:25 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // return settings and config
         return Object.freeze({

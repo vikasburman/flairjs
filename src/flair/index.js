@@ -186,6 +186,7 @@
     <!-- inject: ./(bundle)/types/support/event.js -->   
     <!-- inject: ./(bundle)/types/support/nie.js -->   
     <!-- inject: ./(bundle)/types/support/Dispatcher.js -->
+    <!-- inject: ./(bundle)/types/support/InjectedArg.js -->
     <!-- inject: ./(bundle)/port/port.js -->
 
     <!-- inject: ./(bundle)/assembly/AssemblyLoadContext.js -->  

@@ -1256,20 +1256,34 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                 if (_isDeprecate) { console.log(_deprecate_message); } // eslint-disable-line no-console
 
                 // resolve args
+                // 1: base() if applicable
                 let fnArgs = [];
                 if (base) { fnArgs.push(base); }                                // base is always first, if overriding
+
+                // 2: any custom attribute injected args such as api() by fetch
+                // manage injected args: the whole logic is
+                // any custom attribute OR advise can inject an attribute to pass on to main method
+                // such arguments should be injected at the beginning of args array, so that all such args appear
+                // in the order in which attributes or advise are applied
+                let injectedArgs = InjectedArg.extract(args); // this gives the injected args in required order
+                if (injectedArgs) { fnArgs.push(...injectedArgs); }
+
+                // 3: any known injections will come after injected args but before direct passed on args
                 if (_injections.length > 0) { fnArgs.push(_injections); }       // injections comes after base or as first, if injected
                 if (args_attr && args_attr.args.length > 0) {
                     let argsObj = _Args(...args_attr.args)(...args); argsObj.throwOnError(builder);
                     fnArgs.push(argsObj);                                       // push a single args processor's result object
                 }
-                fnArgs = fnArgs.concat(args);                                   // finally add all original args as is
+
+                // 4: directly passed args
+                let directArgs = InjectedArg.filter(args); // this removed any injected args and give rest all
+                if (directArgs) { fnArgs.push(...directArgs); }                 // finally add all original args as is
 
                 // get correct overload memberDef
                 if (overload_attr) {
-                    // note: this is finding overload on the basis of original args and not modified version fnArgs
+                    // note: this is finding overload on the basis of directly passed args and not modified version fnArgs
                     // because this may throw the matching off - e.g., if base is added and injections are added etc.
-                    memberDef = getOverloadFunc(memberName, ...args);         // this may return null also, in that case it will throw below
+                    memberDef = getOverloadFunc(memberName, ...directArgs);         // this may return null also, in that case it will throw below
                 }
 
                 // run
