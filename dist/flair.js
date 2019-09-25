@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.59.73
- *  Wed, 25 Sep 2019 01:49:16 GMT
+ *  Version: 0.59.75
+ *  Wed, 25 Sep 2019 04:56:26 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -913,11 +913,11 @@
         return filteredArgs;
     };
     InjectedArg.extract = (args) => {
-        // return all injected args, in reverse order
+        // return all raw injected args, in reverse order
         let injectedArgs = [];
         if (args) {
             for(let a of args) {
-                if (a instanceof InjectedArg) { injectedArgs.push(a); }
+                if (a instanceof InjectedArg) { injectedArgs.push(a.value); }
             }
         }
         return injectedArgs.reverse();
@@ -7456,10 +7456,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.59.73',
+        version: '0.59.75',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Wed, 25 Sep 2019 01:49:16 GMT')
+        lupdate: new Date('Wed, 25 Sep 2019 04:56:26 GMT')
     });  
 
     // bundled assembly load process 
@@ -7863,7 +7863,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('', (typeof onLoadComplete === 'function' ? onLoadComplete : null)); // eslint-disable-line no-undef
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.73","lupdate":"Wed, 25 Sep 2019 01:49:16 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.75","lupdate":"Wed, 25 Sep 2019 04:56:26 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // return settings and config
         return Object.freeze({

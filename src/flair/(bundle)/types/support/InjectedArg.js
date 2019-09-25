@@ -20,11 +20,11 @@ InjectedArg.filter = (args) => {
     return filteredArgs;
 };
 InjectedArg.extract = (args) => {
-    // return all injected args, in reverse order
+    // return all raw injected args, in reverse order
     let injectedArgs = [];
     if (args) {
         for(let a of args) {
-            if (a instanceof InjectedArg) { injectedArgs.push(a); }
+            if (a instanceof InjectedArg) { injectedArgs.push(a.value); }
         }
     }
     return injectedArgs.reverse();
