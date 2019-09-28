@@ -13,6 +13,7 @@ const Route = function(asmFile, route, ns, alc) {
     this.connection = route.connection || '';
     this.mount = route.mount;
     this.verbs = route.verbs || (isServer ? ['get'] : ['view']); // default verb
+    this.mw = route.mw || [];
     this.path = route.path;
     this.handler = route.handler;
 };

@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.59.75
- *  Wed, 25 Sep 2019 04:56:26 GMT
+ *  Version: 0.59.80
+ *  Thu, 26 Sep 2019 01:46:54 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -894,10 +894,6 @@
     /**
      * @name InjectedArg
      * @description An argument that is injected by a custom attribute OR an advise
-     * @example
-     *  InjectedArg(value);
-     * @params
-     * @returns
      */ 
     const InjectedArg = function(value) {
         this.value = value;
@@ -930,65 +926,48 @@
      * @description Customize configurable functionality of the core. This gives a way to configure a different component to
      *              handle some specific functionalities of the core, e.g., fetching a file on server, or loading a module on
      *              client, or handling sessionStorage, to name a few.
-     *              Ports are defined by a component and handlers of required interface types can be supplied from outside
-     *              as per usage requirements
+     *              Ports are defined by a component and handlers of required interface (complies, not implements) types can be 
+     *              supplied from outside as per usage requirements
      * @example
-     *  Port(name)                     // @returns handler/null - if connected returns handler else null
-     *  Port.define(name, members, intf)  // @returns void
-     *  Port.connect(name, handler)    // @returns void
-     *  Port.disconnect(name)          // @returns void
-     *  Port.disconnect.all()          // @returns void
-     *  Port.isDefined(name)           // @returns boolean - true/false
-     *  Port.isConnected(name)         // @returns boolean - true/false
+     *  Port(name)                     // returns handler/null - if connected returns handler else null
+     *  Port.define(name, members)     
+     *  Port.connect(ph)
+     *  Port.disconnect(name)
+     *  Port.isDefined(name)
+     *  Port.isConnected(name)
      * @params
      *  name: string - name of the port
-     *  members: array of strings - having member names that are checked for their presence
-     *  handler: function - a factory that return the actual handler to provide named functionality for current environment
-     *  inbuilt: function - an inbuilt factory implementation of the port functionality, if nothing is configured, this implementation will be returned
-     *          NOTE: Both handler and inbuilt are passed flair.options.env object to return most suited implementation of the port
-     * @returns handler/boolean/void - as specified above
+     *  members: array of strings - having member names that are checked for their presence when a port is accepted and connected
+     *  ph: object - an object having all required members defined in port definition
      */ 
     let ports_registry = {};
     const _Port = (name) => {
         if (typeof name !== 'string') { throw _Exception.InvalidArgument('name', _Port); }
-        if (ports_registry[name]) {
-            return (ports_registry[name].handler ? ports_registry[name].handler : ports_registry[name].inbuilt); // inbuilt could also be null if not inbuilt implementation is given
-        }
-        return null;
+        return ((ports_registry[name] && ports_registry[name].handler) ? ports_registry[name].handler : null);
     };
-    _Port.define = (name, members, inbuilt) => {
-        let args = _Args('name: string, members: array, inbuilt: afunction',
-                         'name: string, inbuilt: afunction',
-                         'name: string, members: array',
-                         'name: string')(name, members, inbuilt); args.throwOnError(_Port.define);
-    
+    _Port.define = (name, members) => {
+        if (typeof name !== 'string') { throw _Exception.InvalidArgument('name', _Port); }
+        if (!Array.isArray(members) || members.length === 0) { throw _Exception.InvalidArgument('members', _Port); }
         if (ports_registry[name]) { throw _Exception.Duplicate(name, _Port.define); }
+    
         ports_registry[name] = {
-            type: (args.values.members ? 'object' : 'function'), // a port handler can be 
-            members: args.values.members || null,
-            handler: null,
-            inbuilt: (args.values.inbuilt ? args.values.inbuilt(options.env) : null)
+            members: members,
+            handler: null
         };
     };
-    _Port.connect = (name, handler) => {
-        let args = _Args('name: string, handler: afunction')(name, handler); args.throwOnError(_Port.connect);
+    _Port.connect = (ph) => {
+        if (!ph || !ph.name) { throw _Exception.InvalidArgument('ph', _Port.connect); }
+        if (!ports_registry[ph.name]) { throw _Exception.NotFound(name, _Port.connect); } 
     
-        if (!ports_registry[name]) { throw _Exception.NotFound(name, _Port.connect); } 
-        let actualHandler = handler(options.env); // let it return handler as per context
-        if (typeof actualHandler !== ports_registry[name].type) { throw _Exception.InvalidArgument('handler', _Port.connect); } 
-        let members = ports_registry[name].members;
-        if (members) { 
-            for(let member of members) {
-                if (typeof actualHandler[member] === 'undefined') { throw  _Exception.NotImplemented(member, _Port.connect); }
-            }
+        let members = [ph.name].members;
+        for(let member of members) {
+            if (typeof ph[member] === 'undefined') { throw  _Exception.NotImplemented(member, _Port.connect); }
         }
-        ports_registry[name].handler = actualHandler;
+        ports_registry[name].handler = ph;
     };
     _Port.disconnect = (name) => {
         if (typeof name !== 'string') { throw _Exception.InvalidArgument('name', _Port.disconnect); }
-        if (ports_registry[name]) {
-            ports_registry[name].handler = null;
-        }
+        if (ports_registry[name]) { ports_registry[name].handler = null; }
     };
     _Port.isDefined = (name) => {
         if (typeof name !== 'string') { throw _Exception.InvalidArgument('name', _Port.isDefined); }
@@ -996,20 +975,12 @@
     };
     _Port.isConnected = (name) => {
         if (typeof name !== 'string') { throw _Exception.InvalidArgument('name', _Port.isConnected); }
-        return (ports_registry[name] && ports_registry[name].handler ? false : true);
+        return ((ports_registry[name] && ports_registry[name].handler !== null) ? true : false);
     };
     
     // attach to flair
     a2f('Port', _Port, () => {
-        // disconnect all ports
-        for(let port in ports_registry) {
-            if (ports_registry.hasOwnProperty(port)) {
-                ports_registry[port].handler = null;
-            }
-        }
-    
-        // clear registry
-        ports_registry = {};
+        ports_registry = {}; // clear registry
     });
 
     /**
@@ -3351,45 +3322,37 @@
      *  attrArgs: any - Any arguments that may be needed by attribute
      * @returns void
      */ 
-    let isInsertAttrOnTop = false;
+    let isInsertAttrOnTop = false,
+        custom_attr_registry = {};
     const _$$ = (name, ...attrArgs) => {
-        let args = _Args('name: string',
-                         'name: Attribute')(name); args.throwOnError(_$$);
+        if (typeof name !== 'string') { throw _Exception.InvalidArgument('name'); }
     
-        let AttrType = null,
-            attrInstance = null, // for inbuilt, this will remain null
-            cfg = null;
-        if (args.index === 0) { // name = string
+        let ca = null, // for inbuilt, this will remain null
             cfg = _attrMeta.inbuilt[name] || null;
-            if (!cfg) { // not an inbuilt attr
-                AttrType = _getType(name);
-                if (!AttrType) { throw _Exception.NotFound(name, _$$); }
-                name = AttrType[meta].name;
-            }
-        } else {
-            AttrType = name; // the actual Attribute type
-            name = AttrType[meta].name;
+        
+        if (!cfg) { // means it is a custom attribute
+            ca = custom_attr_registry[name] || null;
+            if (!ca) { throw _Exception.NotFound(name, _$$); }
+            cfg = new _attrConfig(ca.constraints);
         }
     
         // duplicate check
         if (findIndexByProp(_attrMeta.bucket, 'name', name) !== -1) { throw _Exception.Duplicate(name, _$$); }
     
-        // custom attribute instance
-        if (AttrType) {
-            try {
-                attrInstance = new AttrType(...attrArgs);
-            } catch (err) {
-                throw new _Exception(err, _$$);
-            }
-            cfg = new _attrConfig(attrInstance.constraints);
-        }
-    
         // store
         if (isInsertAttrOnTop) {
-            _attrMeta.bucket.unshift({name: name, cfg: cfg, isCustom: (attrInstance !== null), attr: attrInstance, args: attrArgs});
+            _attrMeta.bucket.unshift({name: name, cfg: cfg, isCustom: (ca !== null), attr: ca, args: attrArgs});
         } else {
-            _attrMeta.bucket.push({name: name, cfg: cfg, isCustom: (attrInstance !== null), attr: attrInstance, args: attrArgs});
+            _attrMeta.bucket.push({name: name, cfg: cfg, isCustom: (ca !== null), attr: ca, args: attrArgs});
         }
+    };
+    _$$.register = (ca) => {
+        if (!ca || !ca.name || !ca.constraints) { throw _Exception.InvalidArgument('ca'); }
+        if (_attrMeta.inbuilt[ca.name]) { throw _Exception.Duplicate('ca'); }
+        if (custom_attr_registry[ca.name]) { throw _Exception.Duplicate('ca'); }
+    
+        // register in local registry
+        custom_attr_registry[name] = ca;
     };
     
     /**
@@ -3436,19 +3399,11 @@
      * 
      * @constructs Constructs attribute configuration object
      */ 
-    const _attrConfig = function(isModifier, constraints) {
-        let args = _Args('isModifier: boolean, constraints: string',
-                         'constraints: string',
-                         'isModifier: boolean,')(isModifier, constraints); args.throwOnError(_attrConfig);
-    
-        // config object
-        let _this = {
-            isModifier: args.values.isModifier || false,
-            constraints: args.values.constraints
+    const _attrConfig = function(constraints, isModifier) {
+        return {
+            constraints: constraints || '',
+            isModifier: isModifier || false
         };
-    
-        // return
-        return _this;
     };
     
     const _attr = (name, ...attrArgs) => { // _attr is for internal use only, so collect/clear etc. are not exposed out)
@@ -3463,20 +3418,22 @@
     const _attrMeta = _attr[meta] = Object.freeze({
         bucket: [],
         inbuilt: Object.freeze({ 
-            static: new _attrConfig(true, '(class && !$abstract) || ((class && (prop || func)) && !($abstract || $virtual || $override))'),
+            // modifiers
+            static: new _attrConfig('(class && !$abstract) || ((class && (prop || func)) && !($abstract || $virtual || $override))', true),
         
-            abstract: new _attrConfig(true, '(class && !$sealed && !$static) || ((class && (prop || func || event)) && !($override || $sealed || $static))'),
-            virtual: new _attrConfig(true, 'class && (prop || func || construct || dispose || event) && !($abstract || $override || $sealed || $static)'),
-            override: new _attrConfig(true, '(class && (prop || func || construct || dispose || event) && ((@virtual || @abstract || @override) && !(virtual || abstract)) && !(@sealed || $static))'),
-            sealed: new _attrConfig(true, '(class || ((class && (prop || func || event)) && override))'), 
+            abstract: new _attrConfig('(class && !$sealed && !$static) || ((class && (prop || func || event)) && !($override || $sealed || $static))', true),
+            virtual: new _attrConfig('class && (prop || func || construct || dispose || event) && !($abstract || $override || $sealed || $static)', true),
+            override: new _attrConfig('(class && (prop || func || construct || dispose || event) && ((@virtual || @abstract || @override) && !(virtual || abstract)) && !(@sealed || $static))', true),
+            sealed: new _attrConfig('(class || ((class && (prop || func || event)) && override))', true), 
         
-            private: new _attrConfig(true, '(class || struct) && (prop || func || event) && !($protected || @private || $static)'),
-            protected: new _attrConfig(true, '(class) && (prop || func || event) && !($private || $static)'),
-            readonly: new _attrConfig(true, '(class || struct) && prop && !abstract'),
-            async: new _attrConfig(true, '(class || struct) && func'),
-            privateSet: new _attrConfig(true, '(class || struct) && prop && !($private || $static)'),
-            protectedSet: new _attrConfig(true, '(class) && prop && !($protected || $private || $static)'),
+            private: new _attrConfig('(class || struct) && (prop || func || event) && !($protected || @private || $static)', true),
+            protected: new _attrConfig('(class) && (prop || func || event) && !($private || $static)', true),
+            readonly: new _attrConfig('(class || struct) && prop && !abstract', true),
+            async: new _attrConfig('(class || struct) && func', true),
+            privateSet: new _attrConfig('(class || struct) && prop && !($private || $static)', true),
+            protectedSet: new _attrConfig('(class) && prop && !($protected || $private || $static)', true),
         
+            // inbuilt attributes
             overload: new _attrConfig('((class || struct) && (func || construct) && !($virtual || $abstract || $override || $args))'),
             enumerate: new _attrConfig('(class || struct) && prop || func || event'),
             dispose: new _attrConfig('class && prop'),
@@ -3503,20 +3460,12 @@
         })
     });
     
-    // define easy-syntax methods to be made available in assembly closure
-    for(let inbuilt_attr in _attrMeta.inbuilt) {
-        if (_attrMeta.inbuilt.hasOwnProperty(inbuilt_attr)) {
-            _$$[`$$${inbuilt_attr}`] = (...args) => { _$$(inbuilt_attr, ...args); };
-        }
-    }
-    
     _attr.collect = () => {
         let attrs = _attrMeta.bucket.slice(); _attr.clear();
         return attrs;
     };
     _attr.has = (name) => {
         if (typeof name !== 'string') { throw _Exception.InvalidArgument('name'); }
-        
         return (_attrMeta.bucket.findIndex(item => item.name === name) !== -1);
     };
     _attr.get = (name) => {
@@ -3534,7 +3483,10 @@
     };
     
     // attach to flair
-    a2f('$$', _$$);
+    a2f('$$', _$$, () => {
+        custom_attr_registry = {}; // clear registry
+    });
+    
       
 
     const attributesAndModifiers = (def, typeDef, memberName, isTypeLevel, isCustomAllowed) => {
@@ -4143,7 +4095,7 @@
             for(let appliedAttr of attrs.members.all(memberName).current()) {
                 if (appliedAttr.isCustom) { // custom attribute instance
                     if (memberType === 'prop') {
-                        let newSet = appliedAttr.attr.decorateProperty(def.name, memberName, member); // set must return a object with get and set members
+                        let newSet = appliedAttr.attr.decorateProperty(def.name, memberName, member, ...appliedAttr.args); // set must return a object with get and set members
                         if (newSet.get && newSet.set) {
                             newSet.get = newSet.get.bind(bindingHost);
                             newSet.set = newSet.set.bind(bindingHost);
@@ -4154,10 +4106,10 @@
                     } else { // func or event
                         let newFn = null;
                         if (memberType === 'func') { // func
-                            newFn = appliedAttr.attr.decorateFunction(def.name, memberName, member);
+                            newFn = appliedAttr.attr.decorateFunction(def.name, memberName, member, ...appliedAttr.args);
                             if (isASync(member) !== isASync(newFn)) { throw _Exception.OperationFailed(`${appliedAttr.name} decoration result is unexpected. (${def.name}::${memberName})`, builder); }
                         } else { // event
-                            newFn = appliedAttr.attr.decorateEvent(def.name, memberName, member);
+                            newFn = appliedAttr.attr.decorateEvent(def.name, memberName, member, ...appliedAttr.args);
                         }
                         if (newFn) {
                             member = newFn.bind(bindingHost); // update for next attribute application
@@ -4356,13 +4308,19 @@
             if (!params.isTopLevelInstance) { exposed_obj[parentObjs] = obj[parentObjs]; } // same object
         };
         const validateMember = (memberName, interface_being_validated) => {
+            // optional members will have a '_' suffix to mark being optional
+            let isOptionalMember = memberName.endsWith('_');
+            if (isOptionalMember) { memberName = memberName.substr(0, memberName.length - 1); } // remove _ suffix
+    
             // member must exists check + member type must match
             if (Object.keys(exposed_obj).indexOf(memberName) === -1 || modifiers.members.type(memberName) !== interface_being_validated[meta].modifiers.members.type(memberName)) {
                 if (memberName === 'dispose' && (typeof exposed_obj[_disposeName] === 'function' || 
                                                  typeof exposed_objMeta.dispose === 'function')) {
                     // its ok, continue below
                 } else {
-                    throw _Exception.NotImplemented(`Interface member is not implemented. (${interface_being_validated[meta].name + ':' + memberName})`, builder); 
+                    if (!isOptionalMember) {
+                        throw _Exception.NotImplemented(`Interface member is not implemented. (${interface_being_validated[meta].name + ':' + memberName})`, builder); 
+                    }
                 }
             }
     
@@ -4379,6 +4337,7 @@
                 for(let _interfaceType of def.interfaces) { 
                     // an interface define members just like a type
                     // with but its functions, event and props will be nim, nie and nip respectively
+                    // additionally these names may end with '_' to represent that member being an optional member
                     for(let __memberName in _interfaceType) {
                         if (_interfaceType.hasOwnProperty(__memberName)) {
                             validateMember(__memberName, _interfaceType)
@@ -5150,8 +5109,6 @@
             }
         }
     
-    
-    
         // define proxy for clean syntax inside factory
         proxy = new Proxy({}, {
             get: (_obj, name) => { 
@@ -5658,7 +5615,9 @@
         // return 
         return _finalObject;
     };
-      
+    
+    
+    // TODO: for all types - check to keep minimum meta data and in sync  
     /**
      * @name Class
      * @description Constructs a Class type.
@@ -6058,10 +6017,10 @@
      * @name Container
      * @description Dependency injection container system
      * @example
-     *  .isRegistered(alias)                                // - true/false
-     *  .get(alias, isAll)                                  // - item / array of registered unresolved items, as is
-     *  .register(alias, item)                              // - void
-     *  .resolve(alias, isAll, ...args)                     // - item / array of resolved items
+     *  isRegistered(alias)                                // - true/false
+     *  get(alias, isAll)                                  // - item / array of registered unresolved items, as is
+     *  register(alias, item)                              // - void
+     *  resolve(alias, isAll, ...args)                     // - item / array of resolved items
      * @params
      *  alias: string - name of alias for an item
      *  item: type/object/string - either a flair type, any object or a qualified type name or a file name
@@ -6070,86 +6029,74 @@
      *  isAll: boolean - if resolve with all registered items against given alias or only first
      */ 
     let container_registry = {};
-    const _Container = {
-        // if an alias is registered
-        isRegistered: (alias) => {
-            if (typeof alias !== 'string') { throw _Exception.InvalidArgument('alias', _Container.isRegistered); }
-            return (typeof container_registry[alias] !== 'undefined' && container_registry[alias].length > 0);
-        },
+    const _Container = () => { };
+    _Container.isRegistered = (alias) => {
+        if (typeof alias !== 'string') { throw _Exception.InvalidArgument('alias', _Container.isRegistered); }
+        return (typeof container_registry[alias] !== 'undefined' && container_registry[alias].length > 0);
+    };
+    _Container.get = (alias, isAll) => {
+        if (typeof alias !== 'string') { throw _Exception.InvalidArgument('alias', _Container.get); }
+        if (isAll) {
+            return (container_registry[alias] ? container_registry[alias].slice() : []);
+        } else {
+            return (container_registry[alias] ? container_registry[alias][0] : null);
+        }
+    };
+    _Container.register = (alias, item) => {
+        if (typeof alias !== 'string') { throw _Exception.InvalidArgument('alias', _Container.register); }
+        if (!item) { throw _Exception.InvalidArgument('item', _Container.register); }
+        if (alias.indexOf('.') !== -1) { throw _Exception.InvalidArgument('alias', _Container.register); }
     
-        // get registered items as is for given alias
-        get: (alias, isAll) => {
-            if (typeof alias !== 'string') { throw _Exception.InvalidArgument('alias', _Container.get); }
+        if (typeof item === 'string') { item = which(item); } // register only relevant item for server/client
     
-            if (isAll) {
-                return (container_registry[alias] ? container_registry[alias].slice() : []);
-            } else {
-                return (container_registry[alias] ? container_registry[alias][0] : null);
+        // register (first time or push more with same alias)
+        if (!container_registry[alias]) { container_registry[alias] = []; }
+        container_registry[alias].push(item);
+    };
+    _Container.resolve = (alias, isAll, ...args) => {
+        if (typeof alias !== 'string') { throw _Exception.InvalidArgument('alias', _Container.resolve); }
+        if (typeof isAll !== 'boolean') { throw _Exception.InvalidArgument('isAll', _Container.resolve); }
+    
+        let result = null;
+        const getResolvedObject = (Type) => {
+            // TODO: resolve one alias only once for isAll and once for first item (if isAll was done, pick first from there)
+            // and rest all times load from local resolved cache (lifecycle management thoughts as well)
+    
+            let obj = Type; // whatever it was
+            if (typeof Type === 'string') {
+                if (Type.endsWith('.js') || Type.endsWith('.mjs')) { 
+                    // file, leave it as is
+                } else { // try to resolve it from a loaded type
+                    let _Type = _getType(Type);
+                    if (_Type) { Type = _Type; }
+                }
             }
-        },
-    
-        // register given alias
-        register: (alias, item) => {
-            if (typeof alias !== 'string') { throw _Exception.InvalidArgument('alias', _Container.register); }
-            if (!item) { throw _Exception.InvalidArgument('item', _Container.register); }
-            if (alias.indexOf('.') !== -1) { throw _Exception.InvalidArgument('alias', _Container.register); }
-    
-            if (typeof item === 'string') { 
-                item = which(item); // register only relevant item for server/client
-            }
-            // register (first time or push more with same alias)
-            if (!container_registry[alias]) { container_registry[alias] = []; }
-            container_registry[alias].push(item);
-        },
-    
-        // resolve alias with registered item(s)
-        resolve: (alias, isAll, ...args) => {
-            if (typeof alias !== 'string') { throw _Exception.InvalidArgument('alias', _Container.resolve); }
-            if (typeof isAll !== 'boolean') { throw _Exception.InvalidArgument('isAll', _Container.resolve); }
-        
-            let result = null;
-            const getResolvedObject = (Type) => {
-                // TODO: resolve one alias only once for isAll and once for first item (if isAll was done, pick first from there)
-                // and rest all times load from local resolved cache
-    
-                let obj = Type; // whatever it was
-                if (typeof Type === 'string') {
-                    if (Type.endsWith('.js') || Type.endsWith('.mjs')) { 
-                        // file, leave it as is
-                    } else { // try to resolve it from a loaded type
-                        let _Type = _getType(Type);
-                        if (_Type) { Type = _Type; }
+            if (['class', 'struct'].indexOf(_typeOf(Type)) !== -1) { // only class and struct need a new instance
+                try {
+                    if (args) {
+                        obj = new Type(...args); 
+                    } else {
+                        obj = new Type(); 
                     }
-                }
-                if (['class', 'struct'].indexOf(_typeOf(Type)) !== -1) { // only class and struct need a new instance
-                    try {
-                        if (args) {
-                            obj = new Type(...args); 
-                        } else {
-                            obj = new Type(); 
-                        }
-                    } catch (err) {
-                        throw _Exception.OperationFailed(`Type could not be instantiated. (${Type[meta].name})`, _Container.resolve);
-                    }
-                }
-                // any other type of object will be passed through as is
-    
-                // return
-                return obj;
-            };
-    
-            if (container_registry[alias] && container_registry[alias].length > 0) {
-                if (isAll) {
-                    result = [];
-                    container_registry[alias].forEach(Type => { result.push(getResolvedObject(Type)); });
-                } else {
-                    result = getResolvedObject(container_registry[alias][0]); // pick first
+                } catch (err) {
+                    throw _Exception.OperationFailed(`Type could not be instantiated. (${Type[meta].name})`, _Container.resolve);
                 }
             }
+            // any other type of object will be passed through as is
     
             // return
-            return result;
+            return obj;
+        };
+    
+        if (container_registry[alias] && container_registry[alias].length > 0) {
+            if (isAll) {
+                result = [];
+                container_registry[alias].forEach(Type => { result.push(getResolvedObject(Type)); });
+            } else {
+                result = getResolvedObject(container_registry[alias][0]); // pick first
+            }
         }
+        return result;
     };
     
     // attach to flair
@@ -6715,190 +6662,16 @@
         ADPool.length = 0;
     });
      
-    // define all ports with their inbuilt implementations as applicable
+    /**
+     * @name ClientFileLoaderPort
+     * @description Default client file loading implementation
+     */
+    const ClientFileLoaderPort = function() {
+        this.name = 'clientFile';
     
-    // sessionStorage factory
-    const __sessionStorage = (env) => {
-        if (env.isServer) {
-            if (!global.sessionStorage) { 
-                // the way, on browser sessionStorage is different for each tab, 
-                // here 'sessionStorage' property on global is different for each node instance in a cluster
-                const nodeSessionStorage = function() {
-                    let keys = {};
-                    this.key = (key) => { 
-                        if (!key) { throw _Exception.InvalidArgument('key', this.key); }
-                        return (keys.key ? true : false); 
-                    };
-                    this.getItem = (key) => { 
-                        if (!key) { throw _Exception.InvalidArgument('key', this.getItem); }
-                        return keys.key || null;
-                    };
-                    this.setItem = (key, value) => {
-                        if (!key) { throw _Exception.InvalidArgument('key', this.setItem); }
-                        if (typeof value === 'undefined') { throw _Exception.InvalidArgument('value', this.setItem); }
-                        keys[key] = value;
-                    };
-                    this.removeItem = (key) => { 
-                        if (!key) { throw _Exception.InvalidArgument('key', this.removeItem); }
-                        delete keys[key];
-                    };
-                    this.clear = () => { 
-                        keys = {};
-                    };                        
-                };
-                global.sessionStorage = new nodeSessionStorage();
-            }
-            return global.sessionStorage;
-        } else { // client
-            return window.sessionStorage;
-        }
-    };
-    _Port.define('sessionStorage', ['key', 'getItem', 'setItem', 'removeItem', 'clear'], __sessionStorage);
-    
-    // localStorage factory
-    const __localStorage = (env) => {
-        if (env.isServer) {
-            return __sessionStorage(env);
-        } else { // client
-            return window.localStorage;
-        }
-    };
-    _Port.define('localStorage', ['key', 'getItem', 'setItem', 'removeItem', 'clear'], __localStorage);
-    
-    // serverModule factory
-    const __serverModule = (env) => { // eslint-disable-line no-unused-vars
-        let funcs = {
-            require: async (module) => {
-                if (typeof module !== 'string') { throw _Exception.InvalidArgument('module'); }
-    
-                // both worker and normal scenarios, same loading technique
-                try {
-                    return require(module);
-                } catch (err) {
-                    throw new _Exception(err);
-                }
-            },
-            undef: (module) => {
-                if (typeof module !== 'string') { throw _Exception.InvalidArgument('module', funcs.undef); }
-                try {
-                    delete require.cache[require.resolve(module)]
-                } catch (err) {
-                    throw new _Exception(err, funcs.undef);
-                }
-            }
-        };
-        return funcs;
-    };
-    _Port.define('serverModule', ['require', 'undef'], __serverModule);
-    
-    // clientModule factory
-    const __clientModule = (env) => {
-        let funcs = {
-            require: async (module) => {
-                if (typeof module !== 'string') { throw _Exception.InvalidArgument('module'); }
-    
-                let doLoadViaRequire = () => {
-                    return new Promise((resolve, reject) => { 
-                        require([module], resolve, reject); 
-                    });
-                };
-                let doLoadViaDOM = () => {
-                    return new Promise((resolve, reject) => { 
-                        let ext = module.substr(module.lastIndexOf('.') + 1).toLowerCase();
-                        let js = window.document.createElement('script');
-                        if (ext === 'mjs') {
-                            js.type = 'module';
-                        } else {
-                            js.type = 'text/javascript';
-                        }
-                        js.name = module;
-                        js.src = module;
-                        js.onload = () => { 
-                            resolve(); // TODO: Check how we can pass the loaded 'exported' object of module to this resolve.
-                        };
-                        js.onerror = (err) => {
-                            reject(new _Exception(err));
-                        };
-                        window.document.head.appendChild(js);                    
-                    });
-                };
-    
-                if (typeof require !== 'undefined') { // if requirejs is available
-                    return await doLoadViaRequire();
-                } else { // load it as file on browser or in web worker
-                    if (env.isWorker) {
-                        importScripts(module); // sync call
-                        return // TODO: Check how we can pass the loaded 'exported' object of module to this resolve.
-                    } else { // browser
-                        return await doLoadViaDOM();
-                    }
-                }
-            },
-            undef: (module) => {
-                if (typeof module !== 'string') { throw _Exception.InvalidArgument('module', funcs.undef); }
-                let _requireJs = null;
-                if (isWorker) {
-                    _requireJs = WorkerGlobalScope.requirejs || null;
-                } else {
-                    _requireJs = window.requirejs || null;
-                }
-                if (_requireJs) { // if requirejs library is available
-                    _requireJs.undef(module);
-                } else {
-                    // console.warn("No approach is available to undef a loaded module. Connect clientModule port to an external handler."); // eslint-disable-line no-console
-                }
-            }
-        };
-        return funcs;
-    };
-    _Port.define('clientModule', ['require', 'undef'], __clientModule);
-    
-    // serverFile factory
-    const __serverFile = (env) => { // eslint-disable-line no-unused-vars
-        return (file) => {
-            return new Promise((resolve, reject) => {
-                if (typeof file !== 'string') { reject(_Exception.InvalidArgument('file')); return; }
-    
-                let ext = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
-                try {
-                    let httpOrhttps = null,
-                        body = '';
-                    if (file.startsWith('https')) {
-                        httpOrhttps = require('https');
-                    } else {
-                        httpOrhttps = require('http'); // for urls where it is not defined
-                    }
-                    httpOrhttps.get(file, (resp) => {
-                        resp.on('data', (chunk) => { body += chunk; });
-                        resp.on('end', () => { 
-                            let contentType = resp.headers['content-type'];
-                            if (ext === 'json' || /^application\/json/.test(contentType)) { // special case of JSON
-                                try {
-                                    let data = JSON.parse(body);
-                                    resolve(data);
-                                } catch (err) {
-                                    reject(new _Exception(err));
-                                }
-                            } else { // everything else is a text
-                                resolve(body);
-                            }
-                        });
-                    }).on('error', (err) => {
-                        reject(new _Exception(err));
-                    });
-                } catch(err) {
-                    reject(new _Exception(err));
-                }
-            });
-        };
-    };
-    _Port.define('serverFile', __serverFile);
-    
-    // clientFile factory
-    const __clientFile = (env) => { // eslint-disable-line no-unused-vars
-        return async (file) => {
+        this.load = async (file) => {
             if (typeof file !== 'string') { throw _Exception.InvalidArgument('file'); }
-    
+            
             let ext = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
             let response = await fetch(file);
             if (!response.ok) { throw _Exception.OperationFailed(file, response.status); }
@@ -6908,14 +6681,151 @@
                 return response.json();
             } else { // everything else is a text
                 return response.text();
+            }       
+        };
+    };
+     
+    /**
+     * @name ClientModuleLoaderPort
+     * @description Default client module loading implementation
+     */
+    const ClientModuleLoaderPort = function() {
+        this.name = 'clientModule';
+    
+        this.require = async (module) => {
+            if (typeof module !== 'string') { throw _Exception.InvalidArgument('module'); }
+            
+            let doLoadViaRequire = () => {
+                return new Promise((resolve, reject) => { 
+                    require([module], resolve, reject); 
+                });
+            };
+            let doLoadViaDOM = () => {
+                return new Promise((resolve, reject) => { 
+                    let ext = module.substr(module.lastIndexOf('.') + 1).toLowerCase();
+                    let js = window.document.createElement('script');
+                    if (ext === 'mjs') {
+                        js.type = 'module';
+                    } else {
+                        js.type = 'text/javascript';
+                    }
+                    js.name = module;
+                    js.src = module;
+                    js.onload = () => { 
+                        resolve(); // TODO: Check how we can pass the loaded 'exported' object of module to this resolve.
+                    };
+                    js.onerror = (err) => {
+                        reject(new _Exception(err));
+                    };
+                    window.document.head.appendChild(js);                    
+                });
+            };
+    
+            if (typeof require !== 'undefined') { // if requirejs is available
+                return await doLoadViaRequire();
+            } else { // load it as file on browser or in web worker
+                if (options.env.isWorker) {
+                    importScripts(module); // sync call
+                    return // TODO: Check how we can pass the loaded 'exported' object of module to this resolve.
+                } else { // browser
+                    return await doLoadViaDOM();
+                }
+            }        
+        };
+        this.undef = (module) => {
+            if (typeof module !== 'string') { throw _Exception.InvalidArgument('module'); }
+    
+            let _requireJs = null;
+            if (options.env.isWorker) {
+                _requireJs = WorkerGlobalScope.requirejs || null;
+            } else {
+                _requireJs = window.requirejs || null;
+            }
+            if (_requireJs) { // if requirejs library is available
+                _requireJs.undef(module);
+            } else {
+                console.warn("No approach is available to undef a loaded module. Connect clientModule port to an external handler."); // eslint-disable-line no-console
             }
         };
     };
-    _Port.define('clientFile', __clientFile);
+     
+    /**
+     * @name ServerFileLoaderPort
+     * @description Default server file loading implementation
+     */
+    const ServerFileLoaderPort = function() {
+        this.name = 'serverFile';
     
-    // settingsReader factory
-    const __settingsReader = (env) => { // eslint-disable-line no-unused-vars
-        return (asmName) => {
+        this.load = async (file) => {
+            const serverFileLoader = () => {
+                return new Promise((resolve, reject) => {
+                    if (typeof file !== 'string') { reject(_Exception.InvalidArgument('file')); return; }
+        
+                    let ext = file.substr(file.lastIndexOf('.') + 1).toLowerCase();
+                    try {
+                        let httpOrhttps = null,
+                            body = '';
+                        if (file.startsWith('https')) {
+                            httpOrhttps = require('https');
+                        } else {
+                            httpOrhttps = require('http'); // for urls where it is not defined
+                        }
+                        httpOrhttps.get(file, (resp) => {
+                            resp.on('data', (chunk) => { body += chunk; });
+                            resp.on('end', () => { 
+                                let contentType = resp.headers['content-type'];
+                                if (ext === 'json' || /^application\/json/.test(contentType)) { // special case of JSON
+                                    try {
+                                        let data = JSON.parse(body);
+                                        resolve(data);
+                                    } catch (err) {
+                                        reject(new _Exception(err));
+                                    }
+                                } else { // everything else is a text
+                                    resolve(body);
+                                }
+                            });
+                        }).on('error', (err) => {
+                            reject(new _Exception(err));
+                        });
+                    } catch(err) {
+                        reject(new _Exception(err));
+                    }
+                });  
+            };
+    
+            return await serverFileLoader();
+        };
+    };
+     
+    
+    /**
+     * @name ServerModuleLoaderPort
+     * @description Default server module loading implementation
+     */
+    const ServerModuleLoaderPort = function() {
+        this.name = 'serverModule';
+    
+        this.require = async (module) => {
+            if (typeof module !== 'string') { throw _Exception.InvalidArgument('module'); }
+            return require(module); // both worker and normal scenarios, same loading technique
+        };
+        this.undef = (module) => {
+            if (typeof module !== 'string') { throw _Exception.InvalidArgument('module'); }
+            delete require.cache[require.resolve(module)]
+        };
+    };
+     
+    /**
+     * @name SettingsReaderPort
+     * @description Default settings reader implementation
+     */
+    const SettingsReaderPort = function() {
+        this.name = 'settingsReader';
+    
+        this.read = (asmName) => {
+            if (typeof asmName !== 'string') { throw _Exception.InvalidArgument('asmName'); }
+    
             /** 
              * NOTE: appConfig.json (on server) and webConfig.json (on client)
              * is the standard config file which can contain settings for every
@@ -6954,14 +6864,61 @@
             if (configFileJSON && configFileJSON[asmName]) { // pick non-worker settings
                 settings = deepMerge([settings, configFileJSON[asmName]], false);
             }
-            if (env.isWorker && configFileJSON && configFileJSON[`worker:${asmName}`]) { // overwrite with worker section if defined
+            if (options.env.isWorker && configFileJSON && configFileJSON[`worker:${asmName}`]) { // overwrite with worker section if defined
                 settings = deepMerge([settings, configFileJSON[`worker:${asmName}`]], false);
             }
             return settings;
         };
     };
-    _Port.define('settingsReader', __settingsReader);
     
+    //
+    // define all inbuilt port definitions
+    //
+    
+    //  clientModule {
+    //      require: async (module)
+    //      undef: (module)
+    //  }
+    //  module: module to load or undef
+    _Port.define('clientModule', ['require', 'undef']);
+    
+    //  serverModule {
+    //      require: async (module)
+    //      undef: (module)
+    //  }
+    //  module: module to load or undef
+    _Port.define('serverModule', ['require', 'undef']);
+    
+    //  clientFile {
+    //      load: async (file)
+    //  }
+    //  file: file to load
+    _Port.define('clientFile', ['load']);
+    
+    //  serverFile {
+    //      load: async (file)
+    //  }
+    //  file: file to load
+    _Port.define('serverFile', ['load']);
+    
+    //  settingsReader {
+    //      read: (asmName)
+    //  }
+    //  asmName: assembly name to read settings for
+    _Port.define('settingsReader', ['read']);
+    
+    //
+    // connect all inbuilt port implementations
+    //
+    
+    let list = [];
+    list.push(options.env.isServer ? ServerModuleLoaderPort : ClientModuleLoaderPort);
+    list.push(options.env.isServer ? ServerFileLoaderPort : ClientFileLoaderPort);
+    list.push(SettingsReaderPort);
+    
+    for(let ph of list) {
+        _Port.connect(new ph());
+    }
      
     /**
      * @name Reflector
@@ -7456,10 +7413,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.59.75',
+        version: '0.59.80',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Wed, 25 Sep 2019 04:56:26 GMT')
+        lupdate: new Date('Thu, 26 Sep 2019 01:46:54 GMT')
     });  
 
     // bundled assembly load process 
@@ -7590,26 +7547,19 @@
         });
         
     })();    
-    (() => { // type: ./src/flair/(root)/@2-Attribute.js
+    (() => { // type: ./src/flair/(root)/IAttribute.js
         /**
-         * @name Attribute
-         * @description Attribute base class.
+         * @name IAttribute
+         * @description IAttribute interface
          */
-        $$('abstract');
         $$('ns', '(root)');
-		Class('Attribute', function() {
-            $$('virtual');
-            this.construct = (...args) => {
-                this.args = Object.freeze(args);
-            };
+		Interface('IAttribute', function() {
+            /** 
+            *  @name name: string - name of custom attribute
+            */    
+            this.name = nip;
         
-           /** 
-            *  @name args: array - arguments as defined where attribute is applied e.g., ('text', 012, false, Reference)
-            */
-            $$('readonly');
-            this.args = [];
-        
-           /** 
+            /** 
             *  @name constraints: string - An expression that defined the constraints of applying this attribute 
             *                     using NAMES, PREFIXES, SUFFIXES and logical Javascript operator
             * 
@@ -7643,12 +7593,11 @@
             *                        GROUPING: ((<name1> || <name2>) && (<name1> || <name2>))
             *                                  (((<name1> || <name2>) && (<name1> || <name2>)) || <name3>)
             * 
-            **/
-            $$('readonly');
-            this.constraints = '';
+            **/          
+            this.constraints = nip;
         
             /** 
-             * @name decorateProperty
+             * @name decorateProperty (optional)
              * @description Property decorator
              * @example
              *  decorateProperty(typeName, memberName, member)
@@ -7661,12 +7610,11 @@
              *  object - having decorated { get: fn, set: fn }
              *           Note: decorated get must call member's get
              *                 decorated set must accept value argument and pass it to member's set with or without processing
-             */  
-            $$('virtual');
-            this.decorateProperty = nim;
+             */     
+             this.decorateProperty_ = nim; 
         
             /** 
-             * @name decorateFunction
+             * @name decorateFunction (optional)
              * @description Function decorator
              * @example
              *  decorateFunction(typeName, memberName, member)
@@ -7678,11 +7626,10 @@
              *  function - decorated function
              *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
              */  
-            $$('virtual');
-            this.decorateFunction = nim;    
+            this.decorateFunction_ = nim;
         
             /** 
-             * @name decorateEvent
+             * @name decorateEvent (optional)
              * @description Event decorator
              * @example
              *  decorateEvent(typeName, memberName, member)
@@ -7694,10 +7641,8 @@
              *  function - decorated function
              *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
              */  
-            $$('virtual');
-            this.decorateEvent = nim;
+            this.decorateEvent_ = nim;
         });
-        
         
     })();    
     (() => { // type: ./src/flair/(root)/IDisposable.js
@@ -7708,6 +7653,20 @@
         $$('ns', '(root)');
 		Interface('IDisposable', function() {
             this.dispose = nim;
+        });
+        
+    })();    
+    (() => { // type: ./src/flair/(root)/IPortHandler.js
+        /**
+         * @name IPortHandler
+         * @description IPortHandler interface
+         */
+        $$('ns', '(root)');
+		Interface('IPortHandler', function() {
+            /** 
+            *  @name name: string - name of port handler
+            */    
+           this.name = nip;
         });
         
     })();    
@@ -7863,7 +7822,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('', (typeof onLoadComplete === 'function' ? onLoadComplete : null)); // eslint-disable-line no-undef
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.75","lupdate":"Wed, 25 Sep 2019 04:56:26 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","Attribute","IDisposable","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.80","lupdate":"Thu, 26 Sep 2019 01:46:54 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","IAttribute","IDisposable","IPortHandler","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // return settings and config
         return Object.freeze({

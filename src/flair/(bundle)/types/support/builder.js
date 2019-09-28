@@ -604,7 +604,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         for(let appliedAttr of attrs.members.all(memberName).current()) {
             if (appliedAttr.isCustom) { // custom attribute instance
                 if (memberType === 'prop') {
-                    let newSet = appliedAttr.attr.decorateProperty(def.name, memberName, member); // set must return a object with get and set members
+                    let newSet = appliedAttr.attr.decorateProperty(def.name, memberName, member, ...appliedAttr.args); // set must return a object with get and set members
                     if (newSet.get && newSet.set) {
                         newSet.get = newSet.get.bind(bindingHost);
                         newSet.set = newSet.set.bind(bindingHost);
@@ -615,10 +615,10 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
                 } else { // func or event
                     let newFn = null;
                     if (memberType === 'func') { // func
-                        newFn = appliedAttr.attr.decorateFunction(def.name, memberName, member);
+                        newFn = appliedAttr.attr.decorateFunction(def.name, memberName, member, ...appliedAttr.args);
                         if (isASync(member) !== isASync(newFn)) { throw _Exception.OperationFailed(`${appliedAttr.name} decoration result is unexpected. (${def.name}::${memberName})`, builder); }
                     } else { // event
-                        newFn = appliedAttr.attr.decorateEvent(def.name, memberName, member);
+                        newFn = appliedAttr.attr.decorateEvent(def.name, memberName, member, ...appliedAttr.args);
                     }
                     if (newFn) {
                         member = newFn.bind(bindingHost); // update for next attribute application
@@ -817,13 +817,19 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         if (!params.isTopLevelInstance) { exposed_obj[parentObjs] = obj[parentObjs]; } // same object
     };
     const validateMember = (memberName, interface_being_validated) => {
+        // optional members will have a '_' suffix to mark being optional
+        let isOptionalMember = memberName.endsWith('_');
+        if (isOptionalMember) { memberName = memberName.substr(0, memberName.length - 1); } // remove _ suffix
+
         // member must exists check + member type must match
         if (Object.keys(exposed_obj).indexOf(memberName) === -1 || modifiers.members.type(memberName) !== interface_being_validated[meta].modifiers.members.type(memberName)) {
             if (memberName === 'dispose' && (typeof exposed_obj[_disposeName] === 'function' || 
                                              typeof exposed_objMeta.dispose === 'function')) {
                 // its ok, continue below
             } else {
-                throw _Exception.NotImplemented(`Interface member is not implemented. (${interface_being_validated[meta].name + ':' + memberName})`, builder); 
+                if (!isOptionalMember) {
+                    throw _Exception.NotImplemented(`Interface member is not implemented. (${interface_being_validated[meta].name + ':' + memberName})`, builder); 
+                }
             }
         }
 
@@ -840,6 +846,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             for(let _interfaceType of def.interfaces) { 
                 // an interface define members just like a type
                 // with but its functions, event and props will be nim, nie and nip respectively
+                // additionally these names may end with '_' to represent that member being an optional member
                 for(let __memberName in _interfaceType) {
                     if (_interfaceType.hasOwnProperty(__memberName)) {
                         validateMember(__memberName, _interfaceType)
@@ -1611,8 +1618,6 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         }
     }
 
-
-
     // define proxy for clean syntax inside factory
     proxy = new Proxy({}, {
         get: (_obj, name) => { 
@@ -2119,3 +2124,6 @@ const builder = (cfg) => {
     // return 
     return _finalObject;
 };
+
+
+// TODO: for all types - check to keep minimum meta data and in sync

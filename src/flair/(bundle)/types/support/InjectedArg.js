@@ -1,10 +1,6 @@
 /**
  * @name InjectedArg
  * @description An argument that is injected by a custom attribute OR an advise
- * @example
- *  InjectedArg(value);
- * @params
- * @returns
  */ 
 const InjectedArg = function(value) {
     this.value = value;

@@ -2,10 +2,10 @@
  * @name Container
  * @description Dependency injection container system
  * @example
- *  .isRegistered(alias)                                // - true/false
- *  .get(alias, isAll)                                  // - item / array of registered unresolved items, as is
- *  .register(alias, item)                              // - void
- *  .resolve(alias, isAll, ...args)                     // - item / array of resolved items
+ *  isRegistered(alias)                                // - true/false
+ *  get(alias, isAll)                                  // - item / array of registered unresolved items, as is
+ *  register(alias, item)                              // - void
+ *  resolve(alias, isAll, ...args)                     // - item / array of resolved items
  * @params
  *  alias: string - name of alias for an item
  *  item: type/object/string - either a flair type, any object or a qualified type name or a file name
@@ -14,86 +14,74 @@
  *  isAll: boolean - if resolve with all registered items against given alias or only first
  */ 
 let container_registry = {};
-const _Container = {
-    // if an alias is registered
-    isRegistered: (alias) => {
-        if (typeof alias !== 'string') { throw _Exception.InvalidArgument('alias', _Container.isRegistered); }
-        return (typeof container_registry[alias] !== 'undefined' && container_registry[alias].length > 0);
-    },
+const _Container = () => { };
+_Container.isRegistered = (alias) => {
+    if (typeof alias !== 'string') { throw _Exception.InvalidArgument('alias', _Container.isRegistered); }
+    return (typeof container_registry[alias] !== 'undefined' && container_registry[alias].length > 0);
+};
+_Container.get = (alias, isAll) => {
+    if (typeof alias !== 'string') { throw _Exception.InvalidArgument('alias', _Container.get); }
+    if (isAll) {
+        return (container_registry[alias] ? container_registry[alias].slice() : []);
+    } else {
+        return (container_registry[alias] ? container_registry[alias][0] : null);
+    }
+};
+_Container.register = (alias, item) => {
+    if (typeof alias !== 'string') { throw _Exception.InvalidArgument('alias', _Container.register); }
+    if (!item) { throw _Exception.InvalidArgument('item', _Container.register); }
+    if (alias.indexOf('.') !== -1) { throw _Exception.InvalidArgument('alias', _Container.register); }
 
-    // get registered items as is for given alias
-    get: (alias, isAll) => {
-        if (typeof alias !== 'string') { throw _Exception.InvalidArgument('alias', _Container.get); }
+    if (typeof item === 'string') { item = which(item); } // register only relevant item for server/client
 
-        if (isAll) {
-            return (container_registry[alias] ? container_registry[alias].slice() : []);
-        } else {
-            return (container_registry[alias] ? container_registry[alias][0] : null);
+    // register (first time or push more with same alias)
+    if (!container_registry[alias]) { container_registry[alias] = []; }
+    container_registry[alias].push(item);
+};
+_Container.resolve = (alias, isAll, ...args) => {
+    if (typeof alias !== 'string') { throw _Exception.InvalidArgument('alias', _Container.resolve); }
+    if (typeof isAll !== 'boolean') { throw _Exception.InvalidArgument('isAll', _Container.resolve); }
+
+    let result = null;
+    const getResolvedObject = (Type) => {
+        // TODO: resolve one alias only once for isAll and once for first item (if isAll was done, pick first from there)
+        // and rest all times load from local resolved cache (lifecycle management thoughts as well)
+
+        let obj = Type; // whatever it was
+        if (typeof Type === 'string') {
+            if (Type.endsWith('.js') || Type.endsWith('.mjs')) { 
+                // file, leave it as is
+            } else { // try to resolve it from a loaded type
+                let _Type = _getType(Type);
+                if (_Type) { Type = _Type; }
+            }
         }
-    },
-
-    // register given alias
-    register: (alias, item) => {
-        if (typeof alias !== 'string') { throw _Exception.InvalidArgument('alias', _Container.register); }
-        if (!item) { throw _Exception.InvalidArgument('item', _Container.register); }
-        if (alias.indexOf('.') !== -1) { throw _Exception.InvalidArgument('alias', _Container.register); }
-
-        if (typeof item === 'string') { 
-            item = which(item); // register only relevant item for server/client
-        }
-        // register (first time or push more with same alias)
-        if (!container_registry[alias]) { container_registry[alias] = []; }
-        container_registry[alias].push(item);
-    },
-
-    // resolve alias with registered item(s)
-    resolve: (alias, isAll, ...args) => {
-        if (typeof alias !== 'string') { throw _Exception.InvalidArgument('alias', _Container.resolve); }
-        if (typeof isAll !== 'boolean') { throw _Exception.InvalidArgument('isAll', _Container.resolve); }
-    
-        let result = null;
-        const getResolvedObject = (Type) => {
-            // TODO: resolve one alias only once for isAll and once for first item (if isAll was done, pick first from there)
-            // and rest all times load from local resolved cache
-
-            let obj = Type; // whatever it was
-            if (typeof Type === 'string') {
-                if (Type.endsWith('.js') || Type.endsWith('.mjs')) { 
-                    // file, leave it as is
-                } else { // try to resolve it from a loaded type
-                    let _Type = _getType(Type);
-                    if (_Type) { Type = _Type; }
+        if (['class', 'struct'].indexOf(_typeOf(Type)) !== -1) { // only class and struct need a new instance
+            try {
+                if (args) {
+                    obj = new Type(...args); 
+                } else {
+                    obj = new Type(); 
                 }
-            }
-            if (['class', 'struct'].indexOf(_typeOf(Type)) !== -1) { // only class and struct need a new instance
-                try {
-                    if (args) {
-                        obj = new Type(...args); 
-                    } else {
-                        obj = new Type(); 
-                    }
-                } catch (err) {
-                    throw _Exception.OperationFailed(`Type could not be instantiated. (${Type[meta].name})`, _Container.resolve);
-                }
-            }
-            // any other type of object will be passed through as is
-
-            // return
-            return obj;
-        };
-
-        if (container_registry[alias] && container_registry[alias].length > 0) {
-            if (isAll) {
-                result = [];
-                container_registry[alias].forEach(Type => { result.push(getResolvedObject(Type)); });
-            } else {
-                result = getResolvedObject(container_registry[alias][0]); // pick first
+            } catch (err) {
+                throw _Exception.OperationFailed(`Type could not be instantiated. (${Type[meta].name})`, _Container.resolve);
             }
         }
+        // any other type of object will be passed through as is
 
         // return
-        return result;
+        return obj;
+    };
+
+    if (container_registry[alias] && container_registry[alias].length > 0) {
+        if (isAll) {
+            result = [];
+            container_registry[alias].forEach(Type => { result.push(getResolvedObject(Type)); });
+        } else {
+            result = getResolvedObject(container_registry[alias][0]); // pick first
+        }
     }
+    return result;
 };
 
 // attach to flair

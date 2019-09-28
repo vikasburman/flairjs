@@ -240,6 +240,11 @@
     <!-- inject: ./(bundle)/aop/aspects.js -->   
     <!-- inject: ./(bundle)/serialization/serializer.js --> 
     <!-- inject: ./(bundle)/tasks/tasks.js --> 
+    <!-- inject: ./(bundle)/port/inbuilt/ClientFileLoaderPort.js --> 
+    <!-- inject: ./(bundle)/port/inbuilt/ClientModuleLoaderPort.js --> 
+    <!-- inject: ./(bundle)/port/inbuilt/ServerFileLoaderPort.js --> 
+    <!-- inject: ./(bundle)/port/inbuilt/ServerModuleLoaderPort.js --> 
+    <!-- inject: ./(bundle)/port/inbuilt/SettingsReaderPort.js -->
     <!-- inject: ./(bundle)/port/ports.js --> 
     <!-- inject: ./(bundle)/reflection/reflector.js -->    
     <!-- inject: ./(bundle)/types/support/utils.js -->    

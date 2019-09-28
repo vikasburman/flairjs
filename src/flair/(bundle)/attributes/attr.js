@@ -9,45 +9,37 @@
  *  attrArgs: any - Any arguments that may be needed by attribute
  * @returns void
  */ 
-let isInsertAttrOnTop = false;
+let isInsertAttrOnTop = false,
+    custom_attr_registry = {};
 const _$$ = (name, ...attrArgs) => {
-    let args = _Args('name: string',
-                     'name: Attribute')(name); args.throwOnError(_$$);
+    if (typeof name !== 'string') { throw _Exception.InvalidArgument('name'); }
 
-    let AttrType = null,
-        attrInstance = null, // for inbuilt, this will remain null
-        cfg = null;
-    if (args.index === 0) { // name = string
+    let ca = null, // for inbuilt, this will remain null
         cfg = _attrMeta.inbuilt[name] || null;
-        if (!cfg) { // not an inbuilt attr
-            AttrType = _getType(name);
-            if (!AttrType) { throw _Exception.NotFound(name, _$$); }
-            name = AttrType[meta].name;
-        }
-    } else {
-        AttrType = name; // the actual Attribute type
-        name = AttrType[meta].name;
+    
+    if (!cfg) { // means it is a custom attribute
+        ca = custom_attr_registry[name] || null;
+        if (!ca) { throw _Exception.NotFound(name, _$$); }
+        cfg = new _attrConfig(ca.constraints);
     }
 
     // duplicate check
     if (findIndexByProp(_attrMeta.bucket, 'name', name) !== -1) { throw _Exception.Duplicate(name, _$$); }
 
-    // custom attribute instance
-    if (AttrType) {
-        try {
-            attrInstance = new AttrType(...attrArgs);
-        } catch (err) {
-            throw new _Exception(err, _$$);
-        }
-        cfg = new _attrConfig(attrInstance.constraints);
-    }
-
     // store
     if (isInsertAttrOnTop) {
-        _attrMeta.bucket.unshift({name: name, cfg: cfg, isCustom: (attrInstance !== null), attr: attrInstance, args: attrArgs});
+        _attrMeta.bucket.unshift({name: name, cfg: cfg, isCustom: (ca !== null), attr: ca, args: attrArgs});
     } else {
-        _attrMeta.bucket.push({name: name, cfg: cfg, isCustom: (attrInstance !== null), attr: attrInstance, args: attrArgs});
+        _attrMeta.bucket.push({name: name, cfg: cfg, isCustom: (ca !== null), attr: ca, args: attrArgs});
     }
+};
+_$$.register = (ca) => {
+    if (!ca || !ca.name || !ca.constraints) { throw _Exception.InvalidArgument('ca'); }
+    if (_attrMeta.inbuilt[ca.name]) { throw _Exception.Duplicate('ca'); }
+    if (custom_attr_registry[ca.name]) { throw _Exception.Duplicate('ca'); }
+
+    // register in local registry
+    custom_attr_registry[name] = ca;
 };
 
 /**
@@ -94,19 +86,11 @@ const _$$ = (name, ...attrArgs) => {
  * 
  * @constructs Constructs attribute configuration object
  */ 
-const _attrConfig = function(isModifier, constraints) {
-    let args = _Args('isModifier: boolean, constraints: string',
-                     'constraints: string',
-                     'isModifier: boolean,')(isModifier, constraints); args.throwOnError(_attrConfig);
-
-    // config object
-    let _this = {
-        isModifier: args.values.isModifier || false,
-        constraints: args.values.constraints
+const _attrConfig = function(constraints, isModifier) {
+    return {
+        constraints: constraints || '',
+        isModifier: isModifier || false
     };
-
-    // return
-    return _this;
 };
 
 const _attr = (name, ...attrArgs) => { // _attr is for internal use only, so collect/clear etc. are not exposed out)
@@ -121,20 +105,22 @@ const _attr_i = (name, ...attrArgs) => { // _attr is for internal use only, so c
 const _attrMeta = _attr[meta] = Object.freeze({
     bucket: [],
     inbuilt: Object.freeze({ 
-        static: new _attrConfig(true, '(class && !$abstract) || ((class && (prop || func)) && !($abstract || $virtual || $override))'),
+        // modifiers
+        static: new _attrConfig('(class && !$abstract) || ((class && (prop || func)) && !($abstract || $virtual || $override))', true),
     
-        abstract: new _attrConfig(true, '(class && !$sealed && !$static) || ((class && (prop || func || event)) && !($override || $sealed || $static))'),
-        virtual: new _attrConfig(true, 'class && (prop || func || construct || dispose || event) && !($abstract || $override || $sealed || $static)'),
-        override: new _attrConfig(true, '(class && (prop || func || construct || dispose || event) && ((@virtual || @abstract || @override) && !(virtual || abstract)) && !(@sealed || $static))'),
-        sealed: new _attrConfig(true, '(class || ((class && (prop || func || event)) && override))'), 
+        abstract: new _attrConfig('(class && !$sealed && !$static) || ((class && (prop || func || event)) && !($override || $sealed || $static))', true),
+        virtual: new _attrConfig('class && (prop || func || construct || dispose || event) && !($abstract || $override || $sealed || $static)', true),
+        override: new _attrConfig('(class && (prop || func || construct || dispose || event) && ((@virtual || @abstract || @override) && !(virtual || abstract)) && !(@sealed || $static))', true),
+        sealed: new _attrConfig('(class || ((class && (prop || func || event)) && override))', true), 
     
-        private: new _attrConfig(true, '(class || struct) && (prop || func || event) && !($protected || @private || $static)'),
-        protected: new _attrConfig(true, '(class) && (prop || func || event) && !($private || $static)'),
-        readonly: new _attrConfig(true, '(class || struct) && prop && !abstract'),
-        async: new _attrConfig(true, '(class || struct) && func'),
-        privateSet: new _attrConfig(true, '(class || struct) && prop && !($private || $static)'),
-        protectedSet: new _attrConfig(true, '(class) && prop && !($protected || $private || $static)'),
+        private: new _attrConfig('(class || struct) && (prop || func || event) && !($protected || @private || $static)', true),
+        protected: new _attrConfig('(class) && (prop || func || event) && !($private || $static)', true),
+        readonly: new _attrConfig('(class || struct) && prop && !abstract', true),
+        async: new _attrConfig('(class || struct) && func', true),
+        privateSet: new _attrConfig('(class || struct) && prop && !($private || $static)', true),
+        protectedSet: new _attrConfig('(class) && prop && !($protected || $private || $static)', true),
     
+        // inbuilt attributes
         overload: new _attrConfig('((class || struct) && (func || construct) && !($virtual || $abstract || $override || $args))'),
         enumerate: new _attrConfig('(class || struct) && prop || func || event'),
         dispose: new _attrConfig('class && prop'),
@@ -161,20 +147,12 @@ const _attrMeta = _attr[meta] = Object.freeze({
     })
 });
 
-// define easy-syntax methods to be made available in assembly closure
-for(let inbuilt_attr in _attrMeta.inbuilt) {
-    if (_attrMeta.inbuilt.hasOwnProperty(inbuilt_attr)) {
-        _$$[`$$${inbuilt_attr}`] = (...args) => { _$$(inbuilt_attr, ...args); };
-    }
-}
-
 _attr.collect = () => {
     let attrs = _attrMeta.bucket.slice(); _attr.clear();
     return attrs;
 };
 _attr.has = (name) => {
     if (typeof name !== 'string') { throw _Exception.InvalidArgument('name'); }
-    
     return (_attrMeta.bucket.findIndex(item => item.name === name) !== -1);
 };
 _attr.get = (name) => {
@@ -192,4 +170,7 @@ _attr.clear = () => {
 };
 
 // attach to flair
-a2f('$$', _$$);
+a2f('$$', _$$, () => {
+    custom_attr_registry = {}; // clear registry
+});
+

@@ -1,21 +1,14 @@
 /**
- * @name Attribute
- * @description Attribute base class.
+ * @name IAttribute
+ * @description IAttribute interface
  */
-$$('abstract');
-Class('', function() {
-    $$('virtual');
-    this.construct = (...args) => {
-        this.args = Object.freeze(args);
-    };
+Interface('', function() {
+    /** 
+    *  @name name: string - name of custom attribute
+    */    
+    this.name = nip;
 
-   /** 
-    *  @name args: array - arguments as defined where attribute is applied e.g., ('text', 012, false, Reference)
-    */
-    $$('readonly');
-    this.args = [];
-
-   /** 
+    /** 
     *  @name constraints: string - An expression that defined the constraints of applying this attribute 
     *                     using NAMES, PREFIXES, SUFFIXES and logical Javascript operator
     * 
@@ -49,12 +42,11 @@ Class('', function() {
     *                        GROUPING: ((<name1> || <name2>) && (<name1> || <name2>))
     *                                  (((<name1> || <name2>) && (<name1> || <name2>)) || <name3>)
     * 
-    **/
-    $$('readonly');
-    this.constraints = '';
+    **/          
+    this.constraints = nip;
 
     /** 
-     * @name decorateProperty
+     * @name decorateProperty (optional)
      * @description Property decorator
      * @example
      *  decorateProperty(typeName, memberName, member)
@@ -67,12 +59,11 @@ Class('', function() {
      *  object - having decorated { get: fn, set: fn }
      *           Note: decorated get must call member's get
      *                 decorated set must accept value argument and pass it to member's set with or without processing
-     */  
-    $$('virtual');
-    this.decorateProperty = nim;
+     */     
+     this.decorateProperty_ = nim; 
 
     /** 
-     * @name decorateFunction
+     * @name decorateFunction (optional)
      * @description Function decorator
      * @example
      *  decorateFunction(typeName, memberName, member)
@@ -84,11 +75,10 @@ Class('', function() {
      *  function - decorated function
      *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
      */  
-    $$('virtual');
-    this.decorateFunction = nim;    
+    this.decorateFunction_ = nim;
 
     /** 
-     * @name decorateEvent
+     * @name decorateEvent (optional)
      * @description Event decorator
      * @example
      *  decorateEvent(typeName, memberName, member)
@@ -100,7 +90,5 @@ Class('', function() {
      *  function - decorated function
      *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
      */  
-    $$('virtual');
-    this.decorateEvent = nim;
+    this.decorateEvent_ = nim;
 });
-
