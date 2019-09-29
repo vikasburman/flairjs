@@ -9,7 +9,7 @@
  *  globalVar: string - globally added variable name by the dependency
  *             NOTE: if dependency is a file and it emits a global variable, this should be name
  *                   of that variable and it will return that variable itself
- * @returns promise - that gets resolved with given dependency
+ * @returns {Promise} - that gets resolved with given dependency
  */ 
 const _include = (dep, globalVar) => { 
     return new Promise((resolve, reject) => {

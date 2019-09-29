@@ -3,8 +3,6 @@
  * @description Not Implemented Property
  * @example
  *  nip()
- * @params
- * @returns
  */ 
 const _nip = {
     get: () => { throw _Exception.NotImplemented('prop', _nip.get); },

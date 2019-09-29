@@ -17,7 +17,7 @@
  *                    Then type can be accessed as getType('MyType');
  *                    Note: When auto-naming is being used, namespace is also added automatically, and $$('ns') should not be applied
  *  factory: function - factory function to build enum definition
- * @returns type - constructed flair enum type
+ * @returns {type} - constructed flair enum type
  */
 const _Enum = (name, factory) => {
     let args = _Args('name: string, factory: cfunction')(name, factory); args.throwOnError(_Enum);

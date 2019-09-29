@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.59.91
- *  Sun, 29 Sep 2019 02:24:32 GMT
+ *  Version: 0.60.2
+ *  Sun, 29 Sep 2019 17:35:48 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -188,8 +188,6 @@
      * @description No Operation function
      * @example
      *  noop()
-     * @params
-     * @returns
      */ 
     const _noop = () => {};
     
@@ -201,8 +199,6 @@
      * @description Not Implemented Property
      * @example
      *  nip()
-     * @params
-     * @returns
      */ 
     const _nip = {
         get: () => { throw _Exception.NotImplemented('prop', _nip.get); },
@@ -218,8 +214,6 @@
      * @description Not Implemented Method
      * @example
      *  nim()
-     * @params
-     * @returns
      */ 
     const _nim = () => { throw _Exception.NotImplemented('func', _nim); };
     _nim.ni = true; // a special flag to quick check that this is a not-implemented object
@@ -560,7 +554,7 @@
      *  typeOf(obj)
      * @params
      *  obj: object - object that needs to be checked
-     * @returns string - type of the given object
+     * @returns {string} - type of the given object
      *                   it can be following:
      *                    > special ones like 'undefined', 'null', 'NaN', infinity
      *                    > special javascript data types like 'array', 'date', etc.
@@ -616,7 +610,7 @@
      *                              isMixed given as mixin
      *                           >> for struct instances:
      *                              isInstance of given as struct type
-     * @returns boolean - true/false
+     * @returns {boolean} - true/false
      */ 
     const _is = (obj, type) => {
         // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
@@ -694,7 +688,7 @@
      * @params
      *  obj: object - object that needs to be checked
      *  memberName: string - name of the member to check
-     * @returns boolean - true/false
+     * @returns {boolean} - true/false
      */ 
     const _isDefined = (obj, memberName) => {
         // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
@@ -738,7 +732,7 @@
      *                                  >> for struct instances:
      *                                     isInstance of given as struct type
      *                          name: argument name which will be used to store extracted value by parser
-     * @returns function - validator function that is configured for specified patterns
+     * @returns {function} - validator function that is configured for specified patterns
      */ 
     const _Args = (...patterns) => {
         if (patterns.length === 0) { throw _Exception.InvalidArgument('patterns', _Args); }
@@ -749,7 +743,7 @@
          *  (...args)
          * @params
          *  args: any - multiple arguments to match against given pattern sets
-         * @returns object - result object, having:
+         * @returns {object} - result object, having:
          *  raw: (array) - original arguments as passed
          *  index: (number) - index of pattern-set that matches for given arguments, -1 if no match found
          *                    if more than one patterns may match, it will stop at first match
@@ -824,7 +818,7 @@
      *  event()
      * @params
      *  argsProcessor - args processor function, if args to be processed before event is raised
-     * @returns
+     * @returns {function}
      *  function - returns given function or a noop function as is with an event marked tag
      */ 
     const _event = (argsProcessor) => { 
@@ -843,8 +837,6 @@
      * @description Not Implemented Event
      * @example
      *  nie()
-     * @params
-     * @returns
      */ 
     const _nie = _event(() => { throw _Exception.NotImplemented('event', _nie); });
     _nie.ni = true; // a special flag to quick check that this is a not-implemented object
@@ -1948,8 +1940,6 @@
     /**
      * @name AppDomainProxy
      * @description Proxy to AppDomain that is created inside other worker.
-     * @example
-     *  
      */
     const AppDomainProxy = function(name, domains, allADOs) {
         let isUnloaded = false,
@@ -2057,8 +2047,6 @@
     /**
      * @name AppDomain
      * @description Thread level isolation.
-     * @example
-     *  
      */
     const AppDomain = function(name) {
         let asmFiles = {},
@@ -2427,7 +2415,7 @@
      *  memberName: string - when passed is flair object instance - member name for which attributes are to be read 
      *                 when passed is flair type - attribute name - if any specific attribute needs to be read (it will read all when this is null)
      *  attrName: string - if any specific attribute needs to be read (it will read all when this is null)
-     * @returns array of attributes information objects { name, isCustom, args, type }
+     * @returns {IAttribute[]} - array of attributes information objects { name, isCustom, args, type }
      *          name: name of the attribute
      *          isCustom: true/false - if this is a custom attribute
      *          args: attribute arguments
@@ -2478,7 +2466,7 @@
      *                               assembly name, if assembly is to be looked for by assembly name
      *                               (since this is also string, this must be enclosed in [] to represent this is assembly name and not qualified type name)
      *                               (if assembly is not loaded, it will return null)
-     * @returns object - assembly object
+     * @returns {object} - assembly object
      */ 
     const _getAssembly = (Type) => { 
         let args = _Args('Type: flairtype',
@@ -2517,7 +2505,7 @@
      * @params
      *  Type: string - qualified type name, if it is needed to know in which assembly file this exists
      *                               
-     * @returns string - assembly file name which contains this type
+     * @returns {string} - assembly file name which contains this type
      */ 
     const _getAssemblyOf = (Type) => { 
         let args = _Args('Type: string')(Type); args.throwOnError(_getAssemblyOf);
@@ -2535,7 +2523,7 @@
      *  _getContext(Type)
      * @params
      *  Type: type - flair type whose context is required
-     * @returns object - assembly load context object where this type is loaded
+     * @returns {object} - assembly load context object where this type is loaded
      */ 
     const _getContext = (Type) => {
         let args = _Args('Type: flairtype')(Type); args.throwOnError(_getContext);
@@ -2554,7 +2542,7 @@
      *  getResource(qualifiedName)
      * @params
      *  qualifiedName: string - qualified resource name
-     * @returns object - resource object's data
+     * @returns {object} - resource object's data
      */ 
     const _getResource = (qualifiedName) => { 
         let args = _Args('qualifiedName: string')(qualifiedName); args.throwOnError(_getResource);
@@ -2580,7 +2568,7 @@
      *  getRoute(qualifiedName)
      * @params
      *  qualifiedName: string - qualified route name
-     * @returns object - route's data
+     * @returns {object} - route's data
      */ 
     const _getRoute= (qualifiedName) => { 
         let args = _Args('qualifiedName: string')(qualifiedName); args.throwOnError(_getRoute);
@@ -2598,7 +2586,7 @@
      *  getType(qualifiedName)
      * @params
      *  qualifiedName: string - qualified type name whose reference is needed
-     * @returns object - if assembly which contains this type is loaded, it will return flair type object OR will return null
+     * @returns {object} - if assembly which contains this type is loaded, it will return flair type object OR will return null
      */ 
     const _getType = (qualifiedName) => { 
         let args = _Args('qualifiedName: string')(qualifiedName); args.throwOnError(_getType);
@@ -2624,7 +2612,7 @@
      *  getType(obj)
      * @params
      *  obj: object - object that needs to be checked
-     * @returns type - flair type for the given object
+     * @returns {type} - flair type for the given object
      */ 
     const _getTypeOf = (obj) => {
         let args = _Args('obj: flair')(obj); args.throwOnError(_getTypeOf);
@@ -2643,7 +2631,7 @@
      *  getTypeName(obj)
      * @params
      *  obj: object - object that needs to be checked
-     * @returns string - name of the type of given object
+     * @returns {string} - name of the type of given object
      */ 
     const _getTypeName = (obj) => {
         let args = _Args('obj: flair')(obj); args.throwOnError(_getTypeName);
@@ -2672,7 +2660,7 @@
      *          <assembly-file-name> can be xyz.js | xyz.min.js | ./<path>/xyz.js | ./<path>/xyz.min.js 
      *              no need to use .min. in file name here, it will pick whatever is applicable for the environment
      *              but if this is added, it will be ignored
-     * @returns object if no name is passed to represents root-namespace OR promise that resolves with namespace object for specified namespace name
+     * @returns {object} if no name is passed to represents root-namespace OR promise that resolves with namespace object for specified namespace name
      */ 
     const _ns = (name, scan) => { 
         if (!name) {
@@ -2695,7 +2683,7 @@
      *  Parent: string OR class - class type to be checked for being in parent hierarchy, it can be following:
      *                            > fully qualified class type name
      *                            > class type reference
-     * @returns boolean - true/false
+     * @returns {boolean} - true/false
      */ 
     const _isDerivedFrom = (Type, Parent) => {
         // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
@@ -2715,7 +2703,7 @@
      *  isAbstract(type)
      * @params
      *  Type: class - flair class type that needs to be checked
-     * @returns boolean - true/false
+     * @returns {boolean} - true/false
      */ 
     const _isAbstract = (Type) => {
         // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
@@ -2734,7 +2722,7 @@
      *  isSealed(type)
      * @params
      *  Type: class - flair class type that needs to be checked
-     * @returns boolean - true/false
+     * @returns {boolean} - true/false
      */ 
     const _isSealed = (Type) => {
         // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
@@ -2753,7 +2741,7 @@
      *  isStatic(type)
      * @params
      *  Type: class - flair class type that needs to be checked
-     * @returns boolean - true/false
+     * @returns {boolean} - true/false
      */ 
     const _isStatic = (Type) => {
         // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
@@ -2772,7 +2760,7 @@
      *  isSingleton(type)
      * @params
      *  Type: class - flair class type that needs to be checked
-     * @returns boolean - true/false
+     * @returns {boolean} - true/false
      */ 
     const _isSingleton = (Type) => {
         // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
@@ -2791,7 +2779,7 @@
      *  isDeprecated(type)
      * @params
      *  Type: class - flair class type that needs to be checked
-     * @returns boolean - true/false
+     * @returns {boolean} - true/false
      */ 
     const _isDeprecated = (Type) => {
         // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
@@ -2813,7 +2801,7 @@
      * @params
      *  obj: object - flair object instance that needs to be checked
      *  Type: flair type of string
-     * @returns boolean - true/false
+     * @returns {boolean} - true/false
      */ 
     const _isInstanceOf = (obj, Type) => {
         // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
@@ -2870,7 +2858,7 @@
      *                              isMixed given as mixin
      *                           >> for struct instances:
      *                              isInstance of given as struct type
-     * @returns object - if can be used as specified type, return same object, else null
+     * @returns {object} - if can be used as specified type, return same object, else null
      */ 
     const _as = (obj, type) => {
         // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
@@ -2894,7 +2882,7 @@
      * @params
      *  obj: object - any object that needs to be checked
      *  intf: interface - flair interface type to be checked for
-     * @returns boolean - true/false
+     * @returns {boolean} - true/false
      */ 
     const _isComplies = (obj, intf) => {
         // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
@@ -2933,7 +2921,7 @@
      *  intf: string OR interface - interface to be checked for, it can be following:
      *                              > fully qualified interface name
      *                              > interface type reference
-     * @returns boolean - true/false
+     * @returns {boolean} - true/false
      */ 
     const _isImplements = (obj, intf) => {
         // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
@@ -2956,7 +2944,7 @@
      *  mixin: string OR mixin - mixin to be checked for, it can be following:
      *                           > fully qualified mixin name
      *                           > mixin type reference
-     * @returns boolean - true/false
+     * @returns {boolean} - true/false
      */ 
     const _isMixed = (obj, mixin) => {
         // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself
@@ -3032,7 +3020,7 @@
      *                     if a dependency could not be resolved, it will throw the console.error()
      *                     cyclic dependencies are taken care of - if A is looking for B which is looking for C and that is looking for A - or any such scenario - it will throw error
      *  fn: function - function where to pass resolved dependencies, in order they are defined in deps
-     * @returns void
+     * @returns {void}
      */ 
     const bringCycle = [];
     const _bring = (deps, fn) => {
@@ -3221,7 +3209,7 @@
      *  globalVar: string - globally added variable name by the dependency
      *             NOTE: if dependency is a file and it emits a global variable, this should be name
      *                   of that variable and it will return that variable itself
-     * @returns promise - that gets resolved with given dependency
+     * @returns {Promise} - that gets resolved with given dependency
      */ 
     const _include = (dep, globalVar) => { 
         return new Promise((resolve, reject) => {
@@ -3259,7 +3247,7 @@
      * @params
      *  obj: object - flair object that needs to be disposed
      *       boolean - if passed true, it will clear all of flair internal system
-     * @returns void
+     * @returns {void}
      */ 
     const _dispose = (obj) => {
         let args = _Args('obj: instance', 
@@ -3291,7 +3279,7 @@
      *  obj: object/string - object that needs to be processed by processor function or qualified name for which object will be created
      *                If a disposer is not defined for the object, it will not do anything
      *  fn: function - processor function
-     * @returns any - returns anything that is returned by processor function, it may also be a promise
+     * @returns {any} - returns anything that is returned by processor function, it may also be a promise
      */ 
     const _using = (obj, fn) => {
         let args = _Args('obj: instance, fn: afunction', 
@@ -3339,7 +3327,7 @@
      *  attrName: string/type - Name of the attribute, it can be an internal attribute or namespaced attribute name
      *                          It can also be the Attribute flair type itself
      *  attrArgs: any - Any arguments that may be needed by attribute
-     * @returns void
+     * @returns {void}
      */ 
     let isInsertAttrOnTop = false,
         custom_attr_registry = {};
@@ -4145,17 +4133,17 @@
             }
             return member;           
         };
-        const applyAspects = (memberName, member, isASync) => {
+        const applyAspects = (memberName, member, isMemberASync) => {
             let weavedFn = null,
                 funcAspects = [];
     
             // get aspects that are applicable for this function (NOTE: Optimization will be needed here, eventually)
-            funcAspects = Aspects(def.name, memberName);
+            funcAspects = getAspects(def.name, memberName, (modifierName) => { return modifiers.members.probe(modifierName, memberName).anywhere(); });
             def.aspects.members[memberName] = funcAspects; // store for reference by reflector
                 
             // apply these aspects
             if (funcAspects.length > 0) {
-                weavedFn = attachAspects(def.name, memberName, funcAspects, member, isASync); 
+                weavedFn = attachAspects(def.name, memberName, funcAspects, member, isMemberASync); 
                 if (weavedFn) {
                     member = weavedFn; // update member itself
                 }
@@ -5653,7 +5641,7 @@
      *  mixints: array - An array of mixin and/or interface types which needs to be applied to this class type
      *                        mixins will be applied in order they are defined here
      *  factory: function - factory function to build class definition
-     * @returns type - constructed flair class type
+     * @returns {type} - constructed flair class type
      */
     const _Class = (name, inherits, mixints, factory) => {
         let args = _Args('name: string, inherits: class, factory: cfunction',
@@ -5724,7 +5712,7 @@
      *                    Then type can be accessed as getType('MyType');
      *                    Note: When auto-naming is being used, namespace is also added automatically, and $$('ns') should not be applied
      *  factory: function - factory function to build interface definition
-     * @returns type - constructed flair interface type
+     * @returns {type} - constructed flair interface type
      */
     const _Interface = (name, factory) => {
         let args = _Args('name: string, factory: cfunction')(name, factory); args.throwOnError(_Interface);
@@ -5773,7 +5761,7 @@
      *                    Then type can be accessed as getType('MyType');
      *                    Note: When auto-naming is being used, namespace is also added automatically, and $$('ns') should not be applied
      *  factory: function - factory function to build struct definition
-     * @returns type - constructed flair struct type
+     * @returns {type} - constructed flair struct type
      */
     const _Struct = (name, factory) => {
         let args = _Args('name: string, factory: cfunction')(name, factory); args.throwOnError(_Struct);
@@ -5821,7 +5809,7 @@
      *                    Then type can be accessed as getType('MyType');
      *                    Note: When auto-naming is being used, namespace is also added automatically, and $$('ns') should not be applied
      *  factory: function - factory function to build enum definition
-     * @returns type - constructed flair enum type
+     * @returns {type} - constructed flair enum type
      */
     const _Enum = (name, factory) => {
         let args = _Args('name: string, factory: cfunction')(name, factory); args.throwOnError(_Enum);
@@ -5946,7 +5934,7 @@
      *                    Then type can be accessed as getType('MyType');
      *                    Note: When auto-naming is being used, namespace is also added automatically, and $$('ns') should not be applied
      *  factory: function - factory function to build mixin definition
-     * @returns type - constructed flair mixin type
+     * @returns {type} - constructed flair mixin type
      */
     const _Mixin = (name, factory) => {
         let args = _Args('name: string, factory: cfunction')(name, factory); args.throwOnError(_Mixin);
@@ -5985,7 +5973,7 @@
      *  event: string - Name of the even to subscribe to
      *  handler: function - event handler function
      *  isRemove: boolean - is previously associated handler to be removed
-     * @returns void
+     * @returns {void}
      */ 
     const _dispatcher = new Dispatcher();
     const _dispatchEvent = _dispatcher.dispatch;  // this can be used via dispatch member to dispatch any event
@@ -6201,37 +6189,42 @@
         
     // Aspects API: start
     
+    let Exception = _Exception, ns = _ns, as = _as; // TODO: Remove this list when all refactored
+    
     /**
-     * @description List of registered aspects
-     * @type {AspectListItem[]}
+     * List of registered aspects
+     * @private
+     * @const {AspectListItem[]}
      */
     const aspectsList = [];
     
     /**
-     * @type {AspectListItem}
-     * @description Aspect list item
-     * @param {string} pc - pointcut definition
-     * @param {regex} rex - pointcut definition regular expression
+     * Aspect list item
+     * @private
+     * @constructor
+     * @param {RegExp} rex - pointcut definition regular expression
+     * @param {string[]} modifiers - list of modifiers for pointcut
      * @param {IAspect} type - Aspect type
      */
-    const AspectListItem = function(pc, rex, type) {
-        this.pointcut = pc;
+    const AspectListItem = function(rex, modifiers, type) {
         this.rex = rex;
+        this.modifiers = modifiers || [];
         this.Aspect = type;
     };
     
     /**
-     * @description Builds an id for given context that can be matched with aspectContextIdPattern
+     * Builds an id for given context that can be matched with aspectContextIdPattern
+     * @private
      * @param {string} typeName - qualified type name
-     * @param {regex} funcName - function name
-     * @returns {string} - aspectContextId
+     * @param {string} funcName - function name
+     * @returns {RegExp} - aspectContextId
      */
     const buildAspectContextId = (typeName, funcName) => {
         let _ns = '',
         _class = '',
         _func = funcName.trim();
     
-        if (typeName.indexOf('.') !== -1) {
+        if (typeName.includes('.')) {
             _ns = typeName.substr(0, typeName.lastIndexOf('.')).trim();
             _class = typeName.substr(typeName.lastIndexOf('.') + 1).trim(); 
         } else {
@@ -6243,8 +6236,9 @@
     };
     
     /**
-     * @description Builds a pattern for given pointcut, that can be matched with aspectContextId
-     * @param {string} pointcut - pointcut identifier pattern string as -> namespace.class:func
+     * Builds a pattern for given pointcut, that can be matched with aspectContextId
+     * @private
+     * @param {string} pointcut - pointcut identifier pattern string as -> namespace.class:func (except modifiers)
      * @returns {regex} - aspectContextIdPattern
      * @throws {InvalidArgument}
      */
@@ -6257,7 +6251,7 @@
             _identifier = '';
     
         // extract func
-        if(pc.indexOf(':') !== -1) {
+        if(pc.includes(':')) {
             items = pc.split(':');
             pc = items[0].trim();
             _func = items[1].trim() || '';
@@ -6267,7 +6261,7 @@
         }
     
         // extract namespace and class
-        if (pc.indexOf('.') !== -1) {
+        if (pc.includes('.')) {
             _ns = pc.substr(0, pc.lastIndexOf('.')).trim();
             _class = pc.substr(pc.lastIndexOf('.') + 1).trim(); 
         } else {
@@ -6291,16 +6285,48 @@
     };
     
     /**
-    * @description Attach given aspects to given function
-    * @param {string} typeName - qualified type name
-    * @param {regex} funcName - function name
-    * @param {IAspect[]} funcAspects - function aspects to attach
-    * @param {function} fn - function to wrap
-    * @param {boolean} isASync - if fn is async
-    * @returns {function} - sync or async wrapped function
-    */
+     * Get matching aspects for given context
+     * @private
+     * @param {string} typeName - qualified type name
+     * @param {string} funcName - function name
+     * @param {function} modifiers - modifiers probe function for this context
+     * @returns {IAspect[]} - matching aspects
+     */
+    const getAspects = (typeName, funcName, modifiers) => {
+        // note: no type checking, as this is an internal call
+    
+        // collect and return matching aspects
+        let funcAspects = [],
+            isMatched = false,
+            aspectContextId = buildAspectContextId(typeName, funcName);
+        aspectsList.forEach(item => {
+            isMatched = item.rex.test(aspectContextId); // pattern match
+            if (isMatched) { // if pattern matched
+                if (item.modifiers.length > 0) { // modifiers match is required (all listed modifiers must match)
+                    for(let modifier of item.modifiers) {
+                        isMatched = modifiers(modifier);
+                        if (!isMatched) { break; }
+                    }
+                }
+                if (isMatched) { funcAspects.push(item.Aspect); }
+            }
+        });
+        return funcAspects;
+    };
+    
+    /**
+     * Attach given aspects to given function
+     * @private
+     * @param {string} typeName - qualified type name
+     * @param {regex} funcName - function name
+     * @param {IAspect[]} funcAspects - meta for function aspects to attach
+     * @param {function} fn - function to wrap
+     * @param {boolean} isASync - is async wrapper is required
+     * @returns {function} - sync or async wrapped function
+     */
     const attachAspects = (typeName, funcName, funcAspects, fn, isASync) => {
         // note: no type checking, as this is an internal call
+    
         let before = [],
             after = [],
             around = [],
@@ -6420,7 +6446,8 @@
     };
     
     /**
-     * @description Dispose aspects api internals
+     * Dispose aspects api internals
+     * @private
      * @returns {void}
      */
     const aspectsDisposer = () => {
@@ -6432,48 +6459,41 @@
     // main api: start
     
     /**
-     * Finds matching aspects for given context
-     * @param {string} typeName - qualified type name
-     * @param {string} funcName - function name
-     * @returns {IAspect[]} - matching aspects
+     * Aspects api root
+     * @public
+     * @namespace Aspects
+     * @property {function} register - Register given aspect type against given pointcut pattern
      */
-    const Aspects = (typeName, funcName) => {
-        if (typeof typeName !== 'string' || !typeName) { throw Exception.InvalidArgument('typeName'); }
-        if (typeof funcName !== 'string' || !funcName) { throw Exception.InvalidArgument('funcName'); }
-    
-        // collect and return matching aspects
-        let funcAspects = [],
-            aspectContextId = buildAspectContextId(typeName, funcName);
-        aspectsList.forEach(item => {
-            if (item.rex.test(aspectContextId)) { funcAspects.push(item.Aspect); }
-        });
-        return funcAspects;
-    };
+    const Aspects = {};
     
     /**
      * Register given aspect type against given pointcut pattern
-      * @param {string} pointcut - pointcut identifier pattern string as -> namespace.class:func
+     * @public
+     * @param {string} pointcut - pointcut identifier pattern string as -> namespace.class:func#modifier1,modifier2,...
      *                            wildcard characters ? or * can be used in any or all parts of the three (namespace, class, func)
-     *                            providing all three parts are necessary in any definition
-     *                            using just wildcard (when the whole set name is *) is not allowed on more than one sections to prevent misuse of this feature
-     * 
-     *                            examples of valid and invalid strings are:
-     *                              valid: *.className:funcName 
-     *                              valid: *.class?:func?
-     *                              valid: className:funcName  <-- root namespace
-     *                              valid: namespace.*:funcName
-     *                              valid: name*.*:func*
-     *                              valid: namespace.className:*
-     *                              valid: ?amespace.class*:?uncName
-     *                              invalid: *.*:funcName
-     *                              invalid: namespace.*:*
-     *                              invalid: *.className:*
-     * 
-     *                            funcs can be of any type: static, public, protected or private
      *                            classes can be of any type: static, sealed, singleton, or normal
-     * @param {string} aspectType - flair class type that implements IAspect
-     * @returns {void}
-     * @throws {InvalidArgument}
+     *                            funcs can be of any type: async, static, public, protected or private, unless speicific modifiers are provided via #
+     * 
+     * @example
+     * // all methods of all classes of all namespaces (EXPENSIVE!)
+     * '*'                                  
+     * '*.*'                                
+     * '*.*:*'
+     * // all public async functions with matching name for specific className
+     * '*.className:func*#public,async'  
+     * // at root namespace for specified class and function name
+     * 'className:funcName'
+     * // all public methods of specified className under specified namespace
+     * 'namespace.className:*#public'
+     * // others
+     * '*.class?:func?'
+     * 'namespace.*:funcName'
+     * 'name*.*:func*'
+     * '?amespace.class*:?uncName'
+     * 
+     * @param {IAspect} aspectType - flair class type that implements IAspect
+     * @return {void} nothing
+     * @throws {InvalidArgumentException}
      */
     Aspects.register = (pointcut, aspectType) => {
         if (typeof pointcut !== 'string') { throw Exception.InvalidArgument('pointcut'); }
@@ -6481,11 +6501,19 @@
         const { IAspect } = ns(); // sync call for root namespace
         if (!as(aspectType, IAspect)) { throw Exception.InvalidArgument('aspectType'); }
     
+        // extract modifiers, which are stored separately
+        let modifiers = [];
+        if (pointcut.includes('#')) {
+            let items = pointcut.split('#');
+            pointcut = items[0].trim();
+            modifiers = splitAndTrim(items[0], ',');
+        }
+    
         // get pattern (regex)
         let aspectContextIdPattern = buildAspectContextIdPattern(pointcut);
     
         // register
-        aspectsList.push(new AspectListItem(pointcut, aspectContextIdPattern, aspectType));
+        aspectsList.push(new AspectListItem(aspectContextIdPattern, modifiers, aspectType));
     };
     
     // main api: end
@@ -6504,7 +6532,7 @@
      * @params
      *  instance: object - supported flair type's object instance to serialize
      *  json: object - previously serialized object by the same process
-     * @returns
+     * @returns {string|object}
      *  string: json string when serialized
      *  object: flair object instance, when deserialized
      */ 
@@ -6623,7 +6651,7 @@
      *  Tasks.sequence.invoke(...tasks)
      * @params
      *  qualifiedName: string - qualified type name whose reference is needed
-     * @returns object - if assembly which contains this type is loaded, it will return flair type object OR will return null
+     * @returns {object} - if assembly which contains this type is loaded, it will return flair type object OR will return null
      */
     const max_pool_size = (options.env.cores * 4);
     const min_pool_size = Math.round(max_pool_size/4);
@@ -7496,8 +7524,6 @@
      * @description Helper functions exposed.
      * @example
      *  utils.<...>
-     * @params
-     * @returns
      */ 
     const _utils = () => { };
     _utils.guid = guid;
@@ -7533,10 +7559,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.59.91',
+        version: '0.60.2',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 29 Sep 2019 02:24:32 GMT')
+        lupdate: new Date('Sun, 29 Sep 2019 17:35:48 GMT')
     });  
     
     // bundled assembly load process 
@@ -7550,7 +7576,7 @@
         /* eslint-disable no-unused-vars */
         
         // flair types, variables and functions
-        const { Class, Struct, Enum, Interface, Mixin, Aspects, AppDomain, $$, attr, InjectedArg, bring, Container, include, Port, on, post, telemetry,
+        const { Class, Struct, Enum, Interface, Mixin, Aspects, AppDomain, $$, InjectedArg, bring, Container, include, Port, on, post, telemetry,
                 Reflector, Serializer, Tasks, as, is, isDefined, isComplies, isDerivedFrom, isAbstract, isSealed, isStatic, isSingleton, isDeprecated,
                 isImplements, isInstanceOf, isMixed, getAssembly, getAttr, getContext, getResource, getRoute, getType, ns, getTypeOf,
                 getTypeName, typeOf, dispose, using, Args, Exception, noop, nip, nim, nie, event } = flair;
@@ -7607,7 +7633,7 @@
             
     (() => { // type: ./src/flair/(root)/IAspect.js
         /**
-         * @name IAspect
+         * @typedef IAspect
          * @description IAspect interface
          */
         $$('ns', '(root)');
@@ -7705,7 +7731,7 @@
              *  memberName: string - member name
              *  member - object - having get: getter function and set: setter function
              *          both getter and setter can be applied attribute functionality on
-             * @returns
+             * @returns {object}
              *  object - having decorated { get: fn, set: fn }
              *           Note: decorated get must call member's get
              *                 decorated set must accept value argument and pass it to member's set with or without processing
@@ -7721,7 +7747,7 @@
              *  typeName: string - typeName
              *  memberName: string - member name
              *  member - function - function to decorate
-             * @returns
+             * @returns {function}
              *  function - decorated function
              *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
              */  
@@ -7736,7 +7762,7 @@
              *  typeName: string - typeName
              *  memberName: string - member name
              *  member - function - event argument processor function
-             * @returns
+             * @returns {function}
              *  function - decorated function
              *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
              */  
@@ -7838,7 +7864,7 @@
             *  run()
             * @arguments
             *  args: array - array as passed to task constructor* 
-            * @returns
+            * @returns {any}
             *  any - anything
             */  
             this.run = async (...args) => {
@@ -7886,7 +7912,7 @@
              * @description Task related setup, executed only once, before onRun is called, - async
              * @example
              *  setup()
-             * @returns
+             * @returns {Promise}
              *  promise
              */  
             $$('virtual');
@@ -7901,7 +7927,7 @@
              *  onRun(...args)
              * @arguments
              *  args: array - array as passed to task run
-             * @returns
+             * @returns {any}
              *  any - anything
              */  
             $$('abstract');
@@ -7921,7 +7947,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('', (typeof onLoadComplete === 'function' ? onLoadComplete : null)); // eslint-disable-line no-undef
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.91","lupdate":"Sun, 29 Sep 2019 02:24:32 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["IAspect","IAttribute","IDisposable","IPortHandler","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.60.2","lupdate":"Sun, 29 Sep 2019 17:35:48 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["IAspect","IAttribute","IDisposable","IPortHandler","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // return settings and config
         return Object.freeze({

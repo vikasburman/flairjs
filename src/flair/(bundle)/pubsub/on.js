@@ -8,7 +8,7 @@
  *  event: string - Name of the even to subscribe to
  *  handler: function - event handler function
  *  isRemove: boolean - is previously associated handler to be removed
- * @returns void
+ * @returns {void}
  */ 
 const _dispatcher = new Dispatcher();
 const _dispatchEvent = _dispatcher.dispatch;  // this can be used via dispatch member to dispatch any event

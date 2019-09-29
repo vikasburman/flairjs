@@ -9,7 +9,7 @@
  *                               assembly name, if assembly is to be looked for by assembly name
  *                               (since this is also string, this must be enclosed in [] to represent this is assembly name and not qualified type name)
  *                               (if assembly is not loaded, it will return null)
- * @returns object - assembly object
+ * @returns {object} - assembly object
  */ 
 const _getAssembly = (Type) => { 
     let args = _Args('Type: flairtype',

@@ -7,7 +7,7 @@
  *  attrName: string/type - Name of the attribute, it can be an internal attribute or namespaced attribute name
  *                          It can also be the Attribute flair type itself
  *  attrArgs: any - Any arguments that may be needed by attribute
- * @returns void
+ * @returns {void}
  */ 
 let isInsertAttrOnTop = false,
     custom_attr_registry = {};

@@ -55,7 +55,7 @@ Interface('', function() {
      *  memberName: string - member name
      *  member - object - having get: getter function and set: setter function
      *          both getter and setter can be applied attribute functionality on
-     * @returns
+     * @returns {object}
      *  object - having decorated { get: fn, set: fn }
      *           Note: decorated get must call member's get
      *                 decorated set must accept value argument and pass it to member's set with or without processing
@@ -71,7 +71,7 @@ Interface('', function() {
      *  typeName: string - typeName
      *  memberName: string - member name
      *  member - function - function to decorate
-     * @returns
+     * @returns {function}
      *  function - decorated function
      *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
      */  
@@ -86,7 +86,7 @@ Interface('', function() {
      *  typeName: string - typeName
      *  memberName: string - member name
      *  member - function - event argument processor function
-     * @returns
+     * @returns {function}
      *  function - decorated function
      *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
      */  

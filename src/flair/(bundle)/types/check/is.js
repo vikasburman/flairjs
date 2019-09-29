@@ -17,7 +17,7 @@
  *                              isMixed given as mixin
  *                           >> for struct instances:
  *                              isInstance of given as struct type
- * @returns boolean - true/false
+ * @returns {boolean} - true/false
  */ 
 const _is = (obj, type) => {
     // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself

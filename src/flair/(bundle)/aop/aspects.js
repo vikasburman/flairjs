@@ -1,36 +1,41 @@
 // Aspects API: start
 
+let Exception = _Exception, ns = _ns, as = _as; // TODO: Remove this list when all refactored
+
 /**
- * @description List of registered aspects
- * @type {AspectListItem[]}
+ * List of registered aspects
+ * @private
+ * @const {AspectListItem[]}
  */
 const aspectsList = [];
 
 /**
- * @type {AspectListItem}
- * @description Aspect list item
- * @param {string} pc - pointcut definition
- * @param {regex} rex - pointcut definition regular expression
+ * Aspect list item
+ * @private
+ * @constructor
+ * @param {RegExp} rex - pointcut definition regular expression
+ * @param {string[]} modifiers - list of modifiers for pointcut
  * @param {IAspect} type - Aspect type
  */
-const AspectListItem = function(pc, rex, type) {
-    this.pointcut = pc;
+const AspectListItem = function(rex, modifiers, type) {
     this.rex = rex;
+    this.modifiers = modifiers || [];
     this.Aspect = type;
 };
 
 /**
- * @description Builds an id for given context that can be matched with aspectContextIdPattern
+ * Builds an id for given context that can be matched with aspectContextIdPattern
+ * @private
  * @param {string} typeName - qualified type name
- * @param {regex} funcName - function name
- * @returns {string} - aspectContextId
+ * @param {string} funcName - function name
+ * @returns {RegExp} - aspectContextId
  */
 const buildAspectContextId = (typeName, funcName) => {
     let _ns = '',
     _class = '',
     _func = funcName.trim();
 
-    if (typeName.indexOf('.') !== -1) {
+    if (typeName.includes('.')) {
         _ns = typeName.substr(0, typeName.lastIndexOf('.')).trim();
         _class = typeName.substr(typeName.lastIndexOf('.') + 1).trim(); 
     } else {
@@ -42,8 +47,9 @@ const buildAspectContextId = (typeName, funcName) => {
 };
 
 /**
- * @description Builds a pattern for given pointcut, that can be matched with aspectContextId
- * @param {string} pointcut - pointcut identifier pattern string as -> namespace.class:func
+ * Builds a pattern for given pointcut, that can be matched with aspectContextId
+ * @private
+ * @param {string} pointcut - pointcut identifier pattern string as -> namespace.class:func (except modifiers)
  * @returns {regex} - aspectContextIdPattern
  * @throws {InvalidArgument}
  */
@@ -56,7 +62,7 @@ const buildAspectContextIdPattern = (pointcut) => {
         _identifier = '';
 
     // extract func
-    if(pc.indexOf(':') !== -1) {
+    if(pc.includes(':')) {
         items = pc.split(':');
         pc = items[0].trim();
         _func = items[1].trim() || '';
@@ -66,7 +72,7 @@ const buildAspectContextIdPattern = (pointcut) => {
     }
 
     // extract namespace and class
-    if (pc.indexOf('.') !== -1) {
+    if (pc.includes('.')) {
         _ns = pc.substr(0, pc.lastIndexOf('.')).trim();
         _class = pc.substr(pc.lastIndexOf('.') + 1).trim(); 
     } else {
@@ -90,16 +96,48 @@ const buildAspectContextIdPattern = (pointcut) => {
 };
 
 /**
-* @description Attach given aspects to given function
-* @param {string} typeName - qualified type name
-* @param {regex} funcName - function name
-* @param {IAspect[]} funcAspects - function aspects to attach
-* @param {function} fn - function to wrap
-* @param {boolean} isASync - if fn is async
-* @returns {function} - sync or async wrapped function
-*/
+ * Get matching aspects for given context
+ * @private
+ * @param {string} typeName - qualified type name
+ * @param {string} funcName - function name
+ * @param {function} modifiers - modifiers probe function for this context
+ * @returns {IAspect[]} - matching aspects
+ */
+const getAspects = (typeName, funcName, modifiers) => {
+    // note: no type checking, as this is an internal call
+
+    // collect and return matching aspects
+    let funcAspects = [],
+        isMatched = false,
+        aspectContextId = buildAspectContextId(typeName, funcName);
+    aspectsList.forEach(item => {
+        isMatched = item.rex.test(aspectContextId); // pattern match
+        if (isMatched) { // if pattern matched
+            if (item.modifiers.length > 0) { // modifiers match is required (all listed modifiers must match)
+                for(let modifier of item.modifiers) {
+                    isMatched = modifiers(modifier);
+                    if (!isMatched) { break; }
+                }
+            }
+            if (isMatched) { funcAspects.push(item.Aspect); }
+        }
+    });
+    return funcAspects;
+};
+
+/**
+ * Attach given aspects to given function
+ * @private
+ * @param {string} typeName - qualified type name
+ * @param {regex} funcName - function name
+ * @param {IAspect[]} funcAspects - meta for function aspects to attach
+ * @param {function} fn - function to wrap
+ * @param {boolean} isASync - is async wrapper is required
+ * @returns {function} - sync or async wrapped function
+ */
 const attachAspects = (typeName, funcName, funcAspects, fn, isASync) => {
     // note: no type checking, as this is an internal call
+
     let before = [],
         after = [],
         around = [],
@@ -219,7 +257,8 @@ const attachAspects = (typeName, funcName, funcAspects, fn, isASync) => {
 };
 
 /**
- * @description Dispose aspects api internals
+ * Dispose aspects api internals
+ * @private
  * @returns {void}
  */
 const aspectsDisposer = () => {
@@ -231,48 +270,41 @@ const aspectsDisposer = () => {
 // main api: start
 
 /**
- * Finds matching aspects for given context
- * @param {string} typeName - qualified type name
- * @param {string} funcName - function name
- * @returns {IAspect[]} - matching aspects
+ * Aspects api root
+ * @public
+ * @namespace Aspects
+ * @property {function} register - Register given aspect type against given pointcut pattern
  */
-const Aspects = (typeName, funcName) => {
-    if (typeof typeName !== 'string' || !typeName) { throw Exception.InvalidArgument('typeName'); }
-    if (typeof funcName !== 'string' || !funcName) { throw Exception.InvalidArgument('funcName'); }
-
-    // collect and return matching aspects
-    let funcAspects = [],
-        aspectContextId = buildAspectContextId(typeName, funcName);
-    aspectsList.forEach(item => {
-        if (item.rex.test(aspectContextId)) { funcAspects.push(item.Aspect); }
-    });
-    return funcAspects;
-};
+const Aspects = {};
 
 /**
  * Register given aspect type against given pointcut pattern
-  * @param {string} pointcut - pointcut identifier pattern string as -> namespace.class:func
+ * @public
+ * @param {string} pointcut - pointcut identifier pattern string as -> namespace.class:func#modifier1,modifier2,...
  *                            wildcard characters ? or * can be used in any or all parts of the three (namespace, class, func)
- *                            providing all three parts are necessary in any definition
- *                            using just wildcard (when the whole set name is *) is not allowed on more than one sections to prevent misuse of this feature
- * 
- *                            examples of valid and invalid strings are:
- *                              valid: *.className:funcName 
- *                              valid: *.class?:func?
- *                              valid: className:funcName  <-- root namespace
- *                              valid: namespace.*:funcName
- *                              valid: name*.*:func*
- *                              valid: namespace.className:*
- *                              valid: ?amespace.class*:?uncName
- *                              invalid: *.*:funcName
- *                              invalid: namespace.*:*
- *                              invalid: *.className:*
- * 
- *                            funcs can be of any type: static, public, protected or private
  *                            classes can be of any type: static, sealed, singleton, or normal
- * @param {string} aspectType - flair class type that implements IAspect
- * @returns {void}
- * @throws {InvalidArgument}
+ *                            funcs can be of any type: async, static, public, protected or private, unless speicific modifiers are provided via #
+ * 
+ * @example
+ * // all methods of all classes of all namespaces (EXPENSIVE!)
+ * '*'                                  
+ * '*.*'                                
+ * '*.*:*'
+ * // all public async functions with matching name for specific className
+ * '*.className:func*#public,async'  
+ * // at root namespace for specified class and function name
+ * 'className:funcName'
+ * // all public methods of specified className under specified namespace
+ * 'namespace.className:*#public'
+ * // others
+ * '*.class?:func?'
+ * 'namespace.*:funcName'
+ * 'name*.*:func*'
+ * '?amespace.class*:?uncName'
+ * 
+ * @param {IAspect} aspectType - flair class type that implements IAspect
+ * @return {void} nothing
+ * @throws {InvalidArgumentException}
  */
 Aspects.register = (pointcut, aspectType) => {
     if (typeof pointcut !== 'string') { throw Exception.InvalidArgument('pointcut'); }
@@ -280,11 +312,19 @@ Aspects.register = (pointcut, aspectType) => {
     const { IAspect } = ns(); // sync call for root namespace
     if (!as(aspectType, IAspect)) { throw Exception.InvalidArgument('aspectType'); }
 
+    // extract modifiers, which are stored separately
+    let modifiers = [];
+    if (pointcut.includes('#')) {
+        let items = pointcut.split('#');
+        pointcut = items[0].trim();
+        modifiers = splitAndTrim(items[0], ',');
+    }
+
     // get pattern (regex)
     let aspectContextIdPattern = buildAspectContextIdPattern(pointcut);
 
     // register
-    aspectsList.push(new AspectListItem(pointcut, aspectContextIdPattern, aspectType));
+    aspectsList.push(new AspectListItem(aspectContextIdPattern, modifiers, aspectType));
 };
 
 // main api: end

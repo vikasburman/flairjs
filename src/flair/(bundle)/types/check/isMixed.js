@@ -8,7 +8,7 @@
  *  mixin: string OR mixin - mixin to be checked for, it can be following:
  *                           > fully qualified mixin name
  *                           > mixin type reference
- * @returns boolean - true/false
+ * @returns {boolean} - true/false
  */ 
 const _isMixed = (obj, mixin) => {
     // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself

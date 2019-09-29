@@ -1,8 +1,6 @@
 /**
  * @name AppDomain
  * @description Thread level isolation.
- * @example
- *  
  */
 const AppDomain = function(name) {
     let asmFiles = {},

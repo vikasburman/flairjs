@@ -6,7 +6,7 @@
  *  getType(qualifiedName)
  * @params
  *  qualifiedName: string - qualified type name whose reference is needed
- * @returns object - if assembly which contains this type is loaded, it will return flair type object OR will return null
+ * @returns {object} - if assembly which contains this type is loaded, it will return flair type object OR will return null
  */ 
 const _getType = (qualifiedName) => { 
     let args = _Args('qualifiedName: string')(qualifiedName); args.throwOnError(_getType);

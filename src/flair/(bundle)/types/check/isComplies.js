@@ -6,7 +6,7 @@
  * @params
  *  obj: object - any object that needs to be checked
  *  intf: interface - flair interface type to be checked for
- * @returns boolean - true/false
+ * @returns {boolean} - true/false
  */ 
 const _isComplies = (obj, intf) => {
     // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself

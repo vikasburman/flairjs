@@ -8,7 +8,7 @@
  *  Parent: string OR class - class type to be checked for being in parent hierarchy, it can be following:
  *                            > fully qualified class type name
  *                            > class type reference
- * @returns boolean - true/false
+ * @returns {boolean} - true/false
  */ 
 const _isDerivedFrom = (Type, Parent) => {
     // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself

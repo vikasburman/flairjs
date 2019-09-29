@@ -24,7 +24,7 @@
  *  mixints: array - An array of mixin and/or interface types which needs to be applied to this class type
  *                        mixins will be applied in order they are defined here
  *  factory: function - factory function to build class definition
- * @returns type - constructed flair class type
+ * @returns {type} - constructed flair class type
  */
 const _Class = (name, inherits, mixints, factory) => {
     let args = _Args('name: string, inherits: class, factory: cfunction',

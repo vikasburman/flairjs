@@ -6,7 +6,7 @@
  * @params
  *  obj: object - flair object that needs to be disposed
  *       boolean - if passed true, it will clear all of flair internal system
- * @returns void
+ * @returns {void}
  */ 
 const _dispose = (obj) => {
     let args = _Args('obj: instance', 

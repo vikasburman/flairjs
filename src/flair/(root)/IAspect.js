@@ -1,6 +1,6 @@
 /**
+ * IAspect interface
  * @typedef IAspect
- * @description IAspect interface
  */
 Interface('', function() {
     /** 

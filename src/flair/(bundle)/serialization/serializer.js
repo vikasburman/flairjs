@@ -7,7 +7,7 @@
  * @params
  *  instance: object - supported flair type's object instance to serialize
  *  json: object - previously serialized object by the same process
- * @returns
+ * @returns {string|object}
  *  string: json string when serialized
  *  object: flair object instance, when deserialized
  */ 

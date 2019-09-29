@@ -5,7 +5,7 @@
  *  getTypeName(obj)
  * @params
  *  obj: object - object that needs to be checked
- * @returns string - name of the type of given object
+ * @returns {string} - name of the type of given object
  */ 
 const _getTypeName = (obj) => {
     let args = _Args('obj: flair')(obj); args.throwOnError(_getTypeName);

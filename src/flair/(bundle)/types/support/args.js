@@ -20,7 +20,7 @@
  *                                  >> for struct instances:
  *                                     isInstance of given as struct type
  *                          name: argument name which will be used to store extracted value by parser
- * @returns function - validator function that is configured for specified patterns
+ * @returns {function} - validator function that is configured for specified patterns
  */ 
 const _Args = (...patterns) => {
     if (patterns.length === 0) { throw _Exception.InvalidArgument('patterns', _Args); }
@@ -31,7 +31,7 @@ const _Args = (...patterns) => {
      *  (...args)
      * @params
      *  args: any - multiple arguments to match against given pattern sets
-     * @returns object - result object, having:
+     * @returns {object} - result object, having:
      *  raw: (array) - original arguments as passed
      *  index: (number) - index of pattern-set that matches for given arguments, -1 if no match found
      *                    if more than one patterns may match, it will stop at first match

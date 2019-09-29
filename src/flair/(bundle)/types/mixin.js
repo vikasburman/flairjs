@@ -17,7 +17,7 @@
  *                    Then type can be accessed as getType('MyType');
  *                    Note: When auto-naming is being used, namespace is also added automatically, and $$('ns') should not be applied
  *  factory: function - factory function to build mixin definition
- * @returns type - constructed flair mixin type
+ * @returns {type} - constructed flair mixin type
  */
 const _Mixin = (name, factory) => {
     let args = _Args('name: string, factory: cfunction')(name, factory); args.throwOnError(_Mixin);

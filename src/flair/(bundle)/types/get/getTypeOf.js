@@ -5,7 +5,7 @@
  *  getType(obj)
  * @params
  *  obj: object - object that needs to be checked
- * @returns type - flair type for the given object
+ * @returns {type} - flair type for the given object
  */ 
 const _getTypeOf = (obj) => {
     let args = _Args('obj: flair')(obj); args.throwOnError(_getTypeOf);

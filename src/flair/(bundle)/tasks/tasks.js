@@ -13,7 +13,7 @@
  *  Tasks.sequence.invoke(...tasks)
  * @params
  *  qualifiedName: string - qualified type name whose reference is needed
- * @returns object - if assembly which contains this type is loaded, it will return flair type object OR will return null
+ * @returns {object} - if assembly which contains this type is loaded, it will return flair type object OR will return null
  */
 const max_pool_size = (options.env.cores * 4);
 const min_pool_size = Math.round(max_pool_size/4);

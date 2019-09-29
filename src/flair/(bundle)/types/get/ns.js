@@ -15,7 +15,7 @@
  *          <assembly-file-name> can be xyz.js | xyz.min.js | ./<path>/xyz.js | ./<path>/xyz.min.js 
  *              no need to use .min. in file name here, it will pick whatever is applicable for the environment
  *              but if this is added, it will be ignored
- * @returns object if no name is passed to represents root-namespace OR promise that resolves with namespace object for specified namespace name
+ * @returns {object} if no name is passed to represents root-namespace OR promise that resolves with namespace object for specified namespace name
  */ 
 const _ns = (name, scan) => { 
     if (!name) {

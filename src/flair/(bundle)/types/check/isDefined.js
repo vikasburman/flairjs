@@ -6,7 +6,7 @@
  * @params
  *  obj: object - object that needs to be checked
  *  memberName: string - name of the member to check
- * @returns boolean - true/false
+ * @returns {boolean} - true/false
  */ 
 const _isDefined = (obj, memberName) => {
     // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself

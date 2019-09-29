@@ -8,7 +8,7 @@
  *  obj: object/string - object that needs to be processed by processor function or qualified name for which object will be created
  *                If a disposer is not defined for the object, it will not do anything
  *  fn: function - processor function
- * @returns any - returns anything that is returned by processor function, it may also be a promise
+ * @returns {any} - returns anything that is returned by processor function, it may also be a promise
  */ 
 const _using = (obj, fn) => {
     let args = _Args('obj: instance, fn: afunction', 

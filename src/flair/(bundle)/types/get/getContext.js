@@ -5,7 +5,7 @@
  *  _getContext(Type)
  * @params
  *  Type: type - flair type whose context is required
- * @returns object - assembly load context object where this type is loaded
+ * @returns {object} - assembly load context object where this type is loaded
  */ 
 const _getContext = (Type) => {
     let args = _Args('Type: flairtype')(Type); args.throwOnError(_getContext);

@@ -633,17 +633,17 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         }
         return member;           
     };
-    const applyAspects = (memberName, member, isASync) => {
+    const applyAspects = (memberName, member, isMemberASync) => {
         let weavedFn = null,
             funcAspects = [];
 
         // get aspects that are applicable for this function (NOTE: Optimization will be needed here, eventually)
-        funcAspects = Aspects(def.name, memberName);
+        funcAspects = getAspects(def.name, memberName, (modifierName) => { return modifiers.members.probe(modifierName, memberName).anywhere(); });
         def.aspects.members[memberName] = funcAspects; // store for reference by reflector
             
         // apply these aspects
         if (funcAspects.length > 0) {
-            weavedFn = attachAspects(def.name, memberName, funcAspects, member, isASync); 
+            weavedFn = attachAspects(def.name, memberName, funcAspects, member, isMemberASync); 
             if (weavedFn) {
                 member = weavedFn; // update member itself
             }

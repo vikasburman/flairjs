@@ -8,7 +8,7 @@
  *  intf: string OR interface - interface to be checked for, it can be following:
  *                              > fully qualified interface name
  *                              > interface type reference
- * @returns boolean - true/false
+ * @returns {boolean} - true/false
  */ 
 const _isImplements = (obj, intf) => {
     // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself

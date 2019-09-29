@@ -6,7 +6,7 @@
  *  getResource(qualifiedName)
  * @params
  *  qualifiedName: string - qualified resource name
- * @returns object - resource object's data
+ * @returns {object} - resource object's data
  */ 
 const _getResource = (qualifiedName) => { 
     let args = _Args('qualifiedName: string')(qualifiedName); args.throwOnError(_getResource);

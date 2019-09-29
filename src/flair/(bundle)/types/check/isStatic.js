@@ -5,7 +5,7 @@
  *  isStatic(type)
  * @params
  *  Type: class - flair class type that needs to be checked
- * @returns boolean - true/false
+ * @returns {boolean} - true/false
  */ 
 const _isStatic = (Type) => {
     // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself

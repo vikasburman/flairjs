@@ -53,7 +53,7 @@ Class('', [IProgressReporter, IDisposable], function() {
     *  run()
     * @arguments
     *  args: array - array as passed to task constructor* 
-    * @returns
+    * @returns {any}
     *  any - anything
     */  
     this.run = async (...args) => {
@@ -101,7 +101,7 @@ Class('', [IProgressReporter, IDisposable], function() {
      * @description Task related setup, executed only once, before onRun is called, - async
      * @example
      *  setup()
-     * @returns
+     * @returns {Promise}
      *  promise
      */  
     $$('virtual');
@@ -116,7 +116,7 @@ Class('', [IProgressReporter, IDisposable], function() {
      *  onRun(...args)
      * @arguments
      *  args: array - array as passed to task run
-     * @returns
+     * @returns {any}
      *  any - anything
      */  
     $$('abstract');

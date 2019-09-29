@@ -3,8 +3,6 @@
  * @description Helper functions exposed.
  * @example
  *  utils.<...>
- * @params
- * @returns
  */ 
 const _utils = () => { };
 _utils.guid = guid;

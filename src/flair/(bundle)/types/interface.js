@@ -18,7 +18,7 @@
  *                    Then type can be accessed as getType('MyType');
  *                    Note: When auto-naming is being used, namespace is also added automatically, and $$('ns') should not be applied
  *  factory: function - factory function to build interface definition
- * @returns type - constructed flair interface type
+ * @returns {type} - constructed flair interface type
  */
 const _Interface = (name, factory) => {
     let args = _Args('name: string, factory: cfunction')(name, factory); args.throwOnError(_Interface);

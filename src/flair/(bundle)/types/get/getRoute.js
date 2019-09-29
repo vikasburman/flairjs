@@ -5,7 +5,7 @@
  *  getRoute(qualifiedName)
  * @params
  *  qualifiedName: string - qualified route name
- * @returns object - route's data
+ * @returns {object} - route's data
  */ 
 const _getRoute= (qualifiedName) => { 
     let args = _Args('qualifiedName: string')(qualifiedName); args.throwOnError(_getRoute);

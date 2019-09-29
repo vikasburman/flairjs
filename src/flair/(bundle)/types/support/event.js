@@ -5,7 +5,7 @@
  *  event()
  * @params
  *  argsProcessor - args processor function, if args to be processed before event is raised
- * @returns
+ * @returns {function}
  *  function - returns given function or a noop function as is with an event marked tag
  */ 
 const _event = (argsProcessor) => { 

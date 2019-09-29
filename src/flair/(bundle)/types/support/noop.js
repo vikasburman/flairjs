@@ -3,8 +3,6 @@
  * @description No Operation function
  * @example
  *  noop()
- * @params
- * @returns
  */ 
 const _noop = () => {};
 

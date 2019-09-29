@@ -5,7 +5,7 @@
  *  typeOf(obj)
  * @params
  *  obj: object - object that needs to be checked
- * @returns string - type of the given object
+ * @returns {string} - type of the given object
  *                   it can be following:
  *                    > special ones like 'undefined', 'null', 'NaN', infinity
  *                    > special javascript data types like 'array', 'date', etc.

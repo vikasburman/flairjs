@@ -1,8 +1,6 @@
 /**
  * @name AppDomainProxy
  * @description Proxy to AppDomain that is created inside other worker.
- * @example
- *  
  */
 const AppDomainProxy = function(name, domains, allADOs) {
     let isUnloaded = false,

@@ -60,7 +60,7 @@
  *                     if a dependency could not be resolved, it will throw the console.error()
  *                     cyclic dependencies are taken care of - if A is looking for B which is looking for C and that is looking for A - or any such scenario - it will throw error
  *  fn: function - function where to pass resolved dependencies, in order they are defined in deps
- * @returns void
+ * @returns {void}
  */ 
 const bringCycle = [];
 const _bring = (deps, fn) => {

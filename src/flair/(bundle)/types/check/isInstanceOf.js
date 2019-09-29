@@ -8,7 +8,7 @@
  * @params
  *  obj: object - flair object instance that needs to be checked
  *  Type: flair type of string
- * @returns boolean - true/false
+ * @returns {boolean} - true/false
  */ 
 const _isInstanceOf = (obj, Type) => {
     // NOTE: in all 'check' type functions, Args() is not to be used, as Args use them itself

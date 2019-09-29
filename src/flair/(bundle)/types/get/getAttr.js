@@ -8,7 +8,7 @@
  *  memberName: string - when passed is flair object instance - member name for which attributes are to be read 
  *                 when passed is flair type - attribute name - if any specific attribute needs to be read (it will read all when this is null)
  *  attrName: string - if any specific attribute needs to be read (it will read all when this is null)
- * @returns array of attributes information objects { name, isCustom, args, type }
+ * @returns {IAttribute[]} - array of attributes information objects { name, isCustom, args, type }
  *          name: name of the attribute
  *          isCustom: true/false - if this is a custom attribute
  *          args: attribute arguments
