@@ -34,10 +34,7 @@ const _$$ = (name, ...attrArgs) => {
     }
 };
 _$$.register = (ca) => {
-    const { IAttribute } = _ns(); // sync call for root namespace
-    if (!_as(ca, IAttribute)) { throw _Exception.InvalidArgument('ca'); }
-    if (!ca.name || !ca.constraints) { throw _Exception.InvalidArgument('ca'); }
-
+    if (!ca || !ca.name || !ca.constraints) { throw _Exception.InvalidArgument('ca'); }
     if (_attrMeta.inbuilt[ca.name]) { throw _Exception.Duplicate('ca'); }
     if (custom_attr_registry[ca.name]) { throw _Exception.Duplicate('ca'); }
 
@@ -142,6 +139,7 @@ const _attrMeta = _attr[meta] = Object.freeze({
         state: new _attrConfig('(class && prop) && !($static || $session || $readonly || $abstract || $virtual)'),
         conditional: new _attrConfig('(class || struct) && (prop || func || event)'),
         noserialize: new _attrConfig('(class || struct) && prop'),
+        aspects: new _attrConfig('(class && func)'),
         ns: new _attrConfig('(class || struct || mixin || interface || enum) && !(prop || func || event || construct || dispose)'),
     
         mixin: new _attrConfig('class && (prop || func || event)'),

@@ -1,0 +1,1 @@
+flair.members = Object.freeze(flair.members);

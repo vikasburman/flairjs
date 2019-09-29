@@ -603,7 +603,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     const applyCustomAttributes = (bindingHost, memberName, memberType, member) => {
         for(let appliedAttr of attrs.members.all(memberName).current()) {
             if (appliedAttr.isCustom) { // custom attribute instance
-                if (memberType === 'prop') { // TODO: check if decorateProp exists
+                if (memberType === 'prop') {
                     let newSet = appliedAttr.attr.decorateProperty(def.name, memberName, member, ...appliedAttr.args); // set must return a object with get and set members
                     if (newSet.get && newSet.set) {
                         newSet.get = newSet.get.bind(bindingHost);
@@ -633,17 +633,17 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
         }
         return member;           
     };
-    const applyAspects = (memberName, member, isASync) => {
+    const applyAspects = (memberName, member, cannedAspects) => {
         let weavedFn = null,
             funcAspects = [];
 
         // get aspects that are applicable for this function (NOTE: Optimization will be needed here, eventually)
-        funcAspects = Aspects(def.name, memberName);
+        funcAspects = _get_Aspects(def.name, memberName, cannedAspects);
         def.aspects.members[memberName] = funcAspects; // store for reference by reflector
             
         // apply these aspects
         if (funcAspects.length > 0) {
-            weavedFn = attachAspects(def.name, memberName, funcAspects, member, isASync); 
+            weavedFn = _attach_Aspects(member, def.name, memberName, funcAspects); 
             if (weavedFn) {
                 member = weavedFn; // update member itself
             }
@@ -818,12 +818,11 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     };
     const validateMember = (memberName, interface_being_validated) => {
         // optional members will have a '_' suffix to mark being optional
-        let isOptionalMember = memberName.endsWith('_'),
-            updatedMemberName = memberName;
-        if (isOptionalMember) { updatedMemberName = memberName.substr(0, memberName.length - 1); } // remove _ suffix
+        let isOptionalMember = memberName.endsWith('_');
+        if (isOptionalMember) { memberName = memberName.substr(0, memberName.length - 1); } // remove _ suffix
 
         // member must exists check + member type must match
-        if (Object.keys(exposed_obj).indexOf(updatedMemberName) === -1 || modifiers.members.type(memberName) !== interface_being_validated[meta].modifiers.members.type(memberName)) {
+        if (Object.keys(exposed_obj).indexOf(memberName) === -1 || modifiers.members.type(memberName) !== interface_being_validated[meta].modifiers.members.type(memberName)) {
             if (memberName === 'dispose' && (typeof exposed_obj[_disposeName] === 'function' || 
                                              typeof exposed_objMeta.dispose === 'function')) {
                 // its ok, continue below
@@ -844,8 +843,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
     };       
     const validateInterfaces = () => {
         if (def.interfaces) {
-            for(let _interfaceType of def.interfaces) {
-                // TODO: use isComplies here
+            for(let _interfaceType of def.interfaces) { 
                 // an interface define members just like a type
                 // with but its functions, event and props will be nim, nie and nip respectively
                 // additionally these names may end with '_' to represent that member being an optional member
@@ -1228,6 +1226,7 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
             on_attr = attrs.members.probe('on', memberName).current(),              // always look for current on, inherited case would already be baked in
             timer_attr = attrs.members.probe('timer', memberName).current(),          // always look for current timer
             args_attr = attrs.members.probe('args', memberName).current(),
+            aspects_attr = attrs.members.probe('aspects', memberName).current(),
             overload_attr = attrs.members.probe('overload', memberName).current(),
             _isDeprecate = (_deprecate_attr !== null),
             _deprecate_message = (_isDeprecate ? (_deprecate_attr.args[0] || `Function is marked as deprecate. (${def.name}::${memberName})`) : ''),
@@ -1339,7 +1338,18 @@ const buildTypeInstance = (cfg, Type, obj, _flag, _static, ...args) => {
 
         // weave advices from aspects
         if (cfg.aop) {
-            _member = applyAspects(memberName, _member, _isASync);
+            let staticAspects = [];
+            if (aspects_attr && aspects_attr.args.length > 0) { 
+                // validate, each being of type Aspect
+                aspects_attr.args.forEach(item => {
+                    if (!_is(item, 'Aspect')) {
+                        throw _Exception.InvalidArgument(`Only Aspect types can be statically weaved on function. (${def.name}::${memberName})`, builder); 
+                    }
+                });
+                staticAspects = aspects_attr.args; 
+            }
+            // staticAspects are actual type references - cannot be just type names
+            _member = applyAspects(memberName, _member, staticAspects);
         }
 
         // hook it to handle posted event, if configured
@@ -2114,3 +2124,6 @@ const builder = (cfg) => {
     // return 
     return _finalObject;
 };
+
+
+// TODO: for all types - check to keep minimum meta data and in sync

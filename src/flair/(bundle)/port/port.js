@@ -33,7 +33,9 @@ _Port.define = (name, members) => {
     };
 };
 _Port.connect = (ph) => {
-    if (!ph || !ph.name) { throw _Exception.InvalidArgument('ph', _Port.connect); }
+    const { IPortHandler } = _ns(); // sync call for root namespace
+    if (!_as(ph, IPortHandler)) { throw _Exception.InvalidArgument('ph', _Port.connect); }
+    if (!ph.name) { throw _Exception.InvalidArgument('ph', _Port.connect); }
     if (!ports_registry[ph.name]) { throw _Exception.NotFound(name, _Port.connect); } 
 
     let members = [ph.name].members;

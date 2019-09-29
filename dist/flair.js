@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.59.80
- *  Thu, 26 Sep 2019 01:46:54 GMT
+ *  Version: 0.59.91
+ *  Sun, 29 Sep 2019 02:24:32 GMT
  * 
  * (c) 2017-2019 Vikas Burman
  * MIT
@@ -24,12 +24,11 @@
         module.exports = exports = fo; // CommonJS        
     } else { // expose as global on window
         root.flair = factory();
-    }
+    } 
 })((this || globalThis), function() {
     'use strict';
 
     /* eslint-disable no-unused-vars */
-    // locals
     let isServer = new Function("try {return this===global;}catch(e){return false;}")(),
         isWorker = false,
         sym = [],
@@ -47,7 +46,7 @@
         envProps = {},
         isAppStarted = false;
     /* eslint-enable no-unused-vars */
-
+    
     // worker setting
     if (isServer) {
         try {
@@ -59,33 +58,7 @@
     } else { // client
         isWorker = (typeof WorkerGlobalScope !== 'undefined' ? true : false);
     }
-
-    // flairapp bootstrapper
-    let flair = async (arg1, arg2) => {
-        let ADO = null,
-            options = null;
-        if (typeof arg1 === 'string') { // just the  entry point is specified
-            options = { main: arg1 };
-        } else if (arg1.main && arg1.module && arg1.engine) { // this is start options object
-            options = arg1;
-        } else {
-            ADO = arg1;
-        }
-        
-        if (options) {
-            if (typeof arg2 === 'string') { options.config = arg2; } // config is also given
-            if (!isAppStarted) {
-                // boot
-                isAppStarted = await flair.AppDomain.boot(options);
-            }
-
-            // return
-            return flair.AppDomain.app();
-        } else if (ADO) {
-            flair.AppDomain.registerAdo(ADO);
-        }
-    };
-
+    
     // read symbols from environment
     // symbols can be pass in variety of formats: 
     //  server: command line args (process.argv), environment variables (process.env.FLAIR_SYMBOLS)
@@ -101,7 +74,7 @@
             // from process.argv
             let idx = process.argv.findIndex((item) => { return (item.startsWith(`--${symKey}`) ? true : false); });
             if (idx !== -1) { symString = process.argv[idx].substr(2).split('=')[1]; }
-
+    
             // from process.env
             if (process.env[symKey]) { // add to list
                 if (symString) { symString += ','; }
@@ -117,8 +90,8 @@
         }
     }
     if (symString) { sym = symString.split(',').map(item => item.trim()); }
-    //
-
+    
+    // options
     options.symbols = Object.freeze(sym);
     options.env = Object.freeze({
         type: (isServer ? 'server' : 'client'),
@@ -163,17 +136,53 @@
     // Dev is true only when DEV is present even if PROD / STAGE is also present
     // Local, Debug and Test can be true in any of these environments
 
-    // flair
+    let flair = async (arg1, arg2) => {
+        let ADO = null,
+            options = null;
+        if (typeof arg1 === 'string') { // just the  entry point is specified
+            options = { main: arg1 };
+        } else if (arg1.main && arg1.module && arg1.engine) { // this is start options object
+            options = arg1;
+        } else {
+            ADO = arg1;
+        }
+        
+        if (options) {
+            if (typeof arg2 === 'string') { options.config = arg2; } // config is also given
+            if (!isAppStarted) {
+                // boot
+                isAppStarted = await flair.AppDomain.boot(options);
+            }
+    
+            // return
+            return flair.AppDomain.app();
+        } else if (ADO) {
+            flair.AppDomain.registerAdo(ADO);
+        }
+    };
+    
     flair.members = [];
     flair.options = Object.freeze(options);
-    flair.env = flair.options.env; // direct env access as well
+    flair.env = flair.options.env; // direct env access as well   
+        
+    
+    /**
+     * @description Attach API to flair instance
+     * @param {string} name - name of the member
+     * @param {object} obj - member API instance
+     * @param {function} disposer - member API internals disposer
+     * @returns {void}
+     */
     const a2f = (name, obj, disposer) => {
-        flair[name] = Object.freeze(obj);
-        flair.members.push(name);
         if (typeof disposer === 'function') { disposers.push(disposer); }
-    };
+    
+        // expose freezed object
+        flair[name] = Object.freeze(obj);
+    
+        // add to list
+        flair.members.push(name);
+    }; 
 
-    // members
     /**
      * @name noop
      * @description No Operation function
@@ -956,7 +965,9 @@
         };
     };
     _Port.connect = (ph) => {
-        if (!ph || !ph.name) { throw _Exception.InvalidArgument('ph', _Port.connect); }
+        const { IPortHandler } = _ns(); // sync call for root namespace
+        if (!_as(ph, IPortHandler)) { throw _Exception.InvalidArgument('ph', _Port.connect); }
+        if (!ph.name) { throw _Exception.InvalidArgument('ph', _Port.connect); }
         if (!ports_registry[ph.name]) { throw _Exception.NotFound(name, _Port.connect); } 
     
         let members = [ph.name].members;
@@ -1718,6 +1729,7 @@
         this.connection = route.connection || '';
         this.mount = route.mount;
         this.verbs = route.verbs || (isServer ? ['get'] : ['view']); // default verb
+        this.mw = route.mw || [];
         this.path = route.path;
         this.handler = route.handler;
     };
@@ -2889,10 +2901,17 @@
         if (!obj) { throw _Exception.InvalidArgument('obj', _isComplies); }
         if (_typeOf(intf) !== 'interface') { throw _Exception.InvalidArgument('intf', _isComplies); }
         
-        let complied = true;
+        let complied = true,
+            isOptionalMember = false;
+        //if (isOptionalMember) { memberName = memberName.substr(0, memberName.length - 1); } // remove _ suffix
+    
+        // TODO: this shoudl also check for sync and async type functions
+    
         for(let member in intf) {
             if (intf.hasOwnProperty(member) && member !== meta) {
-                if (!obj[member]) { complied = false; break; } // member not available
+                isOptionalMember = member.endsWith('_');  
+                if (isOptionalMember) { member = member.substr(0, member.length - 1); } // remove _ suffix
+                if (!obj[member] && !isOptionalMember) { complied = false; break; } // member not available
                 if (typeof intf[member] === 'function') { // function or event
                     if (typeof obj[member] !== 'function') { complied = false; break; } // member is not a function or event
                 } // else property, just presence was to be checked
@@ -3347,7 +3366,10 @@
         }
     };
     _$$.register = (ca) => {
-        if (!ca || !ca.name || !ca.constraints) { throw _Exception.InvalidArgument('ca'); }
+        const { IAttribute } = _ns(); // sync call for root namespace
+        if (!_as(ca, IAttribute)) { throw _Exception.InvalidArgument('ca'); }
+        if (!ca.name || !ca.constraints) { throw _Exception.InvalidArgument('ca'); }
+    
         if (_attrMeta.inbuilt[ca.name]) { throw _Exception.Duplicate('ca'); }
         if (custom_attr_registry[ca.name]) { throw _Exception.Duplicate('ca'); }
     
@@ -3452,7 +3474,6 @@
             state: new _attrConfig('(class && prop) && !($static || $session || $readonly || $abstract || $virtual)'),
             conditional: new _attrConfig('(class || struct) && (prop || func || event)'),
             noserialize: new _attrConfig('(class || struct) && prop'),
-            aspects: new _attrConfig('(class && func)'),
             ns: new _attrConfig('(class || struct || mixin || interface || enum) && !(prop || func || event || construct || dispose)'),
         
             mixin: new _attrConfig('class && (prop || func || event)'),
@@ -4094,7 +4115,7 @@
         const applyCustomAttributes = (bindingHost, memberName, memberType, member) => {
             for(let appliedAttr of attrs.members.all(memberName).current()) {
                 if (appliedAttr.isCustom) { // custom attribute instance
-                    if (memberType === 'prop') {
+                    if (memberType === 'prop') { // TODO: check if decorateProp exists
                         let newSet = appliedAttr.attr.decorateProperty(def.name, memberName, member, ...appliedAttr.args); // set must return a object with get and set members
                         if (newSet.get && newSet.set) {
                             newSet.get = newSet.get.bind(bindingHost);
@@ -4124,17 +4145,17 @@
             }
             return member;           
         };
-        const applyAspects = (memberName, member, cannedAspects) => {
+        const applyAspects = (memberName, member, isASync) => {
             let weavedFn = null,
                 funcAspects = [];
     
             // get aspects that are applicable for this function (NOTE: Optimization will be needed here, eventually)
-            funcAspects = _get_Aspects(def.name, memberName, cannedAspects);
+            funcAspects = Aspects(def.name, memberName);
             def.aspects.members[memberName] = funcAspects; // store for reference by reflector
                 
             // apply these aspects
             if (funcAspects.length > 0) {
-                weavedFn = _attach_Aspects(member, def.name, memberName, funcAspects); 
+                weavedFn = attachAspects(def.name, memberName, funcAspects, member, isASync); 
                 if (weavedFn) {
                     member = weavedFn; // update member itself
                 }
@@ -4309,11 +4330,12 @@
         };
         const validateMember = (memberName, interface_being_validated) => {
             // optional members will have a '_' suffix to mark being optional
-            let isOptionalMember = memberName.endsWith('_');
-            if (isOptionalMember) { memberName = memberName.substr(0, memberName.length - 1); } // remove _ suffix
+            let isOptionalMember = memberName.endsWith('_'),
+                updatedMemberName = memberName;
+            if (isOptionalMember) { updatedMemberName = memberName.substr(0, memberName.length - 1); } // remove _ suffix
     
             // member must exists check + member type must match
-            if (Object.keys(exposed_obj).indexOf(memberName) === -1 || modifiers.members.type(memberName) !== interface_being_validated[meta].modifiers.members.type(memberName)) {
+            if (Object.keys(exposed_obj).indexOf(updatedMemberName) === -1 || modifiers.members.type(memberName) !== interface_being_validated[meta].modifiers.members.type(memberName)) {
                 if (memberName === 'dispose' && (typeof exposed_obj[_disposeName] === 'function' || 
                                                  typeof exposed_objMeta.dispose === 'function')) {
                     // its ok, continue below
@@ -4334,7 +4356,8 @@
         };       
         const validateInterfaces = () => {
             if (def.interfaces) {
-                for(let _interfaceType of def.interfaces) { 
+                for(let _interfaceType of def.interfaces) {
+                    // TODO: use isComplies here
                     // an interface define members just like a type
                     // with but its functions, event and props will be nim, nie and nip respectively
                     // additionally these names may end with '_' to represent that member being an optional member
@@ -4717,7 +4740,6 @@
                 on_attr = attrs.members.probe('on', memberName).current(),              // always look for current on, inherited case would already be baked in
                 timer_attr = attrs.members.probe('timer', memberName).current(),          // always look for current timer
                 args_attr = attrs.members.probe('args', memberName).current(),
-                aspects_attr = attrs.members.probe('aspects', memberName).current(),
                 overload_attr = attrs.members.probe('overload', memberName).current(),
                 _isDeprecate = (_deprecate_attr !== null),
                 _deprecate_message = (_isDeprecate ? (_deprecate_attr.args[0] || `Function is marked as deprecate. (${def.name}::${memberName})`) : ''),
@@ -4829,18 +4851,7 @@
     
             // weave advices from aspects
             if (cfg.aop) {
-                let staticAspects = [];
-                if (aspects_attr && aspects_attr.args.length > 0) { 
-                    // validate, each being of type Aspect
-                    aspects_attr.args.forEach(item => {
-                        if (!_is(item, 'Aspect')) {
-                            throw _Exception.InvalidArgument(`Only Aspect types can be statically weaved on function. (${def.name}::${memberName})`, builder); 
-                        }
-                    });
-                    staticAspects = aspects_attr.args; 
-                }
-                // staticAspects are actual type references - cannot be just type names
-                _member = applyAspects(memberName, _member, staticAspects);
+                _member = applyAspects(memberName, _member, _isASync);
             }
     
             // hook it to handle posted event, if configured
@@ -5615,9 +5626,7 @@
         // return 
         return _finalObject;
     };
-    
-    
-    // TODO: for all types - check to keep minimum meta data and in sync  
+      
     /**
      * @name Class
      * @description Constructs a Class type.
@@ -6190,189 +6199,301 @@
         telemetry_buffer.length = 0;
     });
         
+    // Aspects API: start
+    
     /**
-     * @name Aspects
-     * @description Aspect orientation support.
-     * @example
-     *  .register(pointcut, Aspect)             // - void
-     * @params
-     *  pointcut: string - pointcut identifier string as -> [namespace.]class[:func]
-     *      namespace/class/func: use wildcard characters ? or * to build the pointcut identifier
-     *     
-     *      Examples:
-     *          abc                 - on all functions of all classes named abc in root namespace (without any namespace)
-     *          *.abc               - on all functions of all classes named abc in all namespaces
-     *          xyz.*               - on all functions of all classes in xyz namespace
-     *          xyz.abc             - on all functions of class abc under xyz namespace
-     *          xyz.abc:*           - on all functions of class abc under xyz namespace
-     *          xyz.abc:f1          - on func f1 of class abc under xyz namespace
-     *          xyz.abc:f?test      - on all funcs that are named like f1test, f2test, f3test, etc. in class abc under xyz namespace
-     *          xyz.xx*.abc         - on functions of all classes names abc under namespaces where pattern matches xyz.xx* (e.g., xyz.xx1 and xyz.xx2)
-     *          *xyx.xx*.abc        - on functions of all classes names abc under namespaces where pattern matches *xyz.xx* (e.g., 1xyz.xx1 and 2xyz.xx1)
-     *     
-     * aspect: type - flair Aspect type
-     */ 
-    const allAspects = [];
-    const _Aspects = {
-        // register Aspect against given pointcut definition
-        register: (pointcut, aspect) => {
-            let args = _Args('pointcut: string, aspect: Aspect')(pointcut, aspect); args.throwOnError(_Aspects.register);
-            
-            // add new entry
-            let pc = pointcut,
-                __ns = '',
-                __class = '',
-                __func = '',
-                __identifier = '',
-                items = null;
+     * @description List of registered aspects
+     * @type {AspectListItem[]}
+     */
+    const aspectsList = [];
     
-            if (pc.indexOf(':') !== -1) { // extract func
-                items = pc.split(':');
-                pc = items[0].trim();
-                __func = items[1].trim() || '*';
-            }
-    
-            if (pc.indexOf('.') !== -1) { // extract class and namespace
-                __ns = pc.substr(0, pc.lastIndexOf('.'));
-                __class = pc.substr(pc.lastIndexOf('.') + 1);
-            } else {
-                __ns = ''; // no namespace
-                __class = pc;
-            }    
-    
-            // build regex
-            __identifier = __ns + '\/' +__class + ':' + __func; // eslint-disable-line no-useless-escape
-            __identifier = replaceAll(__identifier, '.', '[.]');    // . -> [.]
-            __identifier = replaceAll(__identifier, '?', '.');      // ? -> .
-            __identifier = replaceAll(__identifier, '*', '.*');     // * -> .*
-    
-            // register
-            allAspects.push({rex: new RegExp(__identifier), Aspect: aspect});
-        }
+    /**
+     * @type {AspectListItem}
+     * @description Aspect list item
+     * @param {string} pc - pointcut definition
+     * @param {regex} rex - pointcut definition regular expression
+     * @param {IAspect} type - Aspect type
+     */
+    const AspectListItem = function(pc, rex, type) {
+        this.pointcut = pc;
+        this.rex = rex;
+        this.Aspect = type;
     };
-    const _get_Aspects = (typeName, funcName, staticAspects) => {
-        // NOTE: intentionally not checking type, because it is an internal call and this needs to run as fast as possible
-        // get parts
-        let funcAspects = [],
-            __ns = '',
-            __class = '',
-            __func = funcName.trim(),
-            __identifier = ''
+    
+    /**
+     * @description Builds an id for given context that can be matched with aspectContextIdPattern
+     * @param {string} typeName - qualified type name
+     * @param {regex} funcName - function name
+     * @returns {string} - aspectContextId
+     */
+    const buildAspectContextId = (typeName, funcName) => {
+        let _ns = '',
+        _class = '',
+        _func = funcName.trim();
     
         if (typeName.indexOf('.') !== -1) {
-            __ns = typeName.substr(0, typeName.lastIndexOf('.')).trim();
-            __class = typeName.substr(typeName.lastIndexOf('.') + 1).trim(); 
+            _ns = typeName.substr(0, typeName.lastIndexOf('.')).trim();
+            _class = typeName.substr(typeName.lastIndexOf('.') + 1).trim(); 
         } else {
-            __ns = ''; // no namespace
-            __class = typeName.trim();
+            _ns = ''; // no namespace
+            _class = typeName.trim();
         }
-        __identifier = __ns + '/' + __class + ':' + __func;
-    
-        // add staticAspects first, if defined
-        if (staticAspects) { funcAspects.push(...staticAspects); }
-    
-        allAspects.forEach(item => {
-            if (item.rex.test(__identifier)) { 
-                if (findIndexByProp(funcAspects, 'name', item.Aspect[meta].name) === -1) {
-                    funcAspects.push({ name: item.Aspect[meta].name, Aspect: item.Aspect });
-                }
-            }
-        });
-    
-        // return
-        return funcAspects;
+        
+        return _ns + '/' + _class + ':' + _func;
     };
-    const _attach_Aspects = (fn, typeName, funcName, funcAspects) => {
-        // NOTE: no type checking, as this is an internal call
+    
+    /**
+     * @description Builds a pattern for given pointcut, that can be matched with aspectContextId
+     * @param {string} pointcut - pointcut identifier pattern string as -> namespace.class:func
+     * @returns {regex} - aspectContextIdPattern
+     * @throws {InvalidArgument}
+     */
+    const buildAspectContextIdPattern = (pointcut) => {
+        let pc = pointcut,
+            _ns = '',
+            _class = '',
+            _func = '',
+            items = null,
+            _identifier = '';
+    
+        // extract func
+        if(pc.indexOf(':') !== -1) {
+            items = pc.split(':');
+            pc = items[0].trim();
+            _func = items[1].trim() || '';
+            if (!_func) { throw _Exception.InvalidArgument('pointcut'); }
+        } else {
+            throw _Exception.InvalidArgument('pointcut');
+        }
+    
+        // extract namespace and class
+        if (pc.indexOf('.') !== -1) {
+            _ns = pc.substr(0, pc.lastIndexOf('.')).trim();
+            _class = pc.substr(pc.lastIndexOf('.') + 1).trim(); 
+        } else {
+            _ns = '';
+            _class = pc;
+        }
+        if (!_class) { throw _Exception.InvalidArgument('pointcut'); }
+    
+        // only 1 section can have *, not more than one
+        if (_ns === '*') { if (_class === '*' || _func === '*') { throw _Exception.InvalidArgument('pointcut'); } }
+        if (_class === '*') { if (_ns === '*' || _func === '*') { throw _Exception.InvalidArgument('pointcut'); } }
+        if (_func === '*') { if (_ns === '*' || _class === '*') { throw _Exception.InvalidArgument('pointcut'); } }
+    
+        // make regex
+        _identifier = _ns + '\/' + _class + ':' + _func; // eslint-disable-line no-useless-escape
+        _identifier = replaceAll(_identifier, '.', '[.]');    // . -> [.]
+        _identifier = replaceAll(_identifier, '?', '.');      // ? -> .
+        _identifier = replaceAll(_identifier, '*', '.*');     // * -> .*
+    
+        return new RegExp(_identifier);
+    };
+    
+    /**
+    * @description Attach given aspects to given function
+    * @param {string} typeName - qualified type name
+    * @param {regex} funcName - function name
+    * @param {IAspect[]} funcAspects - function aspects to attach
+    * @param {function} fn - function to wrap
+    * @param {boolean} isASync - if fn is async
+    * @returns {function} - sync or async wrapped function
+    */
+    const attachAspects = (typeName, funcName, funcAspects, fn, isASync) => {
+        // note: no type checking, as this is an internal call
         let before = [],
             after = [],
             around = [],
+            beforeSq = [],
+            afterSq = [],
             instance = null;
     
         // collect all advices
-        for(let item of funcAspects) {
-            instance = new item.Aspect();
-            if (instance.before !== _noop) { before.push(instance.before); }
-            if (instance.around !== _noop) { around.push(instance.around); }
-            if (instance.after !== _noop) { after.push(instance.after); }
+        for(let Aspect of funcAspects) {
+            instance = new Aspect();
+            if (instance.before && instance.after) { // around type advises
+                around.push(instance); 
+            } else if (instance.before) { // before type
+                before.push(instance); 
+            } else if (instance.after) { // after type
+                after.push(instance); 
+            }
         }
     
-        // around weaving
-        if (around.length > 0) { around.reverse(); }
+        // build sequence of execution
+        // for this case: 
+        //      before1, before2, around1, around2, after1, after2
+        // sequence would be: 
+        //      before2, before1, around2.before, around1.before, MAIN_FN, around1.after, around2.after, after1, after2
+        if (before.length > 0) { before.reverse(); } // reverse, so that first added ones execute close to main function
+        for(let item of before) { beforeSq.push(item.before); }
     
-        // weaved function
-        let weavedFn = function(...args) {
+        // first add after of around without reverse, so that after of first added ones execute close to main function
+        for(let item of around) { afterSq.push(item.after); }
+    
+        if (around.length > 0) { around.reverse(); } // reverse, so that before of first added ones execute close to main function
+        for(let item of around) { beforeSq.push(item.before); }
+        
+        // no reverse for this, so that first added ones execute close to main function
+        for(let item of after) { afterSq.push(item.after); }
+    
+        // clean
+        before = null; after = null; around = null;
+    
+        // context
+        const FuncRunHelper = function(typeName, funcName, fn, beforeSq, afterSq, ...args) {
             let error = null,
                 result = null,
+                fnArgs = args,
+                stage = -1, // -1: before, 0: main, 1: after
                 ctx = {
                     typeName: () => { return typeName; },
                     funcName: () => { return funcName; },
                     error: (err) => { if (err) { error = err; } return error;  },
-                    result: (value) => { if (typeof value !== 'undefined') { result = value; } return result; },
-                    args: () => { return args; },
-                    data: {}
+                    result: (value) => { if (stage >= 0 && typeof value !== 'undefined') { result = value; } return result; }, // can be set only after main func is executed and by after advises
+                    args: (...changedArgs) => { if (stage < 0 && changedArgs) { fnArgs = changedArgs; } return fnArgs; }, // can be set only before main func is executed and by before advises
+                    data: {} // data bag
                 };
             
-            // run before functions
-            for(let beforeFn of before) {
-                try {
-                    beforeFn(ctx);
-                } catch (err) {
-                    error = err;
-                }
-            }
-    
-            // after functions executor
-            const runAfterFn = (_ctx) =>{
-                for(let afterFn of after) {
+            this.runBeforeSq = () => {
+                stage = -1; // before
+                for(let beforeFn of beforeSq) {
                     try {
-                        afterFn(_ctx);
+                        beforeFn(ctx); // can update args
                     } catch (err) {
                         ctx.error(err);
                     }
+                } 
+            };
+            this.runMainSync = () => {
+                this.runBeforeSq();            
+                try {
+                    stage = 0;
+                    ctx.result(fn(...ctx.args()));
+                } catch (err) {
+                    ctx.error(err);
+                }
+                this.runAfterSq();
+                return this.throwOrGiveResult();
+            };
+            this.runMainAsync = async () => {
+                this.runBeforeSq();            
+                try {
+                    stage = 0;
+                    ctx.result(await fn(...ctx.args()));
+                } catch (err) {
+                    ctx.error(err);
+                }
+                this.runAfterSq();
+                return this.throwOrGiveResult();
+            };
+            this.runAfterSq = () => {
+                stage = 1; // after
+                for(let afterFn of afterSq) {
+                    try {
+                        afterFn(ctx); // can update result
+                    } catch (err) {
+                        ctx.error(err);
+                    }
+                }  
+            };        
+            this.throwOrGiveResult = () => {
+                if (ctx.error()) {
+                    throw ctx.error();
+                } else {
+                    return ctx.result();
                 }
             };
-    
-            // run around func
-            let newFn = fn,
-                _result = null;
-            for(let aroundFn of around) { // build a nested function call having each wrapper calling an inner function wrapped inside advices' functionality
-                newFn = aroundFn(ctx, newFn);
-            }                    
-            try {
-                _result = newFn(...args);
-                if (_result && typeof _result.then === 'function') { // async function
-                    ctx.result(new Promise((__resolve, __reject) => {
-                        _result.then((value) => {
-                            ctx.result(value);
-                            runAfterFn(ctx);
-                            __resolve(ctx.result());
-                        }).catch((err) => {
-                            ctx.error(err);
-                            runAfterFn(ctx);
-                            __reject(ctx.error());
-                        });
-                    }));
-                } else {
-                    ctx.result(_result);
-                    runAfterFn(ctx);
-                }
-            } catch (err) {
-                ctx.error(err);
-            }
-    
-            // return
-            return ctx.result();
         };
     
-        // done
-        return weavedFn;
+        if (isASync) { // async
+            return async function (...args) {
+                let fnHelper = new FuncRunHelper(typeName, funcName, fn, beforeSq, afterSq, ...args);
+                return await fnHelper.runMainAsync();
+            };   
+        } else { // sync
+            return function (...args) {
+                let fnHelper = new FuncRunHelper(typeName, funcName, fn, beforeSq, afterSq, ...args);
+                return fnHelper.runMainSync();
+            };
+        }
     };
     
-    // attach to flair
-    a2f('Aspects', _Aspects, () => {
-        allAspects.length = 0;
-    });
+    /**
+     * @description Dispose aspects api internals
+     * @returns {void}
+     */
+    const aspectsDisposer = () => {
+        aspectsList.length = 0;
+    };
+    
+    // internals: end
+    
+    // main api: start
+    
+    /**
+     * Finds matching aspects for given context
+     * @param {string} typeName - qualified type name
+     * @param {string} funcName - function name
+     * @returns {IAspect[]} - matching aspects
+     */
+    const Aspects = (typeName, funcName) => {
+        if (typeof typeName !== 'string' || !typeName) { throw Exception.InvalidArgument('typeName'); }
+        if (typeof funcName !== 'string' || !funcName) { throw Exception.InvalidArgument('funcName'); }
+    
+        // collect and return matching aspects
+        let funcAspects = [],
+            aspectContextId = buildAspectContextId(typeName, funcName);
+        aspectsList.forEach(item => {
+            if (item.rex.test(aspectContextId)) { funcAspects.push(item.Aspect); }
+        });
+        return funcAspects;
+    };
+    
+    /**
+     * Register given aspect type against given pointcut pattern
+      * @param {string} pointcut - pointcut identifier pattern string as -> namespace.class:func
+     *                            wildcard characters ? or * can be used in any or all parts of the three (namespace, class, func)
+     *                            providing all three parts are necessary in any definition
+     *                            using just wildcard (when the whole set name is *) is not allowed on more than one sections to prevent misuse of this feature
+     * 
+     *                            examples of valid and invalid strings are:
+     *                              valid: *.className:funcName 
+     *                              valid: *.class?:func?
+     *                              valid: className:funcName  <-- root namespace
+     *                              valid: namespace.*:funcName
+     *                              valid: name*.*:func*
+     *                              valid: namespace.className:*
+     *                              valid: ?amespace.class*:?uncName
+     *                              invalid: *.*:funcName
+     *                              invalid: namespace.*:*
+     *                              invalid: *.className:*
+     * 
+     *                            funcs can be of any type: static, public, protected or private
+     *                            classes can be of any type: static, sealed, singleton, or normal
+     * @param {string} aspectType - flair class type that implements IAspect
+     * @returns {void}
+     * @throws {InvalidArgument}
+     */
+    Aspects.register = (pointcut, aspectType) => {
+        if (typeof pointcut !== 'string') { throw Exception.InvalidArgument('pointcut'); }
+    
+        const { IAspect } = ns(); // sync call for root namespace
+        if (!as(aspectType, IAspect)) { throw Exception.InvalidArgument('aspectType'); }
+    
+        // get pattern (regex)
+        let aspectContextIdPattern = buildAspectContextIdPattern(pointcut);
+    
+        // register
+        aspectsList.push(new AspectListItem(pointcut, aspectContextIdPattern, aspectType));
+    };
+    
+    // main api: end
+    
+    // expose
+    a2f('Aspects', Aspects, aspectsDisposer);
+    
+    // Aspects API: end
        
     /**
      * @name Serializer
@@ -7400,8 +7521,7 @@
     a2f('utils', _utils);
         
 
-    // freeze members
-    flair.members = Object.freeze(flair.members);
+    flair.members = Object.freeze(flair.members); 
 
     // get current file
     let currentFile = (isServer ? __filename : (isWorker ? self.location.href : getLoadedScript('flair.js', 'flair.min.js')));
@@ -7413,19 +7533,19 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.59.80',
+        version: '0.59.91',
         copyright: '(c) 2017-2019 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Thu, 26 Sep 2019 01:46:54 GMT')
+        lupdate: new Date('Sun, 29 Sep 2019 02:24:32 GMT')
     });  
-
+    
     // bundled assembly load process 
     let file = which('./flair{.min}.js');
     _AppDomain.context.current().loadBundledAssembly(file, currentFile, (flair, __asmFile) => {
         // NOTES: 
         // 1. Since this is a custom assembly index.js file, types built-in here does not support 
         //    await type calls, as this outer closure is not an async function
-
+    
         // assembly closure: init (start)
         /* eslint-disable no-unused-vars */
         
@@ -7485,21 +7605,20 @@
         
         // assembly closure: types (start)
             
-    (() => { // type: ./src/flair/(root)/@1-Aspect.js
+    (() => { // type: ./src/flair/(root)/IAspect.js
         /**
-         * @name Aspect
-         * @description Aspect base class.
+         * @name IAspect
+         * @description IAspect interface
          */
-        $$('abstract');
         $$('ns', '(root)');
-		Class('Aspect', function() {
+		Interface('IAspect', function() {
             /** 
              * @name before
              * @description Before advise
              * @example
              *  before(ctx)
              * @arguments
-             * ctx: object - context object that is shared across all weavings
+             *  ctx: object     - context object that is shared across all weaving
              *  typeName()      - gives the name of the type
              *  funcName()      - gives the name of the function
              *  error(err)      - store new error to context, or just call error() to get last error
@@ -7507,26 +7626,7 @@
              *  args()          - get original args passed to main call
              *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
              */  
-            $$('virtual');
-            this.before = nim;
-        
-            /** 
-             * @name around
-             * @description Around advise
-             * @example
-             *  around(ctx, fn)
-             * @arguments
-             * ctx: object - context object that is shared across all weavings
-             *  typeName()      - gives the name of the type
-             *  funcName()      - gives the name of the function
-             *  error(err)      - store new error to context, or just call error() to get last error
-             *  result(value)   - store new result to context, or just call result() to get last stored result
-             *  args()          - get original args passed to main call
-             *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
-             * fn: function - function which is wrapped, it should be called in between pre and post actions
-             */  
-            $$('virtual');
-            this.around = nim;
+            this.before_ = nim;
         
             /** 
              * @name after
@@ -7534,7 +7634,7 @@
              * @example
              *  after(ctx)
              * @arguments
-             * ctx: object - context object that is shared across all weavings
+             *  ctx: object     - context object that is shared across all weaving
              *  typeName()      - gives the name of the type
              *  funcName()      - gives the name of the function
              *  error(err)      - store new error to context, or just call error() to get last error
@@ -7542,8 +7642,7 @@
              *  args()          - get original args passed to main call
              *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
              */  
-            $$('virtual');
-            this.after = nim;
+            this.after_ = nim;
         });
         
     })();    
@@ -7822,7 +7921,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('', (typeof onLoadComplete === 'function' ? onLoadComplete : null)); // eslint-disable-line no-undef
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.80","lupdate":"Thu, 26 Sep 2019 01:46:54 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["Aspect","IAttribute","IDisposable","IPortHandler","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.59.91","lupdate":"Sun, 29 Sep 2019 02:24:32 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["IAspect","IAttribute","IDisposable","IPortHandler","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
         
         // return settings and config
         return Object.freeze({
@@ -7831,12 +7930,12 @@
             config: config
         });
     });
-
+    
     // set settings and config for uniform access anywhere in this closure
     let asm = _getAssembly('[flair]');
     settings = asm.settings();
     config = asm.config();
-
+    
     // return
     return Object.freeze(flair);
 });
