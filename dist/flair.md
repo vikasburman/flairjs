@@ -11,7 +11,7 @@ Copyright &copy; 2017-2020 Vikas Burman. Distributed under MIT.
 
 # Assembly: <u>flair</u>
 <small>
-Version 0.64.1 | Thu, 27 Feb 2020 14:17:29 GMT
+Version 0.64.2 | Thu, 27 Feb 2020 14:21:34 GMT
 <br/>
 
 [flair.js](./flair.js) (364k, 97k [minified](flair.min.js), 27k [gzipped](flair.min.js.gz)
@@ -95,13 +95,13 @@ Aspect definition
 
 
 
-<span id="IAspect.members">**Members**</span>
+<span id="IAspect-members">**Members**</span>
 
 Name | Description
 :---|:---
 **Functions** | 
-<a href="#IAspect.after.object.">after(object)</a>| After advise
-<a href="#IAspect.before.object.">before(object)</a> &nbsp; ` static `| Before advise
+<a href="#IAspect-after-object-">after(object)</a>| After advise
+<a href="#IAspect-before-object-">before(object)</a> &nbsp; ` static `| Before advise
 
 
 **Remarks**
@@ -114,7 +114,7 @@ TODO: explain structure and usage of ctx object
 
 
 
-<a id="IAspect.after.object."></a>[**after(object)**](#IAspect.members) [public] &nbsp; 
+<a id="IAspect-after-object-"></a>[**after(object)**](#IAspect-members) [public] &nbsp; 
 > After advise
 >
 > **Parameters**
@@ -131,7 +131,7 @@ TODO: explain structure and usage of ctx object
 >
 
 
-<a id="IAspect.before.object."</a>**[before(object)**](#IAspect:members) [public, static] &nbsp; 
+<a id="IAspect-before-object-"></a>[**before(object)**](#IAspect-members) [public, static] &nbsp; 
 > Before advise
 >
 > **Parameters**
@@ -155,17 +155,17 @@ Attribute definition
 
 
 
-<span id="IAttribute:members">**Members**</span>
+<span id="IAttribute-members">**Members**</span>
 
 Name | Description
 :---|:---
 **Properties** | 
-<a href="#IAttribute.constraints">constraints</a>| An expression that defined the constraints of applying this attribute
-<a href="#IAttribute.name">name</a>| Name of the custom attribute
+<a href="#IAttribute-constraints">constraints</a>| An expression that defined the constraints of applying this attribute
+<a href="#IAttribute-name">name</a>| Name of the custom attribute
 **Functions** | 
-<a href="#IAttribute.decorateEvent.string.string.function.">decorateEvent(string, string, function)</a>| Event decorator
-<a href="#IAttribute.decorateFunction.string.string.function.">decorateFunction(string, string, function)</a>| Function decorator
-<a href="#IAttribute.decorateProperty.string.string.object.">decorateProperty(string, string, object)</a>| Property decorator
+<a href="#IAttribute-decorateEvent-string-string-function-">decorateEvent(string, string, function)</a>| Event decorator
+<a href="#IAttribute-decorateFunction-string-string-function-">decorateFunction(string, string, function)</a>| Function decorator
+<a href="#IAttribute-decorateProperty-string-string-object-">decorateProperty(string, string, object)</a>| Property decorator
 
 
 **Remarks**
@@ -182,7 +182,7 @@ TODO: example
 
 
 
-<a id="IAttribute.constraints"</a>**[constraints**](#IAttribute:members) [public] &nbsp; 
+<a id="IAttribute-constraints"></a>[**constraints**](#IAttribute-members) [public] &nbsp; 
 > ` string ` &nbsp; An expression that defined the constraints of applying this attribute
 >
 > **Remarks**
@@ -215,7 +215,7 @@ TODO: example
 > >
 
 
-<a id="IAttribute.name"</a>**[name**](#IAttribute:members) [public] &nbsp; 
+<a id="IAttribute-name"></a>[**name**](#IAttribute-members) [public] &nbsp; 
 > ` string ` &nbsp; Name of the custom attribute
 >
 
@@ -224,7 +224,7 @@ TODO: example
 
 
 
-<a id="IAttribute.decorateEvent.string.string.function."</a>**[decorateEvent(string, string, function)**](#IAttribute:members) [public] &nbsp; 
+<a id="IAttribute-decorateEvent-string-string-function-"></a>[**decorateEvent(string, string, function)**](#IAttribute-members) [public] &nbsp; 
 > Event decorator
 >
 > **Parameters**
@@ -251,7 +251,7 @@ TODO: example
 >
 
 
-<a id="IAttribute.decorateFunction.string.string.function."</a>**[decorateFunction(string, string, function)**](#IAttribute:members) [public] &nbsp; 
+<a id="IAttribute-decorateFunction-string-string-function-"></a>[**decorateFunction(string, string, function)**](#IAttribute-members) [public] &nbsp; 
 > Function decorator
 >
 > **Parameters**
@@ -279,7 +279,7 @@ TODO: example
 >
 
 
-<a id="IAttribute.decorateProperty.string.string.object."</a>**[decorateProperty(string, string, object)**](#IAttribute:members) [public] &nbsp; 
+<a id="IAttribute-decorateProperty-string-string-object-"></a>[**decorateProperty(string, string, object)**](#IAttribute-members) [public] &nbsp; 
 > Property decorator
 >
 > **Parameters**
