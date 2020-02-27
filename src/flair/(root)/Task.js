@@ -3,7 +3,7 @@ const { IProgressReporter, IDisposable } = ns();
 /**
  * @type Task base class
  * @since 1.2.23
- * @static
+ * @abstract
  * @implements IProgressReporter, IDisposable
  * @remarks
  *  This class represents a background thread executable task class
@@ -16,6 +16,8 @@ const { IProgressReporter, IDisposable } = ns();
  *      let task = new Task();
  *      let result = await task.run();
  *  ```
+ * @extends a.background
+ * @mixes d.d
  */
 Class('', [IProgressReporter, IDisposable], function() {
     let isSetupDone = false,
@@ -60,14 +62,13 @@ Class('', [IProgressReporter, IDisposable], function() {
    this.domain = null;
 
    /** 
-    * @name run
-    * @description Task executor
+    * @func run - Task executor
+    * @async
+    * @conditional server, worker
     * @example
     *  run()
-    * @arguments
-    *  args: array - array as passed to task constructor* 
-    * @returns {any}
-    *  any - anything
+    * @param {array} args - array as passed to task constructor
+    * @returns {any} anything
     */  
     this.run = async (...args) => {
         if (!isRunning) {

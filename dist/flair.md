@@ -11,7 +11,7 @@ Copyright &copy; 2017-2020 Vikas Burman. Distributed under MIT.
 
 # <u>flair</u>
 <small>
-Version 0.64.16 | Thu, 27 Feb 2020 16:31:29 GMT
+Version 0.64.35 | Thu, 27 Feb 2020 17:10:40 GMT
 <br/>
 
 [flair.js](./flair.js) (364k, 97k [minified](flair.min.js), 27k [gzipped](flair.min.js.gz))
@@ -44,7 +44,7 @@ ns1.ns2 | This is the namespace description.
 Name | Description
 :---|:---
 **Classes** | 
-<a href="#Task">Task</a> &nbsp; ` static ` | Task base class
+<a href="#Task">Task</a> | Task base class
 **Interfaces** | 
 <a href="#IAspect">IAspect</a> | Aspect definition
 <a href="#IAttribute">IAttribute</a> | Attribute definition
@@ -57,12 +57,22 @@ Name | Description
 </br>
 <h3 id="Task"><a href="#types">Task</a></h3>
 
-`Class` [public, static] &nbsp; 
+**Class** &nbsp; ` public ` ` abstract ` 
+
+_extends_ <a href="a.background">a.background</a> &nbsp; _mixes_ <a href="#d.d">d.d</a> &nbsp; _implements_ <a href="#IProgressReporter">IProgressReporter</a>, <a href="#IDisposable">IDisposable</a> &nbsp; 
 
 ***
 
 Task base class
 
+
+
+<span id="Task-members">**Members**</span>
+
+Name | Description
+:---|:---
+**Functions** | 
+<a href="#Task-run-array-">run(array)</a>| Task executor
 
 
 **Remarks**
@@ -82,6 +92,31 @@ let result = await task.run();
 ```
 
 
+**Functions**
+
+
+
+<a id="Task-run-array-"></a>[**run(array)**](#Task-members) &nbsp;  ` public ` ` async ` 
+> Task executor
+>
+> **Parameters**
+>
+> * args &nbsp; ` array ` &nbsp; array as passed to task constructor
+>
+> **Returns**
+>
+> ` any ` &nbsp; anything
+>
+> **Example**
+>
+> run()
+> >
+> **Additional Information**
+>
+> * _Conditional:_ This member is conditional and will be present only when all of the mentioned runtime environmental conditions are met: **server**, **worker**
+>
+
+
 **Additional Information**
 
 * _Since:_ 1.2.23
@@ -89,7 +124,7 @@ let result = await task.run();
 </br>
 <h3 id="IAspect"><a href="#types">IAspect</a></h3>
 
-`Interface` [public] &nbsp; 
+**Interface** &nbsp; ` public `
 
 ***
 
@@ -116,7 +151,7 @@ TODO: explain structure and usage of ctx object
 
 
 
-<a id="IAspect-after-object-"></a>[**after(object)**](#IAspect-members) [public] &nbsp; 
+<a id="IAspect-after-object-"></a>[**after(object)**](#IAspect-members) &nbsp;  ` public `
 > After advise
 >
 > **Parameters**
@@ -133,7 +168,7 @@ TODO: explain structure and usage of ctx object
 >
 
 
-<a id="IAspect-before-object-"></a>[**before(object)**](#IAspect-members) [public, static] &nbsp; 
+<a id="IAspect-before-object-"></a>[**before(object)**](#IAspect-members) &nbsp;  ` public ` ` static ` 
 > Before advise
 >
 > **Parameters**
@@ -149,7 +184,7 @@ TODO: explain structure and usage of ctx object
 </br>
 <h3 id="IAttribute"><a href="#types">IAttribute</a></h3>
 
-`Interface` [public] &nbsp; 
+**Interface** &nbsp; ` public `
 
 ***
 
@@ -184,7 +219,7 @@ TODO: example
 
 
 
-<a id="IAttribute-constraints"></a>[**constraints**](#IAttribute-members) [public] &nbsp; 
+<a id="IAttribute-constraints"></a>[**constraints**](#IAttribute-members) &nbsp;  ` public `
 > ` string ` &nbsp; An expression that defined the constraints of applying this attribute
 >
 > **Remarks**
@@ -217,7 +252,7 @@ TODO: example
 > >
 
 
-<a id="IAttribute-name"></a>[**name**](#IAttribute-members) [public] &nbsp; 
+<a id="IAttribute-name"></a>[**name**](#IAttribute-members) &nbsp;  ` public `
 > ` string ` &nbsp; Name of the custom attribute
 >
 
@@ -226,7 +261,7 @@ TODO: example
 
 
 
-<a id="IAttribute-decorateEvent-string-string-function-"></a>[**decorateEvent(string, string, function)**](#IAttribute-members) [public] &nbsp; 
+<a id="IAttribute-decorateEvent-string-string-function-"></a>[**decorateEvent(string, string, function)**](#IAttribute-members) &nbsp;  ` public `
 > Event decorator
 >
 > **Parameters**
@@ -253,7 +288,7 @@ TODO: example
 >
 
 
-<a id="IAttribute-decorateFunction-string-string-function-"></a>[**decorateFunction(string, string, function)**](#IAttribute-members) [public] &nbsp; 
+<a id="IAttribute-decorateFunction-string-string-function-"></a>[**decorateFunction(string, string, function)**](#IAttribute-members) &nbsp;  ` public `
 > Function decorator
 >
 > **Parameters**
@@ -281,7 +316,7 @@ TODO: example
 >
 
 
-<a id="IAttribute-decorateProperty-string-string-object-"></a>[**decorateProperty(string, string, object)**](#IAttribute-members) [public] &nbsp; 
+<a id="IAttribute-decorateProperty-string-string-object-"></a>[**decorateProperty(string, string, object)**](#IAttribute-members) &nbsp;  ` public `
 > Property decorator
 >
 > **Parameters**
@@ -311,7 +346,7 @@ TODO: example
 </br>
 <h3 id="IDisposable"><a href="#types">IDisposable</a></h3>
 
-`Interface` [public] &nbsp; 
+**Interface** &nbsp; ` public `
 
 ***
 
@@ -322,7 +357,7 @@ Disposable definition
 </br>
 <h3 id="IPortHandler"><a href="#types">IPortHandler</a></h3>
 
-`Interface` [public] &nbsp; 
+**Interface** &nbsp; ` public `
 
 ***
 
@@ -333,7 +368,7 @@ Port handler definition
 </br>
 <h3 id="IProgressReporter"><a href="#types">IProgressReporter</a></h3>
 
-`Interface` [public] &nbsp; 
+**Interface** &nbsp; ` public `
 
 ***
 
