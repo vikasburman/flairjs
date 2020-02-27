@@ -11,10 +11,12 @@ Copyright &copy; 2017-2020 Vikas Burman. Distributed under MIT.
 
 # <u>flair</u>
 <small>
-Version 0.64.8 | Thu, 27 Feb 2020 15:57:02 GMT
+Version 0.64.10 | Thu, 27 Feb 2020 16:13:03 GMT
 <br/>
 
 [flair.js](./flair.js) (364k, 97k [minified](flair.min.js), 27k [gzipped](flair.min.js.gz))
+
+Refer [using flair assembly](https://flairjs.com/#/using-flair-assembly) to know more about loading this assembly and working with members of this assembly.
 </small>
 <br/>
 
@@ -398,7 +400,7 @@ now | {api_v1} /now/:type? &nbsp;  ` get `  | some desc
 ##
  
 <small><small>
-Built with flairBuild (v1) using fasm (v1) format.
+Built with [flairBuild](https://flairjs.com/#/flairBuild) (v1) using [fasm](https://flairjs.com/#/fasm) (v1) format.
 
 <div style="text-align: right"><a href="#asm_info">[&nwarr;]</a></div>
 </small></small>
