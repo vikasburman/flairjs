@@ -11,7 +11,7 @@ Copyright &copy; 2017-2020 Vikas Burman. Distributed under MIT.
 
 # Assembly: <u>flair</u>
 <small>
-Version 0.63.94 | Thu, 27 Feb 2020 02:25:07 GMT
+Version 0.63.95 | Thu, 27 Feb 2020 02:32:59 GMT
 <br/>
 
 [flair.js](./flair.js) (364k, 97k [minified](./dist/flair.min.js), 27k [gzipped](./dist/flair.min.js.gz))
@@ -33,7 +33,7 @@ ns1.ns2 | This is the namespace description.
 
 
 </span>
-<span name="types">
+<span name="types" id="asm_types">
 </br>
 
 ## Types
@@ -342,7 +342,7 @@ Progress reporter definition
 
 
 </span>
-<span name="resources">
+<span name="resources" id="asm_resources">
 </br>
 
 ## Resources
@@ -356,7 +356,7 @@ ns1.ns2.master &nbsp; ` Layout ` | &nbsp;
 
 
 </span>
-<span name="assets">
+<span name="assets" id="asm_assets">
 </br>
 
 ## Assets
@@ -373,7 +373,7 @@ Name | Description
 
 
 </span>
-<span name="routes">
+<span name="routes" id="asm_routes">
 </br>
 
 ## Routes
@@ -385,7 +385,7 @@ now | {api_v1} /now/:type? &nbsp;  ` get `  | some desc
 
 
 </span>
-<span name="extra">
+<span name="extra" id="asm_extra">
 </br>
 
 
