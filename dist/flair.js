@@ -5,8 +5,8 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.63.99
- *  Thu, 27 Feb 2020 14:05:55 GMT
+ *  Version: 0.64.0
+ *  Thu, 27 Feb 2020 14:10:15 GMT
  * 
  * (c) 2017-2020 Vikas Burman
  * MIT
@@ -7561,10 +7561,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.63.99',
+        version: '0.64.0',
         copyright: '(c) 2017-2020 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Thu, 27 Feb 2020 14:05:55 GMT')
+        lupdate: new Date('Thu, 27 Feb 2020 14:10:15 GMT')
     });  
     
     // bundled assembly load process 
@@ -7948,7 +7948,7 @@
         AppDomain.context.current().currentAssemblyBeingLoaded('', (typeof onLoadComplete === 'function' ? onLoadComplete : null)); // eslint-disable-line no-undef
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.63.99","lupdate":"Thu, 27 Feb 2020 14:05:55 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","docs","sreg"]},"copyright":"(c) 2017-2020 Vikas Burman","license":"MIT","ns":[{"name":"(root)","desc":""},{"name":"ns1.ns2","desc":"This is the namespace description."}],"types":[{"name":"IAspect","type":"interface","desc":"Aspect definition"},{"name":"IAttribute","type":"interface","desc":"Attribute definition"},{"name":"IDisposable","type":"interface","desc":"Disposable definition"},{"name":"IPortHandler","type":"interface","desc":"Port handler definition"},{"name":"IProgressReporter","type":"interface","desc":"Progress reporter definition"},{"name":"Task","type":"class","desc":"Task base class"}],"resources":[{"name":"master","size":"0k","type":"Layout","desc":""},{"name":"vikas","size":"1k","type":"Document","desc":"Test resource document"},{"name":"ns1.ns2.master","size":"0k","type":"Layout","desc":""}],"assets":[{"file":"burman.md","size":"1k","type":"md","desc":""},{"file":"ns1.ns2.hello.md","size":"1k","type":"md","desc":""},{"file":"abc/abc.txt","size":"0k","type":"txt","desc":"some information only"},{"file":"views/l2{.min}.html","size":"0k","type":"html","desc":""},{"file":"views/ns1.ns2.l1{.min}.html","size":"0k","type":"View","desc":""}],"routes":[{"name":"now","mount":"api_v1","index":0,"verbs":["get"],"mw":[],"path":"/now/:type?","handler":"myapp.api.v1.Now","desc":"some desc"}]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.64.0","lupdate":"Thu, 27 Feb 2020 14:10:15 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","docs","sreg"]},"copyright":"(c) 2017-2020 Vikas Burman","license":"MIT","ns":[{"name":"(root)","desc":""},{"name":"ns1.ns2","desc":"This is the namespace description."}],"types":[{"name":"IAspect","type":"interface","desc":"Aspect definition"},{"name":"IAttribute","type":"interface","desc":"Attribute definition"},{"name":"IDisposable","type":"interface","desc":"Disposable definition"},{"name":"IPortHandler","type":"interface","desc":"Port handler definition"},{"name":"IProgressReporter","type":"interface","desc":"Progress reporter definition"},{"name":"Task","type":"class","desc":"Task base class"}],"resources":[{"name":"master","size":"0k","type":"Layout","desc":""},{"name":"vikas","size":"1k","type":"Document","desc":"Test resource document"},{"name":"ns1.ns2.master","size":"0k","type":"Layout","desc":""}],"assets":[{"file":"burman.md","size":"1k","type":"md","desc":""},{"file":"ns1.ns2.hello.md","size":"1k","type":"md","desc":""},{"file":"abc/abc.txt","size":"0k","type":"txt","desc":"some information only"},{"file":"views/l2{.min}.html","size":"0k","type":"html","desc":""},{"file":"views/ns1.ns2.l1{.min}.html","size":"0k","type":"View","desc":""}],"routes":[{"name":"now","mount":"api_v1","index":0,"verbs":["get"],"mw":[],"path":"/now/:type?","handler":"myapp.api.v1.Now","desc":"some desc"}]}');
         
         // return settings and config
         return Object.freeze({
