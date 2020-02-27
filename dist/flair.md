@@ -11,7 +11,7 @@ Copyright &copy; 2017-2020 Vikas Burman. Distributed under MIT.
 
 # Assembly: <u>flair</u>
 <small>
-Version 0.64.2 | Thu, 27 Feb 2020 14:21:34 GMT
+Version 0.64.4 | Thu, 27 Feb 2020 14:27:52 GMT
 <br/>
 
 [flair.js](./flair.js) (364k, 97k [minified](flair.min.js), 27k [gzipped](flair.min.js.gz)
@@ -368,8 +368,8 @@ Name | Description
 [burman.md](./flair/burman.md)   | 
 [ns1.ns2.hello.md](./flair/ns1.ns2.hello.md)   | 
 [abc/abc.txt](./flair/abc/abc.txt)   | some information only
-[views/l2.html](./flair/views/l2{.min}.html)   | 
-[views/ns1.ns2.l1.html](./flair/views/ns1.ns2.l1{.min}.html)  &nbsp; ` View `  | 
+[views/l2.html](./flair/views/l2.html)   | 
+[views/ns1.ns2.l1.html](./flair/views/ns1.ns2.l1.html)  &nbsp; ` View `  | 
 
 
 </span>
