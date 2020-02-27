@@ -2,8 +2,8 @@
     "name": "flairjs",
     "title": "Flair.js",
     "description": "True Object Oriented JavaScript",
-    "copyright": "(c) 2017-2019 Vikas Burman",
-    "version": "0.60.2",
+    "copyright": "(c) 2017-2020 Vikas Burman",
+    "version": "0.63.94",
     "author": "Vikas Burman <vikasburman@gmail.com>",
     "keywords": [
         "javascript",
@@ -36,7 +36,7 @@
         "refresh": "yarn remove flairjs-cli && yarn add flairjs-cli --dev"
     },
     "devDependencies": {
-        "flairjs-cli": "^0.63.0",
+        "flairjs-cli": "^0.66.0",
         "http-server": "^0.11.1"
     },
     "dependencies": {}

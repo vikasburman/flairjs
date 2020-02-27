@@ -130,7 +130,7 @@ const AppDomain = function(name) {
         ado.file = which(ado.file);
         let fileKey = this.getAsmFileKey(ado.file);
         if (!asmFiles[fileKey]) {
-            // generate namespaces (from types and resources)
+            // generate namespaces (from types, resources and routes)
             let nsName = '';
             ado.namespaces = [];            
 

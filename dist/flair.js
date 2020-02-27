@@ -5,10 +5,10 @@
  * 
  * Assembly: flair
  *     File: ./flair.js
- *  Version: 0.60.2
- *  Sun, 29 Sep 2019 17:35:48 GMT
+ *  Version: 0.63.94
+ *  Thu, 27 Feb 2020 02:25:07 GMT
  * 
- * (c) 2017-2019 Vikas Burman
+ * (c) 2017-2020 Vikas Burman
  * MIT
  */
 (function(root, factory) {
@@ -2176,7 +2176,7 @@
             ado.file = which(ado.file);
             let fileKey = this.getAsmFileKey(ado.file);
             if (!asmFiles[fileKey]) {
-                // generate namespaces (from types and resources)
+                // generate namespaces (from types, resources and routes)
                 let nsName = '';
                 ado.namespaces = [];            
     
@@ -7559,10 +7559,10 @@
         desc: 'True Object Oriented JavaScript',
         asm: 'flair',
         file: currentFile,
-        version: '0.60.2',
-        copyright: '(c) 2017-2019 Vikas Burman',
+        version: '0.63.94',
+        copyright: '(c) 2017-2020 Vikas Burman',
         license: 'MIT',
-        lupdate: new Date('Sun, 29 Sep 2019 17:35:48 GMT')
+        lupdate: new Date('Thu, 27 Feb 2020 02:25:07 GMT')
     });  
     
     // bundled assembly load process 
@@ -7633,40 +7633,24 @@
             
     (() => { // type: ./src/flair/(root)/IAspect.js
         /**
-         * @typedef IAspect
-         * @description IAspect interface
+         * @type Aspect definition
+         * @remarks
+         *  TODO: define the before and after relationship for achieving around 
+         *  TODO: explain structure and usage of ctx object
          */
         $$('ns', '(root)');
 		Interface('IAspect', function() {
             /** 
-             * @name before
-             * @description Before advise
-             * @example
-             *  before(ctx)
-             * @arguments
-             *  ctx: object     - context object that is shared across all weaving
-             *  typeName()      - gives the name of the type
-             *  funcName()      - gives the name of the function
-             *  error(err)      - store new error to context, or just call error() to get last error
-             *  result(value)   - store new result to context, or just call result() to get last stored result
-             *  args()          - get original args passed to main call
-             *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
+             * @func before - Before advise
+             * @param {object} ctx - Context object that is shared across weaving
+             * @static
              */  
             this.before_ = nim;
         
             /** 
-             * @name after
-             * @description After advise
-             * @example
-             *  after(ctx)
-             * @arguments
-             *  ctx: object     - context object that is shared across all weaving
-             *  typeName()      - gives the name of the type
-             *  funcName()      - gives the name of the function
-             *  error(err)      - store new error to context, or just call error() to get last error
-             *  result(value)   - store new result to context, or just call result() to get last stored result
-             *  args()          - get original args passed to main call
-             *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
+             * @func after - After advise
+             * @param {object} ctx - Context object that is shared across weaving
+             * @optional
              */  
             this.after_ = nim;
         });
@@ -7674,97 +7658,90 @@
     })();    
     (() => { // type: ./src/flair/(root)/IAttribute.js
         /**
-         * @name IAttribute
-         * @description IAttribute interface
+         * @type Attribute definition
+         * @remarks
+         *  TODO:
+         * @example
+         *  TODO: example
          */
         $$('ns', '(root)');
 		Interface('IAttribute', function() {
             /** 
-            *  @name name: string - name of custom attribute
+            * @prop {string} name - Name of the custom attribute
             */    
             this.name = nip;
         
             /** 
-            *  @name constraints: string - An expression that defined the constraints of applying this attribute 
-            *                     using NAMES, PREFIXES, SUFFIXES and logical Javascript operator
+            * @prop {string} constraints - An expression that defined the constraints of applying this attribute 
+            * @remarks
+            *   Using NAMES, SUFFIXES, PREFIXES, and logical Javascript operator
             * 
-            *                  NAMES can be: 
-            *                      type names: class, struct, enum, interface, mixin
-            *                      type member names: prop, func, construct, dispose, event
-            *                      inbuilt modifier names: static, abstract, sealed, virtual, override, private, protected, readonly, async, etc.
-            *                      inbuilt attribute names: promise, singleton, serialize, deprecate, session, state, conditional, noserialize, etc.
-            *                      custom attribute names: any registered custom attribute name
-            *                      type names itself: e.g., Aspect, Attribute, etc. (any registered type name is fine)
-            *                          SUFFIX: A typename must have a suffix (^) e.g., Aspect^, Attribute^, etc. Otherwise this name will be treated as custom attribute name
+            *   NAMES can be: 
+            *       type names: class, struct, enum, interface, mixin
+            *       type member names: prop, func, construct, dispose, event
+            *       inbuilt modifier names: static, abstract, sealed, virtual, override, private, protected, readonly, async, etc.
+            *       inbuilt attribute names: promise, singleton, serialize, deprecate, session, state, conditional, noserialize, etc.
+            *       custom attribute names: any registered custom attribute name
+            *       type names itself: e.g., Aspect, Attribute, etc. (any registered type name is fine)
+            * 
+            *  SUFFIX: A typename must have a suffix (^) e.g., Aspect^, Attribute^, etc. Otherwise this name will be treated as custom attribute name
             *                  
-            *                  PREFIXES can be:
-            *                      No Prefix: means it must match or be present at the level where it is being defined
-            *                      @: means it must be inherited from or present at up in hierarchy chain
-            *                      $: means it either must ne present at the level where it is being defined or must be present up in hierarchy chain
-            *                  <name> 
-            *                  @<name>
-            *                  $<name>
-            * 
-            *                  BOOLEAN Not (!) can also be used to negate:
-            *                  !<name>
-            *                  !@<name>
-            *                  !$<name>
+            *  PREFIXES can be:
+            *       No Prefix: means it must match or be present at the level where it is being defined
+            *       @: means it must be inherited from or present at up in hierarchy chain
+            *       $: means it either must ne present at the level where it is being defined or must be present up in hierarchy chain
+            *          <name> | @<name> | $<name>
+            *          BOOLEAN Not (!) can also be used to negate:
+            *          !<name> | !@<name> | !$<name>
             *                  
-            *                  NOTE: Constraints are processed as logical boolean expressions and 
-            *                        can be grouped, ANDed or ORed as:
-            * 
-            *                        AND: <name1> && <name2> && ...
-            *                        OR: <name1> || <name2>
-            *                        GROUPING: ((<name1> || <name2>) && (<name1> || <name2>))
-            *                                  (((<name1> || <name2>) && (<name1> || <name2>)) || <name3>)
-            * 
-            **/          
+            *  NOTE: Constraints are processed as logical boolean expressions and can be grouped, ANDed or ORed as:
+            *        AND: <name1> && <name2> && ...
+            *        OR: <name1> || <name2>
+            *        GROUPING: ((<name1> || <name2>) && (<name1> || <name2>))
+            *                  (((<name1> || <name2>) && (<name1> || <name2>)) || <name3>)
+            */          
             this.constraints = nip;
         
             /** 
-             * @name decorateProperty (optional)
-             * @description Property decorator
+             * @func decorateProperty - Property decorator
+             * @param {string} typeName - Name of the type
+             * @param {string} memberName - Name of the member
+             * @param {object} member - Member descriptor's getter, setter functions
+             * @returns {object} Returns decorated getter, setter functions
+             * @optional
+             * @remarks
+             *  Decorated get must call member's get function and decorated set must accept `value` argument and pass it to member's set with or without processing
              * @example
              *  decorateProperty(typeName, memberName, member)
-             * @arguments
-             *  typeName: string - typeName
-             *  memberName: string - member name
-             *  member - object - having get: getter function and set: setter function
-             *          both getter and setter can be applied attribute functionality on
-             * @returns {object}
-             *  object - having decorated { get: fn, set: fn }
-             *           Note: decorated get must call member's get
-             *                 decorated set must accept value argument and pass it to member's set with or without processing
              */     
              this.decorateProperty_ = nim; 
         
             /** 
-             * @name decorateFunction (optional)
-             * @description Function decorator
+             * @func decorateFunction - Function decorator
+             * @param {string} typeName - Name of the type
+             * @param {string} memberName - Name of the member
+             * @param {function} member - Member function to decorate
+             * @returns {function} Returns decorated function
+             * @optional
+             * @deprecated hshshs
+             * @remarks
+             *  TODO: decorated function must accept ...args and pass-it on (with/without processing) to member function
              * @example
              *  decorateFunction(typeName, memberName, member)
-             * @arguments
-             *  typeName: string - typeName
-             *  memberName: string - member name
-             *  member - function - function to decorate
-             * @returns {function}
-             *  function - decorated function
-             *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
              */  
             this.decorateFunction_ = nim;
         
             /** 
-             * @name decorateEvent (optional)
-             * @description Event decorator
+             * @func decorateEvent - Event decorator
+             * @param {string} typeName - Name of the type
+             * @param {string} memberName - Name of the member
+             * @param {function} member - Event argument processor function
+             * @returns {function} Returns decorated function
+             * @optional
+             * @remarks
+             *  TODO: decorated function must accept ...args and pass-it on (with/without processing) to member function
              * @example
              *  decorateEvent(typeName, memberName, member)
-             * @arguments
-             *  typeName: string - typeName
-             *  memberName: string - member name
-             *  member - function - event argument processor function
-             * @returns {function}
-             *  function - decorated function
-             *             Note: decorated function must accept ...args and pass-it on (with/without processing) to member function
              */  
             this.decorateEvent_ = nim;
         });
@@ -7772,8 +7749,7 @@
     })();    
     (() => { // type: ./src/flair/(root)/IDisposable.js
         /**
-         * @name IDisposable
-         * @description IDisposable interface
+         * @type Disposable definition
          */
         $$('ns', '(root)');
 		Interface('IDisposable', function() {
@@ -7783,8 +7759,7 @@
     })();    
     (() => { // type: ./src/flair/(root)/IPortHandler.js
         /**
-         * @name IPortHandler
-         * @description IPortHandler interface
+         * @type Port handler definition
          */
         $$('ns', '(root)');
 		Interface('IPortHandler', function() {
@@ -7797,8 +7772,7 @@
     })();    
     (() => { // type: ./src/flair/(root)/IProgressReporter.js
         /**
-         * @name IProgressReporter
-         * @description IProgressReporter interface
+         * @type Progress reporter definition
          */
         $$('ns', '(root)');
 		Interface('IProgressReporter', function() {
@@ -7811,8 +7785,21 @@
         const { IProgressReporter, IDisposable } = ns();
         
         /**
-         * @name Task
-         * @description Task base class.
+         * @type Task base class
+         * @since 1.2.23
+         * @static
+         * @implements IProgressReporter, IDisposable
+         * @remarks
+         *  This class represents a background thread executable task class
+         * 
+         *  Tasks can be executed in blah blah manner and data can be transferred too
+         * @example
+         *  This example defines how the task code can be executed
+         * 
+         *  ```javascript
+         *      let task = new Task();
+         *      let result = await task.run();
+         *  ```
          */
         $$('ns', '(root)');
 		Class('Task', [IProgressReporter, IDisposable], function() {
@@ -7940,14 +7927,26 @@
         // assembly closure: types (end)
         
         // assembly closure: embedded resources (start)
-        // (not defined)
+        
+    (() => { // resource: ./src/flair/(root)/master.res.layout.html
+        AppDomain.context.current().registerResource(JSON.parse('{"name":"master","encodingType":"utf8;base64;","asmFile":"./flair{.min}.js","file":"./src/flair/(root)/master.res.layout.html","data":"PGh0bWw+PC9odG1sPg=="}'));
+    })();
+
+    (() => { // resource: ./src/flair/(root)/vikas.res.md
+        AppDomain.context.current().registerResource(JSON.parse('{"name":"vikas","encodingType":"utf8;base64;","asmFile":"./flair{.min}.js","file":"./src/flair/(root)/vikas.res.md","data":"IyBGbGFpci5qcwo8c21hbGw+PGI+VHJ1ZSBPYmplY3QgT3JpZW50ZWQgSmF2YVNjcmlwdDwvYj48L2JyPjxpPkNvcHlyaWdodCAmY29weTsgMjAxNy0yMDE5IFZpa2FzIEJ1cm1hbi4gRGlzdHJpYnV0ZWQgdW5kZXIgTUlULjwvaT48L3NtYWxsPgoKIyMgQXNzZW1ibHk6IDx1PmZsYWlyPC91Pgo8c21hbGw+PGk+ClZlcnNpb24gMC42MC41Mgo8YnIvPlNhdCwgMjIgRmViIDIwMjAgMjI6MzU6MzMgR01UCjxici8+ZmxhaXIuanMgKDM2MmssIDk1ayBtaW5pZmllZCwgMjZrIGd6aXBwZWQpCjwvaT48L3NtYWxsPgoKIyMjIFR5cGVzCjw8dHlwZXNfaGVhZGVyPj4KPDx0eXBlc19saXN0Pj4KCiMjIyBSZXNvdXJjZXMKPDxyZXNvdXJjZXNfaGVhZGVyPj4KPDxyZXNvdXJjZXNfbGlzdD4+CgojIyMgQXNzZXRzCjxzbWFsbD4obm9uZSk8L3NtYWxsPgoKCiMjIyBSb3V0ZXMKPHNtYWxsPihub25lKTwvc21hbGw+CgoKIyMjIEFQSQo8PHR5cGVzX2FwaT4+Cgo8L2JyPgotLS0KPHNtYWxsPjxzbWFsbD5CdWlsdCB3aXRoIGZsYWlyQnVpbGQgKHYxKSB1c2luZyBmYXNtICh2MSkgZm9ybWF0Ljwvc21hbGw+PC9zbWFsbD4="}'));
+    })();
+
+    (() => { // resource: ./src/flair/ns1.ns2/master.res.layout.html
+        AppDomain.context.current().registerResource(JSON.parse('{"name":"ns1.ns2.master","encodingType":"utf8;base64;","asmFile":"./flair{.min}.js","file":"./src/flair/ns1.ns2/master.res.layout.html","data":"PGh0bWw+PC9odG1sPg=="}'));
+    })();
+
         // assembly closure: embedded resources (end)        
         
         // clear assembly being loaded
         AppDomain.context.current().currentAssemblyBeingLoaded('', (typeof onLoadComplete === 'function' ? onLoadComplete : null)); // eslint-disable-line no-undef
         
         // register assembly definition object
-        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.60.2","lupdate":"Sun, 29 Sep 2019 17:35:48 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","sreg"]},"copyright":"(c) 2017-2019 Vikas Burman","license":"MIT","types":["IAspect","IAttribute","IDisposable","IPortHandler","IProgressReporter","Task"],"resources":[],"assets":[],"routes":[]}');
+        AppDomain.registerAdo('{"name":"flair","file":"./flair{.min}.js","package":"flairjs","desc":"True Object Oriented JavaScript","title":"Flair.js","version":"0.63.94","lupdate":"Thu, 27 Feb 2020 02:25:07 GMT","builder":{"name":"flairBuild","version":"1","format":"fasm","formatVersion":"1","contains":["init","func","type","vars","reso","asst","rout","docs","sreg"]},"copyright":"(c) 2017-2020 Vikas Burman","license":"MIT","ns":[{"name":"(root)","desc":""},{"name":"ns1.ns2","desc":"This is the namespace description."}],"types":[{"name":"IAspect","type":"interface","desc":"Aspect definition"},{"name":"IAttribute","type":"interface","desc":"Attribute definition"},{"name":"IDisposable","type":"interface","desc":"Disposable definition"},{"name":"IPortHandler","type":"interface","desc":"Port handler definition"},{"name":"IProgressReporter","type":"interface","desc":"Progress reporter definition"},{"name":"Task","type":"class","desc":"Task base class"}],"resources":[{"name":"master","size":"0k","type":"Layout","desc":""},{"name":"vikas","size":"1k","type":"Document","desc":"Test resource document"},{"name":"ns1.ns2.master","size":"0k","type":"Layout","desc":""}],"assets":[{"file":"burman.md","size":"1k","type":"md","desc":""},{"file":"ns1.ns2.hello.md","size":"1k","type":"md","desc":""},{"file":"abc/abc.txt","size":"0k","type":"txt","desc":"some information only"},{"file":"views/l2{.min}.html","size":"0k","type":"html","desc":""},{"file":"views/ns1.ns2.l1{.min}.html","size":"0k","type":"View","desc":""}],"routes":[{"name":"now","mount":"api_v1","index":0,"verbs":["get"],"mw":[],"path":"/now/:type?","handler":"myapp.api.v1.Now","desc":"some desc"}]}');
         
         // return settings and config
         return Object.freeze({

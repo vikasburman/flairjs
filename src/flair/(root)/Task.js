@@ -1,8 +1,21 @@
 const { IProgressReporter, IDisposable } = ns();
 
 /**
- * @name Task
- * @description Task base class.
+ * @type Task base class
+ * @since 1.2.23
+ * @static
+ * @implements IProgressReporter, IDisposable
+ * @remarks
+ *  This class represents a background thread executable task class
+ * 
+ *  Tasks can be executed in blah blah manner and data can be transferred too
+ * @example
+ *  This example defines how the task code can be executed
+ * 
+ *  ```javascript
+ *      let task = new Task();
+ *      let result = await task.run();
+ *  ```
  */
 Class('', [IProgressReporter, IDisposable], function() {
     let isSetupDone = false,

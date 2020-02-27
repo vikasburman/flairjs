@@ -1,6 +1,7 @@
 {
     "build": {
-        "packaged": true
+        "packaged": true,
+        "docs": true
     },
     
     "pack": {

@@ -1,6 +1,5 @@
 /**
- * @name IProgressReporter
- * @description IProgressReporter interface
+ * @type Progress reporter definition
  */
 Interface('', function() {
     // progress report

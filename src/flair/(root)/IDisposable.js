@@ -1,6 +1,5 @@
 /**
- * @name IDisposable
- * @description IDisposable interface
+ * @type Disposable definition
  */
 Interface('', function() {
     this.dispose = nim;

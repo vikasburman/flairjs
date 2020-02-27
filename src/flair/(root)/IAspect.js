@@ -1,37 +1,21 @@
 /**
- * IAspect interface
- * @typedef IAspect
+ * @type Aspect definition
+ * @remarks
+ *  TODO: define the before and after relationship for achieving around 
+ *  TODO: explain structure and usage of ctx object
  */
 Interface('', function() {
     /** 
-     * @name before
-     * @description Before advise
-     * @example
-     *  before(ctx)
-     * @arguments
-     *  ctx: object     - context object that is shared across all weaving
-     *  typeName()      - gives the name of the type
-     *  funcName()      - gives the name of the function
-     *  error(err)      - store new error to context, or just call error() to get last error
-     *  result(value)   - store new result to context, or just call result() to get last stored result
-     *  args()          - get original args passed to main call
-     *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
+     * @func before - Before advise
+     * @param {object} ctx - Context object that is shared across weaving
+     * @static
      */  
     this.before_ = nim;
 
     /** 
-     * @name after
-     * @description After advise
-     * @example
-     *  after(ctx)
-     * @arguments
-     *  ctx: object     - context object that is shared across all weaving
-     *  typeName()      - gives the name of the type
-     *  funcName()      - gives the name of the function
-     *  error(err)      - store new error to context, or just call error() to get last error
-     *  result(value)   - store new result to context, or just call result() to get last stored result
-     *  args()          - get original args passed to main call
-     *  data: {}        - an object to hold context data for temporary use, e.g., storing something in before advise and reading back in after advise
+     * @func after - After advise
+     * @param {object} ctx - Context object that is shared across weaving
+     * @optional
      */  
     this.after_ = nim;
 });

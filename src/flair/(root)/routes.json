@@ -1,0 +1,3 @@
+[
+    { "name": "now", "handler": "myapp.api.v1.Now", "mount": "api_v1", "path": "/now/:type?", "verbs": ["get"], "desc": "some desc" }
+]

@@ -1,6 +1,5 @@
 /**
- * @name IPortHandler
- * @description IPortHandler interface
+ * @type Port handler definition
  */
 Interface('', function() {
     /** 
