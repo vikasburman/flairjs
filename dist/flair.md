@@ -11,7 +11,7 @@ Copyright &copy; 2017-2020 Vikas Burman. Distributed under MIT.
 
 # Assembly: <u>flair</u>
 <small>
-Version 0.63.95 | Thu, 27 Feb 2020 02:32:59 GMT
+Version 0.63.96 | Thu, 27 Feb 2020 13:50:08 GMT
 <br/>
 
 [flair.js](./flair.js) (364k, 97k [minified](./dist/flair.min.js), 27k [gzipped](./dist/flair.min.js.gz))
