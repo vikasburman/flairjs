@@ -11,7 +11,7 @@ Copyright &copy; 2017-2020 Vikas Burman. Distributed under MIT.
 
 # <u>flair</u>
 <small>
-Version 0.64.6 | Thu, 27 Feb 2020 15:53:02 GMT
+Version 0.64.7 | Thu, 27 Feb 2020 15:53:32 GMT
 <br/>
 
 [flair.js](./flair.js) (364k, 97k [minified](flair.min.js), 27k [gzipped](flair.min.js.gz)
@@ -41,10 +41,8 @@ ns1.ns2 | This is the namespace description.
 
 Name | Description
 :---|:---
-
 **Classes** | 
 <a href="#Task">Task</a> &nbsp; ` static ` | Task base class
-
 **Interfaces** | 
 <a href="#IAspect">IAspect</a> | Aspect definition
 <a href="#IAttribute">IAttribute</a> | Attribute definition
