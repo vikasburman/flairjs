@@ -11,7 +11,7 @@ Copyright &copy; 2017-2020 Vikas Burman. Distributed under MIT.
 
 # <u>flair</u>
 <small>
-Version 0.64.12 | Thu, 27 Feb 2020 16:18:13 GMT
+Version 0.64.13 | Thu, 27 Feb 2020 16:21:13 GMT
 <br/>
 
 [flair.js](./flair.js) (364k, 97k [minified](flair.min.js), 27k [gzipped](flair.min.js.gz))
@@ -25,8 +25,8 @@ Refer [using flair assembly](https://flairjs.com/#/using-flair-assembly) to know
 </span> <span name="ns" id="asm_ns">
 </br>
 
-## Namespaces 
-<small><div style="text-align: right"><a href="#asm_info">[&nwarr;]</a></div></small>
+## [Namespaces](#asm_info)
+</br>
 
 Namespace | Description
 :---|:---
@@ -347,8 +347,8 @@ Progress reporter definition
 <span name="resources" id="asm_resources">
 </br>
 
-## Resources
-<small><div style="text-align: right"><a href="#asm_info">[&nwarr;]</a></div></small>
+## [Resources](#asm_info)
+</br>
 
 Name | Description
 :---|:---
@@ -361,8 +361,7 @@ ns1.ns2.master &nbsp; ` Layout ` | &nbsp;
 <span name="assets" id="asm_assets">
 </br>
 
-## Assets
-<small><div style="text-align: right"><a href="#asm_info">[&nwarr;]</a></div></small>
+## [Assets](#asm_info)
 Assets are located under: [./flair/](./flair/)
 
 Name | Description
@@ -378,8 +377,8 @@ Name | Description
 <span name="routes" id="asm_routes">
 </br>
 
-## Routes
-<small><div style="text-align: right"><a href="#asm_info">[&nwarr;]</a></div></small>
+## [Routes](#asm_info)
+</br>
 
 Name | Route | Description
 :---|:---|:---|
