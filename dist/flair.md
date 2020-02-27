@@ -11,10 +11,10 @@ Copyright &copy; 2017-2020 Vikas Burman. Distributed under MIT.
 
 # <u>flair</u>
 <small>
-Version 0.64.7 | Thu, 27 Feb 2020 15:53:32 GMT
+Version 0.64.8 | Thu, 27 Feb 2020 15:57:02 GMT
 <br/>
 
-[flair.js](./flair.js) (364k, 97k [minified](flair.min.js), 27k [gzipped](flair.min.js.gz)
+[flair.js](./flair.js) (364k, 97k [minified](flair.min.js), 27k [gzipped](flair.min.js.gz))
 </small>
 <br/>
 
