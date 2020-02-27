@@ -394,7 +394,7 @@ now | {api_v1} /now/:type? &nbsp;  ` get `  | some desc
 <span name="footer" id="asm_footer">
 
 </br>
----
+***
 
 <small><small>
 Built with flairBuild (v1) using fasm (v1) format.
