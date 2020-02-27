@@ -9,9 +9,9 @@ Copyright &copy; 2017-2020 Vikas Burman. Distributed under MIT.
 </span>
 <span name="assembly" id="asm_info">
 
-# Assembly: <u>flair</u>
+# <u>flair</u>
 <small>
-Version 0.64.4 | Thu, 27 Feb 2020 14:27:52 GMT
+Version 0.64.5 | Thu, 27 Feb 2020 15:50:42 GMT
 <br/>
 
 [flair.js](./flair.js) (364k, 97k [minified](flair.min.js), 27k [gzipped](flair.min.js.gz)
@@ -395,8 +395,8 @@ now | {api_v1} /now/:type? &nbsp;  ` get `  | some desc
 
 </br>
 
-## 
-
+##
+ 
 <small><small>
 Built with flairBuild (v1) using fasm (v1) format.
 
