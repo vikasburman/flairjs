@@ -116,6 +116,8 @@ const AppDomain = function(name) {
     this.registerAdo = (ado) => {
         if (typeof ado === 'string') { ado = JSON.parse(ado); }
 
+        // TODO: handle changes done in types, resources, routes and assets array object structures 
+        
         // validate
         if (_typeOf(ado.types) !== 'array' || 
             _typeOf(ado.resources) !== 'array' ||

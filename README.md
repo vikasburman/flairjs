@@ -7,15 +7,8 @@ _True object orientated features for plain vanilla JavaScript_
 [![Dependencies](https://david-dm.org/vikasburman/flairjs.svg)](https://david-dm.org/vikasburman/flairjs)
 [![Dev Dependencies](https://david-dm.org/vikasburman/flairjs/dev-status.svg)](https://david-dm.org/vikasburman/flairjs?type=dev)
 [![Known Vulnerabilities](https://snyk.io/test/github/vikasburman/flairjs/badge.svg?targetFile=package.json)](https://snyk.io/test/github/vikasburman/flairjs?targetFile=package.json) 
-[![Issues](http://img.shields.io/github/issues/vikasburman/flairjs.svg)](https://github.com/vikasburman/flairjs/issues)
-<br/>
 [![MIT license](http://img.shields.io/badge/license-MIT-brightgreen.svg)](http://opensource.org/licenses/MIT)
 [![npm version](https://badge.fury.io/js/flairjs.svg)](https://badge.fury.io/js/flairjs)
-![GitHub top language](https://img.shields.io/github/languages/top/vikasburman/flairjs.svg?color=brightgreen)
-![GitHub file size in bytes](https://img.shields.io/github/size/vikasburman/flairjs/dist/flair.min.js.gz.svg?color=brightgreen)
-![GitHub last commit](https://img.shields.io/github/last-commit/vikasburman/flairjs.svg)
-![GitHub (Pre-)Release Date](https://img.shields.io/github/release-date-pre/vikasburman/flairjs.svg)
-[![StackOverflow](http://img.shields.io/badge/stackoverflow-flairjs-brightgreen.svg)](http://stackoverflow.com/questions/tagged/flairjs)
 
 
 Introduction 
